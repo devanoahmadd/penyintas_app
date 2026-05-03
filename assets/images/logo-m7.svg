@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" aria-label="Penyintas logo M7">
+  <!-- M7 · Tumbuh Miring: monogram P dari 3 ruas bambu, miring 6°, daun pucuk tetap tegak -->
+  <g transform="rotate(-6 80 80)">
+    <!-- Ruas 1 — paling bawah (opacity 0.6 = fase bertahan) -->
+    <rect x="38" y="100" width="22" height="34" rx="5" fill="#0F7A3E" opacity="0.6"/>
+    <!-- Ruas 2 — tengah (opacity 0.8 = fase stabil) -->
+    <rect x="38" y="64"  width="22" height="34" rx="5" fill="#0F7A3E" opacity="0.8"/>
+    <!-- Ruas 3 — paling atas (opacity 1.0 = fase berkembang) -->
+    <rect x="38" y="28"  width="22" height="34" rx="5" fill="#0F7A3E"/>
+    <!-- Sekat ruas (garis pemisah) -->
+    <line x1="34" y1="100" x2="64" y2="100" stroke="#FBFAF6" stroke-width="2.5"/>
+    <line x1="34" y1="64"  x2="64" y2="64"  stroke="#FBFAF6" stroke-width="2.5"/>
+    <!-- Lengkung P (counter huruf P) -->
+    <path d="M60 32 C 110 32, 116 88, 72 88 L 60 88" fill="none" stroke="#0F7A3E" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Daun pucuk — tetap tegak (signature M7), tidak ikut miring -->
+  <ellipse cx="68" cy="16" rx="11" ry="6" fill="#0F7A3E" transform="rotate(-20 68 16)"/>
+</svg>
