@@ -51,6 +51,9 @@ key.properties
 *.jks
 *.keystore
 
+# Firebase Functions
+functions/node_modules/
+
 # Firebase & sensitive config
 google-services.json
 GoogleService-Info.plist

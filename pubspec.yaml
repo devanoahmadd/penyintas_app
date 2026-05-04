@@ -67,7 +67,7 @@ dev_dependencies:
   build_runner: ^2.4.0
   # isar_generator: ^3.1.0
   # ↑ Konflik analyzer dengan bloc_test ^10.
-  # Cara pakai: flutter pub add dev:isar_generator → dart run build_runner build → flutter pub remove isar_generator
+  # Cara re-generate: comment bloc_test+mocktail, uncomment isar_generator → build → restore
 
 flutter:
   uses-material-design: true

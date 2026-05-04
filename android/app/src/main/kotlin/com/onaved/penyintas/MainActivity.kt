@@ -1,4 +1,4 @@
-package com.example.penyintas_app
+package com.onaved.penyintas
 
 import io.flutter.embedding.android.FlutterActivity
 
