@@ -11,12 +11,14 @@ import 'package:get_it/get_it.dart';
 import 'package:isar/isar.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
+import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 
 final sl = GetIt.instance;
 
 Future<void> init({required Isar isar}) async {
   _registerExternal(isar);
   _registerCore();
+  _registerSettings();
 }
 
 void _registerExternal(Isar isar) {
@@ -44,4 +46,8 @@ void _registerCore() {
   sl.registerLazySingleton(
     () => AnalyticsService(sl()),
   );
+}
+
+void _registerSettings() {
+  sl.registerFactory(() => SettingsBloc(sl()));
 }

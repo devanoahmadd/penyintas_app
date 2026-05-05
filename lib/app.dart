@@ -1,29 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/theme/app_theme.dart';
+import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 
 class PenyintasApp extends StatelessWidget {
   const PenyintasApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Penyintas',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
-      routerConfig: appRouter,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('id'),
-        Locale('en'),
-      ],
-      debugShowCheckedModeBanner: false,
+    return BlocProvider(
+      create: (_) => sl<SettingsBloc>()..add(const SettingsLoaded()),
+      child: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, settings) {
+          return MaterialApp.router(
+            title: 'Penyintas',
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: settings.themeMode,
+            routerConfig: appRouter,
+            locale: Locale(settings.locale),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('id'),
+              Locale('en'),
+            ],
+            debugShowCheckedModeBanner: false,
+          );
+        },
+      ),
     );
   }
 }
