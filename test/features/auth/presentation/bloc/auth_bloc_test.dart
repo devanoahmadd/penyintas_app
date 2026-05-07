@@ -1,0 +1,176 @@
+import 'package:bloc_test/bloc_test.dart';
+import 'package:dartz/dartz.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/error/failures.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
+
+// Mocks
+class MockSignInUseCase extends Mock implements SignInUseCase {}
+class MockSignUpUseCase extends Mock implements SignUpUseCase {}
+class MockSignOutUseCase extends Mock implements SignOutUseCase {}
+class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
+class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
+
+// Fallback values
+class FakeSignInParams extends Fake implements SignInParams {}
+class FakeSignUpParams extends Fake implements SignUpParams {}
+class FakeNoParams extends Fake implements NoParams {}
+
+void main() {
+  late MockSignInUseCase mockSignIn;
+  late MockSignUpUseCase mockSignUp;
+  late MockSignOutUseCase mockSignOut;
+  late MockGetCurrentUserUseCase mockGetCurrentUser;
+  late MockWatchAuthStateUseCase mockWatchAuthState;
+
+  final tUser = UserEntity(
+    uid: 'uid-123',
+    email: 'test@email.com',
+    displayName: 'Tester',
+    createdAt: DateTime(2025),
+  );
+
+  setUpAll(() {
+    registerFallbackValue(FakeSignInParams());
+    registerFallbackValue(FakeSignUpParams());
+    registerFallbackValue(FakeNoParams());
+  });
+
+  setUp(() {
+    mockSignIn = MockSignInUseCase();
+    mockSignUp = MockSignUpUseCase();
+    mockSignOut = MockSignOutUseCase();
+    mockGetCurrentUser = MockGetCurrentUserUseCase();
+    mockWatchAuthState = MockWatchAuthStateUseCase();
+
+    // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
+    when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
+  });
+
+  AuthBloc buildBloc() => AuthBloc(
+        signIn: mockSignIn,
+        signUp: mockSignUp,
+        signOut: mockSignOut,
+        getCurrentUser: mockGetCurrentUser,
+        watchAuthState: mockWatchAuthState,
+      );
+
+  group('SignInRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'should emit [AuthLoading, Authenticated] when sign in succeeds',
+      build: buildBloc,
+      act: (bloc) => bloc.add(SignInRequested(
+        email: 'test@email.com',
+        password: 'password123',
+      )),
+      setUp: () {
+        when(() => mockSignIn(any()))
+            .thenAnswer((_) async => Right(tUser));
+      },
+      expect: () => [const AuthLoading(), Authenticated(tUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'should emit [AuthLoading, AuthError] when sign in fails with wrong password',
+      build: buildBloc,
+      act: (bloc) => bloc.add(SignInRequested(
+        email: 'test@email.com',
+        password: 'wrong',
+      )),
+      setUp: () {
+        when(() => mockSignIn(any())).thenAnswer(
+          (_) async => const Left(
+            AuthFailure('Email atau password salah. Coba lagi ya.'),
+          ),
+        );
+      },
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Email atau password salah. Coba lagi ya.'),
+      ],
+    );
+  });
+
+  group('SignUpRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'should emit [AuthLoading, Authenticated] when sign up succeeds',
+      build: buildBloc,
+      act: (bloc) => bloc.add(SignUpRequested(
+        email: 'new@email.com',
+        password: 'password123',
+        name: 'Pengguna Baru',
+      )),
+      setUp: () {
+        when(() => mockSignUp(any()))
+            .thenAnswer((_) async => Right(tUser));
+      },
+      expect: () => [const AuthLoading(), Authenticated(tUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'should emit [AuthLoading, AuthError] when email already in use',
+      build: buildBloc,
+      act: (bloc) => bloc.add(SignUpRequested(
+        email: 'existing@email.com',
+        password: 'password123',
+        name: 'User',
+      )),
+      setUp: () {
+        when(() => mockSignUp(any())).thenAnswer(
+          (_) async => const Left(
+            AuthFailure('Email ini sudah terdaftar. Coba login langsung.'),
+          ),
+        );
+      },
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Email ini sudah terdaftar. Coba login langsung.'),
+      ],
+    );
+  });
+
+  group('SignOutRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'should emit [AuthLoading, Unauthenticated] when sign out succeeds',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        when(() => mockSignOut(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+    );
+  });
+
+  group('AuthCheckRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'should emit Authenticated when auth stream emits a user',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockWatchAuthState())
+            .thenAnswer((_) => Stream.value(tUser));
+      },
+      act: (bloc) => bloc.add(const AuthCheckRequested()),
+      expect: () => [Authenticated(tUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'should emit Unauthenticated when auth stream emits null',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockWatchAuthState())
+            .thenAnswer((_) => Stream.value(null));
+      },
+      act: (bloc) => bloc.add(const AuthCheckRequested()),
+      expect: () => [const Unauthenticated()],
+    );
+  });
+}

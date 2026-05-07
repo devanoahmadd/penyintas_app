@@ -1,0 +1,109 @@
+import 'dart:async';
+
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+
+part 'auth_event.dart';
+part 'auth_state.dart';
+
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  AuthBloc({
+    required this.signIn,
+    required this.signUp,
+    required this.signOut,
+    required this.getCurrentUser,
+    required this.watchAuthState,
+  }) : super(const AuthInitial()) {
+    on<AuthCheckRequested>(_onAuthCheckRequested);
+    on<SignInRequested>(_onSignInRequested);
+    on<SignUpRequested>(_onSignUpRequested);
+    on<SignOutRequested>(_onSignOutRequested);
+    on<_AuthStateChanged>(_onAuthStateChanged);
+  }
+
+  final SignInUseCase signIn;
+  final SignUpUseCase signUp;
+  final SignOutUseCase signOut;
+  final GetCurrentUserUseCase getCurrentUser;
+  final WatchAuthStateUseCase watchAuthState;
+
+  StreamSubscription<UserEntity?>? _authSubscription;
+
+  Future<void> _onAuthCheckRequested(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _authSubscription?.cancel();
+    _authSubscription = watchAuthState().listen(
+      (user) => add(_AuthStateChanged(user)),
+    );
+  }
+
+  void _onAuthStateChanged(
+    _AuthStateChanged event,
+    Emitter<AuthState> emit,
+  ) {
+    if (event.user != null) {
+      emit(Authenticated(event.user!));
+    } else {
+      emit(const Unauthenticated());
+    }
+  }
+
+  Future<void> _onSignInRequested(
+    SignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    final result = await signIn(
+      SignInParams(email: event.email, password: event.password),
+    );
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) => emit(Authenticated(user)),
+    );
+  }
+
+  Future<void> _onSignUpRequested(
+    SignUpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    final result = await signUp(
+      SignUpParams(
+        email: event.email,
+        password: event.password,
+        name: event.name,
+      ),
+    );
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) => emit(Authenticated(user)),
+    );
+  }
+
+  Future<void> _onSignOutRequested(
+    SignOutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    final result = await signOut(const NoParams());
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(const Unauthenticated()),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
+  }
+}
