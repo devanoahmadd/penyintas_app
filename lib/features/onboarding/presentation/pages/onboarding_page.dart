@@ -245,6 +245,13 @@ class _Step1WidgetState extends State<_Step1Widget> {
       if (date == null || date < 1 || date > 31) {
         _dateError = 'Tanggal harus antara 1 dan 31.';
         valid = false;
+      } else {
+        final now = DateTime.now();
+        final maxDay = DateTime(now.year, now.month + 1, 0).day;
+        if (date > maxDay) {
+          _dateError = 'Bulan ini maksimal tanggal $maxDay.';
+          valid = false;
+        }
       }
     });
     return valid;

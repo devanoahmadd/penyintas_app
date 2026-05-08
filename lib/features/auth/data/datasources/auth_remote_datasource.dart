@@ -115,8 +115,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Stream<UserModel?> get authStateChanges {
-    return auth.authStateChanges().map((user) {
+    return auth.authStateChanges().asyncMap((user) async {
       if (user == null) return null;
+      try {
+        final doc =
+            await firestore.collection('users').doc(user.uid).get();
+        if (doc.exists) return UserModel.fromFirestore(doc);
+      } catch (_) {}
       return UserModel(
         uid: user.uid,
         email: user.email ?? '',

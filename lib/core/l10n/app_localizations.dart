@@ -15,6 +15,9 @@ class AppLocalizations {
 
   static const delegate = _AppLocalizationsDelegate();
 
+  static LocalizationsDelegate<AppLocalizations> delegateFor(Locale locale) =>
+      _AppLocalizationsDelegate(locale);
+
   Locale get locale => _locale;
 
   String _t(String key) => _strings[key] ?? key;
@@ -70,7 +73,9 @@ class AppLocalizations {
 
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
-  const _AppLocalizationsDelegate();
+  const _AppLocalizationsDelegate([this._locale]);
+
+  final Locale? _locale;
 
   static const _supported = ['id', 'en'];
 
@@ -89,5 +94,5 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool shouldReload(_AppLocalizationsDelegate old) => false;
+  bool shouldReload(_AppLocalizationsDelegate old) => old._locale != _locale;
 }

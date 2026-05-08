@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:isar/isar.dart';
-import 'package:penyintas_app/core/local/app_settings_isar_model.dart';
-import 'package:penyintas_app/core/local/sync_queue_isar_model.dart';
+import 'package:drift/drift.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
 
 abstract class OnboardingLocalDataSource {
@@ -16,34 +15,41 @@ abstract class OnboardingLocalDataSource {
 }
 
 class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
-  OnboardingLocalDataSourceImpl(this._isar);
-  final Isar _isar;
+  OnboardingLocalDataSourceImpl(this._db);
+  final AppDatabase _db;
 
   @override
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings) async {
-    final existing = await _isar.appSettingsIsarModels.get(1);
-    final model = AppSettingsIsarModel()
-      ..id = 1
-      ..locale = existing?.locale ?? 'id'
-      ..themeMode = existing?.themeMode ?? 'system'
-      ..onboardingCompleted = true
-      ..monthlyIncome = settings.monthlyIncome
-      ..paymentDate = settings.paymentDate
-      ..fixedExpenses = settings.fixedExpenses
-      ..emergencyFundPct = settings.emergencyFundPct;
-    await _isar.writeTxn(() => _isar.appSettingsIsarModels.put(model));
+    final existing = await (_db.select(_db.appSettings)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
+          id: const Value(1),
+          locale: Value(existing?.locale ?? 'id'),
+          themeMode: Value(existing?.themeMode ?? 'system'),
+          onboardingCompleted: const Value(true),
+          monthlyIncome: Value(settings.monthlyIncome),
+          paymentDate: Value(settings.paymentDate),
+          fixedExpenses: Value(settings.fixedExpenses),
+          emergencyFundPct: Value(settings.emergencyFundPct),
+          // Set once — jangan overwrite jika sudah ada
+          onboardingCreatedAt:
+              Value(existing?.onboardingCreatedAt ?? settings.createdAt),
+        ));
   }
 
   @override
   Future<BudgetSettingsEntity?> getBudgetSettings() async {
-    final saved = await _isar.appSettingsIsarModels.get(1);
+    final saved = await (_db.select(_db.appSettings)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
     if (saved == null || saved.monthlyIncome == 0) return null;
     return BudgetSettingsEntity(
       monthlyIncome: saved.monthlyIncome,
       paymentDate: saved.paymentDate,
       fixedExpenses: saved.fixedExpenses,
       emergencyFundPct: saved.emergencyFundPct,
-      createdAt: DateTime.now(),
+      createdAt: saved.onboardingCreatedAt ?? DateTime.now(),
     );
   }
 
@@ -53,12 +59,18 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
     required String collectionPath,
     required Map<String, dynamic> data,
   }) async {
-    final item = SyncQueueIsarModel()
-      ..itemId = itemId
-      ..collectionPath = collectionPath
-      ..data = jsonEncode(data)
-      ..operation = SyncOperation.create
-      ..createdAt = DateTime.now();
-    await _isar.writeTxn(() => _isar.syncQueueIsarModels.put(item));
+    final existing = await (_db.select(_db.appSettings)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    final operation = (existing?.onboardingCompleted ?? false)
+        ? SyncOperation.update
+        : SyncOperation.create;
+    await _db.into(_db.syncQueue).insert(SyncQueueCompanion(
+          itemId: Value(itemId),
+          collectionPath: Value(collectionPath),
+          data: Value(jsonEncode(data)),
+          operation: Value(operation),
+          createdAt: Value(DateTime.now()),
+        ));
   }
 }

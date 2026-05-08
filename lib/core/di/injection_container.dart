@@ -8,7 +8,7 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
-import 'package:isar/isar.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -29,22 +29,42 @@ import 'package:penyintas_app/features/onboarding/domain/usecases/get_budget_set
 import 'package:penyintas_app/features/onboarding/domain/usecases/save_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
+import 'package:penyintas_app/features/transaction/data/datasources/transaction_remote_datasource.dart';
+import 'package:penyintas_app/features/transaction/data/repositories/transaction_repository_impl.dart';
+import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/add_transaction_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/delete_transaction_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_transactions_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/update_transaction_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/watch_today_transactions_usecase.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
+import 'package:penyintas_app/core/sync/sync_service.dart';
+import 'package:penyintas_app/features/dashboard/data/repositories/dashboard_repository_impl.dart';
+import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
+import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
+import 'package:penyintas_app/features/dashboard/domain/usecases/get_dashboard_usecase.dart';
+import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 
 final sl = GetIt.instance;
 
-Future<void> init({required Isar isar}) async {
-  _registerExternal(isar);
+Future<void> init({required AppDatabase db}) async {
+  _registerExternal(db);
   _registerCore();
   _registerSettings();
   _initAuth();
   _initOnboarding();
+  _initTransaction();
+  _initDashboard();
+  _initSync();
 }
 
-void _registerExternal(Isar isar) {
-  // ── Isar ─────────────────────────────────────────────────────────────────
-  sl.registerLazySingleton<Isar>(() => isar);
+void _registerExternal(AppDatabase db) {
+  // ── Drift ────────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<AppDatabase>(() => db);
 
-  // ── Firebase ──────────────────────────────────────────────────────────────
+  // ── Firebase ─────────────────────────────────────────────────────────────
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
   sl.registerLazySingleton(() => FirebaseStorage.instance);
@@ -68,11 +88,10 @@ void _registerCore() {
 }
 
 void _registerSettings() {
-  sl.registerFactory(() => SettingsBloc(sl()));
+  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>()));
 }
 
 void _initAuth() {
-  // BLoC — factory agar setiap halaman dapat instance bersih
   sl.registerFactory(() => AuthBloc(
         signIn: sl(),
         signUp: sl(),
@@ -81,38 +100,32 @@ void _initAuth() {
         watchAuthState: sl(),
       ));
 
-  // Use Cases
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));
   sl.registerLazySingleton(() => SignOutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
   sl.registerLazySingleton(() => WatchAuthStateUseCase(sl()));
 
-  // Repository
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDataSource: sl()),
   );
 
-  // Data Source
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl()),
   );
 }
 
 void _initOnboarding() {
-  // BLoC
   sl.registerFactory(() => OnboardingBloc(
         saveBudgetSettings: sl(),
         calculateDailyBudget: sl(),
         analyticsService: sl(),
       ));
 
-  // Use Cases
   sl.registerLazySingleton(() => SaveBudgetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => GetBudgetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
 
-  // Repository
   sl.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepositoryImpl(
       localDataSource: sl(),
@@ -122,11 +135,68 @@ void _initOnboarding() {
     ),
   );
 
-  // Data Sources
   sl.registerLazySingleton<OnboardingLocalDataSource>(
     () => OnboardingLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<OnboardingRemoteDataSource>(
     () => OnboardingRemoteDataSourceImpl(auth: sl(), firestore: sl()),
+  );
+}
+
+void _initTransaction() {
+  sl.registerFactory(
+    () => AddTransactionBloc(addTransaction: sl()),
+  );
+  sl.registerFactory(
+    () => TransactionListBloc(
+      getTransactions: sl(),
+      deleteTransaction: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(() => AddTransactionUseCase(sl()));
+  sl.registerLazySingleton(() => GetTransactionsUseCase(sl()));
+  sl.registerLazySingleton(() => WatchTodayTransactionsUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteTransactionUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateTransactionUseCase(sl()));
+
+  sl.registerLazySingleton<TransactionRepository>(
+    () => TransactionRepositoryImpl(
+      localDataSource: sl(),
+      remoteDataSource: sl(),
+      networkInfo: sl(),
+      auth: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<TransactionLocalDataSource>(
+    () => TransactionLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<TransactionRemoteDataSource>(
+    () => TransactionRemoteDataSourceImpl(auth: sl(), firestore: sl()),
+  );
+}
+
+void _initSync() {
+  sl.registerLazySingleton(() => SyncService(
+        db: sl(),
+        networkInfo: sl(),
+        auth: sl(),
+        firestore: sl(),
+      ));
+}
+
+void _initDashboard() {
+  sl.registerFactory(() => DashboardBloc(getDashboard: sl()));
+
+  sl.registerLazySingleton(() => GetDashboardUseCase(sl()));
+  sl.registerLazySingleton(() => const CalculateDaysToLiveUseCase());
+
+  sl.registerLazySingleton<DashboardRepository>(
+    () => DashboardRepositoryImpl(
+      transactionRepository: sl(),
+      onboardingRepository: sl(),
+      calculateDtl: sl(),
+    ),
   );
 }

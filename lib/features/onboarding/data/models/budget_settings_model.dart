@@ -13,11 +13,13 @@ class BudgetSettingsModel extends BudgetSettingsEntity {
   factory BudgetSettingsModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return BudgetSettingsModel(
-      monthlyIncome: (data['monthlyIncome'] as num).toInt(),
-      paymentDate: (data['paymentDate'] as num).toInt(),
-      fixedExpenses: (data['fixedExpenses'] as num).toInt(),
-      emergencyFundPct: (data['emergencyFundPct'] as num).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      monthlyIncome: (data['monthlyIncome'] as num?)?.toInt() ?? 0,
+      paymentDate: (data['paymentDate'] as num?)?.toInt() ?? 1,
+      fixedExpenses: (data['fixedExpenses'] as num?)?.toInt() ?? 0,
+      emergencyFundPct: (data['emergencyFundPct'] as num?)?.toDouble() ?? 0.10,
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

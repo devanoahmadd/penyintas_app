@@ -31,8 +31,8 @@ class PenyintasApp extends StatelessWidget {
             themeMode: settings.themeMode,
             routerConfig: appRouter,
             locale: Locale(settings.locale),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
+            localizationsDelegates: [
+              AppLocalizations.delegateFor(Locale(settings.locale)),
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,

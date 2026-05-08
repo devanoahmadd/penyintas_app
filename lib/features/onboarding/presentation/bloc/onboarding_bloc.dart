@@ -23,11 +23,13 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<Step1Submitted>(_onStep1);
     on<Step2Submitted>(_onStep2);
     on<Step3Submitted>(_onStep3);
+    on<OnboardingRetryRequested>(_onRetry);
   }
 
   final SaveBudgetSettingsUseCase _saveBudgetSettings;
   final CalculateDailyBudgetUseCase _calculateDailyBudget;
   final AnalyticsService _analyticsService;
+  OnboardingStep3? _lastStep3;
 
   void _onStarted(OnboardingStarted event, Emitter<OnboardingState> emit) {
     emit(const OnboardingStep1());
@@ -62,6 +64,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) async {
     final s = state as OnboardingStep3;
+    _lastStep3 = s;
     emit(const OnboardingCalculating());
 
     final calcResult = await _calculateDailyBudget(CalcParams(
@@ -91,5 +94,17 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         },
       ),
     );
+  }
+
+  void _onRetry(
+      OnboardingRetryRequested event, Emitter<OnboardingState> emit) {
+    if (state is OnboardingError) {
+      final cached = _lastStep3;
+      if (cached != null) {
+        emit(cached);
+      } else {
+        emit(const OnboardingStep1());
+      }
+    }
   }
 }

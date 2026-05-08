@@ -1,16 +1,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:isar/isar.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/local/app_settings_isar_model.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:penyintas_app/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -40,19 +43,14 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/dashboard',
-      builder: (context, state) => const _PlaceholderPage(title: 'Dashboard'),
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<DashboardBloc>(),
+        child: const DashboardPage(),
+      ),
     ),
     GoRoute(
       path: '/transactions',
-      builder: (context, state) =>
-          const _PlaceholderPage(title: 'Transactions'),
-      routes: [
-        GoRoute(
-          path: 'add',
-          builder: (context, state) =>
-              const _PlaceholderPage(title: 'Add Transaction'),
-        ),
-      ],
+      builder: (context, state) => const TransactionListPage(),
     ),
     GoRoute(
       path: '/budget',
@@ -74,28 +72,35 @@ final appRouter = GoRouter(
 );
 
 Future<String?> _redirect(BuildContext context, GoRouterState state) async {
-  final user = FirebaseAuth.instance.currentUser;
-  final location = state.uri.path;
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    final location = state.uri.path;
 
-  const publicRoutes = ['/splash', '/login', '/register'];
+    const publicRoutes = ['/splash', '/login', '/register'];
 
-  if (user == null) {
-    return publicRoutes.contains(location) ? null : '/login';
+    if (user == null) {
+      return publicRoutes.contains(location) ? null : '/login';
+    }
+
+    final db = sl<AppDatabase>();
+    final settings = await (db.select(db.appSettings)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    final onboardingDone = settings?.onboardingCompleted ?? false;
+
+    if (!onboardingDone) {
+      return location == '/onboarding' ? null : '/onboarding';
+    }
+
+    if (publicRoutes.contains(location) || location == '/onboarding') {
+      return '/dashboard';
+    }
+
+    return null;
+  } catch (e, stack) {
+    FirebaseCrashlytics.instance.recordError(e, stack);
+    return '/login';
   }
-
-  final isar = sl<Isar>();
-  final settings = await isar.appSettingsIsarModels.get(1);
-  final onboardingDone = settings?.onboardingCompleted ?? false;
-
-  if (!onboardingDone && location != '/onboarding') {
-    return '/onboarding';
-  }
-
-  if (publicRoutes.contains(location) || location == '/onboarding') {
-    return '/dashboard';
-  }
-
-  return null;
 }
 
 class _PlaceholderPage extends StatelessWidget {

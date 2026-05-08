@@ -3,14 +3,12 @@ import 'dart:ui';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:penyintas_app/app.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart' as di;
-import 'package:penyintas_app/core/local/app_settings_isar_model.dart';
-import 'package:penyintas_app/core/local/sync_queue_isar_model.dart';
-import 'package:penyintas_app/features/transaction/data/models/transaction_isar_model.dart';
+import 'package:penyintas_app/core/sync/sync_service.dart';
 import 'package:penyintas_app/firebase_options.dart';
 
 void main() async {
@@ -20,9 +18,12 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await FirebaseAppCheck.instance.activate(
-    // Ganti ke AndroidPlayIntegrityProvider() + AppleDeviceCheckProvider() untuk release
-    providerAndroid: AndroidDebugProvider(),
-    providerApple: AppleDebugProvider(),
+    providerAndroid: kReleaseMode
+        ? AndroidPlayIntegrityProvider()
+        : AndroidDebugProvider(),
+    providerApple: kReleaseMode
+        ? AppleDeviceCheckProvider()
+        : AppleDebugProvider(),
   );
 
   FlutterError.onError = (details) {
@@ -33,19 +34,41 @@ void main() async {
     return true;
   };
 
-  // ── Isar ─────────────────────────────────────────────────────────────────
-  final dir = await getApplicationDocumentsDirectory();
-  final isar = await Isar.open(
-    [
-      TransactionIsarModelSchema,
-      AppSettingsIsarModelSchema,
-      SyncQueueIsarModelSchema,
-    ],
-    directory: dir.path,
-  );
+  // ── Drift ─────────────────────────────────────────────────────────────────
+  try {
+    final db = AppDatabase();
 
-  // ── Dependency Injection ──────────────────────────────────────────────────
-  await di.init(isar: isar);
+    // ── Dependency Injection ──────────────────────────────────────────────
+    await di.init(db: db);
 
-  runApp(const PenyintasApp());
+    // ── Sync Service ──────────────────────────────────────────────────────
+    di.sl<SyncService>().start();
+
+    runApp(const PenyintasApp());
+  } catch (e, stack) {
+    FirebaseCrashlytics.instance.recordError(e, stack, fatal: true);
+    runApp(const _DbErrorApp());
+  }
+}
+
+class _DbErrorApp extends StatelessWidget {
+  const _DbErrorApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Gagal memuat data. Coba restart aplikasi.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

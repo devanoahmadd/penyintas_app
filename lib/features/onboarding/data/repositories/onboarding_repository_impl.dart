@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
@@ -72,11 +73,19 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   @override
   Future<Either<Failure, BudgetSettingsEntity?>> getBudgetSettings() async {
     try {
-      final settings = await localDataSource.getBudgetSettings();
-      return Right(settings);
+      final local = await localDataSource.getBudgetSettings();
+      if (local != null) return Right(local);
+
+      if (await networkInfo.isConnected) {
+        final remote = await remoteDataSource.getBudgetSettings();
+        if (remote != null) await localDataSource.saveBudgetSettings(remote);
+        return Right(remote);
+      }
+      return const Right(null);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
-    } catch (_) {
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(e, stack);
       return const Left(UnknownFailure());
     }
   }

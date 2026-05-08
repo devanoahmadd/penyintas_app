@@ -6,6 +6,7 @@ import 'package:penyintas_app/features/onboarding/domain/entities/budget_setting
 
 abstract class OnboardingRemoteDataSource {
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings);
+  Future<BudgetSettingsModel?> getBudgetSettings();
 }
 
 class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
@@ -36,6 +37,24 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
           .update({'onboardingCompleted': true});
     } on AuthException {
       rethrow;
+    } catch (_) {
+      throw const ServerException();
+    }
+  }
+
+  @override
+  Future<BudgetSettingsModel?> getBudgetSettings() async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return null;
+    try {
+      final doc = await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('budget_settings')
+          .doc('current')
+          .get();
+      if (!doc.exists) return null;
+      return BudgetSettingsModel.fromFirestore(doc);
     } catch (_) {
       throw const ServerException();
     }

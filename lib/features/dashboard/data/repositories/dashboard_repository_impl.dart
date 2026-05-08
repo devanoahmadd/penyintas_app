@@ -1,0 +1,140 @@
+import 'package:dartz/dartz.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:penyintas_app/core/error/failures.dart';
+import 'package:penyintas_app/core/utils/date_helper.dart';
+import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
+import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
+import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
+import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
+
+class DashboardRepositoryImpl implements DashboardRepository {
+  DashboardRepositoryImpl({
+    required TransactionRepository transactionRepository,
+    required OnboardingRepository onboardingRepository,
+    required CalculateDaysToLiveUseCase calculateDtl,
+  })  : _transactions = transactionRepository,
+        _onboarding = onboardingRepository,
+        _calcDtl = calculateDtl;
+
+  final TransactionRepository _transactions;
+  final OnboardingRepository _onboarding;
+  final CalculateDaysToLiveUseCase _calcDtl;
+
+  static void _logError(Object e, StackTrace stack) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, stack);
+    } catch (_) {}
+  }
+
+  @override
+  Stream<Either<Failure, DashboardEntity>> watchDashboard() async* {
+    await for (final todayResult in _transactions.watchTodayTransactions()) {
+      try {
+        final todayTxns = todayResult.fold((l) => <TransactionEntity>[], (r) => r);
+
+        final settingsResult = await _onboarding.getBudgetSettings();
+        final settings = settingsResult.fold((l) => null, (r) => r);
+
+        if (settings == null) {
+          yield const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.'));
+          continue;
+        }
+
+        final now = DateTime.now();
+        final monthStart = DateTime(now.year, now.month, 1);
+        final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
+
+        final monthResult = await _transactions.getTransactions(
+          from: monthStart,
+          to: monthEnd,
+        );
+        final monthTxns = monthResult.fold((l) => <TransactionEntity>[], (r) => r);
+
+        final sevenDaysAgo = now.subtract(const Duration(days: 7));
+        final last7Result = await _transactions.getTransactions(
+          from: sevenDaysAgo,
+          to: now,
+        );
+        final last7Txns = last7Result.fold((l) => <TransactionEntity>[], (r) => r);
+
+        yield Right<Failure, DashboardEntity>(_compute(
+          settings: settings,
+          todayTxns: todayTxns,
+          monthTxns: monthTxns,
+          last7Txns: last7Txns,
+        ));
+      } catch (e, stack) {
+        _logError(e, stack);
+        yield const Left(UnknownFailure());
+      }
+    }
+  }
+
+  DashboardEntity _compute({
+    required BudgetSettingsEntity settings,
+    required List<TransactionEntity> todayTxns,
+    required List<TransactionEntity> monthTxns,
+    required List<TransactionEntity> last7Txns,
+  }) {
+    final remainingDays = remainingDaysInCycle(settings.paymentDate);
+    final effectiveDays = remainingDays > 0 ? remainingDays : 30;
+
+    final emergencyFund =
+        (settings.monthlyIncome * settings.emergencyFundPct).round();
+    final totalMonthlyBudget =
+        settings.monthlyIncome - settings.fixedExpenses - emergencyFund;
+    final safeMonthlyBudget = totalMonthlyBudget < 0 ? 0 : totalMonthlyBudget;
+
+    final dailyBudget = (safeMonthlyBudget / effectiveDays).floor();
+
+    final spentToday = todayTxns
+        .where((t) => t.type == TransactionType.expense)
+        .fold(0, (sum, t) => sum + t.amount);
+
+    final totalSpentThisMonth = monthTxns
+        .where((t) => t.type == TransactionType.expense)
+        .fold(0, (sum, t) => sum + t.amount);
+
+    final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
+
+    final last7Expense = last7Txns
+        .where((t) => t.type == TransactionType.expense)
+        .fold(0, (sum, t) => sum + t.amount);
+    final avgDailySpend = last7Txns.isEmpty
+        ? (dailyBudget > 0 ? dailyBudget.toDouble() : 0.0)
+        : last7Expense / 7.0;
+
+    final daysToLive = _calcDtl(CalcDtlParams(
+      totalRemaining: totalRemaining,
+      avgDailySpend: avgDailySpend,
+      remainingDays: effectiveDays,
+    ));
+
+    final ratio = safeMonthlyBudget > 0
+        ? totalRemaining / safeMonthlyBudget
+        : 0.0;
+    final status = ratio > 0.30
+        ? BudgetStatus.safe
+        : ratio >= 0.15
+            ? BudgetStatus.caution
+            : BudgetStatus.danger;
+
+    return DashboardEntity(
+      dailyBudget: dailyBudget,
+      spentToday: spentToday,
+      remainingToday: dailyBudget - spentToday,
+      totalMonthlyBudget: safeMonthlyBudget,
+      totalSpentThisMonth: totalSpentThisMonth,
+      totalRemaining: totalRemaining < 0 ? 0 : totalRemaining,
+      daysToLive: daysToLive,
+      remainingDays: effectiveDays,
+      avgDailySpend: avgDailySpend,
+      status: status,
+      lastUpdated: DateTime.now(),
+      todayTransactions: todayTxns,
+    );
+  }
+}

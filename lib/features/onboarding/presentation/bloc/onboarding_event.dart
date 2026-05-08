@@ -37,3 +37,9 @@ class Step3Submitted extends OnboardingEvent {
   @override
   List<Object> get props => [emergencyFundPct];
 }
+
+class OnboardingRetryRequested extends OnboardingEvent {
+  const OnboardingRetryRequested();
+  @override
+  List<Object> get props => [];
+}
