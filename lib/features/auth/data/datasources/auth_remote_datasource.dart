@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/features/auth/data/models/user_model.dart';
 
@@ -47,7 +48,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const AuthException();
     }
   }
@@ -80,7 +82,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       return model;
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const AuthException();
     }
   }
@@ -89,7 +92,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<void> signOut() async {
     try {
       await auth.signOut();
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const AuthException('Gagal keluar. Coba lagi.');
     }
   }
@@ -108,7 +112,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         photoUrl: user.photoURL,
         createdAt: DateTime.now(),
       );
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const ServerException();
     }
   }

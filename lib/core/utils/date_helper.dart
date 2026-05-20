@@ -33,6 +33,17 @@ String formatDateShort(DateTime date) =>
 String formatDateLong(DateTime date) =>
     DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
 
+/// Menghitung total hari dalam siklus pembayaran penuh berikutnya.
+/// Digunakan sebagai fallback saat remainingDays == 0 (hari kiriman).
+int daysInCycle(int paymentDate) {
+  final now = DateTime.now();
+  final start = _clampedDate(now.year, now.month, paymentDate);
+  final nextMonth = now.month == 12 ? 1 : now.month + 1;
+  final nextYear = now.month == 12 ? now.year + 1 : now.year;
+  final end = _clampedDate(nextYear, nextMonth, paymentDate);
+  return end.difference(start).inDays;
+}
+
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 

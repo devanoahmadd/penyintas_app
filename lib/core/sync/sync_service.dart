@@ -58,6 +58,21 @@ class SyncService {
       final uid = _auth.currentUser?.uid;
       if (uid == null) return;
 
+      // #28: hapus item yang lebih dari 7 hari — tidak bisa dispatch, log sebagai abandoned
+      final cutoff = DateTime.now().subtract(const Duration(days: 7));
+      final expired = await (_db.select(_db.syncQueue)
+            ..where((t) => t.createdAt.isSmallerThanValue(cutoff)))
+          .get();
+      for (final item in expired) {
+        try {
+          FirebaseCrashlytics.instance.recordError(
+            Exception('SyncQueue item abandoned after 7 days: ${item.itemId}'),
+            StackTrace.current,
+          );
+        } catch (_) {}
+        await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id))).go();
+      }
+
       final items = await (_db.select(_db.syncQueue)
             ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
           .get();

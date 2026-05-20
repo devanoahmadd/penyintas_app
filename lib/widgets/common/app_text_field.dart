@@ -10,6 +10,8 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 /// - [helperText] default ' ' (spasi) agar tinggi field konsisten
 ///   saat ada/tidak ada pesan error — tidak ada layout shift
 /// - [isPassword] = true aktifkan toggle show/hide secara internal
+/// - [isValid] = true tampilkan checkmark hijau di kanan field
+///   (kompatibel dengan [isPassword] — keduanya muncul bersamaan)
 /// - Hindari floating label untuk form singkat; gunakan [label] di atas field
 ///   dan [hintText] di dalam field
 class AppTextField extends StatefulWidget {
@@ -21,6 +23,7 @@ class AppTextField extends StatefulWidget {
     this.errorText,
     this.helperText = ' ',
     this.isPassword = false,
+    this.isValid = false,
     this.keyboardType,
     this.inputFormatters,
     this.onChanged,
@@ -30,6 +33,7 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.prefixIcon,
+    this.onClear,
   });
 
   final TextEditingController? controller;
@@ -41,6 +45,11 @@ class AppTextField extends StatefulWidget {
   final String helperText;
 
   final bool isPassword;
+
+  /// Tampilkan checkmark [AppColors.success] di kanan field.
+  /// Jika [isPassword] juga true, eye icon dan checkmark muncul berdampingan.
+  final bool isValid;
+
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
@@ -51,12 +60,54 @@ class AppTextField extends StatefulWidget {
   final int maxLines;
   final Widget? prefixIcon;
 
+  /// Tampilkan tombol × di kanan field saat ada isi.
+  /// Tidak berlaku jika [isPassword] true.
+  final VoidCallback? onClear;
+
   @override
   State<AppTextField> createState() => _AppTextFieldState();
 }
 
 class _AppTextFieldState extends State<AppTextField> {
   bool _obscure = true;
+
+  Widget? _buildSuffixIcon(Color hintColor) {
+    final eyeIcon = IconButton(
+      visualDensity: VisualDensity.compact,
+      icon: Icon(
+        _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        color: hintColor,
+        size: 20,
+      ),
+      onPressed: () => setState(() => _obscure = !_obscure),
+      tooltip: _obscure ? 'Tampilkan' : 'Sembunyikan',
+    );
+
+    const checkIcon = Padding(
+      padding: EdgeInsets.only(right: 12),
+      child: Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+    );
+
+    if (widget.isPassword && widget.isValid) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [eyeIcon, checkIcon],
+      );
+    } else if (widget.isPassword) {
+      return eyeIcon;
+    } else if (widget.onClear != null &&
+        (widget.controller?.text.isNotEmpty ?? false)) {
+      return IconButton(
+        visualDensity: VisualDensity.compact,
+        icon: Icon(Icons.close, color: hintColor, size: 18),
+        onPressed: widget.onClear,
+        tooltip: 'Hapus',
+      );
+    } else if (widget.isValid) {
+      return checkIcon;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,19 +165,8 @@ class _AppTextFieldState extends State<AppTextField> {
                 .copyWith(color: AppColors.warn, height: 1.3),
             helperStyle: AppTextStyles.bodySmall.copyWith(height: 1.3),
             prefixIcon: widget.prefixIcon,
-            suffixIcon: widget.isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _obscure
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: hintColor,
-                      size: 20,
-                    ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                    tooltip: _obscure ? 'Tampilkan password' : 'Sembunyikan password',
-                  )
-                : null,
+            suffixIconConstraints: const BoxConstraints(minHeight: 48),
+            suffixIcon: _buildSuffixIcon(hintColor),
             filled: true,
             fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
             contentPadding: const EdgeInsets.symmetric(

@@ -34,21 +34,19 @@ class TransactionListBloc
       RefreshTransactions event, Emitter<TransactionListState> emit) async {
     if (state is! TransactionListLoaded) return;
     final s = state as TransactionListLoaded;
-    await _fetchAndEmit(s.from, s.to, s.activeFilter, emit);
+    await _fetchAndEmit(s.from, s.to, s.typeFilter, emit);
   }
 
   void _onFilterChanged(
       FilterChanged event, Emitter<TransactionListState> emit) {
     if (state is! TransactionListLoaded) return;
     final s = state as TransactionListLoaded;
-    final filtered = event.category == null
+    final filtered = event.type == null
         ? s.transactions
-        : s.transactions
-            .where((t) => t.category == event.category)
-            .toList();
+        : s.transactions.where((t) => t.type == event.type).toList();
     emit(s.copyWith(
       filtered: filtered,
-      activeFilter: () => event.category,
+      typeFilter: () => event.type,
     ));
   }
 
@@ -81,7 +79,7 @@ class TransactionListBloc
   Future<void> _fetchAndEmit(
     DateTime from,
     DateTime to,
-    TransactionCategory? filter,
+    TransactionType? typeFilter,
     Emitter<TransactionListState> emit,
   ) async {
     final result = await _getTransactions(
@@ -90,9 +88,9 @@ class TransactionListBloc
     result.fold(
       (failure) => emit(TransactionListError(failure.message)),
       (transactions) {
-        final filtered = filter == null
+        final filtered = typeFilter == null
             ? transactions
-            : transactions.where((t) => t.category == filter).toList();
+            : transactions.where((t) => t.type == typeFilter).toList();
         final totalSpent = transactions
             .where((t) => t.type == TransactionType.expense)
             .fold(0, (sum, t) => sum + t.amount);
@@ -100,7 +98,7 @@ class TransactionListBloc
           transactions: transactions,
           filtered: filtered,
           totalSpent: totalSpent,
-          activeFilter: filter,
+          typeFilter: typeFilter,
           from: from,
           to: to,
         ));

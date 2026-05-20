@@ -32,6 +32,6 @@ class TransactionEntity extends Equatable {
       ];
 }
 
-enum TransactionCategory { food, transport, campus, data, shopping, fixed, income, other }
+enum TransactionCategory { food, transport, shopping, health, internet, fixed, other, income }
 
 enum TransactionType { expense, income }

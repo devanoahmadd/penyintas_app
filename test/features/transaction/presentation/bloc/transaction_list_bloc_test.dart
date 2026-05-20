@@ -89,16 +89,15 @@ void main() {
         transactions: [tTransaction],
         filtered: [tTransaction],
         totalSpent: 50000,
-        activeFilter: null,
+        typeFilter: null,
         from: tFrom,
         to: tTo,
       ),
-      act: (bloc) =>
-          bloc.add(const FilterChanged(TransactionCategory.transport)),
+      act: (bloc) => bloc.add(const FilterChanged(TransactionType.income)),
       expect: () => [
         isA<TransactionListLoaded>()
             .having((s) => s.filtered.length, 'filtered empty', 0)
-            .having((s) => s.activeFilter, 'filter', TransactionCategory.transport),
+            .having((s) => s.typeFilter, 'filter', TransactionType.income),
       ],
     );
   });
@@ -111,7 +110,7 @@ void main() {
         transactions: [tTransaction],
         filtered: [tTransaction],
         totalSpent: 50000,
-        activeFilter: null,
+        typeFilter: null,
         from: tFrom,
         to: tTo,
       ),

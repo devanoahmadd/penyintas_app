@@ -14,7 +14,7 @@ void main() {
   final tSettings = BudgetSettingsEntity(
     monthlyIncome: 3000000,
     paymentDate: 25,
-    fixedExpenses: 800000,
+    otherFixedExpense: 800000,
     emergencyFundPct: 0.10,
     createdAt: DateTime(2026, 5, 8),
   );
@@ -48,7 +48,7 @@ void main() {
       final firstSettings = BudgetSettingsEntity(
         monthlyIncome: 2000000,
         paymentDate: 1,
-        fixedExpenses: 500000,
+        otherFixedExpense: 500000,
         emergencyFundPct: 0.10,
         createdAt: originalDate,
       );
@@ -58,7 +58,7 @@ void main() {
       final secondSettings = BudgetSettingsEntity(
         monthlyIncome: 3000000,
         paymentDate: 25,
-        fixedExpenses: 800000,
+        otherFixedExpense: 800000,
         emergencyFundPct: 0.15,
         createdAt: DateTime(2026, 5, 8),
       );
@@ -103,7 +103,7 @@ void main() {
       await datasource.saveBudgetSettings(BudgetSettingsEntity(
         monthlyIncome: 0,
         paymentDate: 1,
-        fixedExpenses: 0,
+        otherFixedExpense: 0,
         emergencyFundPct: 0.10,
         createdAt: DateTime(2026, 5, 8),
       ));

@@ -10,7 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   firebase_remote_config
   firebase_storage
-  sqlite3_flutter_libs
+  flutter_timezone
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

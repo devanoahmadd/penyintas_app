@@ -8,8 +8,26 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
+import 'package:penyintas_app/features/report/data/datasources/report_local_datasource.dart';
+import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
+import 'package:penyintas_app/features/report/data/repositories/report_repository_impl.dart';
+import 'package:penyintas_app/features/report/domain/repositories/report_repository.dart';
+import 'package:penyintas_app/features/report/domain/usecases/get_ai_insight_usecase.dart';
+import 'package:penyintas_app/features/report/domain/usecases/get_monthly_report_usecase.dart';
+import 'package:penyintas_app/features/report/presentation/bloc/report_bloc.dart';
+import 'package:penyintas_app/features/notification/data/datasources/notification_remote_datasource.dart';
+import 'package:penyintas_app/features/notification/data/repositories/notification_repository_impl.dart';
+import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/cancel_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/save_fcm_token_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/schedule_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
+import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/repositories/auth_repository_impl.dart';
@@ -58,6 +76,8 @@ Future<void> init({required AppDatabase db}) async {
   _initTransaction();
   _initDashboard();
   _initSync();
+  _initNotification();
+  _initReport();
 }
 
 void _registerExternal(AppDatabase db) {
@@ -79,6 +99,7 @@ void _registerExternal(AppDatabase db) {
 }
 
 void _registerCore() {
+  sl.registerLazySingleton<GoRouter>(() => createAppRouter());
   sl.registerLazySingleton<NetworkInfo>(
     () => NetworkInfoImpl(sl()),
   );
@@ -198,5 +219,59 @@ void _initDashboard() {
       onboardingRepository: sl(),
       calculateDtl: sl(),
     ),
+  );
+}
+
+void _initReport() {
+  sl.registerFactory(() => ReportBloc(
+        getMonthlyReport: sl(),
+        getAiInsight: sl(),
+      ));
+
+  sl.registerLazySingleton(() => GetMonthlyReportUseCase(sl()));
+  sl.registerLazySingleton(() => GetAiInsightUseCase(sl()));
+
+  sl.registerLazySingleton<ReportRepository>(
+    () => ReportRepositoryImpl(local: sl(), remote: sl(), db: sl()),
+  );
+
+  sl.registerLazySingleton<ReportLocalDatasource>(
+    () => ReportLocalDatasourceImpl(sl()),
+  );
+  sl.registerLazySingleton<ReportRemoteDatasource>(
+    () => ReportRemoteDatasourceImpl(
+          functions: sl(),
+          firestore: sl(),
+          auth: sl(),
+        ),
+  );
+}
+
+void _initNotification() {
+  sl.registerFactory(() => NotificationBloc(
+        requestPermission: sl(),
+        saveFcmToken: sl(),
+        scheduleDailyReminder: sl(),
+        cancelDailyReminder: sl(),
+        messaging: sl(),
+        auth: sl(),
+        local: sl(),
+        db: sl(),
+      ));
+
+  sl.registerLazySingleton(() => RequestPermissionUseCase(sl()));
+  sl.registerLazySingleton(() => SaveFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => ScheduleDailyReminderUseCase(sl()));
+  sl.registerLazySingleton(() => CancelDailyReminderUseCase(sl()));
+
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(local: sl(), remote: sl()),
+  );
+
+  sl.registerLazySingleton<NotificationLocalDatasource>(
+    () => NotificationLocalDatasourceImpl(),
+  );
+  sl.registerLazySingleton<NotificationRemoteDatasource>(
+    () => NotificationRemoteDatasourceImpl(messaging: sl(), firestore: sl()),
   );
 }

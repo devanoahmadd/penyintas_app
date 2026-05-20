@@ -25,10 +25,30 @@ class Step1Submitted extends OnboardingEvent {
 }
 
 class Step2Submitted extends OnboardingEvent {
-  const Step2Submitted({required this.fixedExpenses});
-  final int fixedExpenses;
+  const Step2Submitted({
+    this.rentExpense = 0,
+    this.utilitiesExpense = 0,
+    this.internetExpense = 0,
+    this.phoneExpense = 0,
+    this.otherFixedExpense = 0,
+  });
+  final int rentExpense;
+  final int utilitiesExpense;
+  final int internetExpense;
+  final int phoneExpense;
+  final int otherFixedExpense;
+
+  int get fixedExpenses =>
+      rentExpense + utilitiesExpense + internetExpense + phoneExpense + otherFixedExpense;
+
   @override
-  List<Object> get props => [fixedExpenses];
+  List<Object> get props => [
+        rentExpense,
+        utilitiesExpense,
+        internetExpense,
+        phoneExpense,
+        otherFixedExpense,
+      ];
 }
 
 class Step3Submitted extends OnboardingEvent {

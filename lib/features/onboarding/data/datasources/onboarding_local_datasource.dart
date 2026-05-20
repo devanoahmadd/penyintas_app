@@ -30,7 +30,12 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
           onboardingCompleted: const Value(true),
           monthlyIncome: Value(settings.monthlyIncome),
           paymentDate: Value(settings.paymentDate),
-          fixedExpenses: Value(settings.fixedExpenses),
+          fixedExpenses: Value(settings.fixedExpenses), // computed sum — backward compat
+          rentExpense: Value(settings.rentExpense),
+          utilitiesExpense: Value(settings.utilitiesExpense),
+          internetExpense: Value(settings.internetExpense),
+          phoneExpense: Value(settings.phoneExpense),
+          otherFixedExpense: Value(settings.otherFixedExpense),
           emergencyFundPct: Value(settings.emergencyFundPct),
           // Set once — jangan overwrite jika sudah ada
           onboardingCreatedAt:
@@ -47,9 +52,13 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
     return BudgetSettingsEntity(
       monthlyIncome: saved.monthlyIncome,
       paymentDate: saved.paymentDate,
-      fixedExpenses: saved.fixedExpenses,
       emergencyFundPct: saved.emergencyFundPct,
       createdAt: saved.onboardingCreatedAt ?? DateTime.now(),
+      rentExpense: saved.rentExpense,
+      utilitiesExpense: saved.utilitiesExpense,
+      internetExpense: saved.internetExpense,
+      phoneExpense: saved.phoneExpense,
+      otherFixedExpense: saved.otherFixedExpense,
     );
   }
 

@@ -89,7 +89,7 @@ void main() {
       seed: () =>
           const OnboardingStep2(income: tIncome, paymentDate: tPaymentDate),
       act: (bloc) =>
-          bloc.add(const Step2Submitted(fixedExpenses: tFixedExpenses)),
+          bloc.add(const Step2Submitted(otherFixedExpense: tFixedExpenses)),
       expect: () => [
         isA<OnboardingStep3>()
             .having((s) => s.income, 'income', tIncome)
@@ -115,7 +115,7 @@ void main() {
       seed: () => const OnboardingStep3(
         income: tIncome,
         paymentDate: tPaymentDate,
-        fixedExpenses: tFixedExpenses,
+        otherFixedExpense: tFixedExpenses,
         remainingDays: 30,
       ),
       act: (bloc) => bloc.add(const OnboardingBackPressed()),
@@ -140,7 +140,7 @@ void main() {
       seed: () => const OnboardingStep3(
         income: tIncome,
         paymentDate: tPaymentDate,
-        fixedExpenses: tFixedExpenses,
+        otherFixedExpense: tFixedExpenses,
         remainingDays: 30,
       ),
       setUp: () {
@@ -168,7 +168,7 @@ void main() {
       seed: () => const OnboardingStep3(
         income: tIncome,
         paymentDate: tPaymentDate,
-        fixedExpenses: tFixedExpenses,
+        otherFixedExpense: tFixedExpenses,
         remainingDays: 30,
       ),
       setUp: () {

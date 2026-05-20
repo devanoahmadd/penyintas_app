@@ -46,3 +46,5 @@ Tidak ada swap pubspec — `drift_dev ^2.x` kompatibel langsung dengan `bloc_tes
 - [PROMPT.md](PROMPT.md) — Master prompt per phase (konteks + rencana + hasil implementasi)
 - [docs/phase4-plan.md](docs/phase4-plan.md) — Rencana dan hasil implementasi Phase 4
 - [docs/drift-migration-plan.md](docs/drift-migration-plan.md) — Rencana dan hasil migrasi Isar → Drift
+- [docs/issue-tracker.md](docs/issue-tracker.md) — Tracker bug/kelemahan lintas phase (38 item, prioritas & status)
+- [docs/phase5-plan.md](docs/phase5-plan.md) — Rencana lengkap Phase 5 (bug fix + notification + report)

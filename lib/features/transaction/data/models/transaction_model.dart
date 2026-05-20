@@ -56,7 +56,7 @@ class TransactionModel {
   static TransactionModel fromDrift(Transaction row) => TransactionModel(
         id: row.txId,
         amount: row.amount,
-        category: TransactionCategory.values.byName(row.category),
+        category: _categoryFromString(row.category),
         type: TransactionType.values.byName(row.type),
         note: row.note,
         date: row.date,
@@ -125,16 +125,18 @@ class TransactionModel {
         return TransactionCategory.food;
       case 'transport':
         return TransactionCategory.transport;
-      case 'campus':
-        return TransactionCategory.campus;
-      case 'data':
-        return TransactionCategory.data;
       case 'shopping':
         return TransactionCategory.shopping;
+      case 'health':
+        return TransactionCategory.health;
+      case 'internet':
+      case 'data': // backward compat
+        return TransactionCategory.internet;
       case 'fixed':
         return TransactionCategory.fixed;
       case 'income':
         return TransactionCategory.income;
+      case 'campus': // backward compat → other
       default:
         return TransactionCategory.other;
     }

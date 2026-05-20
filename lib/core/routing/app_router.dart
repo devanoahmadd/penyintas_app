@@ -13,9 +13,14 @@ import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_b
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:penyintas_app/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:penyintas_app/features/report/presentation/bloc/report_bloc.dart';
+import 'package:penyintas_app/features/report/presentation/bloc/report_event.dart';
+import 'package:penyintas_app/features/report/presentation/pages/report_page.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
+import 'package:penyintas_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
 
-final appRouter = GoRouter(
+GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
   refreshListenable: GoRouterRefreshStream(
     FirebaseAuth.instance.authStateChanges(),
@@ -43,14 +48,28 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/dashboard',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<DashboardBloc>(),
-        child: const DashboardPage(),
+      pageBuilder: (context, state) => NoTransitionPage(
+        child: BlocProvider(
+          create: (_) => sl<DashboardBloc>(),
+          child: const DashboardPage(),
+        ),
       ),
     ),
     GoRoute(
       path: '/transactions',
-      builder: (context, state) => const TransactionListPage(),
+      pageBuilder: (context, state) {
+        final now = DateTime.now();
+        return NoTransitionPage(
+          child: BlocProvider(
+            create: (_) => sl<TransactionListBloc>()
+              ..add(LoadTransactions(
+                from: DateTime(now.year, now.month, 1),
+                to: now,
+              )),
+            child: const TransactionListPage(),
+          ),
+        );
+      },
     ),
     GoRoute(
       path: '/budget',
@@ -58,11 +77,16 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/report',
-      builder: (context, state) => const _PlaceholderPage(title: 'Report'),
+      pageBuilder: (context, state) => NoTransitionPage(
+        child: BlocProvider(
+          create: (_) => sl<ReportBloc>()..add(LoadReport(DateTime.now())),
+          child: const ReportPage(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const _PlaceholderPage(title: 'Settings'),
+      builder: (context, state) => const SettingsPage(),
     ),
     GoRoute(
       path: '/profile',
@@ -71,24 +95,28 @@ final appRouter = GoRouter(
   ],
 );
 
+// Cache onboarding status — hindari DB query pada setiap navigasi
+bool? _onboardingDone;
+
 Future<String?> _redirect(BuildContext context, GoRouterState state) async {
   try {
     final user = FirebaseAuth.instance.currentUser;
     final location = state.uri.path;
 
+    // SplashPage mengontrol timingnya sendiri — jangan interrupt
+    if (location == '/splash') return null;
+
     const publicRoutes = ['/splash', '/login', '/register'];
 
     if (user == null) {
+      _onboardingDone = null; // reset saat logout
       return publicRoutes.contains(location) ? null : '/login';
     }
 
-    final db = sl<AppDatabase>();
-    final settings = await (db.select(db.appSettings)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-    final onboardingDone = settings?.onboardingCompleted ?? false;
+    // Query DB hanya sekali; setelah itu pakai cache
+    _onboardingDone ??= await _queryOnboardingDone();
 
-    if (!onboardingDone) {
+    if (!(_onboardingDone ?? false)) {
       return location == '/onboarding' ? null : '/onboarding';
     }
 
@@ -101,6 +129,14 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
     FirebaseCrashlytics.instance.recordError(e, stack);
     return '/login';
   }
+}
+
+Future<bool> _queryOnboardingDone() async {
+  final db = sl<AppDatabase>();
+  final settings = await (db.select(db.appSettings)
+        ..where((t) => t.id.equals(1)))
+      .getSingleOrNull();
+  return settings?.onboardingCompleted ?? false;
 }
 
 class _PlaceholderPage extends StatelessWidget {

@@ -18,6 +18,20 @@ class _SplashPageState extends State<SplashPage>
   late final AnimationController _controller;
   late final Animation<double> _fade;
 
+  // Navigasi hanya boleh terjadi setelah branding minimum 2500ms.
+  // GoRouter tidak menginterrupt /splash (lihat app_router.dart),
+  // sehingga SplashPage memegang kendali penuh atas timing navigasi.
+  bool _canNavigate = false;
+  VoidCallback? _pendingNav;
+
+  void _navigateWhenReady(VoidCallback nav) {
+    if (_canNavigate) {
+      nav();
+    } else {
+      _pendingNav = nav;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -29,13 +43,18 @@ class _SplashPageState extends State<SplashPage>
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
 
-    // Branding minimum 1500ms. AuthCheckRequested sudah di-dispatch dari app.dart.
-    // Setelah delay, jika state masih AuthInitial (stream belum emit), paksa ke /login
-    // sebagai safety fallback — kasus edge: tidak ada koneksi saat startup.
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // Setelah 2500ms: buka gerbang navigasi dan jalankan nav yang tertunda.
+    // Safety fallback: jika auth belum resolve (AuthInitial) → go /login.
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
-      final state = context.read<AuthBloc>().state;
-      if (state is AuthInitial) context.go('/login');
+      _canNavigate = true;
+      if (_pendingNav != null) {
+        _pendingNav!();
+        _pendingNav = null;
+      } else {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! Authenticated) context.go('/login');
+      }
     });
   }
 
@@ -47,30 +66,75 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    // "Setiap widget harus responsif terhadap Theme.of(context).brightness"
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Warna teks di atas latar bg splash
+    final onBg = isDark ? AppColors.textDark : Colors.white;
+    final onBgMuted =
+        isDark ? AppColors.mutedDark : Colors.white.withValues(alpha: 0.85);
+    final onBgDim =
+        isDark ? AppColors.mutedDark : Colors.white.withValues(alpha: 0.5);
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Unauthenticated) {
-          context.go('/login');
+          _navigateWhenReady(() => context.go('/login'));
+        } else if (state is Authenticated) {
+          // Navigasi ke /dashboard; GoRouter._redirect akan handle onboarding check
+          _navigateWhenReady(() => context.go('/dashboard'));
         }
-        // Authenticated: GoRouterRefreshStream + redirect sudah menangani
       },
       child: Scaffold(
-        backgroundColor: AppColors.primary,
+        // Light: latar primary (#0F7A3E) — Dark: latar bgDark (#0B1F14)
+        backgroundColor: isDark ? AppColors.bgDark : AppColors.primary,
         body: FadeTransition(
           opacity: _fade,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const PenyintasLogo(size: 80, reversed: true),
-                const SizedBox(height: 24),
-                Text(
-                  'Bertahan. Berkembang.',
-                  style: AppTextStyles.h2.copyWith(color: Colors.white),
-                  textAlign: TextAlign.center,
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Light: logo putih (reversed) — Dark: logo shoot via PenyintasLogo auto-switch
+                    PenyintasLogo(size: 120, reversed: !isDark),
+                    const SizedBox(height: 24),
+                    // Display scale ("Hero, splash, slogan") di-scale ke 44px
+                    Text(
+                      'Penyintas',
+                      style: AppTextStyles.display.copyWith(
+                        fontSize: 44,
+                        letterSpacing: -1.3,
+                        color: onBg,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // BodySmall (14px Inter Tight) — slogan selalu dua kalimat, diakhiri titik
+                    Text(
+                      'Bertahan. Berkembang.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        letterSpacing: 0.1,
+                        color: onBgMuted,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Versi — caption mono di bottom, non-interaktif
+              Positioned(
+                bottom: 36,
+                left: 0,
+                right: 0,
+                child: Text(
+                  'v0.1 · 2026',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 10,
+                    color: onBgDim,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

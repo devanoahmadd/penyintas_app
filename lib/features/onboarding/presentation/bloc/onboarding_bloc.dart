@@ -54,7 +54,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(OnboardingStep3(
       income: s.income,
       paymentDate: s.paymentDate,
-      fixedExpenses: event.fixedExpenses,
+      rentExpense: event.rentExpense,
+      utilitiesExpense: event.utilitiesExpense,
+      internetExpense: event.internetExpense,
+      phoneExpense: event.phoneExpense,
+      otherFixedExpense: event.otherFixedExpense,
       remainingDays: days > 0 ? days : 30,
     ));
   }
@@ -64,7 +68,18 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) async {
     final s = state as OnboardingStep3;
-    _lastStep3 = s;
+    // Simpan emergencyFundPct dari event agar tersedia saat retry (#30)
+    _lastStep3 = OnboardingStep3(
+      income: s.income,
+      paymentDate: s.paymentDate,
+      rentExpense: s.rentExpense,
+      utilitiesExpense: s.utilitiesExpense,
+      internetExpense: s.internetExpense,
+      phoneExpense: s.phoneExpense,
+      otherFixedExpense: s.otherFixedExpense,
+      remainingDays: s.remainingDays,
+      emergencyFundPct: event.emergencyFundPct,
+    );
     emit(const OnboardingCalculating());
 
     final calcResult = await _calculateDailyBudget(CalcParams(
@@ -77,7 +92,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     final settings = BudgetSettingsEntity(
       monthlyIncome: s.income,
       paymentDate: s.paymentDate,
-      fixedExpenses: s.fixedExpenses,
+      rentExpense: s.rentExpense,
+      utilitiesExpense: s.utilitiesExpense,
+      internetExpense: s.internetExpense,
+      phoneExpense: s.phoneExpense,
+      otherFixedExpense: s.otherFixedExpense,
       emergencyFundPct: event.emergencyFundPct,
       createdAt: DateTime.now(),
     );

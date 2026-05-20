@@ -298,6 +298,7 @@ class _Step1WidgetState extends State<_Step1Widget> {
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     bool valid = true;
     setState(() {
       _incomeError = null;
@@ -305,16 +306,16 @@ class _Step1WidgetState extends State<_Step1Widget> {
 
       final income = _incomeAmount;
       if (income <= 0) {
-        _incomeError = 'Masukkan jumlah kiriman yang valid.';
+        _incomeError = l10n.onboardingErrorInvalidAmount;
         valid = false;
       } else if (income > 100000000) {
-        _incomeError = 'Jumlah terlalu besar.';
+        _incomeError = l10n.onboardingErrorAmountTooLarge;
         valid = false;
       }
 
       final date = _selectedDatePreset;
       if (date == null || date < 1 || date > 31) {
-        _dateError = 'Pilih tanggal kiriman terlebih dahulu.';
+        _dateError = l10n.onboardingErrorSelectDate;
         valid = false;
       }
     });
@@ -362,7 +363,7 @@ class _Step1WidgetState extends State<_Step1Widget> {
                         color: AppColors.primary, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      'PEMASUKAN',
+                      l10n.onboardingEyebrowIncome,
                       style: AppTextStyles.caption
                           .copyWith(color: AppColors.primary),
                     ),
@@ -590,11 +591,12 @@ class _Step2WidgetState extends State<_Step2Widget>
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     String? error;
     if (_totalExpenses == 0) {
-      error = 'Isi paling tidak satu pengeluaran tetap.';
+      error = l10n.onboardingErrorEmptyExpenses;
     } else if (widget.income > 0 && _totalExpenses > widget.income) {
-      error = 'Total pengeluaran melebihi pemasukan. Cek lagi ya.';
+      error = l10n.onboardingErrorExpensesExceedIncome;
     }
     setState(() => _submitError = error);
     return error == null;
@@ -645,7 +647,7 @@ class _Step2WidgetState extends State<_Step2Widget>
                         color: AppColors.primary, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      'PENGELUARAN TETAP',
+                      l10n.onboardingEyebrowFixed,
                       style: AppTextStyles.caption
                           .copyWith(color: AppColors.primary),
                     ),
@@ -681,8 +683,8 @@ class _Step2WidgetState extends State<_Step2Widget>
                       children: [
                         _ExpenseInputRow(
                           icon: Icons.home_outlined,
-                          name: 'Kos / Sewa',
-                          hint: 'Bulanan, kontan',
+                          name: l10n.onboardingExpenseRent,
+                          hint: l10n.onboardingExpenseRentHint,
                           controller: _rentCtrl,
                           focusNode: _focusNodes[0],
                           nextFocusNode: _focusNodes[1],
@@ -692,8 +694,8 @@ class _Step2WidgetState extends State<_Step2Widget>
                         Divider(height: 1, color: borderColor),
                         _ExpenseInputRow(
                           icon: Icons.bolt_outlined,
-                          name: 'Listrik & Air',
-                          hint: 'Token / tagihan',
+                          name: l10n.onboardingExpenseUtilities,
+                          hint: l10n.onboardingExpenseUtilitiesHint,
                           controller: _utilitiesCtrl,
                           focusNode: _focusNodes[1],
                           nextFocusNode: _focusNodes[2],
@@ -703,8 +705,8 @@ class _Step2WidgetState extends State<_Step2Widget>
                         Divider(height: 1, color: borderColor),
                         _ExpenseInputRow(
                           icon: Icons.wifi,
-                          name: 'Internet / Wi-Fi',
-                          hint: 'Paket bulanan',
+                          name: l10n.onboardingExpenseInternet,
+                          hint: l10n.onboardingExpenseInternetHint,
                           controller: _internetCtrl,
                           focusNode: _focusNodes[2],
                           nextFocusNode: _focusNodes[3],
@@ -714,8 +716,8 @@ class _Step2WidgetState extends State<_Step2Widget>
                         Divider(height: 1, color: borderColor),
                         _ExpenseInputRow(
                           icon: Icons.smartphone_outlined,
-                          name: 'Pulsa & Data',
-                          hint: 'Opsional',
+                          name: l10n.onboardingExpensePhone,
+                          hint: l10n.onboardingExpensePhoneHint,
                           controller: _phoneCtrl,
                           focusNode: _focusNodes[3],
                           nextFocusNode: _focusNodes[4],
@@ -725,8 +727,8 @@ class _Step2WidgetState extends State<_Step2Widget>
                         Divider(height: 1, color: borderColor),
                         _ExpenseInputRow(
                           icon: Icons.work_outline,
-                          name: 'Lainnya',
-                          hint: 'Cicilan, langganan',
+                          name: l10n.categoryOther,
+                          hint: l10n.onboardingExpenseOtherHint,
                           controller: _otherCtrl,
                           focusNode: _focusNodes[4],
                           isDark: widget.isDark,
@@ -906,6 +908,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor =
         widget.isDark ? AppColors.textDark : AppColors.textLight;
     final textSoftColor =
@@ -971,8 +974,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
-                            'Pengeluaran tetap melebihi pemasukanmu. '
-                            'Kembali ke langkah sebelumnya dan sesuaikan.',
+                            l10n.onboardingErrorFixedExceedsIncome,
                             style: AppTextStyles.bodySmall
                                 .copyWith(color: AppColors.warn),
                           ),
@@ -986,7 +988,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
                 // Target dana darurat
                 AppTextField(
                   controller: _targetController,
-                  label: 'Target dana darurat',
+                  label: l10n.onboardingEmergencyTargetLabel,
                   hintText: 'Contoh: 5.000.000',
                   keyboardType: TextInputType.number,
                   inputFormatters: [_DotFormatter()],
@@ -1008,7 +1010,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
 
                 // Alokasi label (dinamis, berubah dengan slider)
                 Text(
-                  'Dana darurat per bulan ($pctInt% dari sisa)',
+                  l10n.onboardingEmergencyPerMonth(pctInt),
                   style: AppTextStyles.label.copyWith(color: textColor),
                 ),
                 const SizedBox(height: 6),
@@ -1036,26 +1038,30 @@ class _Step3WidgetState extends State<_Step3Widget> {
                     overlayColor: AppColors.primary.withAlpha(30),
                     trackHeight: 4,
                   ),
-                  child: Slider(
-                    value: _emergencyPct,
-                    min: 0.05,
-                    max: 0.25,
-                    divisions: 20,
-                    onChanged: widget.isLoading
-                        ? null
-                        : (val) => setState(() => _emergencyPct = val),
+                  child: Semantics(
+                    label: l10n.onboardingEmergencyTargetLabel,
+                    value: '$pctInt%',
+                    child: Slider(
+                      value: _emergencyPct,
+                      min: 0.05,
+                      max: 0.25,
+                      divisions: 20,
+                      onChanged: widget.isLoading
+                          ? null
+                          : (val) => setState(() => _emergencyPct = val),
+                    ),
                   ),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '5%',
+                      l10n.onboardingSliderMin,
                       style: AppTextStyles.caption
                           .copyWith(color: textSoftColor),
                     ),
                     Text(
-                      '25%',
+                      l10n.onboardingSliderMax,
                       style: AppTextStyles.caption
                           .copyWith(color: textSoftColor),
                     ),
@@ -1364,7 +1370,7 @@ class _DateSegmentPicker extends StatelessWidget {
             child: Semantics(
               button: true,
               selected: isSelected,
-              label: semanticLabel,
+              label: isSelected ? '$semanticLabel, dipilih' : semanticLabel,
               child: GestureDetector(
                 onTap: () => onSelect(date),
                 child: AnimatedContainer(
@@ -1702,12 +1708,14 @@ class _ExpenseInputRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           // Input column (right-aligned)
-          SizedBox(
-            width: 130,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                TextField(
+          Semantics(
+            label: name,
+            child: SizedBox(
+              width: 130,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextField(
                   controller: controller,
                   focusNode: focusNode,
                   textAlign: TextAlign.right,
@@ -1747,6 +1755,7 @@ class _ExpenseInputRow extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

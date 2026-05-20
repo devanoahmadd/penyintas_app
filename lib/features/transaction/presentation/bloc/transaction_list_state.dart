@@ -15,7 +15,7 @@ final class TransactionListLoaded extends TransactionListState {
     required this.transactions,
     required this.filtered,
     required this.totalSpent,
-    required this.activeFilter,
+    required this.typeFilter,
     required this.from,
     required this.to,
   });
@@ -23,7 +23,7 @@ final class TransactionListLoaded extends TransactionListState {
   final List<TransactionEntity> transactions;
   final List<TransactionEntity> filtered;
   final int totalSpent;
-  final TransactionCategory? activeFilter;
+  final TransactionType? typeFilter;
   final DateTime from;
   final DateTime to;
 
@@ -31,21 +31,20 @@ final class TransactionListLoaded extends TransactionListState {
     List<TransactionEntity>? transactions,
     List<TransactionEntity>? filtered,
     int? totalSpent,
-    TransactionCategory? Function()? activeFilter,
+    TransactionType? Function()? typeFilter,
   }) =>
       TransactionListLoaded(
         transactions: transactions ?? this.transactions,
         filtered: filtered ?? this.filtered,
         totalSpent: totalSpent ?? this.totalSpent,
-        activeFilter:
-            activeFilter != null ? activeFilter() : this.activeFilter,
+        typeFilter: typeFilter != null ? typeFilter() : this.typeFilter,
         from: from,
         to: to,
       );
 
   @override
   List<Object?> get props =>
-      [transactions, filtered, totalSpent, activeFilter, from, to];
+      [transactions, filtered, totalSpent, typeFilter, from, to];
 }
 
 final class TransactionListError extends TransactionListState {

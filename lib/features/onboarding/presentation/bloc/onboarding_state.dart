@@ -28,15 +28,39 @@ class OnboardingStep3 extends OnboardingState {
   const OnboardingStep3({
     required this.income,
     required this.paymentDate,
-    required this.fixedExpenses,
     required this.remainingDays,
+    this.rentExpense = 0,
+    this.utilitiesExpense = 0,
+    this.internetExpense = 0,
+    this.phoneExpense = 0,
+    this.otherFixedExpense = 0,
+    this.emergencyFundPct = 0.10,
   });
   final int income;
   final int paymentDate;
-  final int fixedExpenses;
+  final int rentExpense;
+  final int utilitiesExpense;
+  final int internetExpense;
+  final int phoneExpense;
+  final int otherFixedExpense;
   final int remainingDays;
+  final double emergencyFundPct;
+
+  int get fixedExpenses =>
+      rentExpense + utilitiesExpense + internetExpense + phoneExpense + otherFixedExpense;
+
   @override
-  List<Object> get props => [income, paymentDate, fixedExpenses, remainingDays];
+  List<Object> get props => [
+        income,
+        paymentDate,
+        rentExpense,
+        utilitiesExpense,
+        internetExpense,
+        phoneExpense,
+        otherFixedExpense,
+        remainingDays,
+        emergencyFundPct,
+      ];
 }
 
 class OnboardingCalculating extends OnboardingState {

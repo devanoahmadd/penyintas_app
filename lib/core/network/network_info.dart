@@ -28,8 +28,10 @@ class NetworkInfoImpl implements NetworkInfo {
 
   @override
   Stream<bool> get onConnectivityChanged {
-    return _connectivity.onConnectivityChanged.map(
-      (results) => results.any((r) => r != ConnectivityResult.none),
-    );
+    // #4: asyncMap ke isConnected agar stream juga lakukan reachability check,
+    // bukan hanya cek adapter (WiFi tanpa internet tetap false)
+    return _connectivity.onConnectivityChanged
+        .where((results) => results.any((r) => r != ConnectivityResult.none))
+        .asyncMap((_) => isConnected);
   }
 }

@@ -122,8 +122,8 @@ void main() {
         dispatched.add(item.itemId);
       }
 
-      final t1 = DateTime(2026, 5, 8, 10, 0);
-      final t2 = DateTime(2026, 5, 8, 10, 1);
+      final t1 = DateTime.now().subtract(const Duration(minutes: 1));
+      final t2 = DateTime.now();
       await db.into(db.syncQueue).insert(SyncQueueCompanion.insert(
             itemId: 'second',
             collectionPath: 'p/second',

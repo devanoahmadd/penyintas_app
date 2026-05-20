@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -27,6 +28,12 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _passwordError;
   String? _confirmError;
 
+  // Live valid state — ditampilkan sebagai checkmark hijau
+  bool _emailValid = false;
+  bool _confirmValid = false;
+
+  static final _emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -36,7 +43,8 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  bool _validate() {
+  bool _validate(BuildContext context) {
+    final l10n = context.l10n;
     bool valid = true;
     setState(() {
       _nameError = null;
@@ -45,21 +53,19 @@ class _RegisterPageState extends State<RegisterPage> {
       _confirmError = null;
 
       if (_nameController.text.trim().length < 2) {
-        _nameError = 'Nama minimal 2 karakter.';
+        _nameError = l10n.errorNameMin;
         valid = false;
       }
-      if (_emailController.text.trim().isEmpty ||
-          !RegExp(r'^[^@]+@[^@]+\.[^@]+')
-              .hasMatch(_emailController.text.trim())) {
-        _emailError = 'Format email tidak valid.';
+      if (!_emailValid) {
+        _emailError = l10n.errorEmailInvalid;
         valid = false;
       }
       if (_passwordController.text.length < 8) {
-        _passwordError = 'Password minimal 8 karakter.';
+        _passwordError = l10n.errorPasswordMin;
         valid = false;
       }
-      if (_confirmController.text != _passwordController.text) {
-        _confirmError = 'Konfirmasi password tidak cocok.';
+      if (!_confirmValid) {
+        _confirmError = l10n.errorConfirmMismatch;
         valid = false;
       }
     });
@@ -67,7 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _submit(BuildContext context) {
-    if (!_validate()) return;
+    if (!_validate(context)) return;
     context.read<AuthBloc>().add(SignUpRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -105,95 +111,137 @@ class _RegisterPageState extends State<RegisterPage> {
           state is AuthError,
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final l10n = context.l10n;
 
         return Scaffold(
           backgroundColor: bgColor,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.xxl,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.xl),
-                  const PenyintasLogo(size: 36),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text('Daftar',
-                      style: AppTextStyles.h1.copyWith(color: textColor)),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Mulai perjalananmu bersama Penyintas.',
-                    style:
-                        AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  AppTextField(
-                    controller: _nameController,
-                    label: 'Nama',
-                    hintText: 'Nama panggilanmu',
-                    errorText: _nameError,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    hintText: 'nama@email.com',
-                    errorText: _emailError,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    hintText: 'Minimal 8 karakter',
-                    errorText: _passwordError,
-                    isPassword: true,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: _confirmController,
-                    label: 'Konfirmasi Password',
-                    hintText: 'Ulangi password',
-                    errorText: _confirmError,
-                    isPassword: true,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(context),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  PrimaryButton(
-                    label: 'Daftar',
-                    onPressed: () => _submit(context),
-                    isLoading: isLoading,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Center(
-                    child: GestureDetector(
-                      onTap: () => context.pop(),
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Sudah punya akun? ',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: AppSpacing.xl),
+                        const PenyintasLogo(size: 48),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          l10n.authRegisterTitle,
+                          style: AppTextStyles.h1.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l10n.authRegisterSubtitle,
                           style: AppTextStyles.bodySmall
                               .copyWith(color: textSoftColor),
-                          children: [
-                            TextSpan(
-                              text: 'Masuk.',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
                         ),
-                      ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        AppTextField(
+                          controller: _nameController,
+                          label: l10n.authNameLabel,
+                          hintText: l10n.authNameHint,
+                          errorText: _nameError,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        AppTextField(
+                          controller: _emailController,
+                          label: l10n.authEmailLabel,
+                          hintText: l10n.authEmailHint,
+                          errorText: _emailError,
+                          isValid: _emailValid,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (value) {
+                            final valid =
+                                _emailRegex.hasMatch(value.trim());
+                            if (valid != _emailValid) {
+                              setState(() => _emailValid = valid);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        AppTextField(
+                          controller: _passwordController,
+                          label: l10n.authPasswordLabel,
+                          hintText: l10n.authPasswordHintReg,
+                          errorText: _passwordError,
+                          isPassword: true,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        AppTextField(
+                          controller: _confirmController,
+                          label: l10n.authConfirmLabel,
+                          hintText: l10n.authConfirmHint,
+                          errorText: _confirmError,
+                          isValid: _confirmValid,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          onChanged: (value) {
+                            final valid = value.isNotEmpty &&
+                                value == _passwordController.text;
+                            if (valid != _confirmValid) {
+                              setState(() => _confirmValid = valid);
+                            }
+                          },
+                          onSubmitted: (_) => _submit(context),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.sm,
+                    AppSpacing.xl,
+                    AppSpacing.xxl,
+                  ),
+                  child: Column(
+                    children: [
+                      PrimaryButton(
+                        label: l10n.authCreateAccount,
+                        onPressed: () => _submit(context),
+                        isLoading: isLoading,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            text: l10n.authHasAccount,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: textSoftColor),
+                            children: [
+                              TextSpan(
+                                text: l10n.authSignInLink,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );

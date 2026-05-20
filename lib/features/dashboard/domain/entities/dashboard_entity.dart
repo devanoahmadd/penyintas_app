@@ -17,6 +17,7 @@ class DashboardEntity extends Equatable {
     required this.status,
     required this.lastUpdated,
     required this.todayTransactions,
+    required this.emergencyFundMonthly,
   });
 
   final int dailyBudget;
@@ -31,6 +32,8 @@ class DashboardEntity extends Equatable {
   final BudgetStatus status;
   final DateTime lastUpdated;
   final List<TransactionEntity> todayTransactions;
+  // Cicilan bulanan ke dana darurat (income × emergencyFundPct)
+  final int emergencyFundMonthly;
 
   @override
   List<Object> get props => [
@@ -44,6 +47,7 @@ class DashboardEntity extends Equatable {
         remainingDays,
         avgDailySpend,
         status,
-        lastUpdated,
+        todayTransactions, // lastUpdated sengaja tidak di-include — bukan equality signal
+        emergencyFundMonthly,
       ];
 }

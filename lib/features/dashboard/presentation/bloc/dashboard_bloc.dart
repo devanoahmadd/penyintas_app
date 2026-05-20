@@ -1,4 +1,6 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
@@ -11,8 +13,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   DashboardBloc({required GetDashboardUseCase getDashboard})
       : _getDashboard = getDashboard,
         super(const DashboardInitial()) {
-    on<LoadDashboard>(_onLoad);
-    on<DashboardRefreshed>(_onRefresh);
+    // restartable: event LoadDashboard baru batalkan stream lama
+    on<LoadDashboard>(_onLoad, transformer: restartable());
+    // droppable: abaikan DashboardRefreshed saat stream masih aktif
+    on<DashboardRefreshed>(_onRefresh, transformer: droppable());
   }
 
   final GetDashboardUseCase _getDashboard;
@@ -26,7 +30,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         (failure) => DashboardError(failure.message),
         (entity) => DashboardLoaded(entity),
       ),
-      onError: (e, s) => const DashboardError('Terjadi kesalahan.'),
+      onError: (e, s) {
+        try {
+          FirebaseCrashlytics.instance.recordError(e, s);
+        } catch (_) {}
+        return const DashboardError('Terjadi kesalahan.');
+      },
     );
   }
 
@@ -38,7 +47,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         (failure) => DashboardError(failure.message),
         (entity) => DashboardLoaded(entity),
       ),
-      onError: (e, s) => const DashboardError('Terjadi kesalahan.'),
+      onError: (e, s) {
+        try {
+          FirebaseCrashlytics.instance.recordError(e, s);
+        } catch (_) {}
+        return const DashboardError('Terjadi kesalahan.');
+      },
     );
   }
 }

@@ -113,6 +113,105 @@ class $AppSettingsTable extends AppSettings
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _reminderHourMeta = const VerificationMeta(
+    'reminderHour',
+  );
+  @override
+  late final GeneratedColumn<int> reminderHour = GeneratedColumn<int>(
+    'reminder_hour',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(20),
+  );
+  static const VerificationMeta _reminderMinuteMeta = const VerificationMeta(
+    'reminderMinute',
+  );
+  @override
+  late final GeneratedColumn<int> reminderMinute = GeneratedColumn<int>(
+    'reminder_minute',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _rentExpenseMeta = const VerificationMeta(
+    'rentExpense',
+  );
+  @override
+  late final GeneratedColumn<int> rentExpense = GeneratedColumn<int>(
+    'rent_expense',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _utilitiesExpenseMeta = const VerificationMeta(
+    'utilitiesExpense',
+  );
+  @override
+  late final GeneratedColumn<int> utilitiesExpense = GeneratedColumn<int>(
+    'utilities_expense',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _internetExpenseMeta = const VerificationMeta(
+    'internetExpense',
+  );
+  @override
+  late final GeneratedColumn<int> internetExpense = GeneratedColumn<int>(
+    'internet_expense',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _phoneExpenseMeta = const VerificationMeta(
+    'phoneExpense',
+  );
+  @override
+  late final GeneratedColumn<int> phoneExpense = GeneratedColumn<int>(
+    'phone_expense',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _otherFixedExpenseMeta = const VerificationMeta(
+    'otherFixedExpense',
+  );
+  @override
+  late final GeneratedColumn<int> otherFixedExpense = GeneratedColumn<int>(
+    'other_fixed_expense',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -124,6 +223,14 @@ class $AppSettingsTable extends AppSettings
     fixedExpenses,
     emergencyFundPct,
     onboardingCreatedAt,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
+    rentExpense,
+    utilitiesExpense,
+    internetExpense,
+    phoneExpense,
+    otherFixedExpense,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -206,6 +313,78 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_hour')) {
+      context.handle(
+        _reminderHourMeta,
+        reminderHour.isAcceptableOrUnknown(
+          data['reminder_hour']!,
+          _reminderHourMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minute')) {
+      context.handle(
+        _reminderMinuteMeta,
+        reminderMinute.isAcceptableOrUnknown(
+          data['reminder_minute']!,
+          _reminderMinuteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('rent_expense')) {
+      context.handle(
+        _rentExpenseMeta,
+        rentExpense.isAcceptableOrUnknown(
+          data['rent_expense']!,
+          _rentExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('utilities_expense')) {
+      context.handle(
+        _utilitiesExpenseMeta,
+        utilitiesExpense.isAcceptableOrUnknown(
+          data['utilities_expense']!,
+          _utilitiesExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('internet_expense')) {
+      context.handle(
+        _internetExpenseMeta,
+        internetExpense.isAcceptableOrUnknown(
+          data['internet_expense']!,
+          _internetExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('phone_expense')) {
+      context.handle(
+        _phoneExpenseMeta,
+        phoneExpense.isAcceptableOrUnknown(
+          data['phone_expense']!,
+          _phoneExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('other_fixed_expense')) {
+      context.handle(
+        _otherFixedExpenseMeta,
+        otherFixedExpense.isAcceptableOrUnknown(
+          data['other_fixed_expense']!,
+          _otherFixedExpenseMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -251,6 +430,38 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.dateTime,
         data['${effectivePrefix}onboarding_created_at'],
       ),
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_hour'],
+      )!,
+      reminderMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minute'],
+      )!,
+      rentExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rent_expense'],
+      )!,
+      utilitiesExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}utilities_expense'],
+      )!,
+      internetExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}internet_expense'],
+      )!,
+      phoneExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}phone_expense'],
+      )!,
+      otherFixedExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}other_fixed_expense'],
+      )!,
     );
   }
 
@@ -270,6 +481,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int fixedExpenses;
   final double emergencyFundPct;
   final DateTime? onboardingCreatedAt;
+  final bool reminderEnabled;
+  final int reminderHour;
+  final int reminderMinute;
+  final int rentExpense;
+  final int utilitiesExpense;
+  final int internetExpense;
+  final int phoneExpense;
+  final int otherFixedExpense;
   const AppSetting({
     required this.id,
     required this.locale,
@@ -280,6 +499,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.fixedExpenses,
     required this.emergencyFundPct,
     this.onboardingCreatedAt,
+    required this.reminderEnabled,
+    required this.reminderHour,
+    required this.reminderMinute,
+    required this.rentExpense,
+    required this.utilitiesExpense,
+    required this.internetExpense,
+    required this.phoneExpense,
+    required this.otherFixedExpense,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -295,6 +522,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     if (!nullToAbsent || onboardingCreatedAt != null) {
       map['onboarding_created_at'] = Variable<DateTime>(onboardingCreatedAt);
     }
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['reminder_hour'] = Variable<int>(reminderHour);
+    map['reminder_minute'] = Variable<int>(reminderMinute);
+    map['rent_expense'] = Variable<int>(rentExpense);
+    map['utilities_expense'] = Variable<int>(utilitiesExpense);
+    map['internet_expense'] = Variable<int>(internetExpense);
+    map['phone_expense'] = Variable<int>(phoneExpense);
+    map['other_fixed_expense'] = Variable<int>(otherFixedExpense);
     return map;
   }
 
@@ -311,6 +546,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       onboardingCreatedAt: onboardingCreatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(onboardingCreatedAt),
+      reminderEnabled: Value(reminderEnabled),
+      reminderHour: Value(reminderHour),
+      reminderMinute: Value(reminderMinute),
+      rentExpense: Value(rentExpense),
+      utilitiesExpense: Value(utilitiesExpense),
+      internetExpense: Value(internetExpense),
+      phoneExpense: Value(phoneExpense),
+      otherFixedExpense: Value(otherFixedExpense),
     );
   }
 
@@ -333,6 +576,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       onboardingCreatedAt: serializer.fromJson<DateTime?>(
         json['onboardingCreatedAt'],
       ),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderHour: serializer.fromJson<int>(json['reminderHour']),
+      reminderMinute: serializer.fromJson<int>(json['reminderMinute']),
+      rentExpense: serializer.fromJson<int>(json['rentExpense']),
+      utilitiesExpense: serializer.fromJson<int>(json['utilitiesExpense']),
+      internetExpense: serializer.fromJson<int>(json['internetExpense']),
+      phoneExpense: serializer.fromJson<int>(json['phoneExpense']),
+      otherFixedExpense: serializer.fromJson<int>(json['otherFixedExpense']),
     );
   }
   @override
@@ -348,6 +599,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'fixedExpenses': serializer.toJson<int>(fixedExpenses),
       'emergencyFundPct': serializer.toJson<double>(emergencyFundPct),
       'onboardingCreatedAt': serializer.toJson<DateTime?>(onboardingCreatedAt),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderHour': serializer.toJson<int>(reminderHour),
+      'reminderMinute': serializer.toJson<int>(reminderMinute),
+      'rentExpense': serializer.toJson<int>(rentExpense),
+      'utilitiesExpense': serializer.toJson<int>(utilitiesExpense),
+      'internetExpense': serializer.toJson<int>(internetExpense),
+      'phoneExpense': serializer.toJson<int>(phoneExpense),
+      'otherFixedExpense': serializer.toJson<int>(otherFixedExpense),
     };
   }
 
@@ -361,6 +620,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     int? fixedExpenses,
     double? emergencyFundPct,
     Value<DateTime?> onboardingCreatedAt = const Value.absent(),
+    bool? reminderEnabled,
+    int? reminderHour,
+    int? reminderMinute,
+    int? rentExpense,
+    int? utilitiesExpense,
+    int? internetExpense,
+    int? phoneExpense,
+    int? otherFixedExpense,
   }) => AppSetting(
     id: id ?? this.id,
     locale: locale ?? this.locale,
@@ -373,6 +640,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     onboardingCreatedAt: onboardingCreatedAt.present
         ? onboardingCreatedAt.value
         : this.onboardingCreatedAt,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderHour: reminderHour ?? this.reminderHour,
+    reminderMinute: reminderMinute ?? this.reminderMinute,
+    rentExpense: rentExpense ?? this.rentExpense,
+    utilitiesExpense: utilitiesExpense ?? this.utilitiesExpense,
+    internetExpense: internetExpense ?? this.internetExpense,
+    phoneExpense: phoneExpense ?? this.phoneExpense,
+    otherFixedExpense: otherFixedExpense ?? this.otherFixedExpense,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -397,6 +672,30 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       onboardingCreatedAt: data.onboardingCreatedAt.present
           ? data.onboardingCreatedAt.value
           : this.onboardingCreatedAt,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderHour: data.reminderHour.present
+          ? data.reminderHour.value
+          : this.reminderHour,
+      reminderMinute: data.reminderMinute.present
+          ? data.reminderMinute.value
+          : this.reminderMinute,
+      rentExpense: data.rentExpense.present
+          ? data.rentExpense.value
+          : this.rentExpense,
+      utilitiesExpense: data.utilitiesExpense.present
+          ? data.utilitiesExpense.value
+          : this.utilitiesExpense,
+      internetExpense: data.internetExpense.present
+          ? data.internetExpense.value
+          : this.internetExpense,
+      phoneExpense: data.phoneExpense.present
+          ? data.phoneExpense.value
+          : this.phoneExpense,
+      otherFixedExpense: data.otherFixedExpense.present
+          ? data.otherFixedExpense.value
+          : this.otherFixedExpense,
     );
   }
 
@@ -411,7 +710,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('paymentDate: $paymentDate, ')
           ..write('fixedExpenses: $fixedExpenses, ')
           ..write('emergencyFundPct: $emergencyFundPct, ')
-          ..write('onboardingCreatedAt: $onboardingCreatedAt')
+          ..write('onboardingCreatedAt: $onboardingCreatedAt, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
+          ..write('rentExpense: $rentExpense, ')
+          ..write('utilitiesExpense: $utilitiesExpense, ')
+          ..write('internetExpense: $internetExpense, ')
+          ..write('phoneExpense: $phoneExpense, ')
+          ..write('otherFixedExpense: $otherFixedExpense')
           ..write(')'))
         .toString();
   }
@@ -427,6 +734,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     fixedExpenses,
     emergencyFundPct,
     onboardingCreatedAt,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
+    rentExpense,
+    utilitiesExpense,
+    internetExpense,
+    phoneExpense,
+    otherFixedExpense,
   );
   @override
   bool operator ==(Object other) =>
@@ -440,7 +755,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.paymentDate == this.paymentDate &&
           other.fixedExpenses == this.fixedExpenses &&
           other.emergencyFundPct == this.emergencyFundPct &&
-          other.onboardingCreatedAt == this.onboardingCreatedAt);
+          other.onboardingCreatedAt == this.onboardingCreatedAt &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderHour == this.reminderHour &&
+          other.reminderMinute == this.reminderMinute &&
+          other.rentExpense == this.rentExpense &&
+          other.utilitiesExpense == this.utilitiesExpense &&
+          other.internetExpense == this.internetExpense &&
+          other.phoneExpense == this.phoneExpense &&
+          other.otherFixedExpense == this.otherFixedExpense);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -453,6 +776,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> fixedExpenses;
   final Value<double> emergencyFundPct;
   final Value<DateTime?> onboardingCreatedAt;
+  final Value<bool> reminderEnabled;
+  final Value<int> reminderHour;
+  final Value<int> reminderMinute;
+  final Value<int> rentExpense;
+  final Value<int> utilitiesExpense;
+  final Value<int> internetExpense;
+  final Value<int> phoneExpense;
+  final Value<int> otherFixedExpense;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locale = const Value.absent(),
@@ -463,6 +794,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.fixedExpenses = const Value.absent(),
     this.emergencyFundPct = const Value.absent(),
     this.onboardingCreatedAt = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
+    this.rentExpense = const Value.absent(),
+    this.utilitiesExpense = const Value.absent(),
+    this.internetExpense = const Value.absent(),
+    this.phoneExpense = const Value.absent(),
+    this.otherFixedExpense = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -474,6 +813,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.fixedExpenses = const Value.absent(),
     this.emergencyFundPct = const Value.absent(),
     this.onboardingCreatedAt = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
+    this.rentExpense = const Value.absent(),
+    this.utilitiesExpense = const Value.absent(),
+    this.internetExpense = const Value.absent(),
+    this.phoneExpense = const Value.absent(),
+    this.otherFixedExpense = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -485,6 +832,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? fixedExpenses,
     Expression<double>? emergencyFundPct,
     Expression<DateTime>? onboardingCreatedAt,
+    Expression<bool>? reminderEnabled,
+    Expression<int>? reminderHour,
+    Expression<int>? reminderMinute,
+    Expression<int>? rentExpense,
+    Expression<int>? utilitiesExpense,
+    Expression<int>? internetExpense,
+    Expression<int>? phoneExpense,
+    Expression<int>? otherFixedExpense,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -498,6 +853,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (emergencyFundPct != null) 'emergency_fund_pct': emergencyFundPct,
       if (onboardingCreatedAt != null)
         'onboarding_created_at': onboardingCreatedAt,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderHour != null) 'reminder_hour': reminderHour,
+      if (reminderMinute != null) 'reminder_minute': reminderMinute,
+      if (rentExpense != null) 'rent_expense': rentExpense,
+      if (utilitiesExpense != null) 'utilities_expense': utilitiesExpense,
+      if (internetExpense != null) 'internet_expense': internetExpense,
+      if (phoneExpense != null) 'phone_expense': phoneExpense,
+      if (otherFixedExpense != null) 'other_fixed_expense': otherFixedExpense,
     });
   }
 
@@ -511,6 +874,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int>? fixedExpenses,
     Value<double>? emergencyFundPct,
     Value<DateTime?>? onboardingCreatedAt,
+    Value<bool>? reminderEnabled,
+    Value<int>? reminderHour,
+    Value<int>? reminderMinute,
+    Value<int>? rentExpense,
+    Value<int>? utilitiesExpense,
+    Value<int>? internetExpense,
+    Value<int>? phoneExpense,
+    Value<int>? otherFixedExpense,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -522,6 +893,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       fixedExpenses: fixedExpenses ?? this.fixedExpenses,
       emergencyFundPct: emergencyFundPct ?? this.emergencyFundPct,
       onboardingCreatedAt: onboardingCreatedAt ?? this.onboardingCreatedAt,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderMinute: reminderMinute ?? this.reminderMinute,
+      rentExpense: rentExpense ?? this.rentExpense,
+      utilitiesExpense: utilitiesExpense ?? this.utilitiesExpense,
+      internetExpense: internetExpense ?? this.internetExpense,
+      phoneExpense: phoneExpense ?? this.phoneExpense,
+      otherFixedExpense: otherFixedExpense ?? this.otherFixedExpense,
     );
   }
 
@@ -557,6 +936,30 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
         onboardingCreatedAt.value,
       );
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderHour.present) {
+      map['reminder_hour'] = Variable<int>(reminderHour.value);
+    }
+    if (reminderMinute.present) {
+      map['reminder_minute'] = Variable<int>(reminderMinute.value);
+    }
+    if (rentExpense.present) {
+      map['rent_expense'] = Variable<int>(rentExpense.value);
+    }
+    if (utilitiesExpense.present) {
+      map['utilities_expense'] = Variable<int>(utilitiesExpense.value);
+    }
+    if (internetExpense.present) {
+      map['internet_expense'] = Variable<int>(internetExpense.value);
+    }
+    if (phoneExpense.present) {
+      map['phone_expense'] = Variable<int>(phoneExpense.value);
+    }
+    if (otherFixedExpense.present) {
+      map['other_fixed_expense'] = Variable<int>(otherFixedExpense.value);
+    }
     return map;
   }
 
@@ -571,7 +974,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('paymentDate: $paymentDate, ')
           ..write('fixedExpenses: $fixedExpenses, ')
           ..write('emergencyFundPct: $emergencyFundPct, ')
-          ..write('onboardingCreatedAt: $onboardingCreatedAt')
+          ..write('onboardingCreatedAt: $onboardingCreatedAt, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
+          ..write('rentExpense: $rentExpense, ')
+          ..write('utilitiesExpense: $utilitiesExpense, ')
+          ..write('internetExpense: $internetExpense, ')
+          ..write('phoneExpense: $phoneExpense, ')
+          ..write('otherFixedExpense: $otherFixedExpense')
           ..write(')'))
         .toString();
   }
@@ -1660,6 +2071,14 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> fixedExpenses,
       Value<double> emergencyFundPct,
       Value<DateTime?> onboardingCreatedAt,
+      Value<bool> reminderEnabled,
+      Value<int> reminderHour,
+      Value<int> reminderMinute,
+      Value<int> rentExpense,
+      Value<int> utilitiesExpense,
+      Value<int> internetExpense,
+      Value<int> phoneExpense,
+      Value<int> otherFixedExpense,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -1672,6 +2091,14 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int> fixedExpenses,
       Value<double> emergencyFundPct,
       Value<DateTime?> onboardingCreatedAt,
+      Value<bool> reminderEnabled,
+      Value<int> reminderHour,
+      Value<int> reminderMinute,
+      Value<int> rentExpense,
+      Value<int> utilitiesExpense,
+      Value<int> internetExpense,
+      Value<int> phoneExpense,
+      Value<int> otherFixedExpense,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -1725,6 +2152,46 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<DateTime> get onboardingCreatedAt => $composableBuilder(
     column: $table.onboardingCreatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rentExpense => $composableBuilder(
+    column: $table.rentExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get utilitiesExpense => $composableBuilder(
+    column: $table.utilitiesExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get internetExpense => $composableBuilder(
+    column: $table.internetExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get phoneExpense => $composableBuilder(
+    column: $table.phoneExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get otherFixedExpense => $composableBuilder(
+    column: $table.otherFixedExpense,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1782,6 +2249,46 @@ class $$AppSettingsTableOrderingComposer
     column: $table.onboardingCreatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rentExpense => $composableBuilder(
+    column: $table.rentExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get utilitiesExpense => $composableBuilder(
+    column: $table.utilitiesExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get internetExpense => $composableBuilder(
+    column: $table.internetExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get phoneExpense => $composableBuilder(
+    column: $table.phoneExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get otherFixedExpense => $composableBuilder(
+    column: $table.otherFixedExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -1831,6 +2338,46 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.onboardingCreatedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get rentExpense => $composableBuilder(
+    column: $table.rentExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get utilitiesExpense => $composableBuilder(
+    column: $table.utilitiesExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get internetExpense => $composableBuilder(
+    column: $table.internetExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get phoneExpense => $composableBuilder(
+    column: $table.phoneExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get otherFixedExpense => $composableBuilder(
+    column: $table.otherFixedExpense,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -1873,6 +2420,14 @@ class $$AppSettingsTableTableManager
                 Value<int> fixedExpenses = const Value.absent(),
                 Value<double> emergencyFundPct = const Value.absent(),
                 Value<DateTime?> onboardingCreatedAt = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderHour = const Value.absent(),
+                Value<int> reminderMinute = const Value.absent(),
+                Value<int> rentExpense = const Value.absent(),
+                Value<int> utilitiesExpense = const Value.absent(),
+                Value<int> internetExpense = const Value.absent(),
+                Value<int> phoneExpense = const Value.absent(),
+                Value<int> otherFixedExpense = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locale: locale,
@@ -1883,6 +2438,14 @@ class $$AppSettingsTableTableManager
                 fixedExpenses: fixedExpenses,
                 emergencyFundPct: emergencyFundPct,
                 onboardingCreatedAt: onboardingCreatedAt,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
+                rentExpense: rentExpense,
+                utilitiesExpense: utilitiesExpense,
+                internetExpense: internetExpense,
+                phoneExpense: phoneExpense,
+                otherFixedExpense: otherFixedExpense,
               ),
           createCompanionCallback:
               ({
@@ -1895,6 +2458,14 @@ class $$AppSettingsTableTableManager
                 Value<int> fixedExpenses = const Value.absent(),
                 Value<double> emergencyFundPct = const Value.absent(),
                 Value<DateTime?> onboardingCreatedAt = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int> reminderHour = const Value.absent(),
+                Value<int> reminderMinute = const Value.absent(),
+                Value<int> rentExpense = const Value.absent(),
+                Value<int> utilitiesExpense = const Value.absent(),
+                Value<int> internetExpense = const Value.absent(),
+                Value<int> phoneExpense = const Value.absent(),
+                Value<int> otherFixedExpense = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locale: locale,
@@ -1905,6 +2476,14 @@ class $$AppSettingsTableTableManager
                 fixedExpenses: fixedExpenses,
                 emergencyFundPct: emergencyFundPct,
                 onboardingCreatedAt: onboardingCreatedAt,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
+                rentExpense: rentExpense,
+                utilitiesExpense: utilitiesExpense,
+                internetExpense: internetExpense,
+                phoneExpense: phoneExpense,
+                otherFixedExpense: otherFixedExpense,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

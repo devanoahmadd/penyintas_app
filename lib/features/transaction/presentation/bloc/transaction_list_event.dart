@@ -19,10 +19,10 @@ final class RefreshTransactions extends TransactionListEvent {
 }
 
 final class FilterChanged extends TransactionListEvent {
-  const FilterChanged(this.category);
-  final TransactionCategory? category;
+  const FilterChanged(this.type);
+  final TransactionType? type;
   @override
-  List<Object?> get props => [category];
+  List<Object?> get props => [type];
 }
 
 final class DeleteTransactionRequested extends TransactionListEvent {
