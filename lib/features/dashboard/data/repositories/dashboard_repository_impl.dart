@@ -23,6 +23,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
   final OnboardingRepository _onboarding;
   final CalculateDaysToLiveUseCase _calcDtl;
 
+  // Cache settings — jarang berubah, tidak perlu fetch setiap stream event (#33)
+  BudgetSettingsEntity? _cachedSettings;
+
+  void invalidateSettingsCache() => _cachedSettings = null;
+
   static void _logError(Object e, StackTrace stack) {
     try {
       FirebaseCrashlytics.instance.recordError(e, stack);
@@ -35,8 +40,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
       try {
         final todayTxns = todayResult.fold((l) => <TransactionEntity>[], (r) => r);
 
-        final settingsResult = await _onboarding.getBudgetSettings();
-        final settings = settingsResult.fold((l) => null, (r) => r);
+        _cachedSettings ??= (await _onboarding.getBudgetSettings()).fold(
+          (_) => null,
+          (s) => s,
+        );
+        final settings = _cachedSettings;
 
         if (settings == null) {
           yield const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.'));
@@ -46,18 +54,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
         final now = DateTime.now();
         final monthStart = DateTime(now.year, now.month, 1);
         final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
-
-        final monthResult = await _transactions.getTransactions(
-          from: monthStart,
-          to: monthEnd,
-        );
-        final monthTxns = monthResult.fold((l) => <TransactionEntity>[], (r) => r);
-
         final sevenDaysAgo = now.subtract(const Duration(days: 7));
-        final last7Result = await _transactions.getTransactions(
-          from: sevenDaysAgo,
-          to: now,
-        );
+
+        // #36 — parallelise dua DB query yang independen
+        final [monthResult, last7Result] = await Future.wait([
+          _transactions.getTransactions(from: monthStart, to: monthEnd),
+          _transactions.getTransactions(from: sevenDaysAgo, to: now),
+        ]);
+
+        final monthTxns = monthResult.fold((l) => <TransactionEntity>[], (r) => r);
         final last7Txns = last7Result.fold((l) => <TransactionEntity>[], (r) => r);
 
         yield Right<Failure, DashboardEntity>(_compute(
@@ -80,7 +85,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
     required List<TransactionEntity> last7Txns,
   }) {
     final remainingDays = remainingDaysInCycle(settings.paymentDate);
-    final effectiveDays = remainingDays > 0 ? remainingDays : 30;
+    // #38: fallback ke panjang siklus penuh berikutnya, bukan hardcode 30
+    final effectiveDays = remainingDays > 0 ? remainingDays : daysInCycle(settings.paymentDate);
 
     final emergencyFund =
         (settings.monthlyIncome * settings.emergencyFundPct).round();
@@ -94,8 +100,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
         .where((t) => t.type == TransactionType.expense)
         .fold(0, (sum, t) => sum + t.amount);
 
+    // #25: exclude kategori fixed — sudah diwakili oleh settings.fixedExpenses di formula budget
     final totalSpentThisMonth = monthTxns
-        .where((t) => t.type == TransactionType.expense)
+        .where((t) =>
+            t.type == TransactionType.expense &&
+            t.category != TransactionCategory.fixed)
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
@@ -122,6 +131,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
             ? BudgetStatus.caution
             : BudgetStatus.danger;
 
+    // #61: fallback ke 3 transaksi terakhir (last7) jika tidak ada transaksi hari ini
+    final recentTxns = todayTxns.isNotEmpty
+        ? todayTxns
+        : last7Txns.take(3).toList();
+
     return DashboardEntity(
       dailyBudget: dailyBudget,
       spentToday: spentToday,
@@ -134,7 +148,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
       avgDailySpend: avgDailySpend,
       status: status,
       lastUpdated: DateTime.now(),
-      todayTransactions: todayTxns,
+      todayTransactions: recentTxns,
+      emergencyFundMonthly: emergencyFund,
     );
   }
 }

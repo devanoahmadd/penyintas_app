@@ -36,7 +36,12 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
       final syncData = {
         'monthlyIncome': settings.monthlyIncome,
         'paymentDate': settings.paymentDate,
-        'fixedExpenses': settings.fixedExpenses,
+        'fixedExpenses': settings.fixedExpenses, // computed sum — backward compat
+        'rentExpense': settings.rentExpense,
+        'utilitiesExpense': settings.utilitiesExpense,
+        'internetExpense': settings.internetExpense,
+        'phoneExpense': settings.phoneExpense,
+        'otherFixedExpense': settings.otherFixedExpense,
         'emergencyFundPct': settings.emergencyFundPct,
         'createdAt': settings.createdAt.toIso8601String(),
         'onboardingCompleted': true,
@@ -65,7 +70,8 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
       return const Right(null);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       return const Left(UnknownFailure());
     }
   }

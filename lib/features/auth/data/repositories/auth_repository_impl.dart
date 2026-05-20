@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -20,7 +21,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -40,7 +42,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -52,7 +55,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Right(null);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -64,7 +68,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(user);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
-    } catch (_) {
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       return const Left(UnknownFailure());
     }
   }

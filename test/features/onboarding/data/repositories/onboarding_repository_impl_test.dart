@@ -37,7 +37,7 @@ void main() {
   final tSettings = BudgetSettingsEntity(
     monthlyIncome: 5000000,
     paymentDate: 25,
-    fixedExpenses: 1500000,
+    otherFixedExpense: 1500000,
     emergencyFundPct: 0.10,
     createdAt: DateTime(2026, 5, 1),
   );
@@ -45,7 +45,7 @@ void main() {
   final tModel = BudgetSettingsModel(
     monthlyIncome: 5000000,
     paymentDate: 25,
-    fixedExpenses: 1500000,
+    otherFixedExpense: 1500000,
     emergencyFundPct: 0.10,
     createdAt: DateTime(2026, 5, 1),
   );

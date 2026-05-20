@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -30,21 +31,22 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  bool _validate() {
+  bool _validate(BuildContext context) {
+    final l10n = context.l10n;
     bool valid = true;
     setState(() {
       _emailError = null;
       _passwordError = null;
       if (_emailController.text.trim().isEmpty) {
-        _emailError = 'Email tidak boleh kosong.';
+        _emailError = l10n.errorEmailEmpty;
         valid = false;
       } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
           .hasMatch(_emailController.text.trim())) {
-        _emailError = 'Format email tidak valid.';
+        _emailError = l10n.errorEmailInvalid;
         valid = false;
       }
       if (_passwordController.text.isEmpty) {
-        _passwordError = 'Password tidak boleh kosong.';
+        _passwordError = l10n.errorPasswordEmpty;
         valid = false;
       }
     });
@@ -52,7 +54,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _submit(BuildContext context) {
-    if (!_validate()) return;
+    if (!_validate(context)) return;
     context.read<AuthBloc>().add(SignInRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -89,87 +91,126 @@ class _LoginPageState extends State<LoginPage> {
           state is AuthError,
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final l10n = context.l10n;
 
         return Scaffold(
           backgroundColor: bgColor,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.xxl,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.xl),
-                  const PenyintasLogo(size: 36),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text('Masuk', style: AppTextStyles.h1.copyWith(color: textColor)),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Halo lagi, kamu.',
-                    style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  AppTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    hintText: 'nama@email.com',
-                    errorText: _emailError,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    hintText: 'Password kamu',
-                    errorText: _passwordError,
-                    isPassword: true,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(context),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'Lupa password?',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.primary),
-                      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Konten form — scrollable ──────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      0,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  PrimaryButton(
-                    label: 'Masuk',
-                    onPressed: () => _submit(context),
-                    isLoading: isLoading,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Center(
-                    child: GestureDetector(
-                      onTap: () => context.push('/register'),
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Belum punya akun? ',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: AppSpacing.xl),
+                        const PenyintasLogo(size: 56),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          l10n.authLoginTitle,
+                          style: AppTextStyles.h1.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l10n.authLoginSubtitle,
                           style: AppTextStyles.bodySmall
                               .copyWith(color: textSoftColor),
-                          children: [
-                            TextSpan(
-                              text: 'Daftar di sini.',
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        AppTextField(
+                          controller: _emailController,
+                          label: l10n.authEmailLabel,
+                          hintText: l10n.authEmailHint,
+                          errorText: _emailError,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        AppTextField(
+                          controller: _passwordController,
+                          label: l10n.authPasswordLabel,
+                          hintText: l10n.authPasswordHint,
+                          errorText: _passwordError,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _submit(context),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs,
+                                vertical: AppSpacing.xs,
+                              ),
+                            ),
+                            child: Text(
+                              l10n.authForgotPassword,
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                // ── Aksi — pinned ke bawah ────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.sm,
+                    AppSpacing.xl,
+                    AppSpacing.xxl,
+                  ),
+                  child: Column(
+                    children: [
+                      PrimaryButton(
+                        label: l10n.authSignIn,
+                        onPressed: () => _submit(context),
+                        isLoading: isLoading,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      GestureDetector(
+                        onTap: () => context.push('/register'),
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            text: l10n.authNoAccount,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: textSoftColor),
+                            children: [
+                              TextSpan(
+                                text: l10n.authSignUpLink,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );

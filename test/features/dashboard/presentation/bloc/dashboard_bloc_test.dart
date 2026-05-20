@@ -29,6 +29,7 @@ void main() {
         status: BudgetStatus.safe,
         lastUpdated: lastUpdated ?? DateTime(2026, 5, 8),
         todayTransactions: const [],
+        emergencyFundMonthly: 200000,
       );
 
   setUpAll(() {
