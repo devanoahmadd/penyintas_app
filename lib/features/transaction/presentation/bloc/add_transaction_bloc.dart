@@ -23,6 +23,7 @@ class AddTransactionBloc
     on<TypeToggled>(_onTypeToggled);
     on<NoteChanged>(_onNoteChanged);
     on<DateChanged>(_onDateChanged);
+    on<GoalSelected>(_onGoalSelected);
     on<SubmitTransaction>(_onSubmit);
   }
 
@@ -49,7 +50,8 @@ class AddTransactionBloc
       final next = s.type == TransactionType.expense
           ? TransactionType.income
           : TransactionType.expense;
-      emit(s.copyWith(type: next));
+      // Clear goal link saat beralih ke expense — goal hanya untuk income
+      emit(s.copyWith(type: next, selectedGoalId: null));
     }
   }
 
@@ -62,6 +64,13 @@ class AddTransactionBloc
   void _onDateChanged(DateChanged event, Emitter<AddTransactionState> emit) {
     if (state is AddTransactionInProgress) {
       emit((state as AddTransactionInProgress).copyWith(date: event.date));
+    }
+  }
+
+  void _onGoalSelected(GoalSelected event, Emitter<AddTransactionState> emit) {
+    if (state is AddTransactionInProgress) {
+      emit((state as AddTransactionInProgress)
+          .copyWith(selectedGoalId: event.goalId));
     }
   }
 
@@ -85,6 +94,7 @@ class AddTransactionBloc
       isSynced: false,
       createdAt: now,
       updatedAt: now,
+      goalId: s.type == TransactionType.income ? s.selectedGoalId : null,
     );
 
     final result = await _addTransaction(entity);

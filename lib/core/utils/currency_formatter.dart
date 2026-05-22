@@ -1,28 +1,47 @@
 import 'package:intl/intl.dart';
+import 'currency_config.dart';
 
-final _formatter = NumberFormat('#,###', 'id_ID');
+// Cache NumberFormat per currency code — tidak dibuat ulang setiap panggilan (#135)
+final Map<String, NumberFormat> _fmtCache = {};
 
-/// Format integer Rupiah → "Rp 1.245.000"
-/// Locale id_ID menggunakan titik sebagai pemisah ribuan.
-String formatRupiah(int amount) {
-  return 'Rp ${_formatter.format(amount)}';
+// Fungsi utama — pakai ini untuk semua nominal mulai Phase 7
+String formatCurrency(int amount, CurrencyConfig config) {
+  final fmt = _fmtCache.putIfAbsent(
+    config.code,
+    () => NumberFormat.currency(
+      locale: config.locale,
+      symbol: '${config.symbol} ',
+      decimalDigits: config.decimalDigits,
+    ),
+  );
+  return fmt.format(amount);
 }
 
-/// Compact format untuk space sempit → "Rp 1,2jt" / "Rp 480rb"
-String formatRupiahCompact(int amount) {
-  if (amount >= 1000000) {
-    final juta = amount / 1000000;
-    final str = juta == juta.truncateToDouble()
-        ? juta.toInt().toString()
-        : juta.toStringAsFixed(1);
-    return 'Rp ${str}jt';
+String formatCurrencyCompact(int amount, CurrencyConfig config) {
+  // #134: Guard negatif — tanda minus harus di luar simbol (bukan "Rp -Xrb")
+  final isNeg = amount < 0;
+  final abs = amount.abs();
+
+  final String result;
+  if (abs >= 1000000) {
+    final millions = abs / 1000000;
+    final val = millions == millions.truncateToDouble()
+        ? millions.toStringAsFixed(0)
+        : millions.toStringAsFixed(1);
+    result = '${config.symbol} $val${config.compactMillion}';
+  } else if (abs >= 1000) {
+    final val = (abs / 1000).toStringAsFixed(0);
+    result = '${config.symbol} $val${config.compactThousand}';
+  } else {
+    result = formatCurrency(abs, config);
   }
-  if (amount >= 1000) {
-    final ribu = amount / 1000;
-    final str = ribu == ribu.truncateToDouble()
-        ? ribu.toInt().toString()
-        : ribu.toStringAsFixed(1);
-    return 'Rp ${str}rb';
-  }
-  return formatRupiah(amount);
+
+  return isNeg ? '-$result' : result;
 }
+
+// Shim — akan dihapus di Phase 8G setelah semua caller diupdate
+String formatRupiah(int amount) => formatCurrency(amount, CurrencyConfig.idr);
+
+// Shim compact — akan dihapus di Phase 8G
+String formatRupiahCompact(int amount) =>
+    formatCurrencyCompact(amount, CurrencyConfig.idr);

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <!-- Header: nama app + launcher icon -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="PENYINTAS"
+            android:textColor="#6B7264"
+            android:textSize="9sp"
+            android:letterSpacing="0.12"
+            android:fontFamily="monospace" />
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@mipmap/ic_launcher"
+            android:scaleType="centerInside"
+            android:contentDescription="Penyintas" />
+
+    </LinearLayout>
+
+    <!-- Days to Live row — marginTop menggantikan <View> spacer yang dilarang di RemoteViews API 31+ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <!-- Angka DTL besar -->
+        <TextView
+            android:id="@+id/tv_days"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textSize="38sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:textColor="#0F7A3E" />
+
+        <!-- Label "hari tersisa" di samping angka -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="hari"
+                android:textSize="12sp"
+                android:textColor="#1F3328" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="tersisa"
+                android:textSize="12sp"
+                android:textColor="#1F3328" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Divider — FrameLayout menggantikan <View> yang dilarang di RemoteViews API 31+ -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:background="#E2DCC8" />
+
+    <!-- Budget hari ini -->
+    <TextView
+        android:id="@+id/tv_budget"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rp --"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#0B1F14"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="tersedia hari ini"
+        android:textSize="11sp"
+        android:textColor="#6B7264" />
+
+</LinearLayout>

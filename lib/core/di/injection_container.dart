@@ -63,6 +63,25 @@ import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_r
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/get_dashboard_usecase.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:penyintas_app/features/survival/data/datasources/survival_local_datasource.dart';
+import 'package:penyintas_app/features/survival/data/datasources/survival_remote_datasource.dart';
+import 'package:penyintas_app/features/survival/data/repositories/survival_repository_impl.dart';
+import 'package:penyintas_app/features/survival/domain/repositories/survival_repository.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/clear_survival_activated_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/get_survival_mode_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/get_survival_tips_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/record_survival_activated_usecase.dart';
+import 'package:penyintas_app/features/goal/data/datasources/goal_local_datasource.dart';
+import 'package:penyintas_app/features/goal/data/repositories/goal_repository_impl.dart';
+import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/complete_goal_usecase.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/create_goal_usecase.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/delete_goal_usecase.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/link_transaction_usecase.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_usecase.dart';
+import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
+import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 
 final sl = GetIt.instance;
@@ -78,6 +97,8 @@ Future<void> init({required AppDatabase db}) async {
   _initSync();
   _initNotification();
   _initReport();
+  _initSurvival();
+  _initGoal();
 }
 
 void _registerExternal(AppDatabase db) {
@@ -273,5 +294,59 @@ void _initNotification() {
   );
   sl.registerLazySingleton<NotificationRemoteDatasource>(
     () => NotificationRemoteDatasourceImpl(messaging: sl(), firestore: sl()),
+  );
+}
+
+void _initGoal() {
+  // Singleton — instance yang sama dipakai di GoalListPage, GoalDetailPage,
+  // dan dipicu reload dari Dashboard/TransactionList/Profile setelah save
+  sl.registerLazySingleton(() => GoalBloc(
+        loadGoals: sl(),
+        createGoal: sl(),
+        linkTransaction: sl(),
+        unlinkTransaction: sl(),
+        completeGoal: sl(),
+        deleteGoal: sl(),
+      ));
+
+  sl.registerLazySingleton(() => LoadGoalsUseCase(sl()));
+  sl.registerLazySingleton(() => CreateGoalUseCase(sl()));
+  sl.registerLazySingleton(() => LinkTransactionUseCase(sl()));
+  sl.registerLazySingleton(() => UnlinkTransactionUseCase(sl()));
+  sl.registerLazySingleton(() => CompleteGoalUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteGoalUseCase(sl()));
+
+  sl.registerLazySingleton<GoalRepository>(
+    () => GoalRepositoryImpl(local: sl()),
+  );
+
+  sl.registerLazySingleton<GoalLocalDatasource>(
+    () => GoalLocalDatasourceImpl(sl()),
+  );
+}
+
+void _initSurvival() {
+  // Singleton — tips ter-cache in-memory selama sesi, persist antar navigasi
+  sl.registerLazySingleton(() => SurvivalBloc(
+        getSurvivalMode: sl(),
+        getSurvivalTips: sl(),
+        recordActivated: sl(),
+        clearActivated: sl(),
+      ));
+
+  sl.registerLazySingleton(() => GetSurvivalModeUseCase(sl()));
+  sl.registerLazySingleton(() => GetSurvivalTipsUseCase(sl()));
+  sl.registerLazySingleton(() => RecordSurvivalActivatedUseCase(sl()));
+  sl.registerLazySingleton(() => ClearSurvivalActivatedUseCase(sl()));
+
+  sl.registerLazySingleton<SurvivalRepository>(
+    () => SurvivalRepositoryImpl(local: sl(), remote: sl()),
+  );
+
+  sl.registerLazySingleton<SurvivalLocalDatasource>(
+    () => SurvivalLocalDatasourceImpl(sl()),
+  );
+  sl.registerLazySingleton<SurvivalRemoteDatasource>(
+    () => SurvivalRemoteDatasourceImpl(functions: sl()),
   );
 }

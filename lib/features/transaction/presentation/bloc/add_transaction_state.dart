@@ -11,6 +11,7 @@ final class AddTransactionInProgress extends AddTransactionState {
     required this.type,
     required this.note,
     required this.date,
+    this.selectedGoalId,
   });
 
   final int amount;
@@ -18,6 +19,9 @@ final class AddTransactionInProgress extends AddTransactionState {
   final TransactionType type;
   final String note;
   final DateTime date;
+
+  /// null = tidak dikaitkan ke tujuan tabungan.
+  final int? selectedGoalId;
 
   bool get isValid => amount > 0 && amount <= 100000000;
 
@@ -27,6 +31,7 @@ final class AddTransactionInProgress extends AddTransactionState {
     TransactionType? type,
     String? note,
     DateTime? date,
+    Object? selectedGoalId = _kSentinel,
   }) =>
       AddTransactionInProgress(
         amount: amount ?? this.amount,
@@ -34,11 +39,16 @@ final class AddTransactionInProgress extends AddTransactionState {
         type: type ?? this.type,
         note: note ?? this.note,
         date: date ?? this.date,
+        selectedGoalId: identical(selectedGoalId, _kSentinel)
+            ? this.selectedGoalId
+            : selectedGoalId as int?,
       );
 
   @override
-  List<Object?> get props => [amount, category, type, note, date];
+  List<Object?> get props => [amount, category, type, note, date, selectedGoalId];
 }
+
+const _kSentinel = Object();
 
 final class AddTransactionLoading extends AddTransactionState {
   const AddTransactionLoading();

@@ -8,13 +8,18 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 
 // ── Main Sheet ────────────────────────────────────────────────────────────
 
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  const AddTransactionSheet({super.key, this.activeGoals = const []});
+
+  /// Daftar goal aktif (belum selesai) untuk ditampilkan di goal picker.
+  /// Dikirim dari caller (DashboardPage / TransactionListPage).
+  final List<GoalEntity> activeGoals;
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -127,6 +132,30 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       _SectionLabel(context.l10n.txSectionDate, isDark: isDark),
                       const SizedBox(height: AppSpacing.sm),
                       _DateField(isDark: isDark),
+                      // Goal picker — hanya tampil untuk transaksi income dan ada goals aktif
+                      if (widget.activeGoals.isNotEmpty)
+                        BlocBuilder<AddTransactionBloc, AddTransactionState>(
+                          builder: (context, state) {
+                            final isIncome = state is AddTransactionInProgress &&
+                                state.type == TransactionType.income;
+                            if (!isIncome) return const SizedBox.shrink();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: AppSpacing.xl),
+                                _SectionLabel(
+                                  context.l10n.goalLinkLabel,
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                _GoalPicker(
+                                  goals: widget.activeGoals,
+                                  isDark: isDark,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -896,6 +925,89 @@ class _NumpadKey extends StatelessWidget {
                 ),
               ),
       ),
+    );
+  }
+}
+
+// ── Goal Picker ───────────────────────────────────────────────────────────
+
+class _GoalPicker extends StatelessWidget {
+  const _GoalPicker({required this.goals, required this.isDark});
+  final List<GoalEntity> goals;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return BlocBuilder<AddTransactionBloc, AddTransactionState>(
+      builder: (context, state) {
+        final selectedId = state is AddTransactionInProgress
+            ? state.selectedGoalId
+            : null;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 4,
+          ),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: selectedId != null ? AppColors.primary : borderColor,
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int?>(
+              value: selectedId,
+              isExpanded: true,
+              dropdownColor: surfaceColor,
+              style: AppTextStyles.body.copyWith(color: textColor),
+              icon: Icon(Icons.expand_more, color: mutedColor),
+              hint: Text(
+                context.l10n.goalLinkNone,
+                style: AppTextStyles.body.copyWith(color: mutedColor),
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text(
+                    context.l10n.goalLinkNone,
+                    style: AppTextStyles.body.copyWith(color: mutedColor),
+                  ),
+                ),
+                ...goals.map(
+                  (g) => DropdownMenuItem<int?>(
+                    value: g.id,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flag_outlined,
+                            size: 16, color: AppColors.primary),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            g.title,
+                            style:
+                                AppTextStyles.body.copyWith(color: textColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (id) =>
+                  context.read<AddTransactionBloc>().add(GoalSelected(id)),
+            ),
+          ),
+        );
+      },
     );
   }
 }

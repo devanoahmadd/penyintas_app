@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
+import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -93,7 +97,16 @@ class _TransactionListView extends StatelessWidget {
 
   Future<void> _openAddSheet(BuildContext context) async {
     final listBloc = context.read<TransactionListBloc>();
-    await showModalBottomSheet<bool>(
+
+    final goalsResult =
+        await sl<LoadGoalsUseCase>().call(const NoParams());
+    final activeGoals = goalsResult.fold(
+      (_) => <GoalEntity>[],
+      (goals) => goals.where((g) => !g.isCompleted).toList(),
+    );
+
+    if (!context.mounted) return;
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -102,12 +115,14 @@ class _TransactionListView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: const AddTransactionSheet(),
+          child: AddTransactionSheet(activeGoals: activeGoals),
         ),
       ),
     );
+
     if (context.mounted) {
       listBloc.add(const RefreshTransactions());
+      if (saved == true) sl<GoalBloc>().add(const LoadGoals());
     }
   }
 }

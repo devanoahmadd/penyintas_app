@@ -24,18 +24,9 @@ class AppBottomNavBar extends StatelessWidget {
       case 1:
         context.go('/transactions');
       case 3:
+        context.go('/budget');
       case 4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Fitur ini segera hadir.',
-              style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        context.go('/profile');
     }
   }
 

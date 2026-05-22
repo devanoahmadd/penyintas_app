@@ -9,5 +9,6 @@ const { dailyReminder } = require('./daily_reminder');
 const { budgetWarning } = require('./budget_warning');
 const { paydayReminder } = require('./payday_reminder');
 const { generateInsight } = require('./insights');
+const { getSurvivalTips } = require('./survival_tips');
 
-module.exports = { dailyReminder, budgetWarning, paydayReminder, generateInsight };
+module.exports = { dailyReminder, budgetWarning, paydayReminder, generateInsight, getSurvivalTips };

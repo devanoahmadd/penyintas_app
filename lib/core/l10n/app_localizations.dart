@@ -89,6 +89,26 @@ class AppLocalizations {
   String get navReport => _t('nav_report');
   String get navProfile => _t('nav_profile');
 
+  // Saya page
+  String get sayaSectionQuick => _t('saya_section_quick');
+  String get sayaQuickGoals => _t('saya_quick_goals');
+  String get sayaQuickReport => _t('saya_quick_report');
+  String get sayaQuickSurvival => _t('saya_quick_survival');
+  String get sayaSectionSettings => _t('saya_section_settings');
+  String get sayaThemeLabel => _t('saya_theme_label');
+  String get sayaLanguageLabel => _t('saya_language_label');
+  String get sayaNotifLabel => _t('saya_notif_label');
+  String get sayaSectionAccount => _t('saya_section_account');
+  String get sayaVersionLabel => _t('saya_version_label');
+  String get sayaLogout => _t('saya_logout');
+  String get sayaLogoutConfirm => _t('saya_logout_confirm');
+  String get sayaLogoutConfirmYes => _t('saya_logout_confirm_yes');
+
+  // Budget coming soon
+  String get budgetComingSoonEyebrow => _t('budget_coming_soon_eyebrow');
+  String get budgetComingSoonTitle => _t('budget_coming_soon_title');
+  String get budgetComingSoonBody => _t('budget_coming_soon_body');
+
   // Auth
   String get authLoginTitle => _t('auth_login_title');
   String get authLoginSubtitle => _t('auth_login_subtitle');
@@ -156,6 +176,54 @@ class AppLocalizations {
       _t('onboarding_emergency_per_month').replaceAll('{pct}', '$pct');
   String get onboardingSliderMin => _t('onboarding_slider_min');
   String get onboardingSliderMax => _t('onboarding_slider_max');
+
+  // Survival Tips page & banner
+  String get survivalTipsPageTitle => _t('survival_tips_page_title');
+  String get survivalTipsEyebrow => _t('survival_tips_eyebrow');
+  String get survivalBudgetLabel => _t('survival_budget_label');
+  String survivalBudgetDaysSuggested(int days, String amount) =>
+      _t('survival_budget_days_suggested')
+          .replaceAll('{days}', '$days')
+          .replaceAll('{amount}', amount);
+  String survivalTipsSavingChip(String amount) =>
+      _t('survival_tips_saving_chip').replaceAll('{amount}', amount);
+  String survivalBannerBalance(String amount, int days) =>
+      _t('survival_banner_balance')
+          .replaceAll('{amount}', amount)
+          .replaceAll('{days}', '$days');
+  String get survivalTipsLink => _t('survival_tips_link');
+  String get survivalTipsEmpty => _t('survival_tips_empty');
+
+  // Goals
+  String get goalsTitle => _t('goals_title');
+  String get goalsEmpty => _t('goals_empty');
+  String get goalsAdd => _t('goals_add');
+  String goalProgressLabel(String saved, String target) =>
+      _t('goal_progress_label')
+          .replaceAll('{saved}', saved)
+          .replaceAll('{target}', target);
+  String goalTargetDate(String date) =>
+      _t('goal_target_date').replaceAll('{date}', date);
+  String get goalCompleted => _t('goal_completed');
+  String get goalOverdue => _t('goal_overdue');
+  String get goalAddTitle => _t('goal_add_title');
+  String get goalTitleLabel => _t('goal_title_label');
+  String get goalTitleHint => _t('goal_title_hint');
+  String get goalAmountLabel => _t('goal_amount_label');
+  String get goalDateLabel => _t('goal_date_label');
+  String get goalLinkLabel => _t('goal_link_label');
+  String get goalLinkNone => _t('goal_link_none');
+  String get goalDeleteConfirm => _t('goal_delete_confirm');
+  String goalMilestonePct(int pct) =>
+      _t('goal_milestone_pct').replaceAll('{pct}', '$pct');
+  String get goalDetailMarkDone => _t('goal_detail_mark_done');
+  String get goalDetailDeleteTooltip => _t('goal_detail_delete_tooltip');
+  String get goalDetailStatusLabel => _t('goal_detail_status_label');
+  String get goalDetailStatusActive => _t('goal_detail_status_active');
+  String get goalDetailDeleteTitle => _t('goal_detail_delete_title');
+  String get goalDetailDeleteBtn => _t('goal_detail_delete_btn');
+  String get goalDetailTip => _t('goal_detail_tip');
+  String get goalDatePickerHint => _t('goal_date_picker_hint');
 }
 
 class _AppLocalizationsDelegate

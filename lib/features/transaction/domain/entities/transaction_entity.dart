@@ -12,6 +12,7 @@ class TransactionEntity extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.note,
+    this.goalId,
   });
 
   final String id;
@@ -25,10 +26,13 @@ class TransactionEntity extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Link ke Goals.id — null jika tidak dikaitkan ke tujuan tabungan.
+  final int? goalId;
+
   @override
   List<Object?> get props => [
         id, amount, category, type, note, date,
-        isFixed, isSynced, createdAt, updatedAt,
+        isFixed, isSynced, createdAt, updatedAt, goalId,
       ];
 }
 

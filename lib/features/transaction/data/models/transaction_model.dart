@@ -14,6 +14,7 @@ class TransactionModel {
     required this.createdAt,
     required this.updatedAt,
     this.note,
+    this.goalId,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class TransactionModel {
   final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? goalId;
 
   TransactionEntity toEntity() => TransactionEntity(
         id: id,
@@ -38,6 +40,7 @@ class TransactionModel {
         isSynced: isSynced,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        goalId: goalId,
       );
 
   static TransactionModel fromEntity(TransactionEntity e) => TransactionModel(
@@ -51,6 +54,7 @@ class TransactionModel {
         isSynced: e.isSynced,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
+        goalId: e.goalId,
       );
 
   static TransactionModel fromDrift(Transaction row) => TransactionModel(
@@ -64,6 +68,7 @@ class TransactionModel {
         isSynced: row.isSynced,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        goalId: row.goalId,
       );
 
   TransactionsCompanion toDriftCompanion() => TransactionsCompanion(
@@ -77,6 +82,7 @@ class TransactionModel {
         isSynced: Value(isSynced),
         createdAt: Value(createdAt),
         updatedAt: Value(updatedAt),
+        goalId: Value(goalId),
       );
 
   static TransactionModel fromFirestore(Map<String, dynamic> data) =>
@@ -117,6 +123,7 @@ class TransactionModel {
         isSynced: isSynced ?? this.isSynced,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        goalId: goalId,
       );
 
   static TransactionCategory _categoryFromString(String s) {

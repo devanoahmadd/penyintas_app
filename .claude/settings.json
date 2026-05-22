@@ -1,0 +1,22 @@
+{
+  "model": "claude-sonnet-4-6",
+  "permissions": {
+    "allow": [
+      "Read", "Glob", "Grep",
+      "Bash(flutter analyze)",
+      "Bash(flutter test)",
+      "Bash(flutter pub get)",
+      "Bash(dart format *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "ask": [
+      "Write(**)",
+      "Edit(**)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(flutter build *)"
+    ]
+  }
+}

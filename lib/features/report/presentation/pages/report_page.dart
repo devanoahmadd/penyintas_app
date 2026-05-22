@@ -1,5 +1,12 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -11,61 +18,105 @@ import 'package:penyintas_app/features/report/presentation/widgets/category_pie_
 import 'package:penyintas_app/features/report/presentation/widgets/insight_card.dart';
 import 'package:penyintas_app/features/report/presentation/widgets/month_selector.dart';
 import 'package:penyintas_app/features/report/presentation/widgets/weekly_bar_chart.dart';
+import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
-class ReportPage extends StatelessWidget {
+class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
+
+  @override
+  State<ReportPage> createState() => _ReportPageState();
+}
+
+class _ReportPageState extends State<ReportPage> {
+  final _shareKey = GlobalKey();
+
+  Future<void> _shareReport(BuildContext context, ReportLoaded state) async {
+    try {
+      final obj = _shareKey.currentContext?.findRenderObject();
+      if (obj is! RenderRepaintBoundary) return;
+      final image = await obj.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+
+      final dir = await getTemporaryDirectory();
+      final month = DateFormat('yyyy-MM').format(state.report.month);
+      final file = File('${dir.path}/penyintas_laporan_$month.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+
+      try {
+        await Share.shareXFiles(
+          [XFile(file.path, mimeType: 'image/png')],
+          subject: 'Laporan Keuangan Penyintas $month',
+        );
+      } finally {
+        await file.delete().catchError((_) => file);
+      }
+    } catch (_) {
+      // share errors are non-fatal
+    }
+  }
+
+  Widget _buildBody(ReportState state) {
+    if (state is ReportLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state is ReportError) {
+      return _ErrorView(message: state.message);
+    }
+    if (state is ReportLoaded) {
+      return _ReportContent(state: state, shareKey: _shareKey);
+    }
+    return const SizedBox.shrink();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final iconColor = isDark ? AppColors.textDark : AppColors.textLight;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        title: Text('Laporan', style: AppTextStyles.h2),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: BlocBuilder<ReportBloc, ReportState>(
-            builder: (context, state) {
-              final month = state is ReportLoaded
-                  ? state.selectedMonth
-                  : DateTime.now();
-              return MonthSelector(
-                selectedMonth: month,
+    return BlocBuilder<ReportBloc, ReportState>(
+      builder: (context, state) {
+        final selectedMonth =
+            state is ReportLoaded ? state.selectedMonth : DateTime.now();
+
+        return Scaffold(
+          backgroundColor: bgColor,
+          appBar: AppBar(
+            backgroundColor: bgColor,
+            elevation: 0,
+            title: Text('Laporan', style: AppTextStyles.h2),
+            actions: [
+              if (state is ReportLoaded)
+                IconButton(
+                  icon: Icon(Icons.share_outlined, color: iconColor),
+                  tooltip: 'Bagikan laporan',
+                  onPressed: () => _shareReport(context, state),
+                ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(48),
+              child: MonthSelector(
+                selectedMonth: selectedMonth,
                 onPrevious: () =>
                     context.read<ReportBloc>().add(const PreviousMonth()),
                 onNext: () =>
                     context.read<ReportBloc>().add(const NextMonth()),
-              );
-            },
+              ),
+            ),
           ),
-        ),
-      ),
-      body: BlocBuilder<ReportBloc, ReportState>(
-        builder: (context, state) {
-          if (state is ReportLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ReportError) {
-            return _ErrorView(message: state.message);
-          }
-          if (state is ReportLoaded) {
-            return _ReportContent(state: state);
-          }
-          return const SizedBox.shrink();
-        },
-      ),
+          body: _buildBody(state),
+        );
+      },
     );
   }
 }
 
 class _ReportContent extends StatelessWidget {
-  const _ReportContent({required this.state});
+  const _ReportContent({required this.state, required this.shareKey});
 
   final ReportLoaded state;
+  final GlobalKey shareKey;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +126,7 @@ class _ReportContent extends StatelessWidget {
         isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final report = state.report;
 
     final netIsPositive = report.netBalance >= 0;
@@ -86,67 +138,90 @@ class _ReportContent extends StatelessWidget {
             ? '+${(comparedPct * 100).toStringAsFixed(1)}% dari bulan lalu'
             : '${(comparedPct * 100).toStringAsFixed(1)}% dari bulan lalu';
 
+    final monthLabel =
+        DateFormat('MMMM yyyy', 'id').format(report.month).toUpperCase();
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        // Summary card
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: border),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _SummaryItem(
-                    label: 'PENGELUARAN',
-                    value: formatRupiah(report.totalSpent),
-                    valueColor: AppColors.warn,
-                    textColor: textColor,
+        // Summary card — wrapped in RepaintBoundary for share screenshot
+        RepaintBoundary(
+          key: shareKey,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'LAPORAN $monthLabel',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
                   ),
-                  _SummaryItem(
-                    label: 'PEMASUKAN',
-                    value: formatRupiah(report.totalIncome),
-                    valueColor: AppColors.success,
-                    textColor: textColor,
-                  ),
-                  _SummaryItem(
-                    label: 'SALDO BERSIH',
-                    value: report.netBalance == 0
-                        ? formatRupiah(0)
-                        : '${report.netBalance < 0 ? '− ' : '+ '}${formatRupiah(report.netBalance.abs())}',
-                    valueColor: netColor,
-                    textColor: textColor,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                comparedText,
-                style: AppTextStyles.caption.copyWith(color: textSoft),
-              ),
-            ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _SummaryItem(
+                      label: 'PENGELUARAN',
+                      value: formatRupiah(report.totalSpent),
+                      valueColor: AppColors.warn,
+                      textColor: textColor,
+                    ),
+                    _SummaryItem(
+                      label: 'PEMASUKAN',
+                      value: formatRupiah(report.totalIncome),
+                      valueColor: AppColors.success,
+                      textColor: textColor,
+                    ),
+                    _SummaryItem(
+                      label: 'SALDO BERSIH',
+                      value: report.netBalance == 0
+                          ? formatRupiah(0)
+                          : '${report.netBalance < 0 ? '− ' : '+ '}${formatRupiah(report.netBalance.abs())}',
+                      valueColor: netColor,
+                      textColor: textColor,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  comparedText,
+                  style: AppTextStyles.caption.copyWith(color: textSoft),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    PenyintasLogo(size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Penyintas',
+                      style: AppTextStyles.caption.copyWith(color: muted),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // Pie chart
         Text('Pengeluaran per Kategori', style: AppTextStyles.h3),
         const SizedBox(height: AppSpacing.md),
         CategoryPieChart(breakdown: report.categoryBreakdown),
         const SizedBox(height: AppSpacing.xl),
 
-        // Bar chart
         Text('Pengeluaran per Minggu', style: AppTextStyles.h3),
         const SizedBox(height: AppSpacing.md),
         WeeklyBarChart(weeklyData: report.weeklyBreakdown),
         const SizedBox(height: AppSpacing.xl),
 
-        // Daily average
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
@@ -170,7 +245,6 @@ class _ReportContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // AI insight
         InsightCard(
           isLoading: state.isLoadingInsight,
           insights: report.aiInsights,

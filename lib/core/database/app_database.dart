@@ -44,6 +44,8 @@ class AppSettings extends Table {
   IntColumn get internetExpense => integer().withDefault(const Constant(0))();
   IntColumn get phoneExpense => integer().withDefault(const Constant(0))();
   IntColumn get otherFixedExpense => integer().withDefault(const Constant(0))();
+  // Timestamp ketika Survival Mode aktif (null = tidak aktif) — schemaVersion 4
+  DateTimeColumn get survivalModeActivatedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -73,23 +75,41 @@ class Transactions extends Table {
   DateTimeColumn get syncedAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  // Link ke tujuan tabungan (nullable) — schemaVersion 4
+  IntColumn get goalId => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {txId};
 }
 
+/// Tujuan tabungan pengguna.
+class Goals extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text()();
+  IntColumn get targetAmount => integer()();
+  DateTimeColumn get targetDate => dateTime()();
+  BoolColumn get isCompleted =>
+      boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions])
+@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
+    beforeOpen: (details) async {
+      // #138: enforce foreign key constraints — OFF by default in SQLite
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         // Drift type system tidak bisa assigni BoolColumn/IntColumn ke
@@ -124,6 +144,27 @@ class AppDatabase extends _$AppDatabase {
         // Preserve existing fixedExpenses data — copy total ke otherFixedExpense
         await m.database.customStatement(
           'UPDATE app_settings SET other_fixed_expense = fixed_expenses',
+        );
+      }
+      if (from < 4) {
+        // Phase 7: Goals table + goalId di Transactions + survivalModeActivatedAt
+        // Gunakan raw SQL — Drift typed addColumn tidak support nullable columns.
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            target_amount INTEGER NOT NULL,
+            target_date INTEGER NOT NULL,
+            is_completed INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+          )
+        ''');
+        await m.database.customStatement(
+          'ALTER TABLE transactions ADD COLUMN goal_id INTEGER',
+        );
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN survival_mode_activated_at INTEGER',
         );
       }
     },

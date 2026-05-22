@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
@@ -52,6 +57,48 @@ class _SettingsPageState extends State<SettingsPage> {
           );
     } else {
       context.read<NotificationBloc>().add(const CancelDailyReminder());
+    }
+  }
+
+  Future<void> _exportCsv() async {
+    try {
+      final db = sl<AppDatabase>();
+      final txs = await db.select(db.transactions).get();
+
+      final dateFmt = DateFormat('yyyy-MM-dd');
+      final buf = StringBuffer('tanggal,kategori,nominal,catatan,goal_id\n');
+      for (final tx in txs) {
+        final date = dateFmt.format(tx.date);
+        final note = '"${(tx.note ?? '').replaceAll('"', '""')}"';
+        final goalId = tx.goalId?.toString() ?? '';
+        buf.writeln('$date,${tx.category},${tx.amount},$note,$goalId');
+      }
+
+      final dir = await getTemporaryDirectory();
+      final month = DateFormat('yyyy-MM').format(DateTime.now());
+      final file = File('${dir.path}/penyintas_export_$month.csv');
+      await file.writeAsString(buf.toString());
+
+      try {
+        await Share.shareXFiles(
+          [XFile(file.path, mimeType: 'text/csv')],
+          subject: 'Ekspor Transaksi Penyintas $month',
+        );
+      } finally {
+        await file.delete().catchError((_) => file);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal mengekspor data.',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.warn,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -241,6 +288,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
+              _SectionHeader(label: 'EKSPOR DATA', mutedColor: mutedColor),
+              _CardContainer(
+                surfaceColor: surfaceColor,
+                borderColor: borderColor,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xs,
+                  ),
+                  title: Text(
+                    'Export Transaksi (CSV)',
+                    style: AppTextStyles.body.copyWith(color: textColor),
+                  ),
+                  subtitle: Text(
+                    'Ekspor semua transaksi ke file CSV',
+                    style:
+                        AppTextStyles.bodySmall.copyWith(color: textSoftColor),
+                  ),
+                  trailing: Icon(
+                    Icons.download_outlined,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
+                  onTap: _exportCsv,
+                ),
+              ),
               _SectionHeader(label: 'TENTANG', mutedColor: mutedColor),
               _CardContainer(
                 surfaceColor: surfaceColor,

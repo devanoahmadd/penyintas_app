@@ -12,11 +12,16 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
+import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 import 'package:penyintas_app/widgets/common/days_to_live_card.dart';
+import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/widgets/common/survival_mode_banner.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -33,20 +38,38 @@ class _DashboardPageState extends State<DashboardPage> {
     context.read<DashboardBloc>().add(const LoadDashboard());
   }
 
-  void _openAddSheet() {
-    showModalBottomSheet<bool>(
+  Future<void> _openAddSheet() async {
+    List<GoalEntity> activeGoals;
+    final goalState = sl<GoalBloc>().state;
+    if (goalState is GoalLoaded) {
+      activeGoals = goalState.goals.where((g) => !g.isCompleted).toList();
+    } else if (goalState is GoalActionLoading) {
+      activeGoals = goalState.goals.where((g) => !g.isCompleted).toList();
+    } else {
+      // GoalBloc not yet loaded (cold start) — fall back to DB query.
+      final result = await sl<LoadGoalsUseCase>().call(const NoParams());
+      if (!mounted) return;
+      activeGoals = result.fold(
+        (_) => <GoalEntity>[],
+        (goals) => goals.where((g) => !g.isCompleted).toList(),
+      );
+    }
+
+    if (!mounted) return;
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider(
         create: (_) => sl<AddTransactionBloc>(),
-        child: const AddTransactionSheet(),
+        child: AddTransactionSheet(activeGoals: activeGoals),
       ),
-    ).then((saved) {
-      if (mounted && saved == true) {
-        context.read<DashboardBloc>().add(const DashboardRefreshed());
-      }
-    });
+    );
+
+    if (mounted && saved == true) {
+      context.read<DashboardBloc>().add(const DashboardRefreshed());
+      sl<GoalBloc>().add(const LoadGoals());
+    }
   }
 
   @override
@@ -60,38 +83,47 @@ class _DashboardPageState extends State<DashboardPage> {
           : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: bgColor,
-        body: BlocBuilder<DashboardBloc, DashboardState>(
-          builder: (context, state) {
-            if (state is DashboardLoading || state is DashboardInitial) {
-              return const Center(child: CircularProgressIndicator());
+        body: BlocListener<DashboardBloc, DashboardState>(
+          listener: (context, state) {
+            if (state is DashboardLoaded) {
+              context
+                  .read<SurvivalBloc>()
+                  .add(LoadSurvivalMode(state.entity));
             }
-            if (state is DashboardError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.message, style: AppTextStyles.body),
-                    const SizedBox(height: AppSpacing.lg),
-                    TextButton(
-                      onPressed: () => context
-                          .read<DashboardBloc>()
-                          .add(const LoadDashboard()),
-                      child: Text(context.l10n.retry),
-                    ),
-                  ],
-                ),
-              );
-            }
-            final entity = (state as DashboardLoaded).entity;
-            return _DashboardBody(
-              entity: entity,
-              onAddTap: _openAddSheet,
-              onRefresh: () async => context
-                  .read<DashboardBloc>()
-                  .add(const DashboardRefreshed()),
-              onSeeAllTap: () => context.go('/transactions'),
-            );
           },
+          child: BlocBuilder<DashboardBloc, DashboardState>(
+            builder: (context, state) {
+              if (state is DashboardLoading || state is DashboardInitial) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state is DashboardError) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(state.message, style: AppTextStyles.body),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextButton(
+                        onPressed: () => context
+                            .read<DashboardBloc>()
+                            .add(const LoadDashboard()),
+                        child: Text(context.l10n.retry),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final entity = (state as DashboardLoaded).entity;
+              return _DashboardBody(
+                entity: entity,
+                onAddTap: _openAddSheet,
+                onRefresh: () async => context
+                    .read<DashboardBloc>()
+                    .add(const DashboardRefreshed()),
+                onSeeAllTap: () => context.go('/transactions'),
+              );
+            },
+          ),
         ),
         floatingActionButton: AppNavFab(onTap: _openAddSheet),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -139,6 +171,7 @@ class _DashboardBody extends StatelessWidget {
                     SurvivalModeBanner(
                       totalRemaining: entity.totalRemaining,
                       remainingDays: entity.remainingDays,
+                      onTap: () => context.go('/survival/tips'),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],

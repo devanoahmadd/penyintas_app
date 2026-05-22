@@ -1,0 +1,86 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
+import 'package:penyintas_app/features/survival/domain/entities/survival_mode_entity.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/clear_survival_activated_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/get_survival_mode_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/get_survival_tips_usecase.dart';
+import 'package:penyintas_app/features/survival/domain/usecases/record_survival_activated_usecase.dart';
+
+part 'survival_event.dart';
+part 'survival_state.dart';
+
+class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
+  SurvivalBloc({
+    required GetSurvivalModeUseCase getSurvivalMode,
+    required GetSurvivalTipsUseCase getSurvivalTips,
+    required RecordSurvivalActivatedUseCase recordActivated,
+    required ClearSurvivalActivatedUseCase clearActivated,
+  })  : _getSurvivalMode = getSurvivalMode,
+        _getSurvivalTips = getSurvivalTips,
+        _recordActivated = recordActivated,
+        _clearActivated = clearActivated,
+        super(const SurvivalInitial()) {
+    on<LoadSurvivalMode>(_onLoad, transformer: droppable());
+    on<FetchSurvivalTips>(_onFetchTips, transformer: droppable());
+  }
+
+  final GetSurvivalModeUseCase _getSurvivalMode;
+  final GetSurvivalTipsUseCase _getSurvivalTips;
+  final RecordSurvivalActivatedUseCase _recordActivated;
+  final ClearSurvivalActivatedUseCase _clearActivated;
+
+  Future<void> _onLoad(
+      LoadSurvivalMode event, Emitter<SurvivalState> emit) async {
+    final result = await _getSurvivalMode(event.dashboard);
+    if (result.isLeft()) {
+      result.fold((f) => emit(SurvivalError(f.message)), (_) {});
+      return;
+    }
+    final entity = result.getOrElse(() => throw StateError('unreachable'));
+
+    if (!entity.isActive) {
+      // Bersihkan timestamp saat keluar dari danger mode
+      if (entity.activatedAt != null) await _clearActivated();
+      emit(const SurvivalInactive());
+    } else {
+      // Catat waktu aktivasi pertama kali masuk danger mode
+      if (entity.activatedAt == null) await _recordActivated();
+      // Pertahankan tips/loading yang sudah ada saat dashboard refresh
+      if (state is SurvivalTipsLoaded) {
+        final cached = (state as SurvivalTipsLoaded).entity.tips;
+        emit(SurvivalTipsLoaded(entity.copyWith(tips: cached)));
+      } else if (state is SurvivalTipsLoading) {
+        emit(SurvivalTipsLoading(entity));
+      } else {
+        emit(SurvivalActive(entity));
+      }
+    }
+  }
+
+  Future<void> _onFetchTips(
+      FetchSurvivalTips event, Emitter<SurvivalState> emit) async {
+    // Tidak re-fetch jika tips sudah tersedia
+    if (state is SurvivalTipsLoaded) return;
+
+    SurvivalModeEntity? entity;
+    if (state is SurvivalActive) {
+      entity = (state as SurvivalActive).entity;
+    } else if (state is SurvivalError) {
+      entity = (state as SurvivalError).entity;
+    }
+    if (entity == null) return;
+
+    emit(SurvivalTipsLoading(entity));
+    final result = await _getSurvivalTips(SurvivalTipsParams(
+      remainingAmount: entity.remainingAmount,
+      remainingDays: entity.remainingDays,
+      language: event.language,
+    ));
+    result.fold(
+      (failure) => emit(SurvivalError(failure.message, entity)),
+      (tips) => emit(SurvivalTipsLoaded(entity!.copyWith(tips: tips))),
+    );
+  }
+}

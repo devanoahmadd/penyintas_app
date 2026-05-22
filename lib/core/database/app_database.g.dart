@@ -212,6 +212,17 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _survivalModeActivatedAtMeta =
+      const VerificationMeta('survivalModeActivatedAt');
+  @override
+  late final GeneratedColumn<DateTime> survivalModeActivatedAt =
+      GeneratedColumn<DateTime>(
+        'survival_mode_activated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -231,6 +242,7 @@ class $AppSettingsTable extends AppSettings
     internetExpense,
     phoneExpense,
     otherFixedExpense,
+    survivalModeActivatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -385,6 +397,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('survival_mode_activated_at')) {
+      context.handle(
+        _survivalModeActivatedAtMeta,
+        survivalModeActivatedAt.isAcceptableOrUnknown(
+          data['survival_mode_activated_at']!,
+          _survivalModeActivatedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -462,6 +483,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}other_fixed_expense'],
       )!,
+      survivalModeActivatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}survival_mode_activated_at'],
+      ),
     );
   }
 
@@ -489,6 +514,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int internetExpense;
   final int phoneExpense;
   final int otherFixedExpense;
+  final DateTime? survivalModeActivatedAt;
   const AppSetting({
     required this.id,
     required this.locale,
@@ -507,6 +533,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.internetExpense,
     required this.phoneExpense,
     required this.otherFixedExpense,
+    this.survivalModeActivatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -530,6 +557,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['internet_expense'] = Variable<int>(internetExpense);
     map['phone_expense'] = Variable<int>(phoneExpense);
     map['other_fixed_expense'] = Variable<int>(otherFixedExpense);
+    if (!nullToAbsent || survivalModeActivatedAt != null) {
+      map['survival_mode_activated_at'] = Variable<DateTime>(
+        survivalModeActivatedAt,
+      );
+    }
     return map;
   }
 
@@ -554,6 +586,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       internetExpense: Value(internetExpense),
       phoneExpense: Value(phoneExpense),
       otherFixedExpense: Value(otherFixedExpense),
+      survivalModeActivatedAt: survivalModeActivatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(survivalModeActivatedAt),
     );
   }
 
@@ -584,6 +619,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       internetExpense: serializer.fromJson<int>(json['internetExpense']),
       phoneExpense: serializer.fromJson<int>(json['phoneExpense']),
       otherFixedExpense: serializer.fromJson<int>(json['otherFixedExpense']),
+      survivalModeActivatedAt: serializer.fromJson<DateTime?>(
+        json['survivalModeActivatedAt'],
+      ),
     );
   }
   @override
@@ -607,6 +645,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'internetExpense': serializer.toJson<int>(internetExpense),
       'phoneExpense': serializer.toJson<int>(phoneExpense),
       'otherFixedExpense': serializer.toJson<int>(otherFixedExpense),
+      'survivalModeActivatedAt': serializer.toJson<DateTime?>(
+        survivalModeActivatedAt,
+      ),
     };
   }
 
@@ -628,6 +669,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     int? internetExpense,
     int? phoneExpense,
     int? otherFixedExpense,
+    Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
   }) => AppSetting(
     id: id ?? this.id,
     locale: locale ?? this.locale,
@@ -648,6 +690,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     internetExpense: internetExpense ?? this.internetExpense,
     phoneExpense: phoneExpense ?? this.phoneExpense,
     otherFixedExpense: otherFixedExpense ?? this.otherFixedExpense,
+    survivalModeActivatedAt: survivalModeActivatedAt.present
+        ? survivalModeActivatedAt.value
+        : this.survivalModeActivatedAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -696,6 +741,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       otherFixedExpense: data.otherFixedExpense.present
           ? data.otherFixedExpense.value
           : this.otherFixedExpense,
+      survivalModeActivatedAt: data.survivalModeActivatedAt.present
+          ? data.survivalModeActivatedAt.value
+          : this.survivalModeActivatedAt,
     );
   }
 
@@ -718,7 +766,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('utilitiesExpense: $utilitiesExpense, ')
           ..write('internetExpense: $internetExpense, ')
           ..write('phoneExpense: $phoneExpense, ')
-          ..write('otherFixedExpense: $otherFixedExpense')
+          ..write('otherFixedExpense: $otherFixedExpense, ')
+          ..write('survivalModeActivatedAt: $survivalModeActivatedAt')
           ..write(')'))
         .toString();
   }
@@ -742,6 +791,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     internetExpense,
     phoneExpense,
     otherFixedExpense,
+    survivalModeActivatedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -763,7 +813,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.utilitiesExpense == this.utilitiesExpense &&
           other.internetExpense == this.internetExpense &&
           other.phoneExpense == this.phoneExpense &&
-          other.otherFixedExpense == this.otherFixedExpense);
+          other.otherFixedExpense == this.otherFixedExpense &&
+          other.survivalModeActivatedAt == this.survivalModeActivatedAt);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -784,6 +835,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> internetExpense;
   final Value<int> phoneExpense;
   final Value<int> otherFixedExpense;
+  final Value<DateTime?> survivalModeActivatedAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locale = const Value.absent(),
@@ -802,6 +854,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.internetExpense = const Value.absent(),
     this.phoneExpense = const Value.absent(),
     this.otherFixedExpense = const Value.absent(),
+    this.survivalModeActivatedAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -821,6 +874,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.internetExpense = const Value.absent(),
     this.phoneExpense = const Value.absent(),
     this.otherFixedExpense = const Value.absent(),
+    this.survivalModeActivatedAt = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -840,6 +894,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? internetExpense,
     Expression<int>? phoneExpense,
     Expression<int>? otherFixedExpense,
+    Expression<DateTime>? survivalModeActivatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -861,6 +916,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (internetExpense != null) 'internet_expense': internetExpense,
       if (phoneExpense != null) 'phone_expense': phoneExpense,
       if (otherFixedExpense != null) 'other_fixed_expense': otherFixedExpense,
+      if (survivalModeActivatedAt != null)
+        'survival_mode_activated_at': survivalModeActivatedAt,
     });
   }
 
@@ -882,6 +939,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int>? internetExpense,
     Value<int>? phoneExpense,
     Value<int>? otherFixedExpense,
+    Value<DateTime?>? survivalModeActivatedAt,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -901,6 +959,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       internetExpense: internetExpense ?? this.internetExpense,
       phoneExpense: phoneExpense ?? this.phoneExpense,
       otherFixedExpense: otherFixedExpense ?? this.otherFixedExpense,
+      survivalModeActivatedAt:
+          survivalModeActivatedAt ?? this.survivalModeActivatedAt,
     );
   }
 
@@ -960,6 +1020,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (otherFixedExpense.present) {
       map['other_fixed_expense'] = Variable<int>(otherFixedExpense.value);
     }
+    if (survivalModeActivatedAt.present) {
+      map['survival_mode_activated_at'] = Variable<DateTime>(
+        survivalModeActivatedAt.value,
+      );
+    }
     return map;
   }
 
@@ -982,7 +1047,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('utilitiesExpense: $utilitiesExpense, ')
           ..write('internetExpense: $internetExpense, ')
           ..write('phoneExpense: $phoneExpense, ')
-          ..write('otherFixedExpense: $otherFixedExpense')
+          ..write('otherFixedExpense: $otherFixedExpense, ')
+          ..write('survivalModeActivatedAt: $survivalModeActivatedAt')
           ..write(')'))
         .toString();
   }
@@ -1515,6 +1581,15 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _goalIdMeta = const VerificationMeta('goalId');
+  @override
+  late final GeneratedColumn<int> goalId = GeneratedColumn<int>(
+    'goal_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     txId,
@@ -1528,6 +1603,7 @@ class $TransactionsTable extends Transactions
     syncedAt,
     createdAt,
     updatedAt,
+    goalId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1621,6 +1697,12 @@ class $TransactionsTable extends Transactions
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('goal_id')) {
+      context.handle(
+        _goalIdMeta,
+        goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta),
+      );
+    }
     return context;
   }
 
@@ -1674,6 +1756,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      goalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}goal_id'],
+      ),
     );
   }
 
@@ -1695,6 +1781,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final DateTime? syncedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? goalId;
   const Transaction({
     required this.txId,
     required this.amount,
@@ -1707,6 +1794,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.syncedAt,
     required this.createdAt,
     required this.updatedAt,
+    this.goalId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1726,6 +1814,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || goalId != null) {
+      map['goal_id'] = Variable<int>(goalId);
+    }
     return map;
   }
 
@@ -1744,6 +1835,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           : Value(syncedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      goalId: goalId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalId),
     );
   }
 
@@ -1764,6 +1858,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      goalId: serializer.fromJson<int?>(json['goalId']),
     );
   }
   @override
@@ -1781,6 +1876,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'goalId': serializer.toJson<int?>(goalId),
     };
   }
 
@@ -1796,6 +1892,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<DateTime?> syncedAt = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<int?> goalId = const Value.absent(),
   }) => Transaction(
     txId: txId ?? this.txId,
     amount: amount ?? this.amount,
@@ -1808,6 +1905,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    goalId: goalId.present ? goalId.value : this.goalId,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -1822,6 +1920,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      goalId: data.goalId.present ? data.goalId.value : this.goalId,
     );
   }
 
@@ -1838,7 +1937,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('isSynced: $isSynced, ')
           ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('goalId: $goalId')
           ..write(')'))
         .toString();
   }
@@ -1856,6 +1956,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     syncedAt,
     createdAt,
     updatedAt,
+    goalId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1871,7 +1972,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.isSynced == this.isSynced &&
           other.syncedAt == this.syncedAt &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.goalId == this.goalId);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -1886,6 +1988,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<DateTime?> syncedAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<int?> goalId;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.txId = const Value.absent(),
@@ -1899,6 +2002,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.goalId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -1913,6 +2017,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.syncedAt = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.goalId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : txId = Value(txId),
        amount = Value(amount),
@@ -1933,6 +2038,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<DateTime>? syncedAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<int>? goalId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1947,6 +2053,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (syncedAt != null) 'synced_at': syncedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (goalId != null) 'goal_id': goalId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1963,6 +2070,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<DateTime?>? syncedAt,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<int?>? goalId,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -1977,6 +2085,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       syncedAt: syncedAt ?? this.syncedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      goalId: goalId ?? this.goalId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2017,6 +2126,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (goalId.present) {
+      map['goal_id'] = Variable<int>(goalId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2037,7 +2149,472 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('goalId: $goalId, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GoalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetAmountMeta = const VerificationMeta(
+    'targetAmount',
+  );
+  @override
+  late final GeneratedColumn<int> targetAmount = GeneratedColumn<int>(
+    'target_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetDateMeta = const VerificationMeta(
+    'targetDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> targetDate = GeneratedColumn<DateTime>(
+    'target_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isCompletedMeta = const VerificationMeta(
+    'isCompleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isCompleted = GeneratedColumn<bool>(
+    'is_completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    targetAmount,
+    targetDate,
+    isCompleted,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'goals';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Goal> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+        _targetAmountMeta,
+        targetAmount.isAcceptableOrUnknown(
+          data['target_amount']!,
+          _targetAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetAmountMeta);
+    }
+    if (data.containsKey('target_date')) {
+      context.handle(
+        _targetDateMeta,
+        targetDate.isAcceptableOrUnknown(data['target_date']!, _targetDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetDateMeta);
+    }
+    if (data.containsKey('is_completed')) {
+      context.handle(
+        _isCompletedMeta,
+        isCompleted.isAcceptableOrUnknown(
+          data['is_completed']!,
+          _isCompletedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Goal map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Goal(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      targetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_amount'],
+      )!,
+      targetDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}target_date'],
+      )!,
+      isCompleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_completed'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GoalsTable createAlias(String alias) {
+    return $GoalsTable(attachedDatabase, alias);
+  }
+}
+
+class Goal extends DataClass implements Insertable<Goal> {
+  final int id;
+  final String title;
+  final int targetAmount;
+  final DateTime targetDate;
+  final bool isCompleted;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const Goal({
+    required this.id,
+    required this.title,
+    required this.targetAmount,
+    required this.targetDate,
+    required this.isCompleted,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['title'] = Variable<String>(title);
+    map['target_amount'] = Variable<int>(targetAmount);
+    map['target_date'] = Variable<DateTime>(targetDate);
+    map['is_completed'] = Variable<bool>(isCompleted);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  GoalsCompanion toCompanion(bool nullToAbsent) {
+    return GoalsCompanion(
+      id: Value(id),
+      title: Value(title),
+      targetAmount: Value(targetAmount),
+      targetDate: Value(targetDate),
+      isCompleted: Value(isCompleted),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Goal.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Goal(
+      id: serializer.fromJson<int>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      targetAmount: serializer.fromJson<int>(json['targetAmount']),
+      targetDate: serializer.fromJson<DateTime>(json['targetDate']),
+      isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'title': serializer.toJson<String>(title),
+      'targetAmount': serializer.toJson<int>(targetAmount),
+      'targetDate': serializer.toJson<DateTime>(targetDate),
+      'isCompleted': serializer.toJson<bool>(isCompleted),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Goal copyWith({
+    int? id,
+    String? title,
+    int? targetAmount,
+    DateTime? targetDate,
+    bool? isCompleted,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => Goal(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    targetAmount: targetAmount ?? this.targetAmount,
+    targetDate: targetDate ?? this.targetDate,
+    isCompleted: isCompleted ?? this.isCompleted,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Goal copyWithCompanion(GoalsCompanion data) {
+    return Goal(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      targetDate: data.targetDate.present
+          ? data.targetDate.value
+          : this.targetDate,
+      isCompleted: data.isCompleted.present
+          ? data.isCompleted.value
+          : this.isCompleted,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Goal(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    targetAmount,
+    targetDate,
+    isCompleted,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Goal &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.targetAmount == this.targetAmount &&
+          other.targetDate == this.targetDate &&
+          other.isCompleted == this.isCompleted &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GoalsCompanion extends UpdateCompanion<Goal> {
+  final Value<int> id;
+  final Value<String> title;
+  final Value<int> targetAmount;
+  final Value<DateTime> targetDate;
+  final Value<bool> isCompleted;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const GoalsCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
+    this.isCompleted = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  GoalsCompanion.insert({
+    this.id = const Value.absent(),
+    required String title,
+    required int targetAmount,
+    required DateTime targetDate,
+    this.isCompleted = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : title = Value(title),
+       targetAmount = Value(targetAmount),
+       targetDate = Value(targetDate),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<Goal> custom({
+    Expression<int>? id,
+    Expression<String>? title,
+    Expression<int>? targetAmount,
+    Expression<DateTime>? targetDate,
+    Expression<bool>? isCompleted,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (targetDate != null) 'target_date': targetDate,
+      if (isCompleted != null) 'is_completed': isCompleted,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  GoalsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? title,
+    Value<int>? targetAmount,
+    Value<DateTime>? targetDate,
+    Value<bool>? isCompleted,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return GoalsCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      targetAmount: targetAmount ?? this.targetAmount,
+      targetDate: targetDate ?? this.targetDate,
+      isCompleted: isCompleted ?? this.isCompleted,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<int>(targetAmount.value);
+    }
+    if (targetDate.present) {
+      map['target_date'] = Variable<DateTime>(targetDate.value);
+    }
+    if (isCompleted.present) {
+      map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GoalsCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -2049,6 +2626,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
+  late final $GoalsTable goals = $GoalsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2057,6 +2635,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     appSettings,
     syncQueue,
     transactions,
+    goals,
   ];
 }
 
@@ -2079,6 +2658,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> internetExpense,
       Value<int> phoneExpense,
       Value<int> otherFixedExpense,
+      Value<DateTime?> survivalModeActivatedAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -2099,6 +2679,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int> internetExpense,
       Value<int> phoneExpense,
       Value<int> otherFixedExpense,
+      Value<DateTime?> survivalModeActivatedAt,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -2192,6 +2773,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get otherFixedExpense => $composableBuilder(
     column: $table.otherFixedExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get survivalModeActivatedAt => $composableBuilder(
+    column: $table.survivalModeActivatedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2289,6 +2875,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.otherFixedExpense,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get survivalModeActivatedAt => $composableBuilder(
+    column: $table.survivalModeActivatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -2378,6 +2969,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.otherFixedExpense,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get survivalModeActivatedAt => $composableBuilder(
+    column: $table.survivalModeActivatedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -2428,6 +3024,7 @@ class $$AppSettingsTableTableManager
                 Value<int> internetExpense = const Value.absent(),
                 Value<int> phoneExpense = const Value.absent(),
                 Value<int> otherFixedExpense = const Value.absent(),
+                Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locale: locale,
@@ -2446,6 +3043,7 @@ class $$AppSettingsTableTableManager
                 internetExpense: internetExpense,
                 phoneExpense: phoneExpense,
                 otherFixedExpense: otherFixedExpense,
+                survivalModeActivatedAt: survivalModeActivatedAt,
               ),
           createCompanionCallback:
               ({
@@ -2466,6 +3064,7 @@ class $$AppSettingsTableTableManager
                 Value<int> internetExpense = const Value.absent(),
                 Value<int> phoneExpense = const Value.absent(),
                 Value<int> otherFixedExpense = const Value.absent(),
+                Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locale: locale,
@@ -2484,6 +3083,7 @@ class $$AppSettingsTableTableManager
                 internetExpense: internetExpense,
                 phoneExpense: phoneExpense,
                 otherFixedExpense: otherFixedExpense,
+                survivalModeActivatedAt: survivalModeActivatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -2739,6 +3339,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<DateTime?> syncedAt,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<int?> goalId,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -2754,6 +3355,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<DateTime?> syncedAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int?> goalId,
       Value<int> rowid,
     });
 
@@ -2818,6 +3420,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get goalId => $composableBuilder(
+    column: $table.goalId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2885,6 +3492,11 @@ class $$TransactionsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get goalId => $composableBuilder(
+    column: $table.goalId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -2928,6 +3540,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get goalId =>
+      $composableBuilder(column: $table.goalId, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager
@@ -2972,6 +3587,7 @@ class $$TransactionsTableTableManager
                 Value<DateTime?> syncedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int?> goalId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 txId: txId,
@@ -2985,6 +3601,7 @@ class $$TransactionsTableTableManager
                 syncedAt: syncedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                goalId: goalId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3000,6 +3617,7 @@ class $$TransactionsTableTableManager
                 Value<DateTime?> syncedAt = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<int?> goalId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 txId: txId,
@@ -3013,6 +3631,7 @@ class $$TransactionsTableTableManager
                 syncedAt: syncedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                goalId: goalId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3040,6 +3659,237 @@ typedef $$TransactionsTableProcessedTableManager =
       Transaction,
       PrefetchHooks Function()
     >;
+typedef $$GoalsTableCreateCompanionBuilder =
+    GoalsCompanion Function({
+      Value<int> id,
+      required String title,
+      required int targetAmount,
+      required DateTime targetDate,
+      Value<bool> isCompleted,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$GoalsTableUpdateCompanionBuilder =
+    GoalsCompanion Function({
+      Value<int> id,
+      Value<String> title,
+      Value<int> targetAmount,
+      Value<DateTime> targetDate,
+      Value<bool> isCompleted,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
+  $$GoalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GoalsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GoalsTable> {
+  $$GoalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GoalsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GoalsTable> {
+  $$GoalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$GoalsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GoalsTable,
+          Goal,
+          $$GoalsTableFilterComposer,
+          $$GoalsTableOrderingComposer,
+          $$GoalsTableAnnotationComposer,
+          $$GoalsTableCreateCompanionBuilder,
+          $$GoalsTableUpdateCompanionBuilder,
+          (Goal, BaseReferences<_$AppDatabase, $GoalsTable, Goal>),
+          Goal,
+          PrefetchHooks Function()
+        > {
+  $$GoalsTableTableManager(_$AppDatabase db, $GoalsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GoalsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int> targetAmount = const Value.absent(),
+                Value<DateTime> targetDate = const Value.absent(),
+                Value<bool> isCompleted = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => GoalsCompanion(
+                id: id,
+                title: title,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
+                isCompleted: isCompleted,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String title,
+                required int targetAmount,
+                required DateTime targetDate,
+                Value<bool> isCompleted = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => GoalsCompanion.insert(
+                id: id,
+                title: title,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
+                isCompleted: isCompleted,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GoalsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GoalsTable,
+      Goal,
+      $$GoalsTableFilterComposer,
+      $$GoalsTableOrderingComposer,
+      $$GoalsTableAnnotationComposer,
+      $$GoalsTableCreateCompanionBuilder,
+      $$GoalsTableUpdateCompanionBuilder,
+      (Goal, BaseReferences<_$AppDatabase, $GoalsTable, Goal>),
+      Goal,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3050,4 +3900,6 @@ class $AppDatabaseManager {
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db, _db.transactions);
+  $$GoalsTableTableManager get goals =>
+      $$GoalsTableTableManager(_db, _db.goals);
 }

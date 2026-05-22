@@ -1,7 +1,8 @@
 # Claude Code / AI prompts (jangan expose ke repo publik)
 CLAUDE.md
 PROMPT.md
-docs/
+.claude/settings.local.json
+.claude/projects/
 
 # Miscellaneous
 *.class

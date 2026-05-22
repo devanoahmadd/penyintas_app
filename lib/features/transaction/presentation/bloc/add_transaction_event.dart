@@ -43,3 +43,10 @@ final class SubmitTransaction extends AddTransactionEvent {
   @override
   List<Object> get props => [];
 }
+
+final class GoalSelected extends AddTransactionEvent {
+  const GoalSelected(this.goalId);
+  final int? goalId;
+  @override
+  List<Object?> get props => [goalId];
+}

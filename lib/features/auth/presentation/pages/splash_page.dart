@@ -1,3 +1,4 @@
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -43,19 +44,35 @@ class _SplashPageState extends State<SplashPage>
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
 
-    // Setelah 2500ms: buka gerbang navigasi dan jalankan nav yang tertunda.
-    // Safety fallback: jika auth belum resolve (AuthInitial) → go /login.
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (!mounted) return;
-      _canNavigate = true;
-      if (_pendingNav != null) {
-        _pendingNav!();
-        _pendingNav = null;
-      } else {
-        final authState = context.read<AuthBloc>().state;
-        if (authState is! Authenticated) context.go('/login');
-      }
-    });
+    // #20: Durasi splash dari RemoteConfig (default 2500ms).
+    // setDefaults + getInt membaca nilai cached — tidak block UI.
+    _startSplashTimer();
+  }
+
+  Future<void> _startSplashTimer() async {
+    int durationMs = 2500;
+    try {
+      final rc = FirebaseRemoteConfig.instance;
+      await rc.setDefaults(const {'splash_duration_ms': 2500});
+      await rc
+          .fetchAndActivate()
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      final value = rc.getInt('splash_duration_ms');
+      if (value >= 1500 && value <= 8000) durationMs = value;
+    } catch (_) {
+      // fallback ke 2500ms jika RemoteConfig tidak tersedia / timeout
+    }
+
+    await Future.delayed(Duration(milliseconds: durationMs));
+    if (!mounted) return;
+    _canNavigate = true;
+    if (_pendingNav != null) {
+      _pendingNav!();
+      _pendingNav = null;
+    } else {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) context.go('/login');
+    }
   }
 
   @override
