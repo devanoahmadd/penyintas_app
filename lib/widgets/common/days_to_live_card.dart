@@ -47,7 +47,7 @@ class DaysToLiveCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl1),
+      padding: const EdgeInsets.all(AppSpacing.lg2),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(AppRadius.lg),

@@ -164,9 +164,9 @@ class _DashboardBody extends StatelessWidget {
             : AppColors.warn;
     final pctInt = (pct * 100).round();
     final delta = pct <= 0.50
-        ? 'On track'
+        ? 'Sesuai rencana'
         : pct <= 0.80
-            ? 'Mendekati limit'
+            ? 'Mendekati batas'
             : 'Melebihi batas';
 
     return _RingWidget(
@@ -190,7 +190,7 @@ class _DashboardBody extends StatelessWidget {
       label: 'ALOKASI DARURAT',
       value: formatRupiah(entity.emergencyFundMonthly),
       sub: '$pctInt% dari total',
-      delta: 'On track',
+      delta: 'Sesuai rencana',
       pct: pct,
       color: AppColors.primaryBright,
     );
@@ -423,13 +423,14 @@ class _SaldoCardState extends State<_SaldoCard> {
               GestureDetector(
                 onTap: () => setState(() => _hidden = !_hidden),
                 behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
                   child: Icon(
                     _hidden
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    size: 14,
+                    size: 16,
                     color: mutedColor,
                   ),
                 ),
@@ -520,7 +521,7 @@ class _TxnRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: 14,
+            horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
           ),
           child: Row(
@@ -702,7 +703,7 @@ class _BentoFeatTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: 116),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -728,7 +729,6 @@ class _BentoFeatTile extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 10,
                       letterSpacing: 0.12,
-                      fontFamily: 'JetBrainsMono',
                     ),
                   ),
                 ),
@@ -794,7 +794,7 @@ class _BentoQuickTile extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(icon, size: 18, color: AppColors.primary),
             ),
@@ -1011,7 +1011,6 @@ class _RingWidget extends StatelessWidget {
               color: mutedColor,
               fontSize: 9,
               letterSpacing: 0.1,
-              fontFamily: 'JetBrainsMono',
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1036,7 +1035,6 @@ class _RingWidget extends StatelessWidget {
                     Text(
                       '$pctInt%',
                       style: AppTextStyles.caption.copyWith(
-                        fontFamily: 'JetBrainsMono',
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: textColor,
@@ -1146,7 +1144,10 @@ class _TipCard extends StatelessWidget {
         radius: AppRadius.md,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1178,7 +1179,6 @@ class _TipCard extends StatelessWidget {
                         color: mutedColor,
                         fontSize: 9,
                         letterSpacing: 0.12,
-                        fontFamily: 'JetBrainsMono',
                       ),
                     ),
                     TextSpan(
