@@ -47,9 +47,7 @@ class DaysToLiveCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -79,11 +77,12 @@ class DaysToLiveCard extends StatelessWidget {
               Text(
                 '$daysToLive',
                 style: AppTextStyles.h1.copyWith(
-                  fontFamily: 'JetBrainsMono',
-                  fontSize: 64,
-                  fontWeight: FontWeight.w700,
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
                   color: textFull,
                   height: 1.0,
+                  letterSpacing: -1.7,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
