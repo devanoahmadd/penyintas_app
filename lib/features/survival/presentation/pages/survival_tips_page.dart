@@ -19,9 +19,15 @@ class SurvivalTipsPage extends StatefulWidget {
 }
 
 class _SurvivalTipsPageState extends State<SurvivalTipsPage> {
+  bool _tipsRequested = false;
+
+  // initState() cannot call dependOnInheritedWidgetOfExactType (Localizations).
+  // didChangeDependencies runs after initState and is safe for inherited reads.
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tipsRequested) return;
+    _tipsRequested = true;
     final lang = Localizations.localeOf(context).languageCode;
     context.read<SurvivalBloc>().add(FetchSurvivalTips(language: lang));
   }
