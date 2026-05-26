@@ -38,7 +38,13 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    context.read<DashboardBloc>().add(const LoadDashboard());
+    final bloc = context.read<DashboardBloc>();
+    // LoadDashboard hanya dikirim jika bloc belum punya data.
+    // DashboardBloc adalah singleton — bila DashboardLoaded sudah ada,
+    // stream Drift masih berjalan; jangan restart agar tidak flash loading.
+    if (bloc.state is DashboardInitial || bloc.state is DashboardError) {
+      bloc.add(const LoadDashboard());
+    }
   }
 
   Future<void> _openAddSheet() async {
