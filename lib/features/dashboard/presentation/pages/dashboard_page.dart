@@ -220,7 +220,7 @@ class _DashboardBody extends StatelessWidget {
                     remainingDays: entity.remainingDays,
                     status: entity.status,
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md2),
 
                   // 2. Akses Cepat
                   _SectionHeader(
@@ -229,7 +229,7 @@ class _DashboardBody extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   const _BentoGrid(),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md2),
 
                   // 3. Saldo Terkini
                   _SaldoCard(
@@ -243,7 +243,7 @@ class _DashboardBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: _buildSpendingRing(context)),
-                      const SizedBox(width: AppSpacing.sm),
+                      const SizedBox(width: AppSpacing.sm2),
                       Expanded(child: _buildEmergencyRing(context)),
                     ],
                   ),
@@ -251,7 +251,7 @@ class _DashboardBody extends StatelessWidget {
 
                   // 5. Tip
                   const _TipCard(),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md2),
 
                   // 6. Transaksi terkini
                   _SectionHeader(
@@ -532,7 +532,7 @@ class _TxnRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
+            horizontal: AppSpacing.md2,
             vertical: AppSpacing.md,
           ),
           child: Row(
@@ -713,7 +713,7 @@ class _BentoFeatTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: 116),
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(AppSpacing.md2),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -871,7 +871,7 @@ class _BentoGrid extends StatelessWidget {
                 onTap: () => context.go('/survival/tips'),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.sm2),
             Expanded(
               child: _BentoFeatTile(
                 bg: AppColors.primary,
@@ -884,7 +884,7 @@ class _BentoGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.sm2),
         // Quick row 1
         Row(
           children: [
@@ -896,7 +896,7 @@ class _BentoGrid extends StatelessWidget {
                 onTap: () => context.go('/goals'),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.sm2),
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.qr_code_scanner_outlined,
@@ -907,7 +907,7 @@ class _BentoGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.sm2),
         // Quick row 2
         Row(
           children: [
@@ -919,7 +919,7 @@ class _BentoGrid extends StatelessWidget {
                 onTap: () => _comingSoon(context),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.sm2),
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.emoji_events_outlined,
@@ -1156,8 +1156,8 @@ class _TipCard extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.md2,
+          vertical: AppSpacing.sm2,
         ),
         decoration: BoxDecoration(
           color: bg,
