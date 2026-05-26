@@ -1,11 +1,13 @@
 import 'dart:math' show pi;
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
@@ -152,7 +154,8 @@ class _DashboardBody extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final VoidCallback onSeeAllTap;
 
-  Widget _buildSpendingRing() {
+  Widget _buildSpendingRing(BuildContext context) {
+    final l10n = context.l10n;
     final pct = entity.totalMonthlyBudget > 0
         ? (entity.totalSpentThisMonth / entity.totalMonthlyBudget)
             .clamp(0.0, 1.0)
@@ -164,22 +167,23 @@ class _DashboardBody extends StatelessWidget {
             : AppColors.warn;
     final pctInt = (pct * 100).round();
     final delta = pct <= 0.50
-        ? 'Sesuai rencana'
+        ? l10n.dashboardDeltaOnTrack
         : pct <= 0.80
-            ? 'Mendekati batas'
-            : 'Melebihi batas';
+            ? l10n.dashboardDeltaNearing
+            : l10n.dashboardDeltaExceeded;
 
     return _RingWidget(
-      label: 'PENGELUARAN BULAN INI',
+      label: l10n.dashboardSpendingLabel,
       value: formatRupiah(entity.totalSpentThisMonth),
-      sub: '$pctInt% dari anggaran',
+      sub: l10n.dashboardPctOfBudget(pctInt),
       delta: delta,
       pct: pct,
       color: color,
     );
   }
 
-  Widget _buildEmergencyRing() {
+  Widget _buildEmergencyRing(BuildContext context) {
+    final l10n = context.l10n;
     final total = entity.totalMonthlyBudget + entity.emergencyFundMonthly;
     final pct = total > 0
         ? (entity.emergencyFundMonthly / total).clamp(0.0, 1.0)
@@ -187,10 +191,10 @@ class _DashboardBody extends StatelessWidget {
     final pctInt = (pct * 100).round();
 
     return _RingWidget(
-      label: 'ALOKASI DARURAT',
+      label: l10n.dashboardEmergencyLabel,
       value: formatRupiah(entity.emergencyFundMonthly),
-      sub: '$pctInt% dari total',
-      delta: 'Sesuai rencana',
+      sub: l10n.dashboardPctOfTotal(pctInt),
+      delta: l10n.dashboardDeltaOnTrack,
       pct: pct,
       color: AppColors.primaryBright,
     );
@@ -198,6 +202,7 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: onRefresh,
@@ -218,7 +223,10 @@ class _DashboardBody extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
 
                   // 2. Akses Cepat
-                  const _SectionHeader(title: 'Akses Cepat', action: 'Atur'),
+                  _SectionHeader(
+                    title: l10n.dashboardQuickAccess,
+                    action: l10n.dashboardQuickAccessAction,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   const _BentoGrid(),
                   const SizedBox(height: AppSpacing.md),
@@ -234,9 +242,9 @@ class _DashboardBody extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: _buildSpendingRing()),
+                      Expanded(child: _buildSpendingRing(context)),
                       const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: _buildEmergencyRing()),
+                      Expanded(child: _buildEmergencyRing(context)),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -247,8 +255,8 @@ class _DashboardBody extends StatelessWidget {
 
                   // 6. Transaksi terkini
                   _SectionHeader(
-                    title: 'Transaksi terkini',
-                    action: 'Lihat semua',
+                    title: l10n.dashboardRecentTx,
+                    action: l10n.dashboardSeeAllAction,
                     onActionTap: onSeeAllTap,
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -269,12 +277,13 @@ class _DashboardBody extends StatelessWidget {
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader();
 
-  String _greeting() {
+  String _greeting(BuildContext context) {
+    final l10n = context.l10n;
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Selamat pagi,';
-    if (hour < 15) return 'Selamat siang,';
-    if (hour < 18) return 'Selamat sore,';
-    return 'Selamat malam,';
+    if (hour < 12) return l10n.dashboardGreetingMorning;
+    if (hour < 15) return l10n.dashboardGreetingNoon;
+    if (hour < 18) return l10n.dashboardGreetingAfternoon;
+    return l10n.dashboardGreetingEvening;
   }
 
   @override
@@ -285,7 +294,7 @@ class _DashboardHeader extends StatelessWidget {
         isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName ?? 'Penyintas';
+    final name = user?.displayName ?? context.l10n.appName;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
 
     return Padding(
@@ -313,7 +322,7 @@ class _DashboardHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _greeting(),
+                  _greeting(context),
                   style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
                 ),
                 Text(
@@ -383,14 +392,12 @@ class _SaldoCard extends StatefulWidget {
 class _SaldoCardState extends State<_SaldoCard> {
   bool _hidden = false;
 
-  String _timestamp(DateTime dt) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-    ];
+  String _timestamp(BuildContext context, DateTime dt) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final dateStr = DateFormat('d MMMM yyyy', locale).format(dt);
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
-    return 'Per ${dt.day} ${months[dt.month - 1]} ${dt.year} · $h:$m';
+    return '${context.l10n.dashboardBalanceAsOf} $dateStr · $h:$m';
   }
 
   @override
@@ -417,7 +424,7 @@ class _SaldoCardState extends State<_SaldoCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'SALDO TERKINI',
+                context.l10n.dashboardSaldoLabel,
                 style: AppTextStyles.caption.copyWith(color: mutedColor),
               ),
               GestureDetector(
@@ -441,7 +448,9 @@ class _SaldoCardState extends State<_SaldoCard> {
 
           // Balance amount
           Text(
-            _hidden ? 'Rp ••••••' : formatRupiah(widget.entity.totalRemaining),
+            _hidden
+                ? context.l10n.dashboardBalanceHidden
+                : formatRupiah(widget.entity.totalRemaining),
             style: AppTextStyles.h1.copyWith(
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -458,7 +467,7 @@ class _SaldoCardState extends State<_SaldoCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _timestamp(widget.entity.lastUpdated),
+                _timestamp(context, widget.entity.lastUpdated),
                 style: AppTextStyles.caption.copyWith(
                   color: mutedColor,
                   letterSpacing: 0,
@@ -471,7 +480,7 @@ class _SaldoCardState extends State<_SaldoCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Detail',
+                      context.l10n.dashboardBalanceDetail,
                       style: AppTextStyles.label.copyWith(
                         color: AppColors.primary,
                         fontSize: 11,
@@ -508,6 +517,7 @@ class _TxnRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final surfaceColor =
         isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
@@ -516,6 +526,7 @@ class _TxnRow extends StatelessWidget {
 
     final h = transaction.date.hour.toString().padLeft(2, '0');
     final m = transaction.date.minute.toString().padLeft(2, '0');
+    final catLabel = _categoryLabel(l10n, transaction.category);
 
     return Column(
       children: [
@@ -564,14 +575,13 @@ class _TxnRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      transaction.note ??
-                          _categoryLabel(transaction.category),
+                      transaction.note ?? catLabel,
                       style: AppTextStyles.body.copyWith(color: textColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${_categoryLabel(transaction.category)}  $h:$m',
+                      '$catLabel  $h:$m',
                       style: AppTextStyles.caption.copyWith(
                         color: mutedColor,
                         letterSpacing: 0,
@@ -617,24 +627,24 @@ class _TxnRow extends StatelessWidget {
     }
   }
 
-  static String _categoryLabel(TransactionCategory cat) {
+  static String _categoryLabel(AppLocalizations l10n, TransactionCategory cat) {
     switch (cat) {
       case TransactionCategory.food:
-        return 'Makan';
+        return l10n.categoryFood;
       case TransactionCategory.transport:
-        return 'Transport';
+        return l10n.categoryTransport;
       case TransactionCategory.shopping:
-        return 'Belanja';
+        return l10n.categoryShopping;
       case TransactionCategory.health:
-        return 'Kesehatan';
+        return l10n.categoryHealth;
       case TransactionCategory.internet:
-        return 'Internet';
+        return l10n.categoryInternet;
       case TransactionCategory.fixed:
-        return 'Kos';
+        return l10n.categoryFixed;
       case TransactionCategory.income:
-        return 'Pemasukan';
+        return l10n.categoryIncome;
       case TransactionCategory.other:
-        return 'Lainnya';
+        return l10n.categoryOther;
     }
   }
 }
@@ -835,15 +845,16 @@ class _BentoGrid extends StatelessWidget {
 
   void _comingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Segera hadir'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(context.l10n.commonComingSoon),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       children: [
         // Featured row
@@ -854,9 +865,9 @@ class _BentoGrid extends StatelessWidget {
               child: _BentoFeatTile(
                 bg: AppColors.warn,
                 icon: Icons.lightbulb_outline_rounded,
-                label: 'Survival Mode',
-                sub: '3 tips hemat menunggu',
-                badge: 'AI',
+                label: l10n.dashboardBentoSurvivalLabel,
+                sub: l10n.dashboardBentoSurvivalSub,
+                badge: l10n.dashboardBentoSurvivalBadge,
                 onTap: () => context.go('/survival/tips'),
               ),
             ),
@@ -865,9 +876,9 @@ class _BentoGrid extends StatelessWidget {
               child: _BentoFeatTile(
                 bg: AppColors.primary,
                 icon: Icons.receipt_long_outlined,
-                label: 'Tagihan',
-                sub: 'Listrik · 3 hari lagi',
-                badge: '2 JT',
+                label: l10n.dashboardBentoBillsLabel,
+                sub: l10n.dashboardBentoBillsSub,
+                badge: l10n.dashboardBentoBillsBadge,
                 onTap: () => _comingSoon(context),
               ),
             ),
@@ -880,8 +891,8 @@ class _BentoGrid extends StatelessWidget {
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.track_changes_outlined,
-                label: 'Tujuan',
-                sub: '3 aktif',
+                label: l10n.sayaQuickGoals,
+                sub: l10n.dashboardBentoGoalsSub,
                 onTap: () => context.go('/goals'),
               ),
             ),
@@ -889,8 +900,8 @@ class _BentoGrid extends StatelessWidget {
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.qr_code_scanner_outlined,
-                label: 'Scan Struk',
-                sub: 'OCR',
+                label: l10n.dashboardBentoScanLabel,
+                sub: l10n.dashboardBentoScanSub,
                 onTap: () => _comingSoon(context),
               ),
             ),
@@ -903,8 +914,8 @@ class _BentoGrid extends StatelessWidget {
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.people_outline_rounded,
-                label: 'Bagi Tagihan',
-                sub: 'Split bill',
+                label: l10n.dashboardBentoSplitLabel,
+                sub: l10n.dashboardBentoSplitSub,
                 onTap: () => _comingSoon(context),
               ),
             ),
@@ -912,8 +923,8 @@ class _BentoGrid extends StatelessWidget {
             Expanded(
               child: _BentoQuickTile(
                 icon: Icons.emoji_events_outlined,
-                label: 'Tantangan',
-                sub: 'Mingguan',
+                label: l10n.dashboardBentoChallengeLabel,
+                sub: l10n.dashboardBentoChallengeSub,
                 onTap: () => _comingSoon(context),
               ),
             ),
@@ -1174,7 +1185,7 @@ class _TipCard extends StatelessWidget {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: 'TIP HARI INI  ',
+                      text: '${context.l10n.dashboardTipEyebrow}  ',
                       style: AppTextStyles.caption.copyWith(
                         color: mutedColor,
                         fontSize: 9,
@@ -1182,7 +1193,7 @@ class _TipCard extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: 'Bawa botol minum — hemat Rp 6.000/hari.',
+                      text: context.l10n.dashboardTipText,
                       style: AppTextStyles.body.copyWith(
                         color: textColor,
                         fontSize: 12,
@@ -1218,7 +1229,7 @@ class _TxCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: Center(
           child: Text(
-            'Belum ada transaksi. Catat pengeluaran pertamamu hari ini.',
+            context.l10n.dashboardTxEmpty,
             style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
             textAlign: TextAlign.center,
           ),

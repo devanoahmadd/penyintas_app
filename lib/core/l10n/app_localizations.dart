@@ -224,6 +224,60 @@ class AppLocalizations {
   String get goalDetailDeleteBtn => _t('goal_detail_delete_btn');
   String get goalDetailTip => _t('goal_detail_tip');
   String get goalDatePickerHint => _t('goal_date_picker_hint');
+
+  // Dashboard C1 — ring delta
+  String get dashboardDeltaOnTrack => _t('dashboard_delta_on_track');
+  String get dashboardDeltaNearing => _t('dashboard_delta_nearing');
+  String get dashboardDeltaExceeded => _t('dashboard_delta_exceeded');
+  String dashboardPctOfBudget(int pct) =>
+      _t('dashboard_pct_of_budget').replaceAll('{pct}', '$pct');
+  String dashboardPctOfTotal(int pct) =>
+      _t('dashboard_pct_of_total').replaceAll('{pct}', '$pct');
+
+  // Dashboard C1 — section headers
+  String get dashboardQuickAccess => _t('dashboard_quick_access');
+  String get dashboardQuickAccessAction => _t('dashboard_quick_access_action');
+  String get dashboardSeeAllAction => _t('dashboard_see_all_action');
+
+  // Dashboard C1 — greetings
+  String get dashboardGreetingMorning => _t('dashboard_greeting_morning');
+  String get dashboardGreetingNoon => _t('dashboard_greeting_noon');
+  String get dashboardGreetingAfternoon => _t('dashboard_greeting_afternoon');
+  String get dashboardGreetingEvening => _t('dashboard_greeting_evening');
+
+  // Dashboard C1 — saldo card
+  String get dashboardBalanceHidden => _t('dashboard_balance_hidden');
+  String get dashboardBalanceDetail => _t('dashboard_balance_detail');
+  String get dashboardBalanceAsOf => _t('dashboard_balance_as_of');
+
+  // Dashboard C1 — bento tiles
+  String get dashboardBentoSurvivalLabel => _t('dashboard_bento_survival_label');
+  String get dashboardBentoSurvivalBadge => _t('dashboard_bento_survival_badge');
+  String get dashboardBentoSurvivalSub => _t('dashboard_bento_survival_sub');
+  String get dashboardBentoBillsLabel => _t('dashboard_bento_bills_label');
+  String get dashboardBentoBillsSub => _t('dashboard_bento_bills_sub');
+  String get dashboardBentoBillsBadge => _t('dashboard_bento_bills_badge');
+  String get dashboardBentoGoalsSub => _t('dashboard_bento_goals_sub');
+  String get dashboardBentoScanLabel => _t('dashboard_bento_scan_label');
+  String get dashboardBentoScanSub => _t('dashboard_bento_scan_sub');
+  String get dashboardBentoSplitLabel => _t('dashboard_bento_split_label');
+  String get dashboardBentoSplitSub => _t('dashboard_bento_split_sub');
+  String get dashboardBentoChallengeLabel => _t('dashboard_bento_challenge_label');
+  String get dashboardBentoChallengeSub => _t('dashboard_bento_challenge_sub');
+
+  // Common
+  String get commonComingSoon => _t('common_coming_soon');
+
+  // Dashboard C1 — tip card
+  String get dashboardTipEyebrow => _t('dashboard_tip_eyebrow');
+  String get dashboardTipText => _t('dashboard_tip_text');
+
+  // Dashboard C1 — transaction empty
+  String get dashboardTxEmpty => _t('dashboard_tx_empty');
+
+  // Categories (extended)
+  String get categoryHealth => _t('category_health');
+  String get categoryInternet => _t('category_internet');
 }
 
 class _AppLocalizationsDelegate
