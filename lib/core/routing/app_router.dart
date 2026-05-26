@@ -63,8 +63,8 @@ GoRouter createAppRouter() => GoRouter(
       pageBuilder: (context, state) => NoTransitionPage(
         child: MultiBlocProvider(
           providers: [
-            BlocProvider(create: (_) => sl<DashboardBloc>()),
-            // SurvivalBloc singleton — instance yang sama dipakai di /survival/tips
+            // .value — jangan close singleton saat route di-pop/replace
+            BlocProvider.value(value: sl<DashboardBloc>()),
             BlocProvider.value(value: sl<SurvivalBloc>()),
           ],
           child: const DashboardPage(),
@@ -110,7 +110,7 @@ GoRouter createAppRouter() => GoRouter(
           builder: (context, state) {
             final goal = state.extra as GoalEntity;
             return BlocProvider.value(
-              value: context.read<GoalBloc>(),
+              value: sl<GoalBloc>(),
               child: GoalDetailPage(goal: goal),
             );
           },

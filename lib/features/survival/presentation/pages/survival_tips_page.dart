@@ -83,7 +83,8 @@ class _SurvivalTipsPageState extends State<SurvivalTipsPage> {
                     ),
               );
             }
-            return const SizedBox.shrink();
+            // SurvivalInitial / SurvivalInactive — mode darurat tidak aktif
+            return _InactiveBody(isDark: isDark);
           },
         ),
       ),
@@ -359,6 +360,43 @@ class _TipCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Inactive body ─────────────────────────────────────────────────────────
+
+class _InactiveBody extends StatelessWidget {
+  const _InactiveBody({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.shield_outlined, size: 48, color: mutedColor),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Survival Mode Tidak Aktif',
+              style: AppTextStyles.h3.copyWith(color: textColor),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Saldo kamu masih aman. Mode darurat aktif otomatis saat saldo mendekati habis.',
+              style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
