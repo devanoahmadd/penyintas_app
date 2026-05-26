@@ -393,13 +393,13 @@ class _SettingsSection extends StatelessWidget {
             style: AppTextStyles.caption.copyWith(color: mutedColor),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Container(
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: borderColor),
-            ),
+          Material(
+            color: surfaceColor,
             clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              side: BorderSide(color: borderColor),
+            ),
             child: Column(
               children: [
                 _SettingsTile(
@@ -512,13 +512,13 @@ class _AccountSection extends StatelessWidget {
             style: AppTextStyles.caption.copyWith(color: mutedColor),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Container(
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: borderColor),
-            ),
+          Material(
+            color: surfaceColor,
             clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              side: BorderSide(color: borderColor),
+            ),
             child: Column(
               children: [
                 ListTile(

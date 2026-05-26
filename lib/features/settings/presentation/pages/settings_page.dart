@@ -404,13 +404,13 @@ class _CardContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Container(
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: borderColor),
-        ),
+      child: Material(
+        color: surfaceColor,
         clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(color: borderColor),
+        ),
         child: child,
       ),
     );
