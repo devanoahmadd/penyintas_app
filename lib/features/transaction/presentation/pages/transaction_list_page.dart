@@ -155,7 +155,10 @@ class _TransactionListViewState extends State<_TransactionListView> {
                   return _V2FilterRow(
                     typeFilter: state.typeFilter,
                     onSearchTap: _toggleSearch,
-                    onFilterTap: () => _openFilterSheet(state),
+                    onFilterTap: () {
+                      final s = context.read<TransactionListBloc>().state;
+                      if (s is TransactionListLoaded) _openFilterSheet(s);
+                    },
                   );
                 },
               ),
