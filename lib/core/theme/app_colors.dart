@@ -11,8 +11,8 @@ class AppColors {
 
   // Light Theme
   static const Color bgLight = Color(0xFFFBFAF6);
-  static const Color cardLight = Color(0xFFFDFCF8);
-  static const Color surfaceLight = Color(0xFFF5F1E8);
+  static const Color cardLight = Color(0xFFF4F0E7);
+  static const Color surfaceLight = Color(0xFFE8E2D0);
   static const Color borderLight = Color(0xFFE2DCC8);
   static const Color textLight = Color(0xFF0B1F14);
   static const Color textSoftLight = Color(0xFF1F3328);
@@ -20,6 +20,7 @@ class AppColors {
 
   // Dark Theme
   static const Color bgDark = Color(0xFF0B1F14);
+  static const Color cardDark = Color(0xFF1C3526);
   static const Color surfaceDark = Color(0xFF15301F);
   static const Color borderDark = Color(0xFF1F3328);
   static const Color textDark = Color(0xFFE8EFE9);

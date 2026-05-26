@@ -486,7 +486,7 @@ class _NominalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -631,7 +631,7 @@ class _CategoryCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return GestureDetector(
@@ -724,7 +724,7 @@ class _NoteField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -781,7 +781,7 @@ class _DateField extends StatelessWidget {
         final label =
             '${DateFormat('d MMM yyyy', 'id_ID').format(date)} · ${DateFormat('HH:mm').format(date)}';
 
-        final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+        final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
         final borderColor =
             isDark ? AppColors.borderDark : AppColors.borderLight;
         final textColor = isDark ? AppColors.textDark : AppColors.textLight;
@@ -938,7 +938,7 @@ class _GoalPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
