@@ -134,7 +134,10 @@ class _TransactionListView extends StatelessWidget {
                               Text(state.message, style: AppTextStyles.body));
                     }
                     if (state is TransactionListLoaded) {
-                      return _V2Timeline(state: state);
+                      return _V2Timeline(
+                        state: state,
+                        onAddTap: () => _openAddSheet(context),
+                      );
                     }
                     return const SizedBox.shrink();
                   },
@@ -484,24 +487,18 @@ class _IconRoundButton extends StatelessWidget {
 // ── V2 Timeline ───────────────────────────────────────────────────────────────
 
 class _V2Timeline extends StatelessWidget {
-  const _V2Timeline({required this.state});
+  const _V2Timeline({required this.state, required this.onAddTap});
   final TransactionListLoaded state;
+  final VoidCallback onAddTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     if (state.filtered.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Text(
-            'Belum ada catatan bulan ini.\nMulai dari satu pengeluaran kecil hari ini.',
-            style: AppTextStyles.body.copyWith(color: mutedColor),
-            textAlign: TextAlign.center,
-          ),
-        ),
+      return _V2EmptyState(
+        onAddTap: onAddTap,
+        isFiltered: state.transactions.isNotEmpty,
       );
     }
 
@@ -1124,6 +1121,113 @@ class _SkDayGroup extends StatelessWidget {
           ]),
         ),
       ],
+    );
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+class _V2EmptyState extends StatelessWidget {
+  const _V2EmptyState({
+    required this.onAddTap,
+    this.isFiltered = false,
+  });
+  final VoidCallback onAddTap;
+  final bool isFiltered;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: _spineW,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        // ignore: deprecated_member_use
+                        AppColors.primary.withOpacity(_spineOpacity),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                      Icons.add_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  width: _dotD,
+                  height: _dotD,
+                  decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
+                    color: mutedColor.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              isFiltered ? 'Tidak ada hasil' : 'Belum ada transaksi',
+              style: AppTextStyles.h2.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              isFiltered
+                  ? 'Coba ubah filter atau pilih periode lain.'
+                  : 'Catat pengeluaran pertama kamu hari ini.',
+              style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
+              textAlign: TextAlign.center,
+            ),
+            if (!isFiltered) ...[
+              const SizedBox(height: AppSpacing.xl),
+              GestureDetector(
+                onTap: onAddTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    'Tambah Transaksi',
+                    style: AppTextStyles.label.copyWith(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
