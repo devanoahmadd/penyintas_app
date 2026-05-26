@@ -481,15 +481,15 @@ class _SaldoCardState extends State<_SaldoCard> {
                   children: [
                     Text(
                       context.l10n.dashboardBalanceDetail,
-                      style: AppTextStyles.label.copyWith(
+                      style: AppTextStyles.caption.copyWith(
                         color: AppColors.primary,
-                        fontSize: 11,
+                        letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(width: 2),
                     const Icon(
                       Icons.arrow_forward,
-                      size: 11,
+                      size: 12,
                       color: AppColors.primary,
                     ),
                   ],
@@ -576,7 +576,7 @@ class _TxnRow extends StatelessWidget {
                   children: [
                     Text(
                       transaction.note ?? catLabel,
-                      style: AppTextStyles.body.copyWith(color: textColor),
+                      style: AppTextStyles.bodySmall.copyWith(color: textColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -593,9 +593,8 @@ class _TxnRow extends StatelessWidget {
               // Amount
               Text(
                 '${isExpense ? '−' : '+'} ${formatRupiah(transaction.amount)}',
-                style: AppTextStyles.label.copyWith(
+                style: AppTextStyles.numericSm.copyWith(
                   color: isExpense ? AppColors.warn : AppColors.success,
-                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
@@ -677,10 +676,7 @@ class _SectionHeader extends StatelessWidget {
           onTap: onActionTap,
           child: Text(
             '$action →',
-            style: AppTextStyles.label.copyWith(
-              color: AppColors.primary,
-              fontSize: 12,
-            ),
+            style: AppTextStyles.label.copyWith(color: AppColors.primary),
           ),
         ),
       ],
@@ -816,10 +812,7 @@ class _BentoQuickTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: AppTextStyles.label.copyWith(
-                      color: textColor,
-                      fontSize: 12,
-                    ),
+                    style: AppTextStyles.label.copyWith(color: textColor),
                   ),
                   Text(
                     sub,
@@ -1063,12 +1056,7 @@ class _RingWidget extends StatelessWidget {
                   children: [
                     Text(
                       value,
-                      style: AppTextStyles.label.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                      style: AppTextStyles.numericSm.copyWith(color: textColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1194,10 +1182,7 @@ class _TipCard extends StatelessWidget {
                     ),
                     TextSpan(
                       text: context.l10n.dashboardTipText,
-                      style: AppTextStyles.body.copyWith(
-                        color: textColor,
-                        fontSize: 12,
-                      ),
+                      style: AppTextStyles.bodySmall.copyWith(color: textColor),
                     ),
                   ],
                 ),
