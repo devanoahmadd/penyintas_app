@@ -44,9 +44,11 @@ class _ReportPageState extends State<ReportPage> {
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       try {
-        await Share.shareXFiles(
-          [XFile(file.path, mimeType: 'image/png')],
-          subject: 'Laporan Keuangan Penyintas $month',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'image/png')],
+            subject: 'Laporan Keuangan Penyintas $month',
+          ),
         );
       } finally {
         await file.delete().catchError((_) => file);

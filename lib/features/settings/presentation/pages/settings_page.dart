@@ -80,9 +80,11 @@ class _SettingsPageState extends State<SettingsPage> {
       await file.writeAsString(buf.toString());
 
       try {
-        await Share.shareXFiles(
-          [XFile(file.path, mimeType: 'text/csv')],
-          subject: 'Ekspor Transaksi Penyintas $month',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'text/csv')],
+            subject: 'Ekspor Transaksi Penyintas $month',
+          ),
         );
       } finally {
         await file.delete().catchError((_) => file);
