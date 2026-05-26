@@ -18,6 +18,7 @@ class TransactionListBloc
     on<LoadTransactions>(_onLoad);
     on<RefreshTransactions>(_onRefresh);
     on<FilterChanged>(_onFilterChanged);
+    on<FilterSheetApplied>(_onFilterSheetApplied);
     on<DeleteTransactionRequested>(_onDelete);
   }
 
@@ -34,19 +35,48 @@ class TransactionListBloc
       RefreshTransactions event, Emitter<TransactionListState> emit) async {
     if (state is! TransactionListLoaded) return;
     final s = state as TransactionListLoaded;
-    await _fetchAndEmit(s.from, s.to, s.typeFilter, emit);
+    await _fetchAndEmit(
+      s.from,
+      s.to,
+      s.typeFilter,
+      emit,
+      categoryFilter: s.categoryFilter,
+      minAmount: s.minAmount,
+      maxAmount: s.maxAmount,
+    );
   }
 
   void _onFilterChanged(
       FilterChanged event, Emitter<TransactionListState> emit) {
     if (state is! TransactionListLoaded) return;
     final s = state as TransactionListLoaded;
-    final filtered = event.type == null
-        ? s.transactions
-        : s.transactions.where((t) => t.type == event.type).toList();
     emit(s.copyWith(
-      filtered: filtered,
+      filtered: _applyFilters(
+        s.transactions,
+        typeFilter: event.type,
+        categoryFilter: s.categoryFilter,
+        minAmount: s.minAmount,
+        maxAmount: s.maxAmount,
+      ),
       typeFilter: () => event.type,
+    ));
+  }
+
+  void _onFilterSheetApplied(
+      FilterSheetApplied event, Emitter<TransactionListState> emit) {
+    if (state is! TransactionListLoaded) return;
+    final s = state as TransactionListLoaded;
+    emit(s.copyWith(
+      filtered: _applyFilters(
+        s.transactions,
+        typeFilter: s.typeFilter,
+        categoryFilter: event.categories,
+        minAmount: event.minAmount,
+        maxAmount: event.maxAmount,
+      ),
+      categoryFilter: () => event.categories,
+      minAmount: () => event.minAmount,
+      maxAmount: () => event.maxAmount,
     ));
   }
 
@@ -80,17 +110,24 @@ class TransactionListBloc
     DateTime from,
     DateTime to,
     TransactionType? typeFilter,
-    Emitter<TransactionListState> emit,
-  ) async {
+    Emitter<TransactionListState> emit, {
+    Set<TransactionCategory>? categoryFilter,
+    int? minAmount,
+    int? maxAmount,
+  }) async {
     final result = await _getTransactions(
       GetTransactionsParams(from: from, to: to),
     );
     result.fold(
       (failure) => emit(TransactionListError(failure.message)),
       (transactions) {
-        final filtered = typeFilter == null
-            ? transactions
-            : transactions.where((t) => t.type == typeFilter).toList();
+        final filtered = _applyFilters(
+          transactions,
+          typeFilter: typeFilter,
+          categoryFilter: categoryFilter,
+          minAmount: minAmount,
+          maxAmount: maxAmount,
+        );
         final totalSpent = transactions
             .where((t) => t.type == TransactionType.expense)
             .fold(0, (sum, t) => sum + t.amount);
@@ -99,10 +136,31 @@ class TransactionListBloc
           filtered: filtered,
           totalSpent: totalSpent,
           typeFilter: typeFilter,
+          categoryFilter: categoryFilter,
+          minAmount: minAmount,
+          maxAmount: maxAmount,
           from: from,
           to: to,
         ));
       },
     );
+  }
+
+  static List<TransactionEntity> _applyFilters(
+    List<TransactionEntity> transactions, {
+    TransactionType? typeFilter,
+    Set<TransactionCategory>? categoryFilter,
+    int? minAmount,
+    int? maxAmount,
+  }) {
+    return transactions.where((t) {
+      if (typeFilter != null && t.type != typeFilter) { return false; }
+      if (categoryFilter != null &&
+          categoryFilter.isNotEmpty &&
+          !categoryFilter.contains(t.category)) { return false; }
+      if (minAmount != null && t.amount < minAmount) { return false; }
+      if (maxAmount != null && t.amount > maxAmount) { return false; }
+      return true;
+    }).toList();
   }
 }

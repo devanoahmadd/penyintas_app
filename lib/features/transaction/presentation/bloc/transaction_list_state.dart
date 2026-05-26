@@ -18,6 +18,9 @@ final class TransactionListLoaded extends TransactionListState {
     required this.typeFilter,
     required this.from,
     required this.to,
+    this.categoryFilter,
+    this.minAmount,
+    this.maxAmount,
   });
 
   final List<TransactionEntity> transactions;
@@ -26,25 +29,44 @@ final class TransactionListLoaded extends TransactionListState {
   final TransactionType? typeFilter;
   final DateTime from;
   final DateTime to;
+  final Set<TransactionCategory>? categoryFilter; // null = all
+  final int? minAmount;
+  final int? maxAmount;
 
   TransactionListLoaded copyWith({
     List<TransactionEntity>? transactions,
     List<TransactionEntity>? filtered,
     int? totalSpent,
     TransactionType? Function()? typeFilter,
+    Set<TransactionCategory>? Function()? categoryFilter,
+    int? Function()? minAmount,
+    int? Function()? maxAmount,
   }) =>
       TransactionListLoaded(
         transactions: transactions ?? this.transactions,
         filtered: filtered ?? this.filtered,
         totalSpent: totalSpent ?? this.totalSpent,
         typeFilter: typeFilter != null ? typeFilter() : this.typeFilter,
+        categoryFilter:
+            categoryFilter != null ? categoryFilter() : this.categoryFilter,
+        minAmount: minAmount != null ? minAmount() : this.minAmount,
+        maxAmount: maxAmount != null ? maxAmount() : this.maxAmount,
         from: from,
         to: to,
       );
 
   @override
-  List<Object?> get props =>
-      [transactions, filtered, totalSpent, typeFilter, from, to];
+  List<Object?> get props => [
+        transactions,
+        filtered,
+        totalSpent,
+        typeFilter,
+        categoryFilter,
+        minAmount,
+        maxAmount,
+        from,
+        to,
+      ];
 }
 
 final class TransactionListError extends TransactionListState {

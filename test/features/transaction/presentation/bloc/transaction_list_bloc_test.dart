@@ -127,4 +127,72 @@ void main() {
       ],
     );
   });
+
+  group('FilterSheetApplied', () {
+    blocTest<TransactionListBloc, TransactionListState>(
+      'filters out transactions not matching category',
+      build: buildBloc,
+      seed: () => TransactionListLoaded(
+        transactions: [tTransaction],
+        filtered: [tTransaction],
+        totalSpent: 50000,
+        typeFilter: null,
+        from: tFrom,
+        to: tTo,
+      ),
+      act: (bloc) => bloc.add(
+        const FilterSheetApplied(
+          categories: {TransactionCategory.shopping},
+        ),
+      ),
+      expect: () => [
+        isA<TransactionListLoaded>()
+            .having((s) => s.filtered.length, 'filtered empty', 0)
+            .having(
+              (s) => s.categoryFilter,
+              'categoryFilter set',
+              {TransactionCategory.shopping},
+            ),
+      ],
+    );
+
+    blocTest<TransactionListBloc, TransactionListState>(
+      'null categories clears active filter and passes all transactions',
+      build: buildBloc,
+      seed: () => TransactionListLoaded(
+        transactions: [tTransaction],
+        filtered: [],
+        totalSpent: 50000,
+        typeFilter: null,
+        categoryFilter: {TransactionCategory.shopping},
+        from: tFrom,
+        to: tTo,
+      ),
+      act: (bloc) => bloc.add(const FilterSheetApplied()),
+      expect: () => [
+        isA<TransactionListLoaded>()
+            .having((s) => s.filtered.length, 'all pass', 1)
+            .having((s) => s.categoryFilter, 'categoryFilter null', null),
+      ],
+    );
+
+    blocTest<TransactionListBloc, TransactionListState>(
+      'minAmount filters out amounts below threshold',
+      build: buildBloc,
+      seed: () => TransactionListLoaded(
+        transactions: [tTransaction], // amount = 50000
+        filtered: [tTransaction],
+        totalSpent: 50000,
+        typeFilter: null,
+        from: tFrom,
+        to: tTo,
+      ),
+      act: (bloc) =>
+          bloc.add(const FilterSheetApplied(minAmount: 100000)),
+      expect: () => [
+        isA<TransactionListLoaded>()
+            .having((s) => s.filtered.length, 'filtered empty', 0),
+      ],
+    );
+  });
 }

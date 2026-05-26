@@ -31,3 +31,16 @@ final class DeleteTransactionRequested extends TransactionListEvent {
   @override
   List<Object> get props => [id];
 }
+
+final class FilterSheetApplied extends TransactionListEvent {
+  const FilterSheetApplied({
+    this.categories,
+    this.minAmount,
+    this.maxAmount,
+  });
+  final Set<TransactionCategory>? categories; // null = all categories
+  final int? minAmount;
+  final int? maxAmount;
+  @override
+  List<Object?> get props => [categories, minAmount, maxAmount];
+}
