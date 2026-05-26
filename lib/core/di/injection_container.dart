@@ -229,7 +229,11 @@ void _initSync() {
 }
 
 void _initDashboard() {
-  sl.registerFactory(() => DashboardBloc(getDashboard: sl()));
+  // lazySingleton — instance yang sama dipakai di DashboardPage dan router.
+  // registerFactory akan membuat instance baru setiap pageBuilder dipanggil
+  // (mis. saat context.push), yang menyebabkan state reset ke DashboardInitial
+  // dan loading indicator muncul saat kembali ke dashboard.
+  sl.registerLazySingleton(() => DashboardBloc(getDashboard: sl()));
 
   sl.registerLazySingleton(() => GetDashboardUseCase(sl()));
   sl.registerLazySingleton(() => const CalculateDaysToLiveUseCase());
