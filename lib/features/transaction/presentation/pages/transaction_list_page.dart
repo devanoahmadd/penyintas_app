@@ -66,8 +66,32 @@ class TransactionListPage extends StatelessWidget {
   Widget build(BuildContext context) => const _TransactionListView();
 }
 
-class _TransactionListView extends StatelessWidget {
+class _TransactionListView extends StatefulWidget {
   const _TransactionListView();
+  @override
+  State<_TransactionListView> createState() => _TransactionListViewState();
+}
+
+class _TransactionListViewState extends State<_TransactionListView> {
+  bool _searchActive = false;
+  String _searchQuery = '';
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searchActive = !_searchActive;
+      if (!_searchActive) {
+        _searchQuery = '';
+        _searchCtrl.clear();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,18 +108,26 @@ class _TransactionListView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title row — rebuilds only on month change
-              BlocBuilder<TransactionListBloc, TransactionListState>(
-                buildWhen: (p, n) =>
-                    p.runtimeType != n.runtimeType ||
-                    (p is TransactionListLoaded &&
-                        n is TransactionListLoaded &&
-                        p.from != n.from),
-                builder: (context, state) => _V2TitleRow(
-                  selectedMonth:
-                      state is TransactionListLoaded ? state.from : DateTime.now(),
+              // Title row or search bar
+              if (_searchActive)
+                _V2SearchBar(
+                  controller: _searchCtrl,
+                  searchQuery: _searchQuery,
+                  onChanged: (q) => setState(() => _searchQuery = q),
+                  onClose: _toggleSearch,
+                )
+              else
+                BlocBuilder<TransactionListBloc, TransactionListState>(
+                  buildWhen: (p, n) =>
+                      p.runtimeType != n.runtimeType ||
+                      (p is TransactionListLoaded &&
+                          n is TransactionListLoaded &&
+                          p.from != n.from),
+                  builder: (context, state) => _V2TitleRow(
+                    selectedMonth:
+                        state is TransactionListLoaded ? state.from : DateTime.now(),
+                  ),
                 ),
-              ),
               // Summary row — rebuilds only when all-transactions list changes
               BlocBuilder<TransactionListBloc, TransactionListState>(
                 buildWhen: (p, n) =>
@@ -122,8 +154,8 @@ class _TransactionListView extends StatelessWidget {
                   }
                   return _V2FilterRow(
                     typeFilter: state.typeFilter,
-                    onSearchTap: () {}, // wired in Task 6
-                    onFilterTap: () => _openFilterSheet(context, state),
+                    onSearchTap: _toggleSearch,
+                    onFilterTap: () => _openFilterSheet(state),
                   );
                 },
               ),
@@ -142,8 +174,9 @@ class _TransactionListView extends StatelessWidget {
                     if (state is TransactionListLoaded) {
                       return _V2Timeline(
                         state: state,
-                        onAddTap: () => _openAddSheet(context),
-                        onTap: (tx) => _openDetailSheet(context, tx),
+                        onAddTap: _openAddSheet,
+                        onTap: _openDetailSheet,
+                        searchQuery: _searchQuery,
                       );
                     }
                     return const SizedBox.shrink();
@@ -153,17 +186,17 @@ class _TransactionListView extends StatelessWidget {
             ],
           ),
         ),
-        floatingActionButton: AppNavFab(onTap: () => _openAddSheet(context)),
+        floatingActionButton: AppNavFab(onTap: _openAddSheet),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: AppBottomNavBar(
           currentIndex: 1,
-          onFabTap: () => _openAddSheet(context),
+          onFabTap: _openAddSheet,
         ),
       ),
     );
   }
 
-  Future<void> _openAddSheet(BuildContext context) async {
+  Future<void> _openAddSheet() async {
     final listBloc = context.read<TransactionListBloc>();
 
     final goalsResult = await sl<LoadGoalsUseCase>().call(const NoParams());
@@ -172,7 +205,7 @@ class _TransactionListView extends StatelessWidget {
       (goals) => goals.where((g) => !g.isCompleted).toList(),
     );
 
-    if (!context.mounted) return;
+    if (!mounted) return;
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -187,14 +220,13 @@ class _TransactionListView extends StatelessWidget {
       ),
     );
 
-    if (context.mounted) {
+    if (mounted) {
       listBloc.add(const RefreshTransactions());
       if (saved == true) sl<GoalBloc>().add(const LoadGoals());
     }
   }
 
-  Future<void> _openFilterSheet(
-      BuildContext context, TransactionListLoaded state) async {
+  Future<void> _openFilterSheet(TransactionListLoaded state) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -206,8 +238,7 @@ class _TransactionListView extends StatelessWidget {
     );
   }
 
-  Future<void> _openDetailSheet(
-      BuildContext context, TransactionEntity tx) async {
+  Future<void> _openDetailSheet(TransactionEntity tx) async {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -537,23 +568,35 @@ class _V2Timeline extends StatelessWidget {
     required this.state,
     required this.onAddTap,
     required this.onTap,
+    this.searchQuery = '',
   });
   final TransactionListLoaded state;
   final VoidCallback onAddTap;
   final void Function(TransactionEntity) onTap;
+  final String searchQuery;
+
+  static bool _matchesSearch(TransactionEntity t, String q) {
+    final lower = q.toLowerCase();
+    if (t.note?.toLowerCase().contains(lower) ?? false) { return true; }
+    return t.category.label.toLowerCase().contains(lower);
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (state.filtered.isEmpty) {
+    final displayList = searchQuery.isEmpty
+        ? state.filtered
+        : state.filtered.where((t) => _matchesSearch(t, searchQuery)).toList();
+
+    if (displayList.isEmpty) {
       return _V2EmptyState(
         onAddTap: onAddTap,
-        isFiltered: state.transactions.isNotEmpty,
+        isFiltered: state.transactions.isNotEmpty || searchQuery.isNotEmpty,
       );
     }
 
-    final grouped = _groupByDate(state.filtered);
+    final grouped = _groupByDate(displayList);
     final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
     final bloc = context.read<TransactionListBloc>();
 
@@ -1287,6 +1330,106 @@ class _V2EmptyState extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Search bar ────────────────────────────────────────────────────────────────
+
+class _V2SearchBar extends StatelessWidget {
+  const _V2SearchBar({
+    required this.controller,
+    required this.searchQuery,
+    required this.onChanged,
+    required this.onClose,
+  });
+  final TextEditingController controller;
+  final String searchQuery;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
+                    child: Icon(Icons.search_rounded,
+                        size: 16, color: mutedColor),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      onChanged: onChanged,
+                      autofocus: true,
+                      style: AppTextStyles.body.copyWith(
+                        color: textColor,
+                        fontSize: 14,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Cari transaksi...',
+                        hintStyle: AppTextStyles.body.copyWith(
+                          color: mutedColor,
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm2),
+                      ),
+                    ),
+                  ),
+                  if (searchQuery.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        controller.clear();
+                        onChanged('');
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm),
+                        child: Icon(Icons.close_rounded,
+                            size: 16, color: mutedColor),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          GestureDetector(
+            onTap: onClose,
+            child: Text(
+              'Batal',
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.primary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
