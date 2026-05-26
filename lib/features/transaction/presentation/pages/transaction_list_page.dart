@@ -3,20 +3,59 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
-import 'package:penyintas_app/core/usecases/usecase.dart';
-import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
-import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
-import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
+import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
+import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_item.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+
+// ── V2 spec constants ─────────────────────────────────────────────────────────
+const double _spineX = 18;
+const double _spineW = 2;
+const double _spineOpacity = 0.3;
+const double _dayNodeD = 38;
+const double _connectorW = 14;
+const double _connectorH = 1.5;
+const double _dotD = 6;
+const double _rowGap = 6;
+const double _groupGap = 16;
+const double _filterPillH = 36;
+// Left of connector area = dayNode(38) + gap(12) - connectorAreaW(16) = 34
+const double _txOffset = 34;
+const double _connectorAreaW = 16;
+
+// ── Color helpers ─────────────────────────────────────────────────────────────
+
+Color _txColor(bool isDark, bool isIncome) {
+  if (isIncome) return isDark ? AppColors.incomeDark : AppColors.success;
+  return isDark ? AppColors.expenseDark : AppColors.warn;
+}
+
+Color _txBg(bool isDark, bool isIncome) {
+  if (isDark) {
+    return isIncome
+        // ignore: deprecated_member_use
+        ? const Color(0xFF6EE7A0).withOpacity(0.12)
+        // ignore: deprecated_member_use
+        : const Color(0xFFFF8F70).withOpacity(0.10);
+  }
+  return isIncome
+      // ignore: deprecated_member_use
+      ? const Color(0xFF16A34A).withOpacity(0.10)
+      // ignore: deprecated_member_use
+      : const Color(0xFFE07A3C).withOpacity(0.08);
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 class TransactionListPage extends StatelessWidget {
   const TransactionListPage({super.key});
@@ -43,32 +82,51 @@ class _TransactionListView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.lg),
-                child: Text(context.l10n.navTransactions, style: AppTextStyles.h1),
-              ),
+              // Title row — rebuilds only on month change
               BlocBuilder<TransactionListBloc, TransactionListState>(
                 buildWhen: (p, n) =>
                     p.runtimeType != n.runtimeType ||
                     (p is TransactionListLoaded &&
                         n is TransactionListLoaded &&
-                        (p.typeFilter != n.typeFilter || p.from != n.from)),
+                        p.from != n.from),
+                builder: (context, state) => _V2TitleRow(
+                  selectedMonth:
+                      state is TransactionListLoaded ? state.from : DateTime.now(),
+                ),
+              ),
+              // Summary row — rebuilds only when all-transactions list changes
+              BlocBuilder<TransactionListBloc, TransactionListState>(
+                buildWhen: (p, n) =>
+                    n is TransactionListLoaded &&
+                    (p is! TransactionListLoaded ||
+                        p.transactions != n.transactions),
                 builder: (context, state) {
-                  final typeFilter =
-                      state is TransactionListLoaded ? state.typeFilter : null;
-                  final selectedMonth =
-                      state is TransactionListLoaded ? state.from : DateTime.now();
-                  return _FilterRow(
-                      typeFilter: typeFilter, selectedMonth: selectedMonth);
+                  if (state is! TransactionListLoaded) {
+                    return const SizedBox.shrink();
+                  }
+                  return _V2SummaryRow(transactions: state.transactions);
                 },
               ),
-              const SizedBox(height: AppSpacing.sm),
+              // Filter row — rebuilds only on filter change
+              BlocBuilder<TransactionListBloc, TransactionListState>(
+                buildWhen: (p, n) =>
+                    p.runtimeType != n.runtimeType ||
+                    (p is TransactionListLoaded &&
+                        n is TransactionListLoaded &&
+                        p.typeFilter != n.typeFilter),
+                builder: (context, state) {
+                  if (state is! TransactionListLoaded) {
+                    return const SizedBox.shrink();
+                  }
+                  return _V2FilterRow(typeFilter: state.typeFilter);
+                },
+              ),
+              // Timeline
               Expanded(
                 child: BlocBuilder<TransactionListBloc, TransactionListState>(
                   builder: (context, state) {
                     if (state is TransactionListLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const _V2Skeleton();
                     }
                     if (state is TransactionListError) {
                       return Center(
@@ -76,7 +134,7 @@ class _TransactionListView extends StatelessWidget {
                               Text(state.message, style: AppTextStyles.body));
                     }
                     if (state is TransactionListLoaded) {
-                      return _LoadedBody(state: state);
+                      return _V2Timeline(state: state);
                     }
                     return const SizedBox.shrink();
                   },
@@ -98,8 +156,7 @@ class _TransactionListView extends StatelessWidget {
   Future<void> _openAddSheet(BuildContext context) async {
     final listBloc = context.read<TransactionListBloc>();
 
-    final goalsResult =
-        await sl<LoadGoalsUseCase>().call(const NoParams());
+    final goalsResult = await sl<LoadGoalsUseCase>().call(const NoParams());
     final activeGoals = goalsResult.fold(
       (_) => <GoalEntity>[],
       (goals) => goals.where((g) => !g.isCompleted).toList(),
@@ -113,8 +170,8 @@ class _TransactionListView extends StatelessWidget {
       builder: (_) => BlocProvider(
         create: (_) => sl<AddTransactionBloc>(),
         child: Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: AddTransactionSheet(activeGoals: activeGoals),
         ),
       ),
@@ -127,120 +184,67 @@ class _TransactionListView extends StatelessWidget {
   }
 }
 
-// ── Filter row ────────────────────────────────────────────────────────────────
+// ── V2 Title row ──────────────────────────────────────────────────────────────
 
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.typeFilter, required this.selectedMonth});
-  final TransactionType? typeFilter;
+class _V2TitleRow extends StatelessWidget {
+  const _V2TitleRow({required this.selectedMonth});
   final DateTime selectedMonth;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _TypeChip(label: 'Semua', type: null, active: typeFilter),
-          const SizedBox(width: AppSpacing.sm),
-          _TypeChip(
-              label: 'Masuk', type: TransactionType.income, active: typeFilter),
-          const SizedBox(width: AppSpacing.sm),
-          _TypeChip(
-              label: 'Keluar',
-              type: TransactionType.expense,
-              active: typeFilter),
+          Text(
+            'Transaksi',
+            style: AppTextStyles.h1.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+              letterSpacing: -0.7,
+              color: textColor,
+            ),
+          ),
           const Spacer(),
-          _DateChip(selectedMonth: selectedMonth),
-        ],
-      ),
-    );
-  }
-}
-
-class _TypeChip extends StatelessWidget {
-  const _TypeChip(
-      {required this.label, required this.type, required this.active});
-  final String label;
-  final TransactionType? type;
-  final TransactionType? active;
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = active == type;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () =>
-          context.read<TransactionListBloc>().add(FilterChanged(type)),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary
-              : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: isActive
-              ? null
-              : Border.all(
-                  color:
-                      isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.label.copyWith(
-            color: isActive
-                ? Colors.white
-                : (isDark
-                    ? AppColors.textSoftDark
-                    : AppColors.textSoftLight),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DateChip extends StatelessWidget {
-  const _DateChip({required this.selectedMonth});
-  final DateTime selectedMonth;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final label = DateFormat('MMMM', 'id_ID').format(selectedMonth);
-
-    return GestureDetector(
-      onTap: () => _pickMonth(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 13,
-                color: isDark ? AppColors.mutedDark : AppColors.mutedLight),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              label,
-              style: AppTextStyles.label.copyWith(
-                color: isDark
-                    ? AppColors.textSoftDark
-                    : AppColors.textSoftLight,
+          GestureDetector(
+            onTap: () => _pickMonth(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_today_outlined,
+                      size: 13, color: textColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('MMMM yyyy', 'id_ID').format(selectedMonth),
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 12,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 13, color: mutedColor),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -261,6 +265,609 @@ class _DateChip extends StatelessWidget {
           : DateTime(picked.year, picked.month + 1, 0);
       bloc.add(LoadTransactions(from: picked, to: to));
     }
+  }
+}
+
+// ── V2 Summary row ────────────────────────────────────────────────────────────
+
+class _V2SummaryRow extends StatelessWidget {
+  const _V2SummaryRow({required this.transactions});
+  final List<TransactionEntity> transactions;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalMasuk = transactions
+        .where((t) => t.type == TransactionType.income)
+        .fold<int>(0, (s, t) => s + t.amount);
+    final totalKeluar = transactions
+        .where((t) => t.type == TransactionType.expense)
+        .fold<int>(0, (s, t) => s + t.amount);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SummaryStat(
+                isIncome: false, label: 'KELUAR', value: totalKeluar),
+          ),
+          const SizedBox(width: AppSpacing.sm2),
+          Expanded(
+            child: _SummaryStat(
+                isIncome: true, label: 'MASUK', value: totalMasuk),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({
+    required this.isIncome,
+    required this.label,
+    required this.value,
+  });
+
+  final bool isIncome;
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final amtColor = _txColor(isDark, isIncome);
+    final amtBgColor = _txBg(isDark, isIncome);
+    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(color: amtBgColor, shape: BoxShape.circle),
+                child: Icon(
+                  isIncome
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  size: 11,
+                  color: amtColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: mutedColor,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formatRupiah(value),
+            style: AppTextStyles.numericSm.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+              color: amtColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── V2 Filter row ─────────────────────────────────────────────────────────────
+
+class _V2FilterRow extends StatelessWidget {
+  const _V2FilterRow({required this.typeFilter});
+  final TransactionType? typeFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+      child: Row(
+        children: [
+          _TypePill(label: 'Semua', type: null, active: typeFilter),
+          const SizedBox(width: AppSpacing.sm),
+          _TypePill(
+              label: 'Masuk',
+              type: TransactionType.income,
+              active: typeFilter),
+          const SizedBox(width: AppSpacing.sm),
+          _TypePill(
+              label: 'Keluar',
+              type: TransactionType.expense,
+              active: typeFilter),
+          const Spacer(),
+          _IconRoundButton(
+              icon: Icons.search_rounded,
+              borderColor: borderColor,
+              iconColor: textColor),
+          const SizedBox(width: AppSpacing.sm),
+          _IconRoundButton(
+              icon: Icons.tune_rounded,
+              borderColor: borderColor,
+              iconColor: textColor),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypePill extends StatelessWidget {
+  const _TypePill(
+      {required this.label, required this.type, required this.active});
+  final String label;
+  final TransactionType? type;
+  final TransactionType? active;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = active == type;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+
+    return GestureDetector(
+      onTap: () =>
+          context.read<TransactionListBloc>().add(FilterChanged(type)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: _filterPillH,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: isActive ? null : Border.all(color: borderColor),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.label.copyWith(
+            fontSize: 12,
+            color: isActive ? Colors.white : textColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconRoundButton extends StatelessWidget {
+  const _IconRoundButton({
+    required this.icon,
+    required this.borderColor,
+    required this.iconColor,
+  });
+  final IconData icon;
+  final Color borderColor;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor),
+      ),
+      child: Icon(icon, size: 16, color: iconColor),
+    );
+  }
+}
+
+// ── V2 Timeline ───────────────────────────────────────────────────────────────
+
+class _V2Timeline extends StatelessWidget {
+  const _V2Timeline({required this.state});
+  final TransactionListLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    if (state.filtered.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text(
+            'Belum ada catatan bulan ini.\nMulai dari satu pengeluaran kecil hari ini.',
+            style: AppTextStyles.body.copyWith(color: mutedColor),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final grouped = _groupByDate(state.filtered);
+    final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    final bloc = context.read<TransactionListBloc>();
+
+    return RefreshIndicator(
+      onRefresh: () async => bloc.add(const RefreshTransactions()),
+      child: ListView.builder(
+        padding: const EdgeInsets.only(
+            top: AppSpacing.md2, bottom: AppSpacing.xxxl),
+        itemCount: dates.length + 1,
+        itemBuilder: (context, i) {
+          if (i == dates.length) {
+            return _V2EndCap(isDark: isDark);
+          }
+          final date = dates[i];
+          final items = grouped[date]!;
+          return _V2DayGroup(
+            date: date,
+            items: items,
+            isDark: isDark,
+            isLast: i == dates.length - 1,
+            onDelete: (id) => bloc.add(DeleteTransactionRequested(id)),
+          );
+        },
+      ),
+    );
+  }
+
+  Map<DateTime, List<TransactionEntity>> _groupByDate(
+      List<TransactionEntity> list) {
+    final map = <DateTime, List<TransactionEntity>>{};
+    for (final t in list) {
+      final key = DateTime(t.date.year, t.date.month, t.date.day);
+      (map[key] ??= []).add(t);
+    }
+    return map;
+  }
+}
+
+// ── V2 Day group ──────────────────────────────────────────────────────────────
+
+class _V2DayGroup extends StatelessWidget {
+  const _V2DayGroup({
+    required this.date,
+    required this.items,
+    required this.isDark,
+    required this.isLast,
+    required this.onDelete,
+  });
+
+  final DateTime date;
+  final List<TransactionEntity> items;
+  final bool isDark;
+  final bool isLast;
+  final void Function(String id) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtotal = items.fold<int>(
+      0,
+      (s, t) =>
+          t.type == TransactionType.income ? s + t.amount : s - t.amount,
+    );
+    final isPositive = subtotal >= 0;
+    final subtotalColor = _txColor(isDark, isPositive);
+    final subtotalBg = _txBg(isDark, isPositive);
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Padding(
+      padding: EdgeInsets.only(
+          left: AppSpacing.lg, right: AppSpacing.lg, bottom: _groupGap),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Spine — behind content
+          Positioned(
+            left: _spineX,
+            top: 0,
+            bottom: isLast ? 0 : -_groupGap / 2,
+            width: _spineW,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    // ignore: deprecated_member_use
+                    AppColors.primary.withOpacity(_spineOpacity),
+                    // ignore: deprecated_member_use
+                    AppColors.primary.withOpacity(isLast ? 0 : _spineOpacity),
+                  ],
+                  stops: isLast ? const [0.65, 1.0] : const [0.0, 1.0],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Day node row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _DayNode(date: date, isDark: isDark),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _dayLabel(date),
+                          style: AppTextStyles.h3.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          '${items.length} transaksi',
+                          style: AppTextStyles.caption.copyWith(
+                            color: mutedColor,
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Daily subtotal pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm2, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: subtotalBg,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Text(
+                      '${isPositive ? '+' : '−'} ${formatRupiah(subtotal.abs())}',
+                      style: AppTextStyles.numericSm.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: subtotalColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm2),
+              // Transaction rows
+              Padding(
+                padding: const EdgeInsets.only(left: _txOffset),
+                child: Column(
+                  children: [
+                    for (int i = 0; i < items.length; i++) ...[
+                      _V2TxRow(
+                        transaction: items[i],
+                        isDark: isDark,
+                        onDelete: () => onDelete(items[i].id),
+                      ),
+                      if (i < items.length - 1)
+                        const SizedBox(height: _rowGap),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dayLabel(DateTime date) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final diff = today.difference(date).inDays;
+    if (diff == 0) return 'Hari ini';
+    if (diff == 1) return 'Kemarin';
+    return DateFormat('EEEE, d MMMM', 'id_ID').format(date);
+  }
+}
+
+// ── Day node circle ───────────────────────────────────────────────────────────
+
+class _DayNode extends StatelessWidget {
+  const _DayNode({required this.date, required this.isDark});
+  final DateTime date;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final monthAbbr = DateFormat('MMM', 'id_ID')
+        .format(date)
+        .toUpperCase()
+        .replaceAll('.', '');
+
+    return Container(
+      width: _dayNodeD,
+      height: _dayNodeD,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: bgColor, spreadRadius: 4, blurRadius: 0),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${date.day}',
+            style: AppTextStyles.h3.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              height: 1.0,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            monthAbbr,
+            style: AppTextStyles.caption.copyWith(
+              fontSize: 7,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+              letterSpacing: 0.4,
+              color: AppColors.shoot,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Transaction row V2 (connector + dot + dismissible card) ───────────────────
+
+class _V2TxRow extends StatelessWidget {
+  const _V2TxRow({
+    required this.transaction,
+    required this.isDark,
+    this.onDelete,
+  });
+
+  final TransactionEntity transaction;
+  final bool isDark;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIncome = transaction.type == TransactionType.income;
+    final amtColor = _txColor(isDark, isIncome);
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Connector + dot area
+          SizedBox(
+            width: _connectorAreaW,
+            child: Stack(
+              children: [
+                // Horizontal connector line (centered)
+                Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: _connectorW,
+                    height: _connectorH,
+                    color: borderColor,
+                  ),
+                ),
+                // Colored dot at spine end (left-center)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: _dotD,
+                      height: _dotD,
+                      decoration: BoxDecoration(
+                        color: amtColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: bgColor, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Card with swipe-to-delete
+          Expanded(
+            child: Dismissible(
+              key: Key(transaction.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.warn,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: const Icon(Icons.delete_outline,
+                    color: Colors.white, size: 18),
+              ),
+              onDismissed: (_) => onDelete?.call(),
+              child: TransactionItem(transaction: transaction),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Timeline end cap ──────────────────────────────────────────────────────────
+
+class _V2EndCap extends StatelessWidget {
+  const _V2EndCap({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+          left: AppSpacing.lg, right: AppSpacing.lg, top: AppSpacing.xs),
+      child: Row(
+        children: [
+          Container(
+            width: _dayNodeD,
+            height: _dayNodeD,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor, width: 1.5),
+              color: bgColor,
+            ),
+            child: Icon(Icons.more_horiz_rounded, size: 14, color: mutedColor),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Text(
+            'Awal bulan',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: mutedColor,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -287,7 +894,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
-    final monthNames = [
+    const monthNames = [
       'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
       'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des',
     ];
@@ -323,9 +930,8 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
               Text('$_year', style: AppTextStyles.h3),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: _year >= now.year
-                    ? null
-                    : () => setState(() => _year++),
+                onPressed:
+                    _year >= now.year ? null : () => setState(() => _year++),
                 color: _year >= now.year
                     ? (isDark ? AppColors.mutedDark : AppColors.mutedLight)
                     : (isDark ? AppColors.textDark : AppColors.textLight),
@@ -344,8 +950,8 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
               final month = i + 1;
               final isFuture = DateTime(_year, month)
                   .isAfter(DateTime(now.year, now.month));
-              final isSelected = _year == widget.initial.year &&
-                  month == widget.initial.month;
+              final isSelected =
+                  _year == widget.initial.year && month == widget.initial.month;
               return GestureDetector(
                 onTap: isFuture
                     ? null
@@ -353,9 +959,8 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : Colors.transparent,
+                    color:
+                        isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   alignment: Alignment.center,
@@ -385,104 +990,140 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
   }
 }
 
-// ── Loaded body ───────────────────────────────────────────────────────────────
+// ── Loading skeleton ──────────────────────────────────────────────────────────
 
-class _LoadedBody extends StatelessWidget {
-  const _LoadedBody({required this.state});
-  final TransactionListLoaded state;
+class _V2Skeleton extends StatefulWidget {
+  const _V2Skeleton();
+  @override
+  State<_V2Skeleton> createState() => _V2SkeletonState();
+}
+
+class _V2SkeletonState extends State<_V2Skeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _opacity = Tween(begin: 0.6, end: 1.0).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final skColor = isDark ? AppColors.cardDark : AppColors.cardLight;
 
-    if (state.filtered.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Text(
-            'Belum ada catatan bulan ini.\nMulai dari satu pengeluaran kecil hari ini.',
-            style: AppTextStyles.body.copyWith(color: mutedColor),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
-    final grouped = _groupByDate(state.filtered);
-    final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    return RefreshIndicator(
-      onRefresh: () async =>
-          context.read<TransactionListBloc>().add(const RefreshTransactions()),
-      child: ListView.builder(
-        padding: const EdgeInsets.only(
-            top: AppSpacing.xs, bottom: AppSpacing.lg),
-        itemCount: dates.length,
-        itemBuilder: (context, i) {
-          final date = dates[i];
-          final items = grouped[date]!;
-          return Column(
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (_, _) => Opacity(
+        opacity: _opacity.value,
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxxl),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                    AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-                child: Row(
-                  children: [
-                    Text(
-                      _dateHeader(date),
-                      style: AppTextStyles.caption.copyWith(
-                        color: mutedColor,
-                        fontSize: 11,
-                        letterSpacing: 1.32,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ...items.map((t) => TransactionItem(
-                    transaction: t,
-                    onDelete: () => context
-                        .read<TransactionListBloc>()
-                        .add(DeleteTransactionRequested(t.id)),
-                  )),
+              Row(children: [
+                Expanded(
+                    child: _SkBox(skColor,
+                        height: 72, radius: AppRadius.md)),
+                const SizedBox(width: AppSpacing.sm2),
+                Expanded(
+                    child: _SkBox(skColor,
+                        height: 72, radius: AppRadius.md)),
+              ]),
+              const SizedBox(height: AppSpacing.md),
+              Row(children: [
+                _SkBox(skColor,
+                    width: 64, height: _filterPillH, radius: AppRadius.pill),
+                const SizedBox(width: AppSpacing.sm),
+                _SkBox(skColor,
+                    width: 54, height: _filterPillH, radius: AppRadius.pill),
+                const SizedBox(width: AppSpacing.sm),
+                _SkBox(skColor,
+                    width: 58, height: _filterPillH, radius: AppRadius.pill),
+                const Spacer(),
+                _SkBox(skColor,
+                    width: 36, height: 36, radius: AppRadius.pill),
+                const SizedBox(width: AppSpacing.sm),
+                _SkBox(skColor,
+                    width: 36, height: 36, radius: AppRadius.pill),
+              ]),
+              const SizedBox(height: AppSpacing.md2),
+              for (final rowCount in [3, 2, 4]) ...[
+                _SkDayGroup(skColor: skColor, rowCount: rowCount),
+                const SizedBox(height: _groupGap),
+              ],
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
+}
 
-  Map<DateTime, List<TransactionEntity>> _groupByDate(
-      List<TransactionEntity> list) {
-    final map = <DateTime, List<TransactionEntity>>{};
-    for (final t in list) {
-      final key = DateTime(t.date.year, t.date.month, t.date.day);
-      (map[key] ??= []).add(t);
-    }
-    return map;
-  }
+class _SkBox extends StatelessWidget {
+  const _SkBox(this.color,
+      {this.width, required this.height, this.radius = AppRadius.sm});
+  final Color color;
+  final double? width;
+  final double height;
+  final double radius;
 
-  String _dateHeader(DateTime date) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final diff = today.difference(date).inDays;
-    if (diff == 0) {
-      return 'HARI INI · ${DateFormat('d MMM', 'id_ID').format(date).toUpperCase()}';
-    }
-    if (diff == 1) {
-      return 'KEMARIN · ${DateFormat('d MMM', 'id_ID').format(date).toUpperCase()}';
-    }
-    return DateFormat('d MMMM yyyy', 'id_ID').format(date).toUpperCase();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      );
+}
+
+class _SkDayGroup extends StatelessWidget {
+  const _SkDayGroup({required this.skColor, required this.rowCount});
+  final Color skColor;
+  final int rowCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          _SkBox(skColor,
+              width: _dayNodeD, height: _dayNodeD, radius: _dayNodeD),
+          const SizedBox(width: AppSpacing.md),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _SkBox(skColor, width: 90, height: 13, radius: AppRadius.sm),
+            const SizedBox(height: 4),
+            _SkBox(skColor, width: 54, height: 10, radius: AppRadius.sm),
+          ]),
+        ]),
+        const SizedBox(height: AppSpacing.sm2),
+        Padding(
+          padding: const EdgeInsets.only(left: _txOffset),
+          child: Column(children: [
+            for (int i = 0; i < rowCount; i++) ...[
+              _SkBox(skColor, height: 52, radius: AppRadius.md),
+              if (i < rowCount - 1) const SizedBox(height: _rowGap),
+            ],
+          ]),
+        ),
+      ],
+    );
   }
 }
