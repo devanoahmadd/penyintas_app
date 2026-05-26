@@ -861,7 +861,7 @@ class _BentoGrid extends StatelessWidget {
                 label: l10n.dashboardBentoSurvivalLabel,
                 sub: l10n.dashboardBentoSurvivalSub,
                 badge: l10n.dashboardBentoSurvivalBadge,
-                onTap: () => context.go('/survival/tips'),
+                onTap: () => context.push('/survival/tips'),
               ),
             ),
             const SizedBox(width: AppSpacing.sm2),
