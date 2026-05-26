@@ -16,6 +16,7 @@ import 'package:penyintas_app/features/transaction/presentation/bloc/add_transac
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_detail_sheet.dart';
+import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_item.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 
@@ -119,7 +120,11 @@ class _TransactionListView extends StatelessWidget {
                   if (state is! TransactionListLoaded) {
                     return const SizedBox.shrink();
                   }
-                  return _V2FilterRow(typeFilter: state.typeFilter);
+                  return _V2FilterRow(
+                    typeFilter: state.typeFilter,
+                    onSearchTap: () {}, // wired in Task 6
+                    onFilterTap: () => _openFilterSheet(context, state),
+                  );
                 },
               ),
               // Timeline
@@ -186,6 +191,19 @@ class _TransactionListView extends StatelessWidget {
       listBloc.add(const RefreshTransactions());
       if (saved == true) sl<GoalBloc>().add(const LoadGoals());
     }
+  }
+
+  Future<void> _openFilterSheet(
+      BuildContext context, TransactionListLoaded state) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<TransactionListBloc>(),
+        child: TransactionFilterSheet(currentState: state),
+      ),
+    );
   }
 
   Future<void> _openDetailSheet(
@@ -395,8 +413,14 @@ class _SummaryStat extends StatelessWidget {
 // ── V2 Filter row ─────────────────────────────────────────────────────────────
 
 class _V2FilterRow extends StatelessWidget {
-  const _V2FilterRow({required this.typeFilter});
+  const _V2FilterRow({
+    required this.typeFilter,
+    required this.onSearchTap,
+    required this.onFilterTap,
+  });
   final TransactionType? typeFilter;
+  final VoidCallback onSearchTap;
+  final VoidCallback onFilterTap;
 
   @override
   Widget build(BuildContext context) {
@@ -424,12 +448,14 @@ class _V2FilterRow extends StatelessWidget {
           _IconRoundButton(
               icon: Icons.search_rounded,
               borderColor: borderColor,
-              iconColor: textColor),
+              iconColor: textColor,
+              onTap: onSearchTap),
           const SizedBox(width: AppSpacing.sm),
           _IconRoundButton(
               icon: Icons.tune_rounded,
               borderColor: borderColor,
-              iconColor: textColor),
+              iconColor: textColor,
+              onTap: onFilterTap),
         ],
       ),
     );
@@ -480,21 +506,26 @@ class _IconRoundButton extends StatelessWidget {
     required this.icon,
     required this.borderColor,
     required this.iconColor,
+    this.onTap,
   });
   final IconData icon;
   final Color borderColor;
   final Color iconColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor),
+        ),
+        child: Icon(icon, size: 16, color: iconColor),
       ),
-      child: Icon(icon, size: 16, color: iconColor),
     );
   }
 }
