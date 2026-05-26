@@ -15,6 +15,7 @@ import 'package:penyintas_app/features/transaction/domain/entities/transaction_e
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
+import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_detail_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_item.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 
@@ -137,6 +138,7 @@ class _TransactionListView extends StatelessWidget {
                       return _V2Timeline(
                         state: state,
                         onAddTap: () => _openAddSheet(context),
+                        onTap: (tx) => _openDetailSheet(context, tx),
                       );
                     }
                     return const SizedBox.shrink();
@@ -184,6 +186,19 @@ class _TransactionListView extends StatelessWidget {
       listBloc.add(const RefreshTransactions());
       if (saved == true) sl<GoalBloc>().add(const LoadGoals());
     }
+  }
+
+  Future<void> _openDetailSheet(
+      BuildContext context, TransactionEntity tx) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: context.read<TransactionListBloc>(),
+        child: TransactionDetailSheet(transaction: tx),
+      ),
+    );
   }
 }
 
@@ -487,9 +502,14 @@ class _IconRoundButton extends StatelessWidget {
 // ── V2 Timeline ───────────────────────────────────────────────────────────────
 
 class _V2Timeline extends StatelessWidget {
-  const _V2Timeline({required this.state, required this.onAddTap});
+  const _V2Timeline({
+    required this.state,
+    required this.onAddTap,
+    required this.onTap,
+  });
   final TransactionListLoaded state;
   final VoidCallback onAddTap;
+  final void Function(TransactionEntity) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -524,6 +544,7 @@ class _V2Timeline extends StatelessWidget {
             isDark: isDark,
             isLast: i == dates.length - 1,
             onDelete: (id) => bloc.add(DeleteTransactionRequested(id)),
+            onTap: onTap,
           );
         },
       ),
@@ -550,6 +571,7 @@ class _V2DayGroup extends StatelessWidget {
     required this.isDark,
     required this.isLast,
     required this.onDelete,
+    required this.onTap,
   });
 
   final DateTime date;
@@ -557,6 +579,7 @@ class _V2DayGroup extends StatelessWidget {
   final bool isDark;
   final bool isLast;
   final void Function(String id) onDelete;
+  final void Function(TransactionEntity) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -667,6 +690,7 @@ class _V2DayGroup extends StatelessWidget {
                         transaction: items[i],
                         isDark: isDark,
                         onDelete: () => onDelete(items[i].id),
+                        onTap: () => onTap(items[i]),
                       ),
                       if (i < items.length - 1)
                         const SizedBox(height: _rowGap),
@@ -750,11 +774,13 @@ class _V2TxRow extends StatelessWidget {
     required this.transaction,
     required this.isDark,
     this.onDelete,
+    this.onTap,
   });
 
   final TransactionEntity transaction;
   final bool isDark;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -818,7 +844,10 @@ class _V2TxRow extends StatelessWidget {
                     color: Colors.white, size: 18),
               ),
               onDismissed: (_) => onDelete?.call(),
-              child: TransactionItem(transaction: transaction),
+              child: GestureDetector(
+                onTap: onTap,
+                child: TransactionItem(transaction: transaction),
+              ),
             ),
           ),
         ],
