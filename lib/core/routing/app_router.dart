@@ -61,6 +61,7 @@ GoRouter createAppRouter() => GoRouter(
     GoRoute(
       path: '/dashboard',
       pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
         child: MultiBlocProvider(
           providers: [
             // .value — jangan close singleton saat route di-pop/replace
@@ -83,6 +84,7 @@ GoRouter createAppRouter() => GoRouter(
       pageBuilder: (context, state) {
         final now = DateTime.now();
         return NoTransitionPage(
+          key: state.pageKey,
           child: BlocProvider(
             create: (_) => sl<TransactionListBloc>()
               ..add(LoadTransactions(
@@ -97,6 +99,7 @@ GoRouter createAppRouter() => GoRouter(
     GoRoute(
       path: '/goals',
       pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
         // BlocProvider.value karena GoalBloc adalah singleton — jangan di-close
         // saat route di-pop agar state tetap hidup untuk reload cross-route
         child: BlocProvider.value(
@@ -124,6 +127,7 @@ GoRouter createAppRouter() => GoRouter(
     GoRoute(
       path: '/report',
       pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
         child: BlocProvider(
           create: (_) => sl<ReportBloc>()..add(LoadReport(DateTime.now())),
           child: const ReportPage(),
@@ -137,7 +141,7 @@ GoRouter createAppRouter() => GoRouter(
     GoRoute(
       path: '/profile',
       pageBuilder: (context, state) =>
-          const NoTransitionPage(child: SayaPage()),
+          NoTransitionPage(key: state.pageKey, child: const SayaPage()),
     ),
   ],
 );
