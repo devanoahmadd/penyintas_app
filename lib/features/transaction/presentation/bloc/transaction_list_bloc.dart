@@ -35,9 +35,15 @@ class TransactionListBloc
       RefreshTransactions event, Emitter<TransactionListState> emit) async {
     if (state is! TransactionListLoaded) return;
     final s = state as TransactionListLoaded;
+    final now = DateTime.now();
+    // s.to diset saat halaman pertama dibuka — bisa usang dalam hitungan detik.
+    // Transaksi baru punya date > s.to, menyebabkan query tidak menemukannya.
+    // Perbarui to ke sekarang agar transaksi yang baru ditambahkan ikut terbaca.
+    final isCurrentMonth =
+        s.from.year == now.year && s.from.month == now.month;
     await _fetchAndEmit(
       s.from,
-      s.to,
+      isCurrentMonth ? now : s.to,
       s.typeFilter,
       emit,
       categoryFilter: s.categoryFilter,
