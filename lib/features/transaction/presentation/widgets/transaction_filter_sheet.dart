@@ -96,8 +96,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Kategori',
-                      style: AppTextStyles.h3.copyWith(
-                          fontSize: 14,
+                      style: AppTextStyles.label.copyWith(
                           fontWeight: FontWeight.w700,
                           color: textColor)),
                   const SizedBox(height: AppSpacing.sm),
@@ -143,8 +142,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Periode',
-                      style: AppTextStyles.h3.copyWith(
-                          fontSize: 14,
+                      style: AppTextStyles.label.copyWith(
                           fontWeight: FontWeight.w700,
                           color: textColor)),
                   const SizedBox(height: AppSpacing.sm),
@@ -231,8 +229,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Nominal',
-                          style: AppTextStyles.h3.copyWith(
-                              fontSize: 14,
+                          style: AppTextStyles.label.copyWith(
                               fontWeight: FontWeight.w700,
                               color: textColor)),
                       Text(

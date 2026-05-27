@@ -1,8 +1,8 @@
 ﻿# Penyintas — Progress Pengembangan Aplikasi
 
-**Terakhir diperbarui:** 2026-05-22  
-**Status keseluruhan:** Phase 6A ✅ · Phase 6B ✅ · Phase 6B-fix ✅ · Phase 6C ✅ · Phase 6C-fix ✅ · Phase 7-prep ✅ · Phase 7A ✅ · Phase 7-prep-fix ✅ · Phase 7B ✅ · Phase 7B-fix ✅ · Phase 7C ✅ · Profile/Nav polish ✅ · Phase 7C-fix ✅ · Phase 7D ✅ · Phase 7E ✅ · Phase 7F ✅  
-**Test count:** 180/180 passed · flutter analyze: 0 issues
+**Terakhir diperbarui:** 2026-05-27  
+**Status keseluruhan:** Phase 6A ✅ · Phase 6B ✅ · Phase 6B-fix ✅ · Phase 6C ✅ · Phase 6C-fix ✅ · Phase 7-prep ✅ · Phase 7A ✅ · Phase 7-prep-fix ✅ · Phase 7B ✅ · Phase 7B-fix ✅ · Phase 7C ✅ · Profile/Nav polish ✅ · Phase 7C-fix ✅ · Phase 7D ✅ · Phase 7E ✅ · Phase 7F ✅ · Dashboard C1 Redesign ✅ · C1 Polish ✅ · Transactions V2 States ✅  
+**Test count:** 183/183 passed · flutter analyze: 0 issues
 
 ---
 
@@ -38,6 +38,9 @@
 | **7D** | Android Home Screen Widget: penyintas_widget.xml, PenyintasWidgetProvider.kt, DashboardBloc push, home_widget ^0.9.1 | ✅ Selesai | 175 | 2026-05-21 |
 | **7E** | Share Report (RepaintBoundary + share_plus screenshot) + CSV Export (Settings → share_plus) | ✅ Selesai | 180 | 2026-05-21 |
 | **7F** | Tech debt: #20 RemoteConfig splash, #134 compact negative, #135 NumberFormat cache, #136 fromCode case-insensitive, #138 PRAGMA foreign_keys, #140/#141 tests | ✅ Selesai | 180 | 2026-05-21 |
+| **C1** | Dashboard redesign: BentoGrid, RingWidget (donut), TipCard, SaldoCard eye-toggle, token baru (cardLight, lg2) | ✅ Selesai | 180 | 2026-05-26 |
+| **C1-polish** | l10n 100% dashboard (37 key baru, DateFormat locale-aware) · spacing sm2/md2 · text style audit (8 fix) | ✅ Selesai | 180 | 2026-05-26 |
+| **Tx V2 States** | Transaction screen: 5 UI states (skeleton, empty, detail sheet, filter sheet, search) + BLoC filter extension (`FilterSheetApplied`, `categoryFilter`/`minAmount`/`maxAmount`) | ✅ Selesai | 183 | 2026-05-27 |
 
 ---
 
@@ -457,6 +460,9 @@ AppSettings `schemaVersion` → 2: tambah `reminderEnabled`, `reminderHour`, `re
 | Phase 7B-fix (bug sprint) | **153** | +0 |
 | Phase 7C (Goal Saving) | **175** | +22 |
 | Phase 7C-fix (bug sprint) | **175** | +0 |
+| Phase 7D + 7E + 7F | **180** | +5 |
+| Dashboard C1 Redesign (UI pass) | **180** | +0 |
+| Transactions V2 States (BLoC filter extension) | **183** | +3 |
 
 **Distribusi test aktual:**
 
@@ -497,22 +503,27 @@ test/
       goal/
         domain/entities/goal_entity_test.dart                 11 tests
         presentation/bloc/goal_bloc_test.dart                  9 tests
-                                                    TOTAL: 175
+      transaction/
+        presentation/bloc/transaction_list_bloc_test.dart      7 tests  ← +3 dari V2 States (FilterSheetApplied)
+                                                    TOTAL: 183
 ```
 
 ---
 
 ## Issue Tracker — Status Terkini
 
-**Total issue terdokumentasi:** 183 issue (#1–#181, #3 dan #86 obsolete)  
+**Total issue terdokumentasi:** 187 issue (#1–#185, #3 dan #86 obsolete)  
 Detail lengkap di [`docs/issue-tracker.md`](issue-tracker.md)
 
 | Kategori | Jumlah |
 |----------|--------|
-| ✅ Selesai | 140 |
+| ✅ Selesai | 145 |
 | ⚠️ Sebagian | 1 (#98 pie ✅, bar 🔲) |
-| 🔲 Terbuka | 40 (#17, #63, #67–#70, #83, #99–#100, #103, #105, #108–#113, #115, #122, #142, #143, #152–#161, #167, #169, #170, #173–#177, #179) |
+| 🔲 Terbuka | 39 (#17, #63, #67–#70, #83, #99–#100, #103, #105, #108–#113, #115, #122, #142, #143, #152–#154, #156–#161, #167, #169, #170, #173–#177, #179) |
 | ❌ Obsolete | 2 (#3, #86) |
+
+**#185 diperbaiki inline (Transactions V2 States session):**
+- `#185` ✅ — Filter chip stale closure: `buildWhen` di filter-row `BlocBuilder` hanya watch `typeFilter`, sehingga `state` dalam `onFilterTap` closure tidak pernah diperbarui ketika `categoryFilter` berubah → chip kategori terlihat off padahal aktif; fix: baca state live via `context.read<TransactionListBloc>().state` saat tap
 
 **#171 + #172 + #178 + #180 + #181 diperbaiki inline:**
 - `#171` ✅ — `_exportCsv()` ditambah `finally { file.delete() }` (konsisten dengan `_shareReport()`)
@@ -540,8 +551,8 @@ lib/
   features/
     auth/          ✅  Firebase Auth + BLoC + 3 pages
     onboarding/    ✅  Wizard 3 langkah + BLoC + local-first + sync queue
-    dashboard/     ✅  Real-time stream + BLoC + DaysToLiveCard + BudgetBar
-    transaction/   ✅  CRUD + AddTransactionSheet (numpad) + TransactionList
+    dashboard/     ✅  Real-time stream + BLoC + C1 redesign (BentoGrid, RingWidget, TipCard, SaldoCard eye-toggle)
+    transaction/   ✅  CRUD + AddTransactionSheet (numpad) + TransactionList V2 (timeline spine, skeleton, empty state, detail sheet, filter sheet, search)
     notification/  ✅  FCM + local notifications + Cloud Functions (3 functions)
     report/        ✅  Chart (pie + bar) + AI insight (Vertex AI Gemini)
     settings/      ✅  Settings Page UI selesai di Phase 6A
@@ -554,7 +565,7 @@ lib/
     PenyintasLogo      ✅  SVG auto light/dark/reversed
     PrimaryButton      ✅
     AppTextField       ✅
-    DaysToLiveCard     ✅  Pakai AppLocalizations
+    DaysToLiveCard     ✅  Padding AppSpacing.lg2, hero num 48px Plus Jakarta Sans
     BudgetBar          ✅  Animasi dari nilai sebelumnya
     SurvivalModeBanner ✅
     TransactionItem    ✅  Swipe-to-delete
@@ -565,8 +576,8 @@ lib/
     sync/        ✅  SyncService + SyncDispatcher
     di/          ✅  GetIt DI container
     routing/     ✅  go_router + auth redirect + onboarding guard
-    l10n/        ✅  AppLocalizations (100+ keys) — sebagian besar page sudah wire via context.l10n ext (6C)
-    theme/       ✅  AppColors, AppTextStyles, AppSpacing, AppRadius
+    l10n/        ✅  AppLocalizations (200+ keys) — dashboard 100% l10n, DateFormat locale-aware timestamp
+    theme/       ✅  AppColors (+ cardLight #FDFCF8), AppTextStyles, AppSpacing (+ sm2=10, md2=14, lg2=18), AppRadius
     utils/       ✅  formatRupiah (shim), CurrencyConfig (IDR), formatCurrency(), date_helper, analytics_service, network_info
 ```
 
@@ -807,6 +818,158 @@ Schema v4: Goals table, goalId di Transactions, survivalModeActivatedAt di AppSe
 
 ---
 
+## Dashboard C1 Final MVP Redesign ✅ (2026-05-26)
+
+UI-only redesign dashboard berdasarkan handoff bundle C1 Final MVP. 180/180 tests (tidak ada test baru — UI change).
+
+### Perubahan layout
+
+Section order baru:
+1. Header (notif dot static)
+2. DTL Card (padding `AppSpacing.lg2`, hero num 48px Plus Jakarta Sans 800)
+3. Akses Cepat + BentoGrid
+4. SaldoCard (eye toggle)
+5. 2× RingWidget (donut chart)
+6. TipCard (dashed border)
+7. Transaksi terkini (TxCard card-wrapped)
+
+### Widget baru (private, inline di `dashboard_page.dart`)
+
+| Widget | Deskripsi |
+|--------|-----------|
+| `_BentoGrid` | 2-col layout: 2 featured tile + 4 quick tile. Featured: Survival Mode + Tagihan. Quick: Tujuan + Scan Struk + Bagi Tagihan + Tantangan |
+| `_BentoFeatTile` | Tile besar berwarna (min 116dp), badge pill, icon |
+| `_BentoQuickTile` | Tile kecil (60dp), icon container `AppRadius.sm` |
+| `_RingPainter` | `CustomPainter` donut chart, arc dari -π/2, strokeCap round |
+| `_RingWidget` | Card ring + nilai + delta label |
+| `_DashedBorderPainter` | `CustomPainter` dashed border (dashLen=5, gapLen=4) |
+| `_TipCard` | Static tip harian, dashed border, icon circle |
+| `_TxCard` | Card wrapper untuk `_TxnRow` list (max 3 item) |
+| `_SectionHeader` | Row judul + action link |
+
+### Upgrade widget existing
+
+- `_SaldoCard` → StatefulWidget, eye toggle `bool _hidden`, tap target 44×44dp
+- `_DashboardHeader` → notif dot 8×8 `AppColors.warn` di pojok kanan bell
+- `_TxnRow` → divider per row, padding tokenized
+
+### Token baru
+
+| Token | Nilai | Pakai untuk |
+|-------|-------|-------------|
+| `AppSpacing.lg2` | 18dp | Padding DTL card, slot desain 18dp (rename dari `xl1`) |
+| `AppColors.cardLight` | `#FDFCF8` | Card surface light mode (warm off-white, kontras di atas bgLight tanpa pure white) |
+
+### Dihapus
+
+- `SurvivalModeBanner` dari layout dashboard (BlocListener tetap ada untuk routing)
+- `_SpendingCard`, `_EmergencyCard` → diganti `_RingWidget`
+- `_RecentTransactionsSection` → diganti `_TxCard`
+
+### Compliance fixes post-implementasi
+
+Copy `'On track'` → `'Sesuai rencana'`, padding hardcoded 14/10 → token, `BorderRadius.circular(10)` → `AppRadius.sm`, `fontFamily: 'JetBrainsMono'` dari `.copyWith()` dihapus, card background `Colors.white` → `AppColors.cardLight`.
+
+---
+
+## Dashboard C1 — Post-launch Polish ✅ (2026-05-26)
+
+3 commit polish setelah C1 redesign. 180/180 tests, 0 analyze issues.
+
+### 1 · Localization 100% (`feat(l10n)`, commit `c74572e`)
+
+**37 key baru** ditambahkan ke `id.json`, `en.json`, dan `app_localizations.dart`:
+
+| Grup | Key |
+|------|-----|
+| Greeting | `dashboard_greeting_morning/noon/afternoon/evening` |
+| Ring delta | `dashboard_delta_on_track/nearing/exceeded` |
+| Ring sub-label | `dashboard_pct_of_budget(pct)`, `dashboard_pct_of_total(pct)` |
+| Section header | `dashboard_quick_access`, `dashboard_quick_access_action`, `dashboard_see_all_action` |
+| Saldo card | `dashboard_balance_hidden`, `dashboard_balance_detail`, `dashboard_balance_as_of` |
+| Bento tiles | `dashboard_bento_survival_*`, `dashboard_bento_bills_*`, `dashboard_bento_goals_sub`, `dashboard_bento_scan_*`, `dashboard_bento_split_*`, `dashboard_bento_challenge_*` |
+| Umum | `common_coming_soon` |
+| Tip card | `dashboard_tip_eyebrow`, `dashboard_tip_text` |
+| Tx kosong | `dashboard_tx_empty` |
+| Kategori | `category_health`, `category_internet` |
+
+**Perubahan kode `dashboard_page.dart`:**
+- `_timestamp()` → pakai `intl` `DateFormat('d MMMM yyyy', locale)` untuk nama bulan locale-aware (bukan array hardcoded Indonesia)
+- `_greeting()` → terima `BuildContext`, return `context.l10n.dashboardGreetingXxx`
+- `_categoryLabel()` → non-static, terima `AppLocalizations` param
+- `_buildSpendingRing()` / `_buildEmergencyRing()` → terima `BuildContext`, semua string via l10n
+- Semua bento tiles, TipCard, TxCard, SaldoCard → 100% via `context.l10n.*`
+
+### 2 · Spacing design tokens (`fix(spacing)`, commit `dfff4a7`)
+
+**Root cause:** Compliance pass C1 salah mengganti nilai desain 14dp → `AppSpacing.lg` (16) dan 10dp → `AppSpacing.sm` (8). AppSpacing tidak memiliki token untuk keduanya.
+
+**Token baru di `app_spacing.dart`:**
+
+| Token | Nilai | Posisi di skala |
+|-------|-------|-----------------|
+| `AppSpacing.sm2` | 10dp | Antara `sm` (8) dan `md` (12) |
+| `AppSpacing.md2` | 14dp | Antara `md` (12) dan `lg` (16) |
+
+**13 titik diperbarui di `dashboard_page.dart`:**
+
+| Lokasi | Sebelum | Sesudah |
+|--------|---------|---------|
+| `_BentoFeatTile` padding | `lg` (16) | `md2` (14) |
+| `_TipCard` horizontal padding | `lg` (16) | `md2` (14) |
+| `_TipCard` vertical padding | `sm` (8) | `sm2` (10) |
+| `_TxnRow` horizontal padding | `lg` (16) | `md2` (14) |
+| Section separators (×3) | `md` (12) | `md2` (14) |
+| Ring gap | `sm` (8) | `sm2` (10) |
+| Bento horizontal gaps (×3) | `sm` (8) | `sm2` (10) |
+| Bento vertical gaps (×2) | `sm` (8) | `sm2` (10) |
+
+### 3 · Text style audit (`fix(text-style)`, commit `34928cc`)
+
+Audit seluruh penggunaan `AppTextStyles` di dashboard vs CLAUDE.md type scale. **8 fix:**
+
+| Lokasi | Sebelum | Sesudah | Alasan |
+|--------|---------|---------|--------|
+| Transaction name (`_TxnRow`) | `body` IT 16px | `bodySmall` IT 14px | 16px terlalu besar untuk row 60dp |
+| Transaction amount (`_TxnRow`) | `label` IT + manual tabularFigures | `numericSm` JBM 14 | Angka finansial → JBM mono, tabular built-in |
+| Ring value (`_RingWidget`) | `label` IT w800 + tabularFigures | `numericSm` JBM 14 | Idem; w800 tidak ada optical cut di IT |
+| Section header action (`_SectionHeader`) | `label.copyWith(12px)` | `label` 14px | 12px IT off-scale, tidak ada token |
+| Bento quick tile label (`_BentoQuickTile`) | `label.copyWith(12px)` | `label` 14px | Idem |
+| Tip card body (`_TipCard`) | `body.copyWith(12px)` | `bodySmall` IT 14px | 12px IT off-scale; 14px lebih readable |
+| "Detail →" link (`_SaldoCard`) | `label.copyWith(11px)` | `caption` JBM 12px | 11px off-scale; caption cocok dengan timestamp di baris yang sama |
+| Arrow icon "Detail" | `size: 11` | `size: 12` | Match caption baseline |
+
+---
+
+## Transactions V2 States ✅ (2026-05-27)
+
+6 task UI states layar transaksi + BLoC filter extension. 183/183 tests, 0 analyze issues.
+
+| Task | Komponen | Status |
+|------|----------|--------|
+| Pre | `TransactionCategoryX` extension di `transaction_entity.dart` — `.label` getter (pure Dart, tanpa Flutter import, callable sebagai `category.label`) | ✅ |
+| 1 | `FilterSheetApplied` event · 3 field baru di `TransactionListLoaded` (`categoryFilter`, `minAmount`, `maxAmount`) · `_applyFilters()` static · 3 test baru (total bloc: 4 → 7) | ✅ |
+| 2 | `_V2Skeleton` loading skeleton dengan `AnimationController` pulse (repeat+reverse, opacity 0.4–1.0) | ✅ |
+| 3 | `_V2EmptyState` dengan spine illustration (gradient fade), contextual CTA (`onAddTap`) | ✅ |
+| 4 | `transaction_detail_sheet.dart` (FILE BARU) — spine-continuity header, icon card, meta rows (Waktu/Jenis/Catatan), Edit + Duplikat + Hapus actions; wired via `_V2TxRow.onTap` | ✅ |
+| 5 | `transaction_filter_sheet.dart` (FILE BARU) — chip kategori, period grid (4 opsi + custom date picker), `RangeSlider` nominal 0–5 jt; dispatch `FilterSheetApplied` + conditional `LoadTransactions` | ✅ |
+| 6 | Search active state — `_TransactionListView` dikonversi ke `StatefulWidget`, `_V2SearchBar` dengan `autofocus`, `_matchesSearch` (client-side, note + category) | ✅ |
+| Bug | **#185** filter chip stale closure — `buildWhen` membatasi rebuild ke `typeFilter` sehingga `state` di closure tidak update saat `categoryFilter` berubah → chip kategori terlihat off padahal aktif; fix: `context.read<TransactionListBloc>().state` at tap time | ✅ |
+
+### File baru
+
+- `lib/features/transaction/presentation/widgets/transaction_detail_sheet.dart`
+- `lib/features/transaction/presentation/widgets/transaction_filter_sheet.dart`
+
+### Arsitektur kunci
+
+- `TransactionCategoryX` extension di domain layer (`transaction_entity.dart`) — pure Dart, tidak ada Flutter import. Semua widget kini memanggil `category.label` tanpa perlu static helper per-widget
+- `_categoryIcon` (mengembalikan `IconData`) tetap diduplikat di `TransactionItem` dan `TransactionDetailSheet` — Flutter `IconData` adalah UI concern, tidak bisa masuk domain layer
+- **Equatable dedup pitfall (test):** Dispatch event yang menghasilkan state identik tidak emit apapun. Test `FilterSheetApplied(categories: null)` harus seed state dengan filter aktif agar clear menghasilkan state berbeda
+- **Stale closure pattern:** `BlocBuilder` dengan `buildWhen` yang memfilter sebagian field menyebabkan `state` dalam closure tidak diperbarui untuk field yang difilter. Selalu baca state live via `context.read<Bloc>().state` saat interaksi yang bergantung pada state yang di-filter
+
+---
+
 ## Catatan Teknis Penting
 
 ### Dependency Versions (final, per Phase 5C)
@@ -873,11 +1036,13 @@ v5  → Phase 8A (planned: AppSettings split + currency/timezone columns)
 
 ### Aturan desain yang tidak boleh dilanggar
 
-1. Semua warna dari `AppColors` — jangan hardcode hex
-2. Semua font dari `AppTextStyles` — Plus Jakarta Sans / Inter Tight / JetBrains Mono
-3. Semua spacing dari `AppSpacing` / `AppRadius`
-4. Dark mode wajib di setiap widget
-5. Logo selalu dari `assets/images/logo-m7.svg` via `SvgPicture.asset()` + `PenyintasLogo`
-6. Angka selalu `fontFeatures: [FontFeature.tabularFigures()]`
-7. Format Rupiah: `formatRupiah(int)` → `"Rp 1.245.000"`
-8. Copy: bahasa Indonesia santai-formal, sapaan "kamu", tidak menghakimi
+1. Semua warna dari `AppColors` — jangan hardcode hex. Card surface light → `AppColors.cardLight`; scaffold → `AppColors.bgLight`; chip/bottomsheet → `AppColors.surfaceLight`
+2. Semua font dari `AppTextStyles` — Plus Jakarta Sans / Inter Tight / JetBrains Mono. Jangan `copyWith(fontFamily: '...')` untuk font yang sudah di-set via GoogleFonts. Jangan `copyWith(fontSize: X)` dengan ukuran di luar type scale
+3. **Angka finansial wajib JBM** — gunakan `numericSm`/`numericMd`/`numericLg` (tabular-nums built-in). Jangan `label.copyWith(tabularFigures)` untuk saldo/nominal
+4. Semua spacing dari `AppSpacing` / `AppRadius` — jangan angka arbitrary. Skala tersedia: `xs=4, sm=8, sm2=10, md=12, md2=14, lg=16, lg2=18, xl=24, xxl=32, xxxl=48, huge=64`
+5. Dark mode wajib di setiap widget
+6. Logo selalu dari `assets/images/logo-m7.svg` via `SvgPicture.asset()` + `PenyintasLogo`
+7. Angka selalu tabular-nums — via `numericSm/Md/Lg` (built-in), atau explicit `fontFeatures: [FontFeature.tabularFigures()]` jika memakai style lain
+8. Format Rupiah: `formatRupiah(int)` → `"Rp 1.245.000"`
+9. Copy via `context.l10n.*` — jangan hardcode string UI. Dashboard sudah 100% l10n
+10. Hit target minimum 44dp iOS / 48dp Android — semua `GestureDetector` dan tap area

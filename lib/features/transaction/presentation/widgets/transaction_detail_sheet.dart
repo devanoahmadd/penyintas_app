@@ -163,9 +163,8 @@ class TransactionDetailSheet extends StatelessWidget {
                   ),
                   Text(
                     '${isIncome ? '+' : '−'} ${formatRupiah(transaction.amount)}',
-                    style: AppTextStyles.numericSm.copyWith(
+                    style: AppTextStyles.numericMd.copyWith(
                       fontSize: 18,
-                      fontWeight: FontWeight.w800,
                       color: amtColor,
                     ),
                   ),

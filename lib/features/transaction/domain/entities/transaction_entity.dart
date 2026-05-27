@@ -39,3 +39,16 @@ class TransactionEntity extends Equatable {
 enum TransactionCategory { food, transport, shopping, health, internet, fixed, other, income }
 
 enum TransactionType { expense, income }
+
+extension TransactionCategoryX on TransactionCategory {
+  String get label => switch (this) {
+        TransactionCategory.food      => 'Makan',
+        TransactionCategory.transport => 'Transport',
+        TransactionCategory.shopping  => 'Belanja',
+        TransactionCategory.health    => 'Kesehatan',
+        TransactionCategory.internet  => 'Internet',
+        TransactionCategory.fixed     => 'Kos',
+        TransactionCategory.income    => 'Pemasukan',
+        TransactionCategory.other     => 'Lainnya',
+      };
+}

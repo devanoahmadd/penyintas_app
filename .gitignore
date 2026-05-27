@@ -3,6 +3,10 @@ CLAUDE.md
 PROMPT.md
 .claude/settings.local.json
 .claude/projects/
+.claude/skills/
+.superpowers/
+.agents/
+docs/
 
 # Miscellaneous
 *.class

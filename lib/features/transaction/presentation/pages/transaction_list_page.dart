@@ -717,8 +717,7 @@ class _V2DayGroup extends StatelessWidget {
                       children: [
                         Text(
                           _dayLabel(date),
-                          style: AppTextStyles.h3.copyWith(
-                            fontSize: 13,
+                          style: AppTextStyles.label.copyWith(
                             fontWeight: FontWeight.w700,
                             height: 1.2,
                             color: textColor,
@@ -749,7 +748,7 @@ class _V2DayGroup extends StatelessWidget {
                       '${isPositive ? '+' : '−'} ${formatRupiah(subtotal.abs())}',
                       style: AppTextStyles.numericSm.copyWith(
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: subtotalColor,
                       ),
                     ),
@@ -832,7 +831,7 @@ class _DayNode extends StatelessWidget {
             monthAbbr,
             style: AppTextStyles.caption.copyWith(
               fontSize: 7,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
               height: 1.2,
               letterSpacing: 0.4,
               color: AppColors.shoot,

@@ -457,13 +457,9 @@ class _SaldoCardState extends State<_SaldoCard> {
             _hidden
                 ? context.l10n.dashboardBalanceHidden
                 : formatRupiah(widget.entity.totalRemaining),
-            style: AppTextStyles.h1.copyWith(
+            style: AppTextStyles.numericLg.copyWith(
               fontSize: 30,
-              fontWeight: FontWeight.w800,
-              height: 1.0,
               color: textColor,
-              fontFeatures:
-                  _hidden ? null : const [FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(height: AppSpacing.xs),

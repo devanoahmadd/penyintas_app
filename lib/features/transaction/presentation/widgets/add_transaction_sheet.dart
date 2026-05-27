@@ -233,9 +233,8 @@ class _NumpadSheetState extends State<_NumpadSheet> {
               children: [
                 Text(
                   'Rp',
-                  style: AppTextStyles.h2.copyWith(
+                  style: AppTextStyles.numericMd.copyWith(
                     color: mutedColor,
-                    fontWeight: FontWeight.w700,
                     height: 1.2,
                   ),
                 ),
@@ -243,12 +242,9 @@ class _NumpadSheetState extends State<_NumpadSheet> {
                 Expanded(
                   child: Text(
                     NumberFormat.decimalPattern('id_ID').format(amount),
-                    style: AppTextStyles.h1.copyWith(
+                    style: AppTextStyles.numericLg.copyWith(
                       fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
                       color: textColor,
-                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -528,9 +524,8 @@ class _NominalCard extends StatelessWidget {
                 children: [
                   Text(
                     'Rp',
-                    style: AppTextStyles.h2.copyWith(
+                    style: AppTextStyles.numericMd.copyWith(
                       color: mutedColor,
-                      fontWeight: FontWeight.w700,
                       height: 1.2,
                     ),
                   ),
@@ -538,12 +533,9 @@ class _NominalCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       displayStr,
-                      style: AppTextStyles.h1.copyWith(
+                      style: AppTextStyles.numericLg.copyWith(
                         fontSize: 38,
-                        fontWeight: FontWeight.w800,
-                        height: 1.0,
                         color: amount == 0 ? mutedColor : textColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -655,12 +647,10 @@ class _CategoryCell extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              _label(category),
+              _label(category).toUpperCase(),
               style: AppTextStyles.caption.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontSize: 10,
                 color: isSelected ? Colors.white : textColor,
-                letterSpacing: 0,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

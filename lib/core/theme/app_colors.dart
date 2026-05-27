@@ -31,4 +31,8 @@ class AppColors {
   static const Color warn = Color(0xFFE07A3C);
   static const Color caution = Color(0xFFD4A93C);
   static const Color success = Color(0xFF16A34A);
+
+  // Semantic finansial — dark mode (AAA contrast on cardDark)
+  static const Color incomeDark = Color(0xFF6EE7A0);
+  static const Color expenseDark = Color(0xFFFF8F70);
 }
