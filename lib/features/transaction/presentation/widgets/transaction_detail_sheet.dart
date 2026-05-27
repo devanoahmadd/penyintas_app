@@ -217,6 +217,7 @@ class TransactionDetailSheet extends StatelessWidget {
                     icon: Icons.edit_outlined,
                     label: 'Edit',
                     isDark: isDark,
+                    variant: _ButtonVariant.primary,
                     onTap: () => Navigator.pop(context),
                   ),
                 ),
@@ -236,21 +237,18 @@ class TransactionDetailSheet extends StatelessWidget {
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  context
-                      .read<TransactionListBloc>()
-                      .add(DeleteTransactionRequested(transaction.id));
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  'Hapus Transaksi',
-                  style:
-                      AppTextStyles.label.copyWith(color: AppColors.warn),
-                ),
-              ),
+            child: _ActionButton(
+              icon: Icons.delete_outline_rounded,
+              label: 'Hapus Transaksi',
+              isDark: isDark,
+              variant: _ButtonVariant.destructive,
+              fullWidth: true,
+              onTap: () {
+                context
+                    .read<TransactionListBloc>()
+                    .add(DeleteTransactionRequested(transaction.id));
+                Navigator.pop(context);
+              },
             ),
           ),
           SizedBox(
@@ -339,46 +337,85 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
+enum _ButtonVariant { primary, secondary, destructive }
+
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.isDark,
     required this.onTap,
+    this.variant = _ButtonVariant.secondary,
+    this.fullWidth = false,
   });
   final IconData icon;
   final String label;
   final bool isDark;
   final VoidCallback onTap;
+  final _ButtonVariant variant;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final Color bgColor;
+    final Color fgColor;
+    final Color borderColor;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    switch (variant) {
+      case _ButtonVariant.primary:
+        // ignore: deprecated_member_use
+        bgColor = AppColors.primary.withOpacity(isDark ? 0.18 : 0.10);
+        fgColor = isDark ? AppColors.shoot : AppColors.primary;
+        // ignore: deprecated_member_use
+        borderColor = AppColors.primary.withOpacity(isDark ? 0.40 : 0.28);
+      case _ButtonVariant.destructive:
+        // ignore: deprecated_member_use
+        bgColor = AppColors.warn.withOpacity(isDark ? 0.15 : 0.08);
+        fgColor = AppColors.warn;
+        // ignore: deprecated_member_use
+        borderColor = AppColors.warn.withOpacity(isDark ? 0.40 : 0.28);
+      case _ButtonVariant.secondary:
+        bgColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+        fgColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+        borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    }
+
+    final radius = BorderRadius.circular(AppRadius.md);
+
+    final child = Ink(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: radius,
+        border: Border.all(color: borderColor),
+      ),
+      child: SizedBox(
         height: 48,
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: borderColor),
-        ),
+        width: fullWidth ? double.infinity : null,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: textColor),
+            Icon(icon, size: 16, color: fgColor),
             const SizedBox(width: AppSpacing.sm),
             Text(
               label,
-              style: AppTextStyles.label
-                  .copyWith(color: textColor, fontSize: 13),
+              style: AppTextStyles.label.copyWith(color: fgColor, fontSize: 13),
             ),
           ],
         ),
+      ),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        // ignore: deprecated_member_use
+        splashColor: fgColor.withOpacity(0.10),
+        // ignore: deprecated_member_use
+        highlightColor: fgColor.withOpacity(0.06),
+        child: child,
       ),
     );
   }
