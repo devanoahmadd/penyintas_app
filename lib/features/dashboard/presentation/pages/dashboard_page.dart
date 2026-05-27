@@ -244,7 +244,7 @@ class _DashboardBody extends StatelessWidget {
                       Expanded(child: _buildEmergencyRing(context)),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // 4. Akses Cepat
                   _SectionHeader(
@@ -350,8 +350,8 @@ class _DashboardHeader extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: surfaceColor,
                   shape: BoxShape.circle,
@@ -446,7 +446,7 @@ class _SaldoCardState extends State<_SaldoCard> {
                     _hidden
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    size: 16,
+                    size: 20,
                     color: mutedColor,
                   ),
                 ),
@@ -1071,10 +1071,7 @@ class _RingWidget extends StatelessWidget {
                     ),
                     Text(
                       sub,
-                      style: AppTextStyles.caption.copyWith(
-                        color: mutedColor,
-                        fontSize: 10,
-                      ),
+                      style: AppTextStyles.caption.copyWith(color: mutedColor),
                     ),
                   ],
                 ),
@@ -1185,7 +1182,6 @@ class _TipCard extends StatelessWidget {
                       text: '${context.l10n.dashboardTipEyebrow}  ',
                       style: AppTextStyles.caption.copyWith(
                         color: mutedColor,
-                        fontSize: 9,
                         letterSpacing: 0.12,
                       ),
                     ),

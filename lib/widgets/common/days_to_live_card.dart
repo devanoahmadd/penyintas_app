@@ -96,7 +96,7 @@ class DaysToLiveCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppSpacing.xs),
 
           // Subtitle
           Text(
