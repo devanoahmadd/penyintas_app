@@ -46,7 +46,7 @@
   "dashboard_saldo_label": "CURRENT BALANCE",
   "dashboard_spending_label": "SPENDING THIS MONTH",
   "dashboard_emergency_label": "EMERGENCY FUND",
-  "dashboard_recent_tx": "Recent transactions",
+  "dashboard_recent_tx": "Today's transactions",
   "dashboard_see_all": "See all →",
   "dashboard_from_budget": "of budget",
   "dashboard_status_safe": "Safe",

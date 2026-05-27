@@ -215,7 +215,7 @@ class _DashboardBody extends StatelessWidget {
         color: AppColors.primary,
         child: CustomScrollView(
           slivers: [
-            const SliverToBoxAdapter(child: _DashboardHeader()),
+            const SliverToBoxAdapter(child: _DashboardHeader(hasNotification: false)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               sliver: SliverList(
@@ -228,23 +228,14 @@ class _DashboardBody extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.md2),
 
-                  // 2. Akses Cepat
-                  _SectionHeader(
-                    title: l10n.dashboardQuickAccess,
-                    action: l10n.dashboardQuickAccessAction,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  const _BentoGrid(),
-                  const SizedBox(height: AppSpacing.md2),
-
-                  // 3. Saldo Terkini
+                  // 2. Saldo Terkini
                   _SaldoCard(
                     entity: entity,
                     onDetailTap: () => context.go('/transactions'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // 4. Ring widgets
+                  // 3. Ring widgets
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -255,11 +246,20 @@ class _DashboardBody extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
+                  // 4. Akses Cepat
+                  _SectionHeader(
+                    title: l10n.dashboardQuickAccess,
+                    action: l10n.dashboardQuickAccessAction,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const _BentoGrid(),
+                  const SizedBox(height: AppSpacing.md2),
+
                   // 5. Tip
                   const _TipCard(),
                   const SizedBox(height: AppSpacing.md2),
 
-                  // 6. Transaksi terkini
+                  // 6. Transaksi hari ini
                   _SectionHeader(
                     title: l10n.dashboardRecentTx,
                     action: l10n.dashboardSeeAllAction,
@@ -281,7 +281,9 @@ class _DashboardBody extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
+  const _DashboardHeader({required this.hasNotification});
+
+  final bool hasNotification;
 
   String _greeting(BuildContext context) {
     final l10n = context.l10n;
@@ -363,19 +365,20 @@ class _DashboardHeader extends StatelessWidget {
                   color: mutedColor,
                 ),
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.warn,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: surfaceColor, width: 1.5),
+              if (hasNotification)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.warn,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: surfaceColor, width: 1.5),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
@@ -622,7 +625,7 @@ class _TxnRow extends StatelessWidget {
       case TransactionCategory.fixed:
         return Icons.home_outlined;
       case TransactionCategory.income:
-        return Icons.arrow_downward_rounded;
+        return Icons.arrow_upward_rounded;
       case TransactionCategory.other:
         return Icons.more_horiz_rounded;
     }
@@ -707,55 +710,56 @@ class _BentoFeatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 116),
-        padding: const EdgeInsets.all(AppSpacing.md2),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 26, color: Colors.white),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    badge,
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white,
-                      fontSize: 10,
-                      letterSpacing: 0.12,
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 116),
+          padding: const EdgeInsets.all(AppSpacing.md2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 26, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      badge,
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white,
+                        fontSize: 10,
+                        letterSpacing: 0.12,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: AppTextStyles.h3.copyWith(color: Colors.white)),
-                const SizedBox(height: 2),
-                Text(
-                  sub,
-                  style: AppTextStyles.caption.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: AppTextStyles.h3.copyWith(color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text(
+                    sub,
+                    style: AppTextStyles.caption.copyWith(
+                      color: Colors.white.withValues(alpha: 0.92),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -785,48 +789,52 @@ class _BentoQuickTile extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 60,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: cardColor,
-          border: Border.all(color: borderColor),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+    return Material(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(icon, size: 18, color: AppColors.primary),
               ),
-              child: Icon(icon, size: 18, color: AppColors.primary),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    label,
-                    style: AppTextStyles.label.copyWith(color: textColor),
-                  ),
-                  Text(
-                    sub,
-                    style: AppTextStyles.caption.copyWith(
-                      color: mutedColor,
-                      fontSize: 10,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.label.copyWith(color: textColor),
                     ),
-                  ),
-                ],
+                    Text(
+                      sub,
+                      style: AppTextStyles.caption.copyWith(
+                        color: mutedColor,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1015,7 +1023,6 @@ class _RingWidget extends StatelessWidget {
             label,
             style: AppTextStyles.caption.copyWith(
               color: mutedColor,
-              fontSize: 9,
               letterSpacing: 0.1,
             ),
           ),
@@ -1077,7 +1084,7 @@ class _RingWidget extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             delta,
-            style: AppTextStyles.caption.copyWith(color: color, fontSize: 10),
+            style: AppTextStyles.caption.copyWith(color: color),
           ),
         ],
       ),
