@@ -5,6 +5,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 
@@ -13,8 +14,17 @@ const double _spineOpacity = 0.3;
 const double _dayNodeD = 38;
 
 class TransactionDetailSheet extends StatelessWidget {
-  const TransactionDetailSheet({super.key, required this.transaction});
+  const TransactionDetailSheet({
+    super.key,
+    required this.transaction,
+    this.activeGoals = const [],
+    this.onDuplicate,
+    this.onEdit,
+  });
   final TransactionEntity transaction;
+  final List<GoalEntity> activeGoals;
+  final void Function(TransactionEntity)? onDuplicate;
+  final void Function(TransactionEntity)? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +227,10 @@ class TransactionDetailSheet extends StatelessWidget {
                     label: 'Edit',
                     isDark: isDark,
                     variant: _ButtonVariant.primary,
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onEdit?.call(transaction);
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm2),
@@ -226,7 +239,10 @@ class TransactionDetailSheet extends StatelessWidget {
                     icon: Icons.copy_outlined,
                     label: 'Duplikat',
                     isDark: isDark,
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onDuplicate?.call(transaction);
+                    },
                   ),
                 ),
               ],
@@ -243,10 +259,14 @@ class TransactionDetailSheet extends StatelessWidget {
               variant: _ButtonVariant.destructive,
               fullWidth: true,
               onTap: () {
-                context
-                    .read<TransactionListBloc>()
-                    .add(DeleteTransactionRequested(transaction.id));
-                Navigator.pop(context);
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<TransactionListBloc>(),
+                    child: _DeleteConfirmSheet(transaction: transaction),
+                  ),
+                );
               },
             ),
           ),
@@ -283,6 +303,221 @@ class TransactionDetailSheet extends StatelessWidget {
       TransactionCategory.income    => Icons.arrow_downward_rounded,
       TransactionCategory.other     => Icons.more_horiz_rounded,
     };
+  }
+}
+
+// ── Delete Confirm Sheet ──────────────────────────────────────────────────
+
+class _DeleteConfirmSheet extends StatefulWidget {
+  const _DeleteConfirmSheet({required this.transaction});
+  final TransactionEntity transaction;
+
+  @override
+  State<_DeleteConfirmSheet> createState() => _DeleteConfirmSheetState();
+}
+
+class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final isIncome = widget.transaction.type == TransactionType.income;
+    final amtColor = isIncome
+        ? (isDark ? AppColors.incomeDark : AppColors.success)
+        : (isDark ? AppColors.expenseDark : AppColors.warn);
+
+    return BlocListener<TransactionListBloc, TransactionListState>(
+      listener: (context, state) {
+        if (state is! TransactionListLoaded) return;
+        if (state.deleteError != null && _isLoading) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        final stillExists =
+            state.transactions.any((t) => t.id == widget.transaction.id);
+        if (!stillExists && _isLoading) {
+          setState(() => _isLoading = false);
+          int count = 0;
+          Navigator.of(context).popUntil((_) => count++ >= 2);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: borderColor,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Hapus Transaksi?',
+                  style: AppTextStyles.h3.copyWith(color: textColor),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        TransactionDetailSheet._categoryIcon(
+                            widget.transaction.category),
+                        size: 18,
+                        color: amtColor,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          widget.transaction.note ??
+                              widget.transaction.category.label,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '${isIncome ? '+' : '−'} ${formatRupiah(widget.transaction.amount)}',
+                        style: AppTextStyles.numericSm.copyWith(
+                          color: amtColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Tindakan ini tidak bisa dibatalkan.',
+                  style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                BlocBuilder<TransactionListBloc, TransactionListState>(
+                  builder: (context, state) {
+                    final errorMsg = state is TransactionListLoaded
+                        ? state.deleteError
+                        : null;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                  side: BorderSide(color: borderColor),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.md),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Batal',
+                                  style: AppTextStyles.label
+                                      .copyWith(color: textColor),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm2),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () {
+                                        setState(() => _isLoading = true);
+                                        context.read<TransactionListBloc>().add(
+                                              DeleteTransactionRequested(
+                                                  widget.transaction.id),
+                                            );
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                  backgroundColor: AppColors.warn.withValues(
+                                      alpha: isDark ? 0.15 : 0.08),
+                                  foregroundColor: AppColors.warn,
+                                  elevation: 0,
+                                  side: BorderSide(
+                                    color: AppColors.warn
+                                        .withValues(alpha: isDark ? 0.40 : 0.28),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.md),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.warn,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Hapus',
+                                        style: AppTextStyles.label
+                                            .copyWith(color: AppColors.warn),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (errorMsg != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            errorMsg.isNotEmpty
+                                ? errorMsg
+                                : 'Gagal menghapus. Coba lagi.',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.warn),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
