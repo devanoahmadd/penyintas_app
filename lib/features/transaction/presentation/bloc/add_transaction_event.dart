@@ -24,6 +24,13 @@ final class TypeToggled extends AddTransactionEvent {
   List<Object> get props => [];
 }
 
+final class TypeSet extends AddTransactionEvent {
+  const TypeSet(this.type);
+  final TransactionType type;
+  @override
+  List<Object> get props => [type];
+}
+
 final class NoteChanged extends AddTransactionEvent {
   const NoteChanged(this.note);
   final String note;

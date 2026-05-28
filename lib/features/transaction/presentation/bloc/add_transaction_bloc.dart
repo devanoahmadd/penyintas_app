@@ -21,6 +21,7 @@ class AddTransactionBloc
     on<AmountChanged>(_onAmountChanged);
     on<CategorySelected>(_onCategorySelected);
     on<TypeToggled>(_onTypeToggled);
+    on<TypeSet>(_onTypeSet);
     on<NoteChanged>(_onNoteChanged);
     on<DateChanged>(_onDateChanged);
     on<GoalSelected>(_onGoalSelected);
@@ -52,6 +53,14 @@ class AddTransactionBloc
           : TransactionType.expense;
       // Clear goal link saat beralih ke expense — goal hanya untuk income
       emit(s.copyWith(type: next, selectedGoalId: null));
+    }
+  }
+
+  void _onTypeSet(TypeSet event, Emitter<AddTransactionState> emit) {
+    if (state is AddTransactionInProgress) {
+      final s = state as AddTransactionInProgress;
+      if (s.type == event.type) return;
+      emit(s.copyWith(type: event.type, selectedGoalId: null));
     }
   }
 
