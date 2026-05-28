@@ -72,14 +72,185 @@ String _deltaLabel(AppLocalizations l10n, BudgetStatus status) => switch (status
       BudgetStatus.danger => l10n.dashboardDeltaExceeded,
     };
 
-// ── Stub widget (replaced in Task 3) ─────────────────────────────────────────
+// ── Public widget ─────────────────────────────────────────────────────────────
 
-class FinancialSliderWidget extends StatelessWidget {
+class FinancialSliderWidget extends StatefulWidget {
   const FinancialSliderWidget({super.key, required this.entity});
   final DashboardEntity entity;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(height: 190);
+  State<FinancialSliderWidget> createState() => _FinancialSliderWidgetState();
+}
+
+class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  Timer? _autoPlayTimer;
+  Timer? _resumeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.82);
+    _startAutoPlay();
+  }
+
+  @override
+  void dispose() {
+    _autoPlayTimer?.cancel();
+    _resumeTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      final slides = _buildSlides(widget.entity);
+      final next = (_currentPage + 1) % slides.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 440),
+        curve: const Cubic(0.32, 0.72, 0, 1),
+      );
+    });
+  }
+
+  void _pauseAutoPlay() {
+    _autoPlayTimer?.cancel();
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(const Duration(seconds: 6), _startAutoPlay);
+  }
+
+  void _onPageChanged(int page) {
+    setState(() => _currentPage = page);
+  }
+
+  List<_SlideData> _buildSlides(DashboardEntity entity) {
+    final l10n = context.l10n;
+
+    // DTL
+    final dtlProg = entity.remainingDays > 0
+        ? (entity.daysToLive / entity.remainingDays).clamp(0.0, 1.0)
+        : 0.0;
+
+    // Spending
+    final spendPct = entity.totalMonthlyBudget > 0
+        ? (entity.totalSpentThisMonth / entity.totalMonthlyBudget)
+            .clamp(0.0, 1.0)
+        : 0.0;
+    final spendStatus = _pctToStatus(spendPct);
+    final spendPctInt = (spendPct * 100).round();
+
+    // Emergency
+    final emergTotal =
+        entity.totalMonthlyBudget + entity.emergencyFundMonthly;
+    final emergPct = emergTotal > 0
+        ? (entity.emergencyFundMonthly / emergTotal).clamp(0.0, 1.0)
+        : 0.0;
+    final emergPctInt = (emergPct * 100).round();
+
+    return [
+      _SlideData(
+        label: l10n.dashboardDtlLabel,
+        valueText: '${entity.daysToLive}',
+        unitText: 'hari',
+        subtitle:
+            '${l10n.dashboardSafeUntil} ${_safeUntilDate(entity.daysToLive, entity.remainingDays)}',
+        progress: dtlProg,
+        backgroundColor: _statusColor(entity.status),
+        status: entity.status,
+        onTap: () => context.push('/dtl'),
+      ),
+      _SlideData(
+        label: l10n.dashboardSpendingLabel,
+        valueText: formatRupiah(entity.totalSpentThisMonth),
+        subtitle:
+            '${l10n.dashboardPctOfBudget(spendPctInt)} · ${_deltaLabel(l10n, spendStatus)}',
+        progress: spendPct,
+        backgroundColor: _statusColor(spendStatus),
+        status: spendStatus,
+        onTap: () => context.go('/transactions'),
+      ),
+      _SlideData(
+        label: l10n.dashboardEmergencyLabel,
+        valueText: formatRupiah(entity.emergencyFundMonthly),
+        subtitle: l10n.dashboardPctOfTotal(emergPctInt),
+        progress: emergPct,
+        backgroundColor: AppColors.primaryDeep,
+        status: BudgetStatus.safe,
+        onTap: () => context.push('/emergency'),
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final slides = _buildSlides(widget.entity);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 152,
+          child: GestureDetector(
+            onPanDown: (_) => _pauseAutoPlay(),
+            child: PageView.builder(
+              controller: _pageController,
+              clipBehavior: Clip.none,
+              itemCount: slides.length,
+              onPageChanged: _onPageChanged,
+              itemBuilder: (context, i) {
+                final isActive = i == _currentPage;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
+                  child: AnimatedOpacity(
+                    opacity: isActive ? 1.0 : 0.45,
+                    duration: const Duration(milliseconds: 300),
+                    child: AnimatedScale(
+                      scale: isActive ? 1.0 : 0.955,
+                      duration: const Duration(milliseconds: 300),
+                      child: _FinancialSlideCard(
+                        data: slides[i],
+                        isActive: isActive,
+                        index: i,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        // Dot indicator
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(slides.length, (i) {
+            final isActive = i == _currentPage;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeInOut,
+              width: isActive ? AppSpacing.lg2 : AppSpacing.sm,
+              height: 5,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? slides[i].dotColor
+                    : (isDark ? AppColors.mutedDark : AppColors.mutedLight),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: AppSpacing.md),
+      ],
+    );
+  }
 }
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
