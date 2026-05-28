@@ -9,17 +9,17 @@ GoRouter _router({int currentIndex = 0, VoidCallback? onFabTap}) {
     routes: [
       GoRoute(
         path: '/home',
-        builder: (_, __) => Scaffold(
+        builder: (_, _) => Scaffold(
           bottomNavigationBar: AppBottomNavBar(
             currentIndex: currentIndex,
             onFabTap: onFabTap ?? () {},
           ),
         ),
       ),
-      GoRoute(path: '/dashboard', builder: (_, __) => const SizedBox()),
-      GoRoute(path: '/transactions', builder: (_, __) => const SizedBox()),
-      GoRoute(path: '/budget', builder: (_, __) => const SizedBox()),
-      GoRoute(path: '/profile', builder: (_, __) => const SizedBox()),
+      GoRoute(path: '/dashboard', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/transactions', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/budget', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/profile', builder: (_, _) => const SizedBox()),
     ],
   );
 }
