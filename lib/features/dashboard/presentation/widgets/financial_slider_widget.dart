@@ -412,7 +412,7 @@ class _FinancialSlideCard extends StatelessWidget {
                         if (data.unitText != null) ...[
                           const SizedBox(width: AppSpacing.sm),
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: Text(
                               data.unitText!,
                               style: AppTextStyles.h3.copyWith(
