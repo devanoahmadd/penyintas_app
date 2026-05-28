@@ -4,12 +4,12 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 
 // ── Spec constants ─────────────────────────────────────────────────────────
-const double _kNavH = 84.0;
+const double _kNavH = 68.0;
 const double _kFabDiam = 60.0;
 const double _kFabOverhang = 22.0;
 const double _kNotchR = 38.0;
 const double _kShoulder = 6.0;
-const double _kRingGap = 5.0;
+const double _kRingGap = 1.0;
 const double _kGlowSize = _kFabDiam + 36; // 96 dp
 const double _kTabIconSize = 22.0;
 
