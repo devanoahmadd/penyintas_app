@@ -205,7 +205,6 @@ class _BudgetComingSoonPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: bgColor,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       body: SafeArea(
         child: Center(
           child: Padding(
