@@ -15,11 +15,19 @@ import 'package:penyintas_app/features/transaction/presentation/bloc/add_transac
 // ── Main Sheet ────────────────────────────────────────────────────────────
 
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key, this.activeGoals = const []});
+  const AddTransactionSheet({
+    super.key,
+    this.activeGoals = const [],
+    this.initial,
+  });
 
   /// Daftar goal aktif (belum selesai) untuk ditampilkan di goal picker.
   /// Dikirim dari caller (DashboardPage / TransactionListPage).
   final List<GoalEntity> activeGoals;
+
+  /// Jika diisi, pre-fill form dengan data transaksi ini (mode duplikat).
+  /// date selalu DateTime.now(), goalId selalu null.
+  final TransactionEntity? initial;
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -31,9 +39,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   @override
   void initState() {
     super.initState();
-    // Auto-buka numpad saat sheet pertama muncul (per spec mockup)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _openNumpad();
+      if (!mounted) return;
+      final init = widget.initial;
+      if (init != null) {
+        final bloc = context.read<AddTransactionBloc>();
+        bloc.add(AmountChanged(init.amount));
+        bloc.add(CategorySelected(init.category));
+        bloc.add(TypeSet(init.type));
+        if (init.note != null && init.note!.isNotEmpty) {
+          _noteController.text = init.note!;
+          bloc.add(NoteChanged(init.note!));
+        }
+        bloc.add(DateChanged(DateTime.now()));
+        // goalId always stripped on duplicate
+      }
+      _openNumpad();
     });
   }
 
@@ -45,9 +66,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   void _openNumpad() {
     final bloc = context.read<AddTransactionBloc>();
-    final amount = bloc.state is AddTransactionInProgress
-        ? (bloc.state as AddTransactionInProgress).amount
-        : 0;
+    final amount = widget.initial?.amount ??
+        (bloc.state is AddTransactionInProgress
+            ? (bloc.state as AddTransactionInProgress).amount
+            : 0);
 
     showModalBottomSheet<void>(
       context: context,
