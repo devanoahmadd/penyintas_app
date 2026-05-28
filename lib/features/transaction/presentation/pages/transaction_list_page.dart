@@ -12,9 +12,12 @@ import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/update_transaction_usecase.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/edit_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
+import 'package:penyintas_app/features/transaction/presentation/widgets/edit_transaction_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_detail_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_filter_sheet.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/transaction_item.dart';
@@ -242,15 +245,81 @@ class _TransactionListViewState extends State<_TransactionListView> {
   }
 
   Future<void> _openDetailSheet(TransactionEntity tx) async {
+    final goalsResult = await sl<LoadGoalsUseCase>().call(const NoParams());
+    final activeGoals = goalsResult.fold(
+      (_) => <GoalEntity>[],
+      (goals) => goals.where((g) => !g.isCompleted).toList(),
+    );
+
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => BlocProvider.value(
         value: context.read<TransactionListBloc>(),
-        child: TransactionDetailSheet(transaction: tx),
+        child: TransactionDetailSheet(
+          transaction: tx,
+          activeGoals: activeGoals,
+          onDuplicate: (t) => _openDuplicateSheet(t, activeGoals),
+          onEdit: (t) => _openEditSheet(t, activeGoals),
+        ),
       ),
     );
+  }
+
+  Future<void> _openDuplicateSheet(
+      TransactionEntity tx, List<GoalEntity> activeGoals) async {
+    final listBloc = context.read<TransactionListBloc>();
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider(
+        create: (_) => sl<AddTransactionBloc>(),
+        child: Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: AddTransactionSheet(
+            activeGoals: activeGoals,
+            initial: tx,
+          ),
+        ),
+      ),
+    );
+
+    if (mounted && saved == true) {
+      listBloc.add(const RefreshTransactions());
+      sl<GoalBloc>().add(const LoadGoals());
+    }
+  }
+
+  Future<void> _openEditSheet(
+      TransactionEntity tx, List<GoalEntity> activeGoals) async {
+    final listBloc = context.read<TransactionListBloc>();
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider(
+        create: (_) => EditTransactionBloc(
+          updateTransaction: sl<UpdateTransactionUseCase>(),
+          initial: tx,
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: EditTransactionSheet(activeGoals: activeGoals),
+        ),
+      ),
+    );
+
+    if (mounted && saved == true) {
+      listBloc.add(const RefreshTransactions());
+      sl<GoalBloc>().add(const LoadGoals());
+    }
   }
 }
 
