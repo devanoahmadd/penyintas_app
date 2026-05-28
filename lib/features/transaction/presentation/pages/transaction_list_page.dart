@@ -192,8 +192,6 @@ class _TransactionListViewState extends State<_TransactionListView> {
             ],
           ),
         ),
-        floatingActionButton: AppNavFab(onTap: _openAddSheet),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: AppBottomNavBar(
           currentIndex: 1,
           onFabTap: _openAddSheet,

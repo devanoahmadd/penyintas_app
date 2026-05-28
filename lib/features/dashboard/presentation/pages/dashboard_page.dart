@@ -23,6 +23,7 @@ import 'package:penyintas_app/features/transaction/presentation/widgets/add_tran
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/widgets/common/days_to_live_card.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 
@@ -103,7 +104,7 @@ class _DashboardPageState extends State<DashboardPage> {
           child: BlocBuilder<DashboardBloc, DashboardState>(
             builder: (context, state) {
               if (state is DashboardLoading || state is DashboardInitial) {
-                return const Center(child: CircularProgressIndicator());
+                return const DashboardSkeleton();
               }
               if (state is DashboardError) {
                 return Center(
@@ -134,8 +135,6 @@ class _DashboardPageState extends State<DashboardPage> {
             },
           ),
         ),
-        floatingActionButton: AppNavFab(onTap: _openAddSheet),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: AppBottomNavBar(
           currentIndex: 0,
           onFabTap: _openAddSheet,
@@ -226,14 +225,14 @@ class _DashboardBody extends StatelessWidget {
                     remainingDays: entity.remainingDays,
                     status: entity.status,
                   ),
-                  const SizedBox(height: AppSpacing.md2),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // 2. Saldo Terkini
                   _SaldoCard(
                     entity: entity,
                     onDetailTap: () => context.go('/transactions'),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.md2),
 
                   // 3. Ring widgets
                   Row(
@@ -244,20 +243,20 @@ class _DashboardBody extends StatelessWidget {
                       Expanded(child: _buildEmergencyRing(context)),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // 4. Akses Cepat
                   _SectionHeader(
                     title: l10n.dashboardQuickAccess,
                     action: l10n.dashboardQuickAccessAction,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.md),
                   const _BentoGrid(),
-                  const SizedBox(height: AppSpacing.md2),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // 5. Tip
                   const _TipCard(),
-                  const SizedBox(height: AppSpacing.md2),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // 6. Transaksi hari ini
                   _SectionHeader(
@@ -265,7 +264,7 @@ class _DashboardBody extends StatelessWidget {
                     action: l10n.dashboardSeeAllAction,
                     onActionTap: onSeeAllTap,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.md),
                   _TxCard(entity: entity),
                   const SizedBox(height: AppSpacing.xxxl),
                 ]),
@@ -307,7 +306,7 @@ class _DashboardHeader extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm,
+        AppSpacing.lg, AppSpacing.lg2, AppSpacing.lg, AppSpacing.xl,
       ),
       child: Row(
         children: [

@@ -49,8 +49,6 @@ class SayaPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: bgColor,
-      floatingActionButton: AppNavFab(onTap: () => _openAddSheet(context)),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       body: SafeArea(
         child: BlocBuilder<SettingsBloc, SettingsState>(
           builder: (context, settingsState) {
