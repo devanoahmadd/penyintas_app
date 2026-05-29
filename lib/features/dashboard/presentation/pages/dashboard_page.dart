@@ -1,5 +1,3 @@
-import 'dart:math' show pi;
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +22,8 @@ import 'package:penyintas_app/features/transaction/domain/entities/transaction_e
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
-import 'package:penyintas_app/widgets/common/days_to_live_card.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
-
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -88,17 +85,13 @@ class _DashboardPageState extends State<DashboardPage> {
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: isDark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: bgColor,
         body: BlocListener<DashboardBloc, DashboardState>(
           listener: (context, state) {
             if (state is DashboardLoaded) {
-              context
-                  .read<SurvivalBloc>()
-                  .add(LoadSurvivalMode(state.entity));
+              context.read<SurvivalBloc>().add(LoadSurvivalMode(state.entity));
             }
           },
           child: BlocBuilder<DashboardBloc, DashboardState>(
@@ -114,9 +107,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       Text(state.message, style: AppTextStyles.body),
                       const SizedBox(height: AppSpacing.lg),
                       TextButton(
-                        onPressed: () => context
-                            .read<DashboardBloc>()
-                            .add(const LoadDashboard()),
+                        onPressed: () => context.read<DashboardBloc>().add(
+                          const LoadDashboard(),
+                        ),
                         child: Text(context.l10n.retry),
                       ),
                     ],
@@ -127,9 +120,9 @@ class _DashboardPageState extends State<DashboardPage> {
               return _DashboardBody(
                 entity: entity,
                 onAddTap: _openAddSheet,
-                onRefresh: () async => context
-                    .read<DashboardBloc>()
-                    .add(const DashboardRefreshed()),
+                onRefresh: () async => context.read<DashboardBloc>().add(
+                  const DashboardRefreshed(),
+                ),
                 onSeeAllTap: () => context.go('/transactions'),
               );
             },
@@ -159,52 +152,6 @@ class _DashboardBody extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final VoidCallback onSeeAllTap;
 
-  Widget _buildSpendingRing(BuildContext context) {
-    final l10n = context.l10n;
-    final pct = entity.totalMonthlyBudget > 0
-        ? (entity.totalSpentThisMonth / entity.totalMonthlyBudget)
-            .clamp(0.0, 1.0)
-        : 0.0;
-    final color = pct <= 0.50
-        ? AppColors.primary
-        : pct <= 0.80
-            ? AppColors.caution
-            : AppColors.warn;
-    final pctInt = (pct * 100).round();
-    final delta = pct <= 0.50
-        ? l10n.dashboardDeltaOnTrack
-        : pct <= 0.80
-            ? l10n.dashboardDeltaNearing
-            : l10n.dashboardDeltaExceeded;
-
-    return _RingWidget(
-      label: l10n.dashboardSpendingLabel,
-      value: formatRupiah(entity.totalSpentThisMonth),
-      sub: l10n.dashboardPctOfBudget(pctInt),
-      delta: delta,
-      pct: pct,
-      color: color,
-    );
-  }
-
-  Widget _buildEmergencyRing(BuildContext context) {
-    final l10n = context.l10n;
-    final total = entity.totalMonthlyBudget + entity.emergencyFundMonthly;
-    final pct = total > 0
-        ? (entity.emergencyFundMonthly / total).clamp(0.0, 1.0)
-        : 0.0;
-    final pctInt = (pct * 100).round();
-
-    return _RingWidget(
-      label: l10n.dashboardEmergencyLabel,
-      value: formatRupiah(entity.emergencyFundMonthly),
-      sub: l10n.dashboardPctOfTotal(pctInt),
-      delta: l10n.dashboardDeltaOnTrack,
-      pct: pct,
-      color: AppColors.primaryBright,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -214,38 +161,27 @@ class _DashboardBody extends StatelessWidget {
         color: AppColors.primary,
         child: CustomScrollView(
           slivers: [
-            const SliverToBoxAdapter(child: _DashboardHeader(hasNotification: false)),
+            // Header
+            const SliverToBoxAdapter(
+              child: _DashboardHeader(hasNotification: false),
+            ),
+            // Financial slider — no horizontal padding so peek bleeds to edges
+            SliverToBoxAdapter(
+              child: FinancialSliderWidget(entity: entity),
+            ),
+            // Remaining content with horizontal padding
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // 1. Days to Live
-                  DaysToLiveCard(
-                    daysToLive: entity.daysToLive,
-                    remainingDays: entity.remainingDays,
-                    status: entity.status,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // 2. Saldo Terkini
+                  // Saldo Terkini
                   _SaldoCard(
                     entity: entity,
                     onDetailTap: () => context.go('/transactions'),
                   ),
-                  const SizedBox(height: AppSpacing.md2),
-
-                  // 3. Ring widgets
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: _buildSpendingRing(context)),
-                      const SizedBox(width: AppSpacing.sm2),
-                      Expanded(child: _buildEmergencyRing(context)),
-                    ],
-                  ),
                   const SizedBox(height: AppSpacing.xxl),
 
-                  // 4. Akses Cepat
+                  // Akses Cepat
                   _SectionHeader(
                     title: l10n.dashboardQuickAccess,
                     action: l10n.dashboardQuickAccessAction,
@@ -254,11 +190,11 @@ class _DashboardBody extends StatelessWidget {
                   const _BentoGrid(),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // 5. Tip
+                  // Tip
                   const _TipCard(),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // 6. Transaksi hari ini
+                  // Transaksi hari ini
                   _SectionHeader(
                     title: l10n.dashboardRecentTx,
                     action: l10n.dashboardSeeAllAction,
@@ -293,12 +229,21 @@ class _DashboardHeader extends StatelessWidget {
     return l10n.dashboardGreetingEvening;
   }
 
+  String _dateStr(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    return DateFormat(
+      'EEE, d MMM',
+      locale == 'id' ? 'id' : 'en',
+    ).format(DateTime.now());
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     final user = FirebaseAuth.instance.currentUser;
     final name = user?.displayName ?? context.l10n.appName;
@@ -306,19 +251,37 @@ class _DashboardHeader extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.lg2, AppSpacing.lg, AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.lg2,
+        AppSpacing.lg,
+        AppSpacing.xl,
       ),
       child: Row(
         children: [
-          // Avatar
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-            child: Text(
-              initial,
-              style: AppTextStyles.label.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
+          // Avatar with subtle brand ring
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark
+                    ? AppColors.shoot.withValues(alpha: 0.35)
+                    : AppColors.primary.withValues(alpha: 0.15),
+                width: 1.5,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: isDark
+                  ? AppColors.shoot.withValues(alpha: 0.18)
+                  : AppColors.primary.withValues(alpha: 0.10),
+              child: Text(
+                initial,
+                style: AppTextStyles.label.copyWith(
+                  color: isDark ? AppColors.shoot : AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -329,13 +292,17 @@ class _DashboardHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _greeting(context),
-                  style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
+                  '${_greeting(context)} · ${_dateStr(context)}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: mutedColor,
+                    letterSpacing: 0.5,
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   name,
                   style: AppTextStyles.h3.copyWith(
-                    color: AppColors.primary,
+                    color: isDark ? AppColors.textDark : AppColors.textLight,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
@@ -353,9 +320,11 @@ class _DashboardHeader extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: surfaceColor,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                   ),
                 ),
                 child: Icon(
@@ -366,8 +335,8 @@ class _DashboardHeader extends StatelessWidget {
               ),
               if (hasNotification)
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: 7,
+                  right: 7,
                   child: Container(
                     width: 8,
                     height: 8,
@@ -416,9 +385,20 @@ class _SaldoCardState extends State<_SaldoCard> {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
+    // Today's income/expense delta dari transaksi hari ini
+    final todayIncome = widget.entity.todayTransactions
+        .where((t) => t.type == TransactionType.income)
+        .fold<int>(0, (sum, t) => sum + t.amount);
+    final todayExpense = widget.entity.todayTransactions
+        .where((t) => t.type == TransactionType.expense)
+        .fold<int>(0, (sum, t) => sum + t.amount);
+    final hasTodayActivity = widget.entity.todayTransactions.isNotEmpty;
+    final incomeColor = isDark ? AppColors.incomeDark : AppColors.success;
+    final expenseColor = isDark ? AppColors.expenseDark : AppColors.warn;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg2),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -441,12 +421,14 @@ class _SaldoCardState extends State<_SaldoCard> {
                 child: SizedBox(
                   width: 44,
                   height: 44,
-                  child: Icon(
-                    _hidden
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 20,
-                    color: mutedColor,
+                  child: Center(
+                    child: Icon(
+                      _hidden
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 20,
+                      color: mutedColor,
+                    ),
                   ),
                 ),
               ),
@@ -459,12 +441,49 @@ class _SaldoCardState extends State<_SaldoCard> {
             _hidden
                 ? context.l10n.dashboardBalanceHidden
                 : formatRupiah(widget.entity.totalRemaining),
-            style: AppTextStyles.numericLg.copyWith(
-              fontSize: 30,
-              color: textColor,
-            ),
+            style: AppTextStyles.numericLg.copyWith(color: textColor),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Today's delta row (hanya tampil jika ada aktivitas & tidak hidden)
+          if (hasTodayActivity && !_hidden) ...[
+            Row(
+              children: [
+                Icon(Icons.arrow_upward_rounded, size: 12, color: incomeColor),
+                const SizedBox(width: 3),
+                Text(
+                  formatRupiah(todayIncome),
+                  style: AppTextStyles.caption.copyWith(
+                    color: incomeColor,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Icon(
+                  Icons.arrow_downward_rounded,
+                  size: 12,
+                  color: expenseColor,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  formatRupiah(todayExpense),
+                  style: AppTextStyles.caption.copyWith(
+                    color: expenseColor,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'hari ini',
+                  style: AppTextStyles.caption.copyWith(
+                    color: mutedColor,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
 
           // Timestamp + Detail link
           Row(
@@ -480,23 +499,29 @@ class _SaldoCardState extends State<_SaldoCard> {
               GestureDetector(
                 onTap: widget.onDetailTap,
                 behavior: HitTestBehavior.opaque,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      context.l10n.dashboardBalanceDetail,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.primary,
-                        letterSpacing: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        context.l10n.dashboardBalanceDetail,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.primary,
+                          letterSpacing: 0,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(
-                      Icons.arrow_forward,
-                      size: 12,
-                      color: AppColors.primary,
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.arrow_forward,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -522,8 +547,9 @@ class _TxnRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final isExpense = transaction.type == TransactionType.expense;
@@ -728,7 +754,10 @@ class _BentoFeatTile extends StatelessWidget {
                 children: [
                   Icon(icon, size: 26, color: Colors.white),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -747,7 +776,10 @@ class _BentoFeatTile extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: AppTextStyles.h3.copyWith(color: Colors.white)),
+                  Text(
+                    label,
+                    style: AppTextStyles.h3.copyWith(color: Colors.white),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     sub,
@@ -933,157 +965,6 @@ class _BentoGrid extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-// ── Ring widget (donut chart) ──────────────────────────────────────────────
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({
-    required this.pct,
-    required this.color,
-    required this.trackColor,
-  });
-
-  final double pct;
-  final Color color;
-  final Color trackColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.shortestSide - 4) / 2;
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-
-    // Track
-    paint.color = trackColor;
-    canvas.drawCircle(center, radius, paint);
-
-    // Arc (starts at top, goes clockwise)
-    if (pct > 0) {
-      paint.color = color;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -pi / 2,
-        2 * pi * pct.clamp(0.0, 1.0),
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.pct != pct || old.color != color || old.trackColor != trackColor;
-}
-
-class _RingWidget extends StatelessWidget {
-  const _RingWidget({
-    required this.label,
-    required this.value,
-    required this.sub,
-    required this.delta,
-    required this.pct,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final String sub;
-  final String delta;
-  final double pct;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final trackColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final pctInt = (pct * 100).round();
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cardColor,
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: mutedColor,
-              letterSpacing: 0.1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Ring + percentage text
-              SizedBox(
-                width: 52,
-                height: 52,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CustomPaint(
-                      size: const Size(52, 52),
-                      painter: _RingPainter(
-                        pct: pct,
-                        color: color,
-                        trackColor: trackColor,
-                      ),
-                    ),
-                    Text(
-                      '$pctInt%',
-                      style: AppTextStyles.caption.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              // Value + sub
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      value,
-                      style: AppTextStyles.numericSm.copyWith(color: textColor),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      sub,
-                      style: AppTextStyles.caption.copyWith(color: mutedColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            delta,
-            style: AppTextStyles.caption.copyWith(color: color),
-          ),
-        ],
-      ),
     );
   }
 }
