@@ -31,14 +31,14 @@ const List<_Tab> _kTabs = [
   (
     id: 1,
     label: 'Transaksi',
-    icon: Icons.reorder_rounded,
-    activeIcon: Icons.reorder_rounded
+    icon: Icons.history_outlined,
+    activeIcon: Icons.history_rounded
   ),
   (
     id: 3,
     label: 'Budget',
-    icon: Icons.track_changes_outlined,
-    activeIcon: Icons.track_changes
+    icon: Icons.donut_large_outlined,
+    activeIcon: Icons.donut_large_rounded
   ),
   (
     id: 4,

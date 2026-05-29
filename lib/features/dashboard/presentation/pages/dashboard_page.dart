@@ -1089,7 +1089,6 @@ class _TxCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final txns = entity.todayTransactions.take(3).toList();
 
@@ -1107,23 +1106,16 @@ class _TxCard extends StatelessWidget {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < txns.length; i++)
-            _TxnRow(
-              transaction: txns[i],
-              isDark: isDark,
-              showDivider: i < txns.length - 1,
-              borderColor: borderColor,
-            ),
-        ],
-      ),
+    return Column(
+      children: [
+        for (int i = 0; i < txns.length; i++)
+          _TxnRow(
+            transaction: txns[i],
+            isDark: isDark,
+            showDivider: i < txns.length - 1,
+            borderColor: borderColor,
+          ),
+      ],
     );
   }
 }
