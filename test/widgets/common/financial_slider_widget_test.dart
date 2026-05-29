@@ -1,0 +1,148 @@
+// test/widgets/common/financial_slider_widget_test.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
+
+// Minimal entity — safe DTL, spending at 60%, non-zero emergency
+final _mockEntity = DashboardEntity(
+  dailyBudget: 50000,
+  spentToday: 20000,
+  remainingToday: 30000,
+  totalMonthlyBudget: 1500000,
+  totalSpentThisMonth: 900000,
+  totalRemaining: 600000,
+  daysToLive: 23,
+  remainingDays: 30,
+  avgDailySpend: 30000,
+  status: BudgetStatus.safe,
+  lastUpdated: DateTime(2026, 5, 29),
+  todayTransactions: const [],
+  emergencyFundMonthly: 150000,
+);
+
+// Synchronous delegate wrapping a pre-loaded AppLocalizations instance.
+// Required because AppLocalizations.delegate.load() uses rootBundle.loadString()
+// which is backed by a platform channel — after the first test's fakeAsync zone
+// completes, subsequent tests cannot drive the async asset load via pump().
+// Preloading once in setUpAll and forwarding through a sync delegate fixes this.
+class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
+  const _SyncL10nDelegate(this._l10n);
+  final AppLocalizations _l10n;
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<AppLocalizations> load(Locale locale) async => _l10n;
+
+  @override
+  bool shouldReload(covariant _SyncL10nDelegate old) => true;
+}
+
+GoRouter _router(DashboardEntity entity) => GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => Scaffold(
+            body: FinancialSliderWidget(entity: entity),
+          ),
+        ),
+        GoRoute(path: '/dtl', builder: (_, _) => const SizedBox()),
+        GoRoute(path: '/emergency', builder: (_, _) => const SizedBox()),
+        GoRoute(path: '/transactions', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+void main() {
+  late AppLocalizations l10n;
+
+  setUpAll(() async {
+    l10n = await AppLocalizations.delegate.load(const Locale('id'));
+  });
+
+  Widget harness(DashboardEntity entity, {ThemeData? theme}) =>
+      MaterialApp.router(
+        locale: const Locale('id'),
+        supportedLocales: const [Locale('id'), Locale('en')],
+        theme: theme,
+        localizationsDelegates: [
+          _SyncL10nDelegate(l10n),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: _router(entity),
+      );
+
+  group('FinancialSliderWidget', () {
+    testWidgets('renders without exception', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(harness(_mockEntity));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows DTL label (HARI TERSISA)', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(harness(_mockEntity));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // DTL slide is the first (index 0) and starts visible
+      expect(find.text('HARI TERSISA'), findsOneWidget);
+    });
+
+    testWidgets('contains a PageView with 3 slides', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(harness(_mockEntity));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(PageView), findsOneWidget);
+      // Slides 0 (HARI TERSISA) and 1 (PENGELUARAN BULAN INI) are rendered
+      // initially (PageView with viewportFraction 0.82 builds current + next).
+      expect(find.text('HARI TERSISA'), findsOneWidget);
+      expect(find.text('PENGELUARAN BULAN INI'), findsOneWidget);
+      // Swipe once to expose slide 2 (ALOKASI DARURAT) into the render tree
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 800);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('ALOKASI DARURAT'), findsOneWidget);
+    });
+
+    testWidgets('renders in dark mode without exception', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        harness(_mockEntity, theme: ThemeData(brightness: Brightness.dark)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+}
