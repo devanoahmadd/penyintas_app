@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_limit_entity.dart';
-import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_overview_usecase.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
@@ -45,7 +44,7 @@ final _foodLimit = BudgetLimitEntity(
 void main() {
   const usecase = GetBudgetOverviewUseCase();
 
-  OverviewParams _params({
+  OverviewParams params({
     List<BudgetLimitEntity> limits = const [],
     List<TransactionEntity> txns = const [],
     int remainingDays = 10,
@@ -58,7 +57,7 @@ void main() {
       );
 
   test('kalkulasi income allocation benar', () {
-    final result = usecase(_params());
+    final result = usecase(params());
     expect(result.monthlyIncome, 5000000);
     expect(result.totalFixedExpenses, 1500000);
     expect(result.emergencyFundMonthly, 500000);
@@ -66,7 +65,7 @@ void main() {
   });
 
   test('kategori tanpa limit: hasLimit = false, status = null', () {
-    final result = usecase(_params());
+    final result = usecase(params());
     final food = result.categoryItems.firstWhere((i) => i.category == TransactionCategory.food);
     expect(food.hasLimit, false);
     expect(food.status, null);
@@ -74,7 +73,7 @@ void main() {
   });
 
   test('kategori dengan limit dan spending ≤50%: status safe', () {
-    final result = usecase(_params(
+    final result = usecase(params(
       limits: [_foodLimit],
       txns: [_tx(TransactionCategory.food, 400000)],
     ));
@@ -86,7 +85,7 @@ void main() {
   });
 
   test('kategori dengan spending 50–80%: status caution', () {
-    final result = usecase(_params(
+    final result = usecase(params(
       limits: [_foodLimit],
       txns: [_tx(TransactionCategory.food, 700000)],
     ));
@@ -95,7 +94,7 @@ void main() {
   });
 
   test('kategori dengan spending >80%: status danger', () {
-    final result = usecase(_params(
+    final result = usecase(params(
       limits: [_foodLimit],
       txns: [_tx(TransactionCategory.food, 900000)],
     ));
@@ -106,7 +105,7 @@ void main() {
 
   test('disabled limit diperlakukan seperti tidak ada limit', () {
     final disabledLimit = _foodLimit.copyWith(isEnabled: false);
-    final result = usecase(_params(
+    final result = usecase(params(
       limits: [disabledLimit],
       txns: [_tx(TransactionCategory.food, 900000)],
     ));
