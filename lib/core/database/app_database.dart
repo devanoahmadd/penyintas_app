@@ -94,14 +94,23 @@ class Goals extends Table {
   DateTimeColumn get updatedAt => dateTime()();
 }
 
+class BudgetLimits extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get category => text()();
+  IntColumn get limitAmount => integer()();
+  TextColumn get cycleType => text().withDefault(const Constant('cycle'))();
+  BoolColumn get isEnabled => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals])
+@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -166,6 +175,18 @@ class AppDatabase extends _$AppDatabase {
         await m.database.customStatement(
           'ALTER TABLE app_settings ADD COLUMN survival_mode_activated_at INTEGER',
         );
+      }
+      if (from < 5) {
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS budget_limits (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            category     TEXT NOT NULL,
+            limit_amount INTEGER NOT NULL,
+            cycle_type   TEXT NOT NULL DEFAULT 'cycle',
+            is_enabled   INTEGER NOT NULL DEFAULT 1,
+            updated_at   INTEGER NOT NULL
+          )
+        ''');
       }
     },
   );

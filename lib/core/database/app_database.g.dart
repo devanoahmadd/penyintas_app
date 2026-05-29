@@ -2620,6 +2620,410 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }
 }
 
+class $BudgetLimitsTable extends BudgetLimits
+    with TableInfo<$BudgetLimitsTable, BudgetLimit> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BudgetLimitsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _limitAmountMeta = const VerificationMeta(
+    'limitAmount',
+  );
+  @override
+  late final GeneratedColumn<int> limitAmount = GeneratedColumn<int>(
+    'limit_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cycleTypeMeta = const VerificationMeta(
+    'cycleType',
+  );
+  @override
+  late final GeneratedColumn<String> cycleType = GeneratedColumn<String>(
+    'cycle_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('cycle'),
+  );
+  static const VerificationMeta _isEnabledMeta = const VerificationMeta(
+    'isEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> isEnabled = GeneratedColumn<bool>(
+    'is_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    category,
+    limitAmount,
+    cycleType,
+    isEnabled,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'budget_limits';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BudgetLimit> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('limit_amount')) {
+      context.handle(
+        _limitAmountMeta,
+        limitAmount.isAcceptableOrUnknown(
+          data['limit_amount']!,
+          _limitAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_limitAmountMeta);
+    }
+    if (data.containsKey('cycle_type')) {
+      context.handle(
+        _cycleTypeMeta,
+        cycleType.isAcceptableOrUnknown(data['cycle_type']!, _cycleTypeMeta),
+      );
+    }
+    if (data.containsKey('is_enabled')) {
+      context.handle(
+        _isEnabledMeta,
+        isEnabled.isAcceptableOrUnknown(data['is_enabled']!, _isEnabledMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BudgetLimit map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BudgetLimit(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      limitAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}limit_amount'],
+      )!,
+      cycleType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_type'],
+      )!,
+      isEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_enabled'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BudgetLimitsTable createAlias(String alias) {
+    return $BudgetLimitsTable(attachedDatabase, alias);
+  }
+}
+
+class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
+  final int id;
+  final String category;
+  final int limitAmount;
+  final String cycleType;
+  final bool isEnabled;
+  final DateTime updatedAt;
+  const BudgetLimit({
+    required this.id,
+    required this.category,
+    required this.limitAmount,
+    required this.cycleType,
+    required this.isEnabled,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['category'] = Variable<String>(category);
+    map['limit_amount'] = Variable<int>(limitAmount);
+    map['cycle_type'] = Variable<String>(cycleType);
+    map['is_enabled'] = Variable<bool>(isEnabled);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  BudgetLimitsCompanion toCompanion(bool nullToAbsent) {
+    return BudgetLimitsCompanion(
+      id: Value(id),
+      category: Value(category),
+      limitAmount: Value(limitAmount),
+      cycleType: Value(cycleType),
+      isEnabled: Value(isEnabled),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory BudgetLimit.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BudgetLimit(
+      id: serializer.fromJson<int>(json['id']),
+      category: serializer.fromJson<String>(json['category']),
+      limitAmount: serializer.fromJson<int>(json['limitAmount']),
+      cycleType: serializer.fromJson<String>(json['cycleType']),
+      isEnabled: serializer.fromJson<bool>(json['isEnabled']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'category': serializer.toJson<String>(category),
+      'limitAmount': serializer.toJson<int>(limitAmount),
+      'cycleType': serializer.toJson<String>(cycleType),
+      'isEnabled': serializer.toJson<bool>(isEnabled),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  BudgetLimit copyWith({
+    int? id,
+    String? category,
+    int? limitAmount,
+    String? cycleType,
+    bool? isEnabled,
+    DateTime? updatedAt,
+  }) => BudgetLimit(
+    id: id ?? this.id,
+    category: category ?? this.category,
+    limitAmount: limitAmount ?? this.limitAmount,
+    cycleType: cycleType ?? this.cycleType,
+    isEnabled: isEnabled ?? this.isEnabled,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  BudgetLimit copyWithCompanion(BudgetLimitsCompanion data) {
+    return BudgetLimit(
+      id: data.id.present ? data.id.value : this.id,
+      category: data.category.present ? data.category.value : this.category,
+      limitAmount: data.limitAmount.present
+          ? data.limitAmount.value
+          : this.limitAmount,
+      cycleType: data.cycleType.present ? data.cycleType.value : this.cycleType,
+      isEnabled: data.isEnabled.present ? data.isEnabled.value : this.isEnabled,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BudgetLimit(')
+          ..write('id: $id, ')
+          ..write('category: $category, ')
+          ..write('limitAmount: $limitAmount, ')
+          ..write('cycleType: $cycleType, ')
+          ..write('isEnabled: $isEnabled, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, category, limitAmount, cycleType, isEnabled, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BudgetLimit &&
+          other.id == this.id &&
+          other.category == this.category &&
+          other.limitAmount == this.limitAmount &&
+          other.cycleType == this.cycleType &&
+          other.isEnabled == this.isEnabled &&
+          other.updatedAt == this.updatedAt);
+}
+
+class BudgetLimitsCompanion extends UpdateCompanion<BudgetLimit> {
+  final Value<int> id;
+  final Value<String> category;
+  final Value<int> limitAmount;
+  final Value<String> cycleType;
+  final Value<bool> isEnabled;
+  final Value<DateTime> updatedAt;
+  const BudgetLimitsCompanion({
+    this.id = const Value.absent(),
+    this.category = const Value.absent(),
+    this.limitAmount = const Value.absent(),
+    this.cycleType = const Value.absent(),
+    this.isEnabled = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  BudgetLimitsCompanion.insert({
+    this.id = const Value.absent(),
+    required String category,
+    required int limitAmount,
+    this.cycleType = const Value.absent(),
+    this.isEnabled = const Value.absent(),
+    required DateTime updatedAt,
+  }) : category = Value(category),
+       limitAmount = Value(limitAmount),
+       updatedAt = Value(updatedAt);
+  static Insertable<BudgetLimit> custom({
+    Expression<int>? id,
+    Expression<String>? category,
+    Expression<int>? limitAmount,
+    Expression<String>? cycleType,
+    Expression<bool>? isEnabled,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (category != null) 'category': category,
+      if (limitAmount != null) 'limit_amount': limitAmount,
+      if (cycleType != null) 'cycle_type': cycleType,
+      if (isEnabled != null) 'is_enabled': isEnabled,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  BudgetLimitsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? category,
+    Value<int>? limitAmount,
+    Value<String>? cycleType,
+    Value<bool>? isEnabled,
+    Value<DateTime>? updatedAt,
+  }) {
+    return BudgetLimitsCompanion(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      limitAmount: limitAmount ?? this.limitAmount,
+      cycleType: cycleType ?? this.cycleType,
+      isEnabled: isEnabled ?? this.isEnabled,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (limitAmount.present) {
+      map['limit_amount'] = Variable<int>(limitAmount.value);
+    }
+    if (cycleType.present) {
+      map['cycle_type'] = Variable<String>(cycleType.value);
+    }
+    if (isEnabled.present) {
+      map['is_enabled'] = Variable<bool>(isEnabled.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BudgetLimitsCompanion(')
+          ..write('id: $id, ')
+          ..write('category: $category, ')
+          ..write('limitAmount: $limitAmount, ')
+          ..write('cycleType: $cycleType, ')
+          ..write('isEnabled: $isEnabled, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2627,6 +3031,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $GoalsTable goals = $GoalsTable(this);
+  late final $BudgetLimitsTable budgetLimits = $BudgetLimitsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2636,6 +3041,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncQueue,
     transactions,
     goals,
+    budgetLimits,
   ];
 }
 
@@ -3890,6 +4296,221 @@ typedef $$GoalsTableProcessedTableManager =
       Goal,
       PrefetchHooks Function()
     >;
+typedef $$BudgetLimitsTableCreateCompanionBuilder =
+    BudgetLimitsCompanion Function({
+      Value<int> id,
+      required String category,
+      required int limitAmount,
+      Value<String> cycleType,
+      Value<bool> isEnabled,
+      required DateTime updatedAt,
+    });
+typedef $$BudgetLimitsTableUpdateCompanionBuilder =
+    BudgetLimitsCompanion Function({
+      Value<int> id,
+      Value<String> category,
+      Value<int> limitAmount,
+      Value<String> cycleType,
+      Value<bool> isEnabled,
+      Value<DateTime> updatedAt,
+    });
+
+class $$BudgetLimitsTableFilterComposer
+    extends Composer<_$AppDatabase, $BudgetLimitsTable> {
+  $$BudgetLimitsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get limitAmount => $composableBuilder(
+    column: $table.limitAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cycleType => $composableBuilder(
+    column: $table.cycleType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isEnabled => $composableBuilder(
+    column: $table.isEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BudgetLimitsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BudgetLimitsTable> {
+  $$BudgetLimitsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get limitAmount => $composableBuilder(
+    column: $table.limitAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cycleType => $composableBuilder(
+    column: $table.cycleType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isEnabled => $composableBuilder(
+    column: $table.isEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BudgetLimitsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BudgetLimitsTable> {
+  $$BudgetLimitsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<int> get limitAmount => $composableBuilder(
+    column: $table.limitAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cycleType =>
+      $composableBuilder(column: $table.cycleType, builder: (column) => column);
+
+  GeneratedColumn<bool> get isEnabled =>
+      $composableBuilder(column: $table.isEnabled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$BudgetLimitsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BudgetLimitsTable,
+          BudgetLimit,
+          $$BudgetLimitsTableFilterComposer,
+          $$BudgetLimitsTableOrderingComposer,
+          $$BudgetLimitsTableAnnotationComposer,
+          $$BudgetLimitsTableCreateCompanionBuilder,
+          $$BudgetLimitsTableUpdateCompanionBuilder,
+          (
+            BudgetLimit,
+            BaseReferences<_$AppDatabase, $BudgetLimitsTable, BudgetLimit>,
+          ),
+          BudgetLimit,
+          PrefetchHooks Function()
+        > {
+  $$BudgetLimitsTableTableManager(_$AppDatabase db, $BudgetLimitsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BudgetLimitsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BudgetLimitsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BudgetLimitsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<int> limitAmount = const Value.absent(),
+                Value<String> cycleType = const Value.absent(),
+                Value<bool> isEnabled = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => BudgetLimitsCompanion(
+                id: id,
+                category: category,
+                limitAmount: limitAmount,
+                cycleType: cycleType,
+                isEnabled: isEnabled,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String category,
+                required int limitAmount,
+                Value<String> cycleType = const Value.absent(),
+                Value<bool> isEnabled = const Value.absent(),
+                required DateTime updatedAt,
+              }) => BudgetLimitsCompanion.insert(
+                id: id,
+                category: category,
+                limitAmount: limitAmount,
+                cycleType: cycleType,
+                isEnabled: isEnabled,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BudgetLimitsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BudgetLimitsTable,
+      BudgetLimit,
+      $$BudgetLimitsTableFilterComposer,
+      $$BudgetLimitsTableOrderingComposer,
+      $$BudgetLimitsTableAnnotationComposer,
+      $$BudgetLimitsTableCreateCompanionBuilder,
+      $$BudgetLimitsTableUpdateCompanionBuilder,
+      (
+        BudgetLimit,
+        BaseReferences<_$AppDatabase, $BudgetLimitsTable, BudgetLimit>,
+      ),
+      BudgetLimit,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3902,4 +4523,6 @@ class $AppDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$GoalsTableTableManager get goals =>
       $$GoalsTableTableManager(_db, _db.goals);
+  $$BudgetLimitsTableTableManager get budgetLimits =>
+      $$BudgetLimitsTableTableManager(_db, _db.budgetLimits);
 }
