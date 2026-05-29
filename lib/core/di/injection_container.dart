@@ -43,8 +43,18 @@ import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_re
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
+import 'package:penyintas_app/features/budget/data/datasources/budget_local_datasource.dart';
+import 'package:penyintas_app/features/budget/data/datasources/budget_remote_datasource.dart';
+import 'package:penyintas_app/features/budget/data/repositories/budget_repository_impl.dart';
+import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/delete_budget_limit_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/get_budget_limits_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/get_budget_overview_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/save_budget_limit_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
@@ -93,6 +103,7 @@ Future<void> init({required AppDatabase db}) async {
   _initAuth();
   _initOnboarding();
   _initTransaction();
+  _initBudget();
   _initDashboard();
   _initSync();
   _initNotification();
@@ -164,8 +175,6 @@ void _initOnboarding() {
         analyticsService: sl(),
       ));
 
-  sl.registerLazySingleton(() => SaveBudgetSettingsUseCase(sl()));
-  sl.registerLazySingleton(() => GetBudgetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
 
   sl.registerLazySingleton<OnboardingRepository>(
@@ -226,6 +235,42 @@ void _initSync() {
         auth: sl(),
         firestore: sl(),
       ));
+}
+
+void _initBudget() {
+  sl.registerFactory(() => BudgetSettingsBloc(
+        getBudgetSettings: sl(),
+        saveBudgetSettings: sl(),
+      ));
+  sl.registerFactory(() => BudgetLimitsBloc(
+        getBudgetSettings: sl(),
+        getBudgetLimits: sl(),
+        saveBudgetLimit: sl(),
+        deleteBudgetLimit: sl(),
+        getBudgetOverview: sl(),
+        transactionRepository: sl(),
+      ));
+
+  sl.registerLazySingleton(() => GetBudgetSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => SaveBudgetSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => GetBudgetLimitsUseCase(sl()));
+  sl.registerLazySingleton(() => SaveBudgetLimitUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteBudgetLimitUseCase(sl()));
+  sl.registerLazySingleton<GetBudgetOverviewUseCase>(() => const GetBudgetOverviewUseCase());
+
+  sl.registerLazySingleton<BudgetRepository>(
+    () => BudgetRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      networkInfo: sl(),
+    ),
+  );
+  sl.registerLazySingleton<BudgetLocalDatasource>(
+    () => BudgetLocalDatasourceImpl(sl()),
+  );
+  sl.registerLazySingleton<BudgetRemoteDatasource>(
+    () => BudgetRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
 }
 
 void _initDashboard() {

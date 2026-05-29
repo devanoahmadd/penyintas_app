@@ -5,12 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
-import 'package:penyintas_app/core/theme/app_colors.dart';
-import 'package:penyintas_app/core/theme/app_spacing.dart';
-import 'package:penyintas_app/core/theme/app_text_styles.dart';
-import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
@@ -31,6 +26,10 @@ import 'package:penyintas_app/features/goal/presentation/pages/goal_detail_page.
 import 'package:penyintas_app/features/goal/presentation/pages/goal_list_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/saya_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
+import 'package:penyintas_app/features/budget/presentation/pages/budget_edit_settings_page.dart';
+import 'package:penyintas_app/features/budget/presentation/pages/budget_overview_page.dart';
 
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
@@ -122,7 +121,32 @@ GoRouter createAppRouter() => GoRouter(
     ),
     GoRoute(
       path: '/budget',
-      builder: (context, state) => const _BudgetComingSoonPage(),
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
+            ),
+            BlocProvider(
+              create: (_) => sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits()),
+            ),
+          ],
+          child: const BudgetOverviewPage(),
+        ),
+      ),
+      routes: [
+        GoRoute(
+          path: 'edit-settings',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: BlocProvider.value(
+              value: sl<BudgetSettingsBloc>(),
+              child: const BudgetEditSettingsPage(),
+            ),
+          ),
+        ),
+      ],
     ),
     GoRoute(
       path: '/report',
@@ -188,71 +212,4 @@ Future<bool> _queryOnboardingDone() async {
         ..where((t) => t.id.equals(1)))
       .getSingleOrNull();
   return settings?.onboardingCompleted ?? false;
-}
-
-class _BudgetComingSoonPage extends StatelessWidget {
-  const _BudgetComingSoonPage();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-
-    // inline import to avoid adding dependency in router file
-    final l10n = AppLocalizations.of(context);
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 36,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  l10n.budgetComingSoonEyebrow,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l10n.budgetComingSoonTitle,
-                  style: AppTextStyles.h2.copyWith(color: textColor),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  l10n.budgetComingSoonBody,
-                  style: AppTextStyles.body.copyWith(color: mutedColor),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 3,
-        onFabTap: () {},
-      ),
-    );
-  }
 }
