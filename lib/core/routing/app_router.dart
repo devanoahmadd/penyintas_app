@@ -140,8 +140,8 @@ GoRouter createAppRouter() => GoRouter(
           path: 'edit-settings',
           pageBuilder: (context, state) => MaterialPage(
             key: state.pageKey,
-            child: BlocProvider.value(
-              value: sl<BudgetSettingsBloc>(),
+            child: BlocProvider(
+              create: (_) => sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
               child: const BudgetEditSettingsPage(),
             ),
           ),
