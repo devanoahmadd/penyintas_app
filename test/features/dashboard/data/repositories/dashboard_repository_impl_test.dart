@@ -6,17 +6,17 @@ import 'package:penyintas_app/features/dashboard/data/repositories/dashboard_rep
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
-import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
 
 class MockTransactionRepository extends Mock implements TransactionRepository {}
 
-class MockOnboardingRepository extends Mock implements OnboardingRepository {}
+class MockBudgetRepository extends Mock implements BudgetRepository {}
 
 void main() {
   late MockTransactionRepository mockTxRepo;
-  late MockOnboardingRepository mockOnboarding;
+  late MockBudgetRepository mockBudget;
   late DashboardRepositoryImpl repo;
 
   // Settings: income 3_000_000, fixed 500_000, emergency 10% → safeMonthly = 2_200_000
@@ -51,14 +51,14 @@ void main() {
 
   setUp(() {
     mockTxRepo = MockTransactionRepository();
-    mockOnboarding = MockOnboardingRepository();
+    mockBudget = MockBudgetRepository();
     repo = DashboardRepositoryImpl(
       transactionRepository: mockTxRepo,
-      onboardingRepository: mockOnboarding,
+      budgetRepository: mockBudget,
       calculateDtl: const CalculateDaysToLiveUseCase(),
     );
 
-    when(() => mockOnboarding.getBudgetSettings())
+    when(() => mockBudget.getBudgetSettings())
         .thenAnswer((_) async => Right(settings));
     when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
         .thenAnswer((_) async => const Right([]));
@@ -122,7 +122,7 @@ void main() {
         emergencyFundPct: 0.10,
         createdAt: DateTime(2026, 5, 1),
       );
-      when(() => mockOnboarding.getBudgetSettings())
+      when(() => mockBudget.getBudgetSettings())
           .thenAnswer((_) async => Right(overSettings));
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
@@ -231,9 +231,9 @@ void main() {
   });
 
   group('watchDashboard — error handling', () {
-    test('yields CacheFailure when settings are null', () async {
-      when(() => mockOnboarding.getBudgetSettings())
-          .thenAnswer((_) async => const Right(null));
+    test('yields CacheFailure when settings fetch fails', () async {
+      when(() => mockBudget.getBudgetSettings())
+          .thenAnswer((_) async => const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.')));
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
 

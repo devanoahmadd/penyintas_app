@@ -6,21 +6,21 @@ import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entit
 import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
-import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
 
 class DashboardRepositoryImpl implements DashboardRepository {
   DashboardRepositoryImpl({
     required TransactionRepository transactionRepository,
-    required OnboardingRepository onboardingRepository,
+    required BudgetRepository budgetRepository,
     required CalculateDaysToLiveUseCase calculateDtl,
   })  : _transactions = transactionRepository,
-        _onboarding = onboardingRepository,
+        _budget = budgetRepository,
         _calcDtl = calculateDtl;
 
   final TransactionRepository _transactions;
-  final OnboardingRepository _onboarding;
+  final BudgetRepository _budget;
   final CalculateDaysToLiveUseCase _calcDtl;
 
   // Cache settings — jarang berubah, tidak perlu fetch setiap stream event (#33)
@@ -40,7 +40,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
       try {
         final todayTxns = todayResult.fold((l) => <TransactionEntity>[], (r) => r);
 
-        _cachedSettings ??= (await _onboarding.getBudgetSettings()).fold(
+        _cachedSettings ??= (await _budget.getBudgetSettings()).fold(
           (_) => null,
           (s) => s,
         );

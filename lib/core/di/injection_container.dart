@@ -43,8 +43,8 @@ import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_re
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/usecases/get_budget_settings_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/usecases/save_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
@@ -241,7 +241,7 @@ void _initDashboard() {
   sl.registerLazySingleton<DashboardRepository>(
     () => DashboardRepositoryImpl(
       transactionRepository: sl(),
-      onboardingRepository: sl(),
+      budgetRepository: sl(),
       calculateDtl: sl(),
     ),
   );
