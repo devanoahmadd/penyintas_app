@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -335,14 +336,15 @@ class _V2TitleRow extends StatelessWidget {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
+    final locale = Localizations.localeOf(context).languageCode;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
+          AppSpacing.lg, AppSpacing.lg2, AppSpacing.lg, AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            'Transaksi',
+            context.l10n.navTransactions,
             style: AppTextStyles.h1.copyWith(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -368,7 +370,8 @@ class _V2TitleRow extends StatelessWidget {
                       size: 13, color: textColor),
                   const SizedBox(width: 6),
                   Text(
-                    DateFormat('MMMM yyyy', 'id_ID').format(selectedMonth),
+                    DateFormat('MMMM yyyy', locale == 'id' ? 'id_ID' : 'en_US')
+                        .format(selectedMonth),
                     style: AppTextStyles.label.copyWith(
                       fontSize: 12,
                       color: textColor,
@@ -427,12 +430,16 @@ class _V2SummaryRow extends StatelessWidget {
         children: [
           Expanded(
             child: _SummaryStat(
-                isIncome: false, label: 'KELUAR', value: totalKeluar),
+                isIncome: false,
+                label: context.l10n.txExpenseLabel.toUpperCase(),
+                value: totalKeluar),
           ),
           const SizedBox(width: AppSpacing.sm2),
           Expanded(
             child: _SummaryStat(
-                isIncome: true, label: 'MASUK', value: totalMasuk),
+                isIncome: true,
+                label: context.l10n.txIncomeLabel.toUpperCase(),
+                value: totalMasuk),
           ),
         ],
       ),
