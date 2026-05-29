@@ -19,7 +19,7 @@ class TransactionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = transaction.type == TransactionType.income;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -30,9 +30,10 @@ class TransactionItem extends StatelessWidget {
 
     return Container(
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: borderColor),
+          color: bgColor,
+          border: Border(
+            bottom: BorderSide(color: borderColor, width: 0.8),
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
