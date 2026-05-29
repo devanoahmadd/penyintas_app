@@ -623,7 +623,7 @@ class _Step2WidgetState extends State<_Step2Widget>
         widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final borderColor =
         widget.isDark ? AppColors.borderDark : AppColors.borderLight;
-    final cardBg = widget.isDark ? AppColors.surfaceDark : Colors.white;
+    final cardBg = widget.isDark ? AppColors.surfaceDark : AppColors.cardLight;
 
     final total = _totalExpenses;
     final pct = _percentageOfIncome;
@@ -1332,7 +1332,7 @@ class _DateSegmentPicker extends StatelessWidget {
     final bgColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final selectedBg = isDark ? AppColors.surfaceDark : Colors.white;
+    final selectedBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     final isCustomSelected =
         selected != null && !presets.contains(selected);

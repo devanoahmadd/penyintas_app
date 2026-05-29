@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 
 class BudgetSettingsModel extends BudgetSettingsEntity {
   const BudgetSettingsModel({

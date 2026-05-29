@@ -7,9 +7,9 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
-import 'package:penyintas_app/features/onboarding/data/models/budget_settings_model.dart';
+import 'package:penyintas_app/features/budget/data/models/budget_settings_model.dart';
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 
 class MockLocalDataSource extends Mock implements OnboardingLocalDataSource {}
 

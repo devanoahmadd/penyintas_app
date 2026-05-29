@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 
 abstract class OnboardingLocalDataSource {
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings);

@@ -6,7 +6,7 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 
 class OnboardingRepositoryImpl implements OnboardingRepository {

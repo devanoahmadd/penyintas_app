@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 
 AppDatabase _openTestDb() => AppDatabase(NativeDatabase.memory());
 

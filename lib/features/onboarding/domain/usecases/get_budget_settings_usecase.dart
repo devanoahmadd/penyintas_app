@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 
 class GetBudgetSettingsUseCase extends UseCase<BudgetSettingsEntity?, NoParams> {

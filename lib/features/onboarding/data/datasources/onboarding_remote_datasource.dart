@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
-import 'package:penyintas_app/features/onboarding/data/models/budget_settings_model.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/data/models/budget_settings_model.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 
 abstract class OnboardingRemoteDataSource {
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings);

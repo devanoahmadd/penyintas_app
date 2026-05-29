@@ -5,7 +5,7 @@ import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
