@@ -7,7 +7,7 @@ import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/entities/daily_budget_result.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/usecases/save_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 
 // Mocks

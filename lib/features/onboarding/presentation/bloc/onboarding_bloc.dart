@@ -4,7 +4,7 @@ import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/usecases/save_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
 
 part 'onboarding_event.dart';
 part 'onboarding_state.dart';
