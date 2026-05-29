@@ -144,5 +144,62 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('auto-plays to next slide after 4 seconds', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(harness(_mockEntity));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Slide 1 (Spending) starts as the right peek — its label is right of center.
+      final screenCenterX = 400.0; // physicalSize.width / 2
+      final initialCenter = tester.getCenter(find.text('PENGELUARAN BULAN INI'));
+      expect(initialCenter.dx, greaterThan(screenCenterX));
+
+      // Advance past the 4s auto-play interval and the 440ms animation.
+      await tester.pump(const Duration(seconds: 4, milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // After auto-advance, Spending card is centred. The label is left-aligned
+      // within the card, so its X shifts leftward (peek→active direction).
+      final afterCenter = tester.getCenter(find.text('PENGELUARAN BULAN INI'));
+      expect(afterCenter.dx, lessThan(initialCenter.dx));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders safely with all-zero entity', (tester) async {
+      // Guards: remainingDays==0, totalMonthlyBudget==0, emergTotal==0
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final zeroEntity = DashboardEntity(
+        dailyBudget: 0,
+        spentToday: 0,
+        remainingToday: 0,
+        totalMonthlyBudget: 0,
+        totalSpentThisMonth: 0,
+        totalRemaining: 0,
+        daysToLive: 0,
+        remainingDays: 0,
+        avgDailySpend: 0,
+        status: BudgetStatus.danger,
+        lastUpdated: DateTime(2026, 5, 29),
+        todayTransactions: const [],
+        emergencyFundMonthly: 0,
+      );
+
+      await tester.pumpWidget(harness(zeroEntity));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('HARI TERSISA'), findsOneWidget);
+    });
   });
 }

@@ -107,8 +107,7 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
     _autoPlayTimer?.cancel();
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
-      final slides = _buildSlides(widget.entity);
-      final next = (_currentPage + 1) % slides.length;
+      final next = (_currentPage + 1) % 3; // 3 slides: DTL, Spending, Emergency
       _pageController.animateToPage(
         next,
         duration: const Duration(milliseconds: 440),
@@ -171,6 +170,8 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         progress: spendPct,
         backgroundColor: _statusColor(spendStatus),
         status: spendStatus,
+        // /transactions is a bottom-nav tab → go() (replaces stack).
+        // /dtl and /emergency are detail screens → push() (preserves back stack).
         onTap: () => context.go('/transactions'),
       ),
       _SlideData(
