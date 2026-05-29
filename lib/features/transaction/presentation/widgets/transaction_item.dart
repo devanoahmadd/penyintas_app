@@ -26,7 +26,7 @@ class TransactionItem extends StatelessWidget {
     final amtColor = isIncome
         ? (isDark ? AppColors.incomeDark : AppColors.success)
         : (isDark ? AppColors.expenseDark : AppColors.warn);
-    final amtBg = _amtBg(isDark, isIncome);
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     return Container(
         decoration: BoxDecoration(
@@ -39,14 +39,14 @@ class TransactionItem extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 30,
-              height: 30,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: amtBg,
+                color: surfaceColor,
                 borderRadius: BorderRadius.circular(AppSpacing.sm),
               ),
               child: Icon(_categoryIcon(transaction.category),
-                  size: 15, color: amtColor),
+                  size: 18, color: textColor),
             ),
             const SizedBox(width: AppSpacing.sm2),
             Expanded(
@@ -122,21 +122,6 @@ class TransactionItem extends StatelessWidget {
           ],
         ),
     );
-  }
-
-  static Color _amtBg(bool isDark, bool isIncome) {
-    if (isDark) {
-      return isIncome
-          // ignore: deprecated_member_use
-          ? const Color(0xFF6EE7A0).withOpacity(0.12)
-          // ignore: deprecated_member_use
-          : const Color(0xFFFF8F70).withOpacity(0.10);
-    }
-    return isIncome
-        // ignore: deprecated_member_use
-        ? const Color(0xFF16A34A).withOpacity(0.10)
-        // ignore: deprecated_member_use
-        : const Color(0xFFE07A3C).withOpacity(0.08);
   }
 
   static IconData _categoryIcon(TransactionCategory cat) {

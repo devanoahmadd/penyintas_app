@@ -571,16 +571,16 @@ class _TxnRow extends StatelessWidget {
               Stack(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppSpacing.md),
+                      borderRadius: BorderRadius.circular(AppSpacing.sm),
                     ),
                     child: Icon(
                       _categoryIcon(transaction.category),
-                      color: AppColors.primary,
-                      size: 20,
+                      color: textColor,
+                      size: 18,
                     ),
                   ),
                   if (!transaction.isSynced)
