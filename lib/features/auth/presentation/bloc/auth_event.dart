@@ -17,7 +17,9 @@ final class SignInRequested extends AuthEvent {
   const SignInRequested({required this.email, required this.password});
 
   @override
-  List<Object> get props => [email, password];
+  // password dikecualikan dari props agar tidak bocor lewat toString()
+  // jika BlocObserver logging ditambahkan kelak.
+  List<Object> get props => [email];
 }
 
 final class SignUpRequested extends AuthEvent {
@@ -31,7 +33,8 @@ final class SignUpRequested extends AuthEvent {
   });
 
   @override
-  List<Object> get props => [email, password, name];
+  // password dikecualikan dari props — lihat komentar di SignInRequested.
+  List<Object> get props => [email, name];
 }
 
 final class SignOutRequested extends AuthEvent {

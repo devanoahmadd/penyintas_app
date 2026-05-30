@@ -22,5 +22,7 @@ class SignInParams extends Equatable {
   const SignInParams({required this.email, required this.password});
 
   @override
-  List<Object> get props => [email, password];
+  // password dikecualikan dari props agar tidak bocor lewat toString()
+  // jika BlocObserver logging ditambahkan kelak.
+  List<Object> get props => [email];
 }

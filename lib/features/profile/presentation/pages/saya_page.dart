@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
@@ -281,7 +282,7 @@ class _SettingsSection extends StatelessWidget {
       locale == 'id' ? 'Indonesia' : 'English';
 
   void _showThemePicker(BuildContext outerCtx, ThemeMode current) {
-    final sheetBg = isDark ? AppColors.surfaceDark : Colors.white;
+    final sheetBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final l10n = AppLocalizations.of(outerCtx);
 
     showModalBottomSheet<void>(
@@ -331,7 +332,7 @@ class _SettingsSection extends StatelessWidget {
   }
 
   void _showLanguagePicker(BuildContext outerCtx, String current) {
-    final sheetBg = isDark ? AppColors.surfaceDark : Colors.white;
+    final sheetBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     showModalBottomSheet<void>(
       context: outerCtx,
@@ -449,7 +450,7 @@ class _AccountSection extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoftColor =
         isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final sheetBg = isDark ? AppColors.surfaceDark : Colors.white;
+    final sheetBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -484,8 +485,11 @@ class _AccountSection extends StatelessWidget {
       ),
     );
 
+    if (!context.mounted) return;
     if (confirmed == true) {
-      await FirebaseAuth.instance.signOut();
+      // Gunakan AuthBloc agar SignOutUseCase dijalankan dengan error handling
+      // dan tidak bypass event pipeline.
+      context.read<AuthBloc>().add(const SignOutRequested());
     }
   }
 

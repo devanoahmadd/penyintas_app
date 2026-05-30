@@ -5,6 +5,7 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/auth_validators.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/app_text_field.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
@@ -40,7 +41,7 @@ class _LoginPageState extends State<LoginPage> {
       if (_emailController.text.trim().isEmpty) {
         _emailError = l10n.errorEmailEmpty;
         valid = false;
-      } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+      } else if (!AuthValidators.emailRegex
           .hasMatch(_emailController.text.trim())) {
         _emailError = l10n.errorEmailInvalid;
         valid = false;
@@ -70,11 +71,11 @@ class _LoginPageState extends State<LoginPage> {
         isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
     return BlocConsumer<AuthBloc, AuthState>(
-      listenWhen: (_, state) => state is Authenticated || state is AuthError,
+      // Navigasi pasca-auth ditangani oleh go_router redirect (GoRouterRefreshStream
+      // mendengar Firebase authStateChanges) — tidak perlu context.go manual di sini.
+      listenWhen: (_, state) => state is AuthError,
       listener: (context, state) {
-        if (state is Authenticated) {
-          context.go('/dashboard');
-        } else if (state is AuthError) {
+        if (state is AuthError) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(
@@ -145,7 +146,8 @@ class _LoginPageState extends State<LoginPage> {
                           errorText: _passwordError,
                           isPassword: true,
                           textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _submit(context),
+                          // Gate enter-key seperti tombol PrimaryButton
+                          onSubmitted: isLoading ? null : (_) => _submit(context),
                         ),
                         Align(
                           alignment: Alignment.centerRight,

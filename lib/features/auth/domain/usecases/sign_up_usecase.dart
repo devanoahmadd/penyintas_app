@@ -31,5 +31,7 @@ class SignUpParams extends Equatable {
   });
 
   @override
-  List<Object> get props => [email, password, name];
+  // password dikecualikan dari props agar tidak bocor lewat toString()
+  // jika BlocObserver logging ditambahkan kelak.
+  List<Object> get props => [email, name];
 }

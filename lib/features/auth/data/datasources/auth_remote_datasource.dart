@@ -140,9 +140,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   static String _mapFirebaseCode(String code) => switch (code) {
         'email-already-in-use' =>
           'Email ini sudah terdaftar. Coba login langsung.',
-        'wrong-password' || 'invalid-credential' =>
+        // user-not-found digabung agar tidak bocorkan info email terdaftar
+        // (anti user-enumeration). Pesan signup 'email-already-in-use' di bawah
+        // dipertahankan karena UX-nya memang perlu memberi tahu.
+        'wrong-password' || 'invalid-credential' || 'user-not-found' =>
           'Email atau password salah. Coba lagi ya.',
-        'user-not-found' => 'Email belum terdaftar. Yuk daftar dulu.',
         'invalid-email' => 'Format email tidak valid.',
         'weak-password' => 'Password terlalu lemah. Gunakan minimal 8 karakter.',
         'too-many-requests' =>

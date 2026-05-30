@@ -5,6 +5,7 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/auth_validators.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/app_text_field.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
@@ -32,7 +33,8 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _emailValid = false;
   bool _confirmValid = false;
 
-  static final _emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+  // Gunakan shared regex dengan anchor — lihat AuthValidators.
+  static RegExp get _emailRegex => AuthValidators.emailRegex;
 
   @override
   void dispose() {
@@ -64,7 +66,11 @@ class _RegisterPageState extends State<RegisterPage> {
         _passwordError = l10n.errorPasswordMin;
         valid = false;
       }
-      if (!_confirmValid) {
+      // Hitung ulang langsung dari controller — tidak andalkan flag _confirmValid
+      // yang bisa basi jika password diedit setelah confirm diisi.
+      final confirmOk = _confirmController.text.isNotEmpty &&
+          _confirmController.text == _passwordController.text;
+      if (!confirmOk) {
         _confirmError = l10n.errorConfirmMismatch;
         valid = false;
       }
@@ -90,11 +96,11 @@ class _RegisterPageState extends State<RegisterPage> {
         isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
     return BlocConsumer<AuthBloc, AuthState>(
-      listenWhen: (_, state) => state is Authenticated || state is AuthError,
+      // Navigasi pasca-auth ditangani oleh go_router redirect (GoRouterRefreshStream
+      // mendengar Firebase authStateChanges) — tidak perlu context.go manual di sini.
+      listenWhen: (_, state) => state is AuthError,
       listener: (context, state) {
-        if (state is Authenticated) {
-          context.go('/onboarding');
-        } else if (state is AuthError) {
+        if (state is AuthError) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(
@@ -180,6 +186,16 @@ class _RegisterPageState extends State<RegisterPage> {
                           errorText: _passwordError,
                           isPassword: true,
                           textInputAction: TextInputAction.next,
+                          onChanged: (value) {
+                            // Sinkronkan _confirmValid saat password berubah
+                            // supaya confirm tidak basi saat user edit ulang.
+                            final confirmNowValid =
+                                _confirmController.text.isNotEmpty &&
+                                    _confirmController.text == value;
+                            if (confirmNowValid != _confirmValid) {
+                              setState(() => _confirmValid = confirmNowValid);
+                            }
+                          },
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         AppTextField(
@@ -197,7 +213,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               setState(() => _confirmValid = valid);
                             }
                           },
-                          onSubmitted: (_) => _submit(context),
+                          // Gate enter-key seperti tombol PrimaryButton
+                          onSubmitted: isLoading ? null : (_) => _submit(context),
                         ),
                       ],
                     ),
