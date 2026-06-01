@@ -30,13 +30,19 @@ import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:penyintas_app/features/auth/data/datasources/user_settings_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:penyintas_app/features/auth/data/repositories/user_settings_repository_impl.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:penyintas_app/features/auth/domain/repositories/user_settings_repository.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/push_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
@@ -151,6 +157,7 @@ void _initAuth() {
         signOut: sl(),
         getCurrentUser: sl(),
         watchAuthState: sl(),
+        wipeLocalData: sl(),
       ));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
@@ -158,6 +165,17 @@ void _initAuth() {
   sl.registerLazySingleton(() => SignOutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
   sl.registerLazySingleton(() => WatchAuthStateUseCase(sl()));
+
+  sl.registerLazySingleton(() => WipeLocalDataUseCase(sl()));
+  sl.registerLazySingleton(() => SyncUserSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
+
+  sl.registerLazySingleton<UserSettingsRepository>(
+    () => UserSettingsRepositoryImpl(db: sl(), remote: sl()),
+  );
+  sl.registerLazySingleton<UserSettingsRemoteDatasource>(
+    () => UserSettingsRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
 
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDataSource: sl()),
