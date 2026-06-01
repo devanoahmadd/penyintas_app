@@ -20,7 +20,7 @@ class GoalDetailPage extends StatelessWidget {
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     // Resolve live goal from bloc — falls back to constructor snapshot if not loaded
