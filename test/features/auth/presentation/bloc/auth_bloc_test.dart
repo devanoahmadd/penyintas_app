@@ -294,7 +294,7 @@ void main() {
     );
 
     blocTest<AuthBloc, AuthState>(
-      'deleteAccount & wipe sukses tapi signOut gagal → [DeleteAccountInProgress, DeleteAccountFailure]',
+      'deleteAccount & wipe sukses tapi signOut gagal → [DeleteAccountInProgress, Unauthenticated]',
       build: buildBloc,
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
@@ -308,8 +308,13 @@ void main() {
       },
       expect: () => [
         const DeleteAccountInProgress(),
-        const DeleteAccountFailure('Gagal keluar.'),
+        const Unauthenticated(),
       ],
+      verify: (_) {
+        verify(() => mockDeleteAccount(any())).called(1);
+        verify(() => mockWipe(any())).called(1);
+        verify(() => mockSignOut(any())).called(1);
+      },
     );
   });
 }

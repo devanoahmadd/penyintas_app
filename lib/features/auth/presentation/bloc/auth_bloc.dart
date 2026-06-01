@@ -53,10 +53,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onAuthStateChanged(
-    _AuthStateChanged event,
-    Emitter<AuthState> emit,
-  ) {
+  void _onAuthStateChanged(_AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
       emit(Authenticated(event.user!));
     } else {
@@ -102,24 +99,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     final wipeResult = await wipeLocalData(const NoParams());
-    await wipeResult.fold(
-      (failure) async => emit(AuthError(failure.message)),
-      (_) async {
-        final signOutResult = await signOut(const NoParams());
-        signOutResult.fold(
-          (failure) => emit(AuthError(failure.message)),
-          (_) => emit(const Unauthenticated()),
-        );
-      },
-    );
+    await wipeResult.fold((failure) async => emit(AuthError(failure.message)), (
+      _,
+    ) async {
+      final signOutResult = await signOut(const NoParams());
+      signOutResult.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (_) => emit(const Unauthenticated()),
+      );
+    });
   }
 
   Future<void> _onDeleteAccountRequested(
     DeleteAccountRequested event,
     Emitter<AuthState> emit,
   ) async {
+    await _authSubscription?.cancel(); // prevent auth stream race
+    _authSubscription = null;
     emit(const DeleteAccountInProgress());
-    final result = await deleteAccount(DeleteAccountParams(password: event.password));
+    final result = await deleteAccount(
+      DeleteAccountParams(password: event.password),
+    );
     await result.fold(
       (failure) async => emit(DeleteAccountFailure(failure.message)),
       (_) async {
@@ -128,12 +128,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await wipeResult.fold(
           (failure) async => emit(DeleteAccountFailure(failure.message)),
           (_) async {
-            // Sign out dari Firebase Auth (bersihkan sesi lokal)
-            final signOutResult = await signOut(const NoParams());
-            signOutResult.fold(
-              (failure) => emit(DeleteAccountFailure(failure.message)),
-              (_) => emit(const Unauthenticated()),
-            );
+            // Account already deleted — even if signOut fails, treat as logged out
+            await signOut(const NoParams());
+            emit(const Unauthenticated());
           },
         );
       },
