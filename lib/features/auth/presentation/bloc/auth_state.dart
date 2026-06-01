@@ -34,3 +34,15 @@ final class AuthError extends AuthState {
   @override
   List<Object> get props => [message];
 }
+
+final class DeleteAccountInProgress extends AuthState {
+  const DeleteAccountInProgress();
+}
+
+final class DeleteAccountFailure extends AuthState {
+  final String message;
+  const DeleteAccountFailure(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
