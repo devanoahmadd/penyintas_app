@@ -89,23 +89,32 @@ class TransactionListBloc
   Future<void> _onDelete(
       DeleteTransactionRequested event,
       Emitter<TransactionListState> emit) async {
+    if (state is! TransactionListLoaded) return;
+    final s = state as TransactionListLoaded;
+    emit(s.copyWith(deleteError: () => null));
     final result = await _deleteTransaction(event.id);
     result.fold(
-      (failure) {},
+      (failure) {
+        if (state is TransactionListLoaded) {
+          emit((state as TransactionListLoaded)
+              .copyWith(deleteError: () => failure.message));
+        }
+      },
       (_) {
         if (state is TransactionListLoaded) {
-          final s = state as TransactionListLoaded;
+          final current = state as TransactionListLoaded;
           final updated =
-              s.transactions.where((t) => t.id != event.id).toList();
+              current.transactions.where((t) => t.id != event.id).toList();
           final filtered =
-              s.filtered.where((t) => t.id != event.id).toList();
+              current.filtered.where((t) => t.id != event.id).toList();
           final totalSpent = updated
               .where((t) => t.type == TransactionType.expense)
               .fold(0, (sum, t) => sum + t.amount);
-          emit(s.copyWith(
+          emit(current.copyWith(
             transactions: updated,
             filtered: filtered,
             totalSpent: totalSpent,
+            deleteError: () => null,
           ));
         }
       },

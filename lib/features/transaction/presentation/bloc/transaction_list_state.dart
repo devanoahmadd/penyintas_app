@@ -21,6 +21,7 @@ final class TransactionListLoaded extends TransactionListState {
     this.categoryFilter,
     this.minAmount,
     this.maxAmount,
+    this.deleteError,
   });
 
   final List<TransactionEntity> transactions;
@@ -32,6 +33,7 @@ final class TransactionListLoaded extends TransactionListState {
   final Set<TransactionCategory>? categoryFilter; // null = all
   final int? minAmount;
   final int? maxAmount;
+  final String? deleteError;
 
   TransactionListLoaded copyWith({
     List<TransactionEntity>? transactions,
@@ -41,6 +43,7 @@ final class TransactionListLoaded extends TransactionListState {
     Set<TransactionCategory>? Function()? categoryFilter,
     int? Function()? minAmount,
     int? Function()? maxAmount,
+    String? Function()? deleteError,
   }) =>
       TransactionListLoaded(
         transactions: transactions ?? this.transactions,
@@ -51,6 +54,7 @@ final class TransactionListLoaded extends TransactionListState {
             categoryFilter != null ? categoryFilter() : this.categoryFilter,
         minAmount: minAmount != null ? minAmount() : this.minAmount,
         maxAmount: maxAmount != null ? maxAmount() : this.maxAmount,
+        deleteError: deleteError != null ? deleteError() : this.deleteError,
         from: from,
         to: to,
       );
@@ -66,6 +70,7 @@ final class TransactionListLoaded extends TransactionListState {
         maxAmount,
         from,
         to,
+        deleteError,
       ];
 }
 
