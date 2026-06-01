@@ -3,7 +3,9 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/error/failures.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/push_user_settings_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/entities/daily_budget_result.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
@@ -19,6 +21,9 @@ class MockCalculateDailyBudgetUseCase extends Mock
 
 class MockAnalyticsService extends Mock implements AnalyticsService {}
 
+class MockPushUserSettingsUseCase extends Mock
+    implements PushUserSettingsUseCase {}
+
 // Fallbacks
 class FakeBudgetSettingsEntity extends Fake implements BudgetSettingsEntity {}
 class FakeCalcParams extends Fake implements CalcParams {}
@@ -27,6 +32,7 @@ void main() {
   late MockSaveBudgetSettingsUseCase mockSave;
   late MockCalculateDailyBudgetUseCase mockCalc;
   late MockAnalyticsService mockAnalytics;
+  late MockPushUserSettingsUseCase mockPush;
 
   const tIncome = 1500000;
   const tPaymentDate = 25;
@@ -44,18 +50,22 @@ void main() {
   setUpAll(() {
     registerFallbackValue(FakeBudgetSettingsEntity());
     registerFallbackValue(FakeCalcParams());
+    registerFallbackValue(const NoParams());
   });
 
   setUp(() {
     mockSave = MockSaveBudgetSettingsUseCase();
     mockCalc = MockCalculateDailyBudgetUseCase();
     mockAnalytics = MockAnalyticsService();
+    mockPush = MockPushUserSettingsUseCase();
+    when(() => mockPush(any())).thenAnswer((_) async => const Right(unit));
   });
 
   OnboardingBloc buildBloc() => OnboardingBloc(
         saveBudgetSettings: mockSave,
         calculateDailyBudget: mockCalc,
         analyticsService: mockAnalytics,
+        pushUserSettings: mockPush,
       );
 
   group('OnboardingStarted', () {
@@ -184,6 +194,30 @@ void main() {
         const OnboardingCalculating(),
         const OnboardingError(message: 'Gagal menyimpan.'),
       ],
+    );
+
+    blocTest<OnboardingBloc, OnboardingState>(
+      'push user settings ke Firestore setelah save sukses',
+      build: buildBloc,
+      seed: () => const OnboardingStep3(
+        income: tIncome,
+        paymentDate: tPaymentDate,
+        otherFixedExpense: tFixedExpenses,
+        remainingDays: 30,
+      ),
+      setUp: () {
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockAnalytics.logOnboardingCompleted())
+            .thenAnswer((_) async {});
+      },
+      act: (bloc) =>
+          bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct)),
+      verify: (_) {
+        verify(() => mockPush(any())).called(1);
+      },
     );
   });
 }

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/push_user_settings_usecase.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
@@ -14,9 +18,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     required SaveBudgetSettingsUseCase saveBudgetSettings,
     required CalculateDailyBudgetUseCase calculateDailyBudget,
     required AnalyticsService analyticsService,
+    required PushUserSettingsUseCase pushUserSettings,
   })  : _saveBudgetSettings = saveBudgetSettings,
         _calculateDailyBudget = calculateDailyBudget,
         _analyticsService = analyticsService,
+        _pushUserSettings = pushUserSettings,
         super(const OnboardingInitial()) {
     on<OnboardingStarted>(_onStarted);
     on<OnboardingBackPressed>(_onBack);
@@ -29,6 +35,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final SaveBudgetSettingsUseCase _saveBudgetSettings;
   final CalculateDailyBudgetUseCase _calculateDailyBudget;
   final AnalyticsService _analyticsService;
+  final PushUserSettingsUseCase _pushUserSettings;
   OnboardingStep3? _lastStep3;
 
   void _onStarted(OnboardingStarted event, Emitter<OnboardingState> emit) {
@@ -109,6 +116,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         (failure) => emit(OnboardingError(message: failure.message)),
         (result) {
           _analyticsService.logOnboardingCompleted();
+          unawaited(_pushUserSettings(const NoParams()));
           emit(OnboardingSuccess(dailyBudget: result.dailyBudget));
         },
       ),

@@ -191,6 +191,7 @@ void _initOnboarding() {
         saveBudgetSettings: sl(),
         calculateDailyBudget: sl(),
         analyticsService: sl(),
+        pushUserSettings: sl(),
       ));
 
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
