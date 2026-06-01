@@ -149,8 +149,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw const AuthException('Sesi tidak ditemukan. Login ulang.');
     }
     try {
+      final email = user.email;
+      if (email == null) {
+        throw const AuthException('Akun ini tidak mendukung konfirmasi password. Hubungi dukungan.');
+      }
       final credential = EmailAuthProvider.credential(
-        email: user.email!,
+        email: email,
         password: password,
       );
       await user.reauthenticateWithCredential(credential);
@@ -186,6 +190,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'network-request-failed' =>
           'Tidak ada koneksi. Periksa internet kamu.',
         'user-disabled' => 'Akun ini dinonaktifkan. Hubungi dukungan.',
+        'requires-recent-login' => 'Sesi kamu sudah habis. Login ulang untuk melanjutkan.',
         _ => 'Terjadi kesalahan. Coba lagi.',
       };
 }

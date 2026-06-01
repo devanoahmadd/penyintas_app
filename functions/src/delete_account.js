@@ -2,6 +2,8 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
 
+// TODO: aktifkan App Check setelah deployment ke production — sementara dimatikan
+// sesuai pola fungsi lain (getSurvivalTips, generateInsight) di project ini.
 exports.deleteAccount = onCall({ enforceAppCheck: false }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Login dulu.');
