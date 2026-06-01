@@ -173,6 +173,10 @@ GoRouter createAppRouter() => GoRouter(
 // Cache onboarding status — hindari DB query pada setiap navigasi
 bool? _onboardingDone;
 
+/// Invalidasi cache onboarding agar `_redirect` query DB ulang.
+/// Dipanggil SplashPage setelah sync menulis nilai baru ke Drift (#192).
+void resetOnboardingCache() => _onboardingDone = null;
+
 Future<String?> _redirect(BuildContext context, GoRouterState state) async {
   try {
     final user = FirebaseAuth.instance.currentUser;
