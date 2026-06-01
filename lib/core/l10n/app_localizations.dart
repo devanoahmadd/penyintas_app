@@ -103,6 +103,15 @@ class AppLocalizations {
   String get sayaLogout => _t('saya_logout');
   String get sayaLogoutConfirm => _t('saya_logout_confirm');
   String get sayaLogoutConfirmYes => _t('saya_logout_confirm_yes');
+  String get sayaSectionDanger => _t('saya_section_danger');
+  String get sayaDeleteAccount => _t('saya_delete_account');
+  String get deleteAccountTitle => _t('delete_account_title');
+  String get deleteAccountBody => _t('delete_account_body');
+  String get deleteAccountAck => _t('delete_account_ack');
+  String get deleteAccountPasswordLabel => _t('delete_account_password_label');
+  String get deleteAccountConfirm => _t('delete_account_confirm');
+  String get deleteAccountWrongPassword => _t('delete_account_wrong_password');
+  String get deleteAccountDone => _t('delete_account_done');
 
   // Budget coming soon
   String get budgetComingSoonEyebrow => _t('budget_coming_soon_eyebrow');
