@@ -2,8 +2,12 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
@@ -24,6 +28,7 @@ class _SplashPageState extends State<SplashPage>
   // sehingga SplashPage memegang kendali penuh atas timing navigasi.
   bool _canNavigate = false;
   VoidCallback? _pendingNav;
+  bool _syncStarted = false;
 
   void _navigateWhenReady(VoidCallback nav) {
     if (_canNavigate) {
@@ -31,6 +36,15 @@ class _SplashPageState extends State<SplashPage>
     } else {
       _pendingNav = nav;
     }
+  }
+
+  Future<void> _syncThenNavigate() async {
+    if (_syncStarted) return;
+    _syncStarted = true;
+    await sl<SyncUserSettingsUseCase>()(const NoParams());
+    resetOnboardingCache();
+    if (!mounted) return;
+    _navigateWhenReady(() => context.go('/dashboard'));
   }
 
   @override
@@ -98,8 +112,8 @@ class _SplashPageState extends State<SplashPage>
         if (state is Unauthenticated) {
           _navigateWhenReady(() => context.go('/login'));
         } else if (state is Authenticated) {
-          // Navigasi ke /dashboard; GoRouter._redirect akan handle onboarding check
-          _navigateWhenReady(() => context.go('/dashboard'));
+          // #192: sync identity settings dulu (blocking gate), lalu navigate.
+          _syncThenNavigate();
         }
       },
       child: Scaffold(
