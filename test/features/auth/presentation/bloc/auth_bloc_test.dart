@@ -10,6 +10,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 // Mocks
@@ -18,6 +19,7 @@ class MockSignUpUseCase extends Mock implements SignUpUseCase {}
 class MockSignOutUseCase extends Mock implements SignOutUseCase {}
 class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
+class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
@@ -30,6 +32,7 @@ void main() {
   late MockSignOutUseCase mockSignOut;
   late MockGetCurrentUserUseCase mockGetCurrentUser;
   late MockWatchAuthStateUseCase mockWatchAuthState;
+  late MockWipeLocalDataUseCase mockWipe;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -51,6 +54,9 @@ void main() {
     mockGetCurrentUser = MockGetCurrentUserUseCase();
     mockWatchAuthState = MockWatchAuthStateUseCase();
 
+    mockWipe = MockWipeLocalDataUseCase();
+    when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+
     // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
     when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
   });
@@ -61,6 +67,7 @@ void main() {
         signOut: mockSignOut,
         getCurrentUser: mockGetCurrentUser,
         watchAuthState: mockWatchAuthState,
+        wipeLocalData: mockWipe,
       );
 
   group('SignInRequested', () {
@@ -139,14 +146,55 @@ void main() {
 
   group('SignOutRequested', () {
     blocTest<AuthBloc, AuthState>(
-      'should emit [AuthLoading, Unauthenticated] when sign out succeeds',
+      'wipe sukses → signOut → [AuthLoading, Unauthenticated]',
       build: buildBloc,
       act: (bloc) => bloc.add(const SignOutRequested()),
       setUp: () {
+        when(() => mockWipe(any()))
+            .thenAnswer((_) async => const Right(unit));
         when(() => mockSignOut(any()))
             .thenAnswer((_) async => const Right(null));
       },
       expect: () => [const AuthLoading(), const Unauthenticated()],
+      verify: (_) {
+        verify(() => mockWipe(any())).called(1);
+        verify(() => mockSignOut(any())).called(1);
+      },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'wipe gagal → AuthError, signOut TIDAK dipanggil (user tetap login)',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        when(() => mockWipe(any())).thenAnswer(
+          (_) async => const Left(CacheFailure('Gagal membersihkan data.')),
+        );
+      },
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Gagal membersihkan data.'),
+      ],
+      verify: (_) {
+        verifyNever(() => mockSignOut(any()));
+      },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'wipe sukses tapi signOut gagal → AuthError',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        when(() => mockWipe(any()))
+            .thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any())).thenAnswer(
+          (_) async => const Left(AuthFailure('Gagal keluar. Coba lagi.')),
+        );
+      },
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Gagal keluar. Coba lagi.'),
+      ],
     );
   });
 

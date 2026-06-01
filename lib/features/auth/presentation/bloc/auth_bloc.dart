@@ -9,6 +9,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -20,6 +21,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.signOut,
     required this.getCurrentUser,
     required this.watchAuthState,
+    required this.wipeLocalData,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -33,6 +35,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOutUseCase signOut;
   final GetCurrentUserUseCase getCurrentUser;
   final WatchAuthStateUseCase watchAuthState;
+  final WipeLocalDataUseCase wipeLocalData;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -94,10 +97,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthLoading());
-    final result = await signOut(const NoParams());
-    result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (_) => emit(const Unauthenticated()),
+    final wipeResult = await wipeLocalData(const NoParams());
+    await wipeResult.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (_) async {
+        final signOutResult = await signOut(const NoParams());
+        signOutResult.fold(
+          (failure) => emit(AuthError(failure.message)),
+          (_) => emit(const Unauthenticated()),
+        );
+      },
     );
   }
 
