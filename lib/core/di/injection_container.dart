@@ -182,7 +182,7 @@ void _initAuth() {
   );
 
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl()),
+    () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
   );
 }
 

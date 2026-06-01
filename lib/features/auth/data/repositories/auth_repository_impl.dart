@@ -75,6 +75,20 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, void>> deleteAccount({required String password}) async {
+    try {
+      await remoteDataSource.reauthenticate(password: password);
+      await remoteDataSource.callDeleteAccount();
+      return const Right(null);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      return const Left(UnknownFailure());
+    }
+  }
+
+  @override
   Stream<UserEntity?> get authStateChanges =>
       remoteDataSource.authStateChanges;
 }

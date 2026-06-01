@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
@@ -14,16 +15,20 @@ abstract class AuthRemoteDataSource {
   Future<void> signOut();
   Future<UserModel?> getCurrentUser();
   Stream<UserModel?> get authStateChanges;
+  Future<void> reauthenticate({required String password});
+  Future<void> callDeleteAccount();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl({
     required this.auth,
     required this.firestore,
+    required this.functions,
   });
 
   final FirebaseAuth auth;
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
 
   @override
   Future<UserModel> signIn({
@@ -135,6 +140,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         createdAt: DateTime.now(),
       );
     });
+  }
+
+  @override
+  Future<void> reauthenticate({required String password}) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw const AuthException('Sesi tidak ditemukan. Login ulang.');
+    }
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapFirebaseCode(e.code));
+    }
+  }
+
+  @override
+  Future<void> callDeleteAccount() async {
+    try {
+      await functions.httpsCallable('deleteAccount').call();
+    } on FirebaseFunctionsException catch (e) {
+      throw AuthException(e.message ?? 'Gagal menghapus akun.');
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException('Gagal menghapus akun.');
+    }
   }
 
   static String _mapFirebaseCode(String code) => switch (code) {

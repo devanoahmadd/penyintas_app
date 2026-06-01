@@ -21,4 +21,6 @@ abstract class AuthRepository {
   // Stream langsung tanpa Either — auth state tidak bisa gagal secara meaningful;
   // null = logged out, non-null = logged in.
   Stream<UserEntity?> get authStateChanges;
+
+  Future<Either<Failure, void>> deleteAccount({required String password});
 }
