@@ -7,15 +7,18 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
+import 'package:penyintas_app/widgets/common/primary_button.dart';
 
 class BudgetEditSettingsPage extends StatefulWidget {
   const BudgetEditSettingsPage({super.key});
 
   @override
-  State<BudgetEditSettingsPage> createState() => _BudgetEditSettingsPageState();
+  State<BudgetEditSettingsPage> createState() =>
+      _BudgetEditSettingsPageState();
 }
 
-class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
+class _BudgetEditSettingsPageState
+    extends State<BudgetEditSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _incomeCtrl;
   late TextEditingController _rentCtrl;
@@ -81,7 +84,8 @@ class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
         otherFixedExpense: _parseField(_otherCtrl),
       );
 
-  bool get _hasChanges => _original != null && _buildEntity() != _original;
+  bool get _hasChanges =>
+      _original != null && _buildEntity() != _original;
 
   int get _totalFixed =>
       _parseField(_rentCtrl) +
@@ -93,22 +97,94 @@ class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
   int get _dailyPreview {
     final income = _parseField(_incomeCtrl);
     final emergency = (income * _emergencyPct).round();
-    final spendable = (income - _totalFixed - emergency).clamp(0, income);
+    final spendable =
+        (income - _totalFixed - emergency).clamp(0, income);
     return spendable > 0 ? (spendable / 30).floor() : 0;
   }
 
-  Widget _numField(TextEditingController ctrl, String label) => TextFormField(
-        controller: ctrl,
-        keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: AppTextStyles.body,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixText: 'Rp ',
-          labelStyle: AppTextStyles.label,
+  // ── Money field — AppTextField-consistent styling with Rp prefix ─────────
+  Widget _moneyField(
+    TextEditingController ctrl,
+    String label, {
+    bool isDark = false,
+  }) {
+    final borderColor =
+        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor =
+        isDark ? AppColors.textDark : AppColors.textLight;
+    final hintColor =
+        isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final fillColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+            style: AppTextStyles.label.copyWith(color: textColor)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: AppTextStyles.body.copyWith(color: textColor),
+          decoration: InputDecoration(
+            prefixText: 'Rp ',
+            prefixStyle: AppTextStyles.body.copyWith(color: hintColor),
+            hintText: '0',
+            hintStyle: AppTextStyles.body.copyWith(color: hintColor),
+            filled: true,
+            fillColor: fillColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor, width: 1),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius:
+                  BorderRadius.all(Radius.circular(12)),
+              borderSide:
+                  BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
+          onChanged: (_) => setState(() {}),
         ),
-        onChanged: (_) => setState(() {}),
-      );
+      ],
+    );
+  }
+
+  // ── Section card container ────────────────────────────────────────────────
+  Widget _sectionCard({
+    required bool isDark,
+    required String title,
+    required List<Widget> children,
+  }) {
+    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.lg),
+          ...children,
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,92 +204,136 @@ class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
       },
       builder: (context, state) {
         final isSaving = state is BudgetSettingsSaving;
+
         return Scaffold(
           backgroundColor: bg,
           appBar: AppBar(
-            title: Text('Edit Anggaran', style: AppTextStyles.h3),
+            title: Text('Atur Anggaran', style: AppTextStyles.h3),
             backgroundColor: bg,
             elevation: 0,
           ),
           body: Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.xxxl,
+              ),
               children: [
-                Text('PENDAPATAN', style: AppTextStyles.caption),
-                const SizedBox(height: AppSpacing.sm),
-                _numField(_incomeCtrl, 'Penghasilan bulanan'),
-                const SizedBox(height: AppSpacing.md),
-                Text('Tanggal gajian', style: AppTextStyles.label),
-                const SizedBox(height: AppSpacing.sm),
-                _PaymentDateGrid(
-                  selected: _paymentDate,
-                  onSelected: (d) => setState(() => _paymentDate = d),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text('PENGELUARAN TETAP', style: AppTextStyles.caption),
-                const SizedBox(height: AppSpacing.sm),
-                _numField(_rentCtrl, 'Kos / kontrakan'),
-                const SizedBox(height: AppSpacing.md),
-                _numField(_utilitiesCtrl, 'Listrik & air'),
-                const SizedBox(height: AppSpacing.md),
-                _numField(_internetCtrl, 'Internet'),
-                const SizedBox(height: AppSpacing.md),
-                _numField(_phoneCtrl, 'Telepon'),
-                const SizedBox(height: AppSpacing.md),
-                _numField(_otherCtrl, 'Lainnya'),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Total: ${formatRupiah(_totalFixed)}',
-                  style: AppTextStyles.label.copyWith(color: muted),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text('DANA DARURAT', style: AppTextStyles.caption),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // ── Section: Pendapatan ─────────────────────────────────
+                _sectionCard(
+                  isDark: isDark,
+                  title: 'PENDAPATAN',
                   children: [
-                    Text(
-                      '${(_emergencyPct * 100).toStringAsFixed(0)}%',
-                      style: AppTextStyles.numericMd,
-                    ),
-                    Text(
-                      formatRupiah(
-                          (_parseField(_incomeCtrl) * _emergencyPct).round()),
-                      style: AppTextStyles.body.copyWith(color: muted),
+                    _moneyField(_incomeCtrl, 'Penghasilan bulanan',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text('Tanggal gajian',
+                        style: AppTextStyles.label),
+                    const SizedBox(height: AppSpacing.sm),
+                    _PaymentDateGrid(
+                      selected: _paymentDate,
+                      isDark: isDark,
+                      onSelected: (d) =>
+                          setState(() => _paymentDate = d),
                     ),
                   ],
                 ),
-                Slider(
-                  value: _emergencyPct,
-                  min: 0.05,
-                  max: 0.25,
-                  divisions: 4,
-                  activeColor: AppColors.primary,
-                  onChanged: (v) => setState(() => _emergencyPct = v),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Section: Pengeluaran Tetap ───────────────────────────
+                _sectionCard(
+                  isDark: isDark,
+                  title: 'PENGELUARAN TETAP',
+                  children: [
+                    _moneyField(_rentCtrl, 'Kos / kontrakan',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.md),
+                    _moneyField(_utilitiesCtrl, 'Listrik & air',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.md),
+                    _moneyField(_internetCtrl, 'Internet',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.md),
+                    _moneyField(_phoneCtrl, 'Telepon',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.md),
+                    _moneyField(_otherCtrl, 'Lainnya',
+                        isDark: isDark),
+                    const SizedBox(height: AppSpacing.md),
+                    // Total line
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total tetap',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: muted)),
+                        Text(
+                          formatRupiah(_totalFixed),
+                          style: AppTextStyles.numericSm
+                              .copyWith(color: muted),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                _PreviewCard(dailyBudget: _dailyPreview, isDark: isDark),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Section: Dana Darurat ────────────────────────────────
+                _sectionCard(
+                  isDark: isDark,
+                  title: 'DANA DARURAT',
+                  children: [
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${(_emergencyPct * 100).toStringAsFixed(0)}%',
+                          style: AppTextStyles.numericMd,
+                        ),
+                        Text(
+                          formatRupiah((_parseField(_incomeCtrl) *
+                                  _emergencyPct)
+                              .round()),
+                          style: AppTextStyles.body
+                              .copyWith(color: muted),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: _emergencyPct,
+                      min: 0.05,
+                      max: 0.25,
+                      divisions: 4,
+                      activeColor: AppColors.primary,
+                      onChanged: (v) =>
+                          setState(() => _emergencyPct = v),
+                    ),
+                    Text(
+                      'Direkomendasikan 10–20% dari penghasilan.',
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: muted),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Preview card ─────────────────────────────────────────
+                _PreviewCard(
+                    dailyBudget: _dailyPreview, isDark: isDark),
                 const SizedBox(height: AppSpacing.xxl),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: (_hasChanges && !isSaving)
-                        ? () => context
-                            .read<BudgetSettingsBloc>()
-                            .add(SaveBudgetSettings(_buildEntity()))
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary),
-                    child: isSaving
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'Simpan Perubahan',
-                            style: AppTextStyles.label
-                                .copyWith(color: Colors.white),
-                          ),
-                  ),
+
+                // ── Save button ──────────────────────────────────────────
+                PrimaryButton(
+                  label: 'Simpan Perubahan',
+                  isLoading: isSaving,
+                  isEnabled: _hasChanges,
+                  onPressed: () => context
+                      .read<BudgetSettingsBloc>()
+                      .add(SaveBudgetSettings(_buildEntity())),
                 ),
               ],
             ),
@@ -224,15 +344,21 @@ class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
   }
 }
 
+// ── Payment date grid ────────────────────────────────────────────────────────
+
 class _PaymentDateGrid extends StatelessWidget {
-  const _PaymentDateGrid(
-      {required this.selected, required this.onSelected});
+  const _PaymentDateGrid({
+    required this.selected,
+    required this.isDark,
+    required this.onSelected,
+  });
+
   final int selected;
+  final bool isDark;
   final void Function(int) onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
@@ -249,9 +375,18 @@ class _PaymentDateGrid extends StatelessWidget {
               color: isSelected
                   ? AppColors.primary
                   : isDark
-                      ? AppColors.cardDark
-                      : AppColors.cardLight,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ? AppColors.surfaceDark
+                      : AppColors.surfaceLight,
+              borderRadius:
+                  BorderRadius.circular(AppRadius.sm),
+              border: isSelected
+                  ? null
+                  : Border.all(
+                      color: isDark
+                          ? AppColors.borderDark
+                          : AppColors.borderLight,
+                      width: 0.5,
+                    ),
             ),
             child: Text(
               '$day',
@@ -266,6 +401,8 @@ class _PaymentDateGrid extends StatelessWidget {
   }
 }
 
+// ── Preview card ─────────────────────────────────────────────────────────────
+
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({required this.dailyBudget, required this.isDark});
   final int dailyBudget;
@@ -274,6 +411,8 @@ class _PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -284,8 +423,14 @@ class _PreviewCard extends StatelessWidget {
         children: [
           Text('ANGGARAN HARIAN', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.sm),
-          Text(formatRupiah(dailyBudget), style: AppTextStyles.numericLg),
-          Text('per hari', style: AppTextStyles.bodySmall),
+          Text(formatRupiah(dailyBudget),
+              style: AppTextStyles.numericLg),
+          const SizedBox(height: 2),
+          Text(
+            'per hari yang bisa kamu gunakan',
+            style: AppTextStyles.bodySmall.copyWith(color: muted),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
