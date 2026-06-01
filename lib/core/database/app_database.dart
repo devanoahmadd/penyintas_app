@@ -190,6 +190,19 @@ class AppDatabase extends _$AppDatabase {
       }
     },
   );
+
+  /// Wipe semua data lokal (logout flow). Menghapus semua baris di semua tabel dan
+  /// menjalankan VACUUM untuk reclaim disk space.
+  Future<void> clearAllLocalData() async {
+    await transaction(() async {
+      await delete(goals).go();
+      await delete(transactions).go();
+      await delete(budgetLimits).go();
+      await delete(syncQueue).go();
+      await delete(appSettings).go();
+    });
+    await customStatement('VACUUM');
+  }
 }
 
 QueryExecutor _openConnection() => driftDatabase(name: 'penyintas_db');
