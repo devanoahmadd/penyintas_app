@@ -249,6 +249,67 @@ void main() {
     });
   });
 
+  group('OnboardingPage — Exit "Nanti" di Step 1', () {
+    setUp(() {
+      when(() => mockBloc.state).thenReturn(const OnboardingStep1());
+      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
+    });
+
+    testWidgets('menampilkan tombol "Nanti" di Step 1', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      expect(find.text('Nanti'), findsOneWidget);
+    });
+
+    testWidgets('tidak menampilkan tombol "Nanti" di Step 2', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      when(() => mockBloc.state).thenReturn(
+        const OnboardingStep2(income: 1000000, paymentDate: 25),
+      );
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      expect(find.text('Nanti'), findsNothing);
+    });
+
+    testWidgets('tap "Nanti" membuka dialog konfirmasi', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      await tester.tap(find.text('Nanti'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tutup setup sekarang?'), findsOneWidget);
+      expect(find.text('Ya, keluar'), findsOneWidget);
+      expect(find.text('Lanjut isi'), findsOneWidget);
+    });
+  });
+
   group('OnboardingPage — Semantics (#129)', () {
     testWidgets('Step 1: date segment chips have button semantics', (tester) async {
       when(() => mockBloc.state).thenReturn(const OnboardingStep1());

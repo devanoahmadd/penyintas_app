@@ -166,6 +166,55 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 }
 
+// ── Exit dialog (Step 1 → "Nanti") ────────────────────────────────────────
+
+Future<void> _showExitDialog(BuildContext context) async {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+  final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+  final textSoftColor =
+      isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
+      title: Text(
+        'Tutup setup sekarang?',
+        style: AppTextStyles.h3.copyWith(color: textColor),
+      ),
+      content: Text(
+        'Progress belum tersimpan.',
+        style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(
+            'Lanjut isi',
+            style: AppTextStyles.label.copyWith(color: AppColors.primary),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(
+            'Ya, keluar',
+            style: AppTextStyles.label.copyWith(color: AppColors.warn),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    SystemNavigator.pop();
+  }
+}
+
 // ── Header dengan step counter + segmented progress bar ───────────────────
 
 class _OnboardingHeader extends StatelessWidget {
@@ -202,7 +251,23 @@ class _OnboardingHeader extends StatelessWidget {
                 style: AppTextStyles.caption.copyWith(color: textSoftColor),
               ),
               const Spacer(),
-              if (canGoBack)
+              if (currentStep == 0)
+                GestureDetector(
+                  onTap: () => _showExitDialog(context),
+                  child: SizedBox(
+                    width: 44,
+                    height: 32,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'Nanti',
+                        style: AppTextStyles.label
+                            .copyWith(color: textSoftColor),
+                      ),
+                    ),
+                  ),
+                )
+              else if (canGoBack)
                 GestureDetector(
                   onTap: () => context
                       .read<OnboardingBloc>()
@@ -212,7 +277,8 @@ class _OnboardingHeader extends StatelessWidget {
                     height: 32,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Icon(Icons.arrow_back, color: iconColor, size: 20),
+                      child: Icon(Icons.arrow_back,
+                          color: iconColor, size: 20),
                     ),
                   ),
                 ),
