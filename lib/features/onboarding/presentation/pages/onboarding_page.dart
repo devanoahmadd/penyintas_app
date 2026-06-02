@@ -6,6 +6,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
@@ -80,13 +81,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 _cachedRemainingDays = state.remainingDays;
               }
 
-              final page = _stateToPage(state);
-              if (_pageController.hasClients) {
-                _pageController.animateToPage(
-                  page,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
+              // Jangan animate page untuk terminal states — OnboardingError
+              // mengembalikan 0 dari _stateToPage (default), yang menyebabkan
+              // PageController kembali ke Step 1 saat submit gagal.
+              if (state is! OnboardingError && state is! OnboardingSuccess) {
+                final page = _stateToPage(state);
+                if (_pageController.hasClients) {
+                  _pageController.animateToPage(
+                    page,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
               }
 
               if (state is OnboardingSuccess) {
@@ -94,6 +100,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 context
                     .read<NotificationBloc>()
                     .add(const RequestPermission());
+                // Invalidasi cache agar router baca ulang DB (onboardingCompleted=true)
+                resetOnboardingCache();
                 context.go('/dashboard');
               } else if (state is OnboardingError) {
                 ScaffoldMessenger.of(context)
@@ -106,6 +114,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                     backgroundColor: AppColors.warn,
                     behavior: SnackBarBehavior.floating,
+                    action: SnackBarAction(
+                      label: 'Coba lagi',
+                      textColor: Colors.white,
+                      onPressed: () => context
+                          .read<OnboardingBloc>()
+                          .add(const OnboardingRetryRequested()),
+                    ),
                   ));
               }
             },

@@ -74,6 +74,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Step3Submitted event,
     Emitter<OnboardingState> emit,
   ) async {
+    if (state is! OnboardingStep3) return;
     final s = state as OnboardingStep3;
     // Simpan emergencyFundPct dari event agar tersedia saat retry (#30)
     _lastStep3 = OnboardingStep3(

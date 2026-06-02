@@ -220,4 +220,25 @@ void main() {
       },
     );
   });
+
+  group('Step3Submitted guard — state bukan OnboardingStep3', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'tidak mengubah state ketika current state adalah OnboardingError',
+      build: buildBloc,
+      seed: () => const OnboardingError(message: 'Gagal menyimpan.'),
+      act: (bloc) =>
+          bloc.add(const Step3Submitted(emergencyFundPct: 0.10)),
+      expect: () => [], // guard harus return early, tidak ada state change
+    );
+  });
+
+  group('OnboardingRetryRequested', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'emit OnboardingStep1 ketika _lastStep3 kosong',
+      build: buildBloc,
+      seed: () => const OnboardingError(message: 'Gagal.'),
+      act: (bloc) => bloc.add(const OnboardingRetryRequested()),
+      expect: () => [const OnboardingStep1()],
+    );
+  });
 }
