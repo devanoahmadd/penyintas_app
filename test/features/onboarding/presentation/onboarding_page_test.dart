@@ -125,7 +125,7 @@ void main() {
           .thenAnswer((_) => const Stream.empty());
     });
 
-    testWidgets('renders income preset chips', (tester) async {
+    testWidgets('renders income preset chips dengan range mahasiswa', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -137,10 +137,15 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('Rp 1jt', skipOffstage: false), findsOneWidget);
-      expect(find.text('Rp 2jt', skipOffstage: false), findsOneWidget);
+      // New presets
+      expect(find.text('Rp 800rb', skipOffstage: false), findsOneWidget);
+      expect(find.text('Rp 1,5jt', skipOffstage: false), findsOneWidget);
       expect(find.text('Rp 3jt', skipOffstage: false), findsOneWidget);
       expect(find.text('Rp 5jt', skipOffstage: false), findsOneWidget);
+
+      // Old presets gone
+      expect(find.text('Rp 1jt', skipOffstage: false), findsNothing);
+      expect(find.text('Rp 2jt', skipOffstage: false), findsNothing);
     });
 
     testWidgets('tapping Lanjut without income shows validation error',

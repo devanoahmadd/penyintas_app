@@ -297,11 +297,22 @@ class _OnboardingHeader extends StatelessWidget {
 
 // ── Step 1 — Pemasukan & Tanggal ─────────────────────────────────────────
 
-const _kIncomePresets = <int>[1000000, 2000000, 3000000, 5000000];
+const _kIncomePresets = <int>[800000, 1500000, 3000000, 5000000];
 const _kDatePresets = <int>[1, 5, 15, 25];
 
-String _chipLabel(int amount) =>
-    amount >= 1000000 ? 'Rp ${amount ~/ 1000000}jt' : 'Rp ${amount ~/ 1000}rb';
+String _chipLabel(int amount, String languageCode) {
+  final isId = languageCode == 'id';
+  if (amount < 1000000) {
+    return isId ? 'Rp ${amount ~/ 1000}rb' : 'Rp ${amount ~/ 1000}K';
+  }
+  final millions = amount / 1000000;
+  if (millions == millions.truncateToDouble()) {
+    return isId ? 'Rp ${millions.toInt()}jt' : 'Rp ${millions.toInt()}M';
+  }
+  final decSep = isId ? ',' : '.';
+  final formatted = millions.toStringAsFixed(1).replaceAll('.', decSep);
+  return isId ? 'Rp ${formatted}jt' : 'Rp ${formatted}M';
+}
 
 class _Step1Widget extends StatefulWidget {
   const _Step1Widget({required this.isDark});
@@ -414,6 +425,7 @@ class _Step1WidgetState extends State<_Step1Widget> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final langCode = Localizations.localeOf(context).languageCode;
     final textColor =
         widget.isDark ? AppColors.textDark : AppColors.textLight;
     final textSoftColor =
@@ -493,7 +505,7 @@ class _Step1WidgetState extends State<_Step1Widget> {
                   child: Row(
                     children: _kIncomePresets
                         .map((amt) => _QuickChip(
-                              label: _chipLabel(amt),
+                              label: _chipLabel(amt, langCode),
                               selected: income == amt,
                               isDark: widget.isDark,
                               onTap: () => _selectPreset(amt),
@@ -836,7 +848,7 @@ class _Step2WidgetState extends State<_Step2Widget>
                       end: Alignment.bottomRight,
                       colors: widget.isDark
                           ? [AppColors.surfaceDark, AppColors.borderDark]
-                          : [AppColors.textLight, AppColors.textSoftLight],
+                          : [AppColors.primary, AppColors.primaryDeep],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: widget.isDark
