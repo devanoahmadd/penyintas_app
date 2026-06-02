@@ -186,6 +186,21 @@ class AppLocalizations {
   String get onboardingSliderMin => _t('onboarding_slider_min');
   String get onboardingSliderMax => _t('onboarding_slider_max');
 
+  // Onboarding — audit fixes (2026-06-02)
+  String get onboardingEmergencyTitle => _t('onboarding_emergency_title');
+  String get onboardingIncomeSubtitle => _t('onboarding_income_subtitle');
+  String get onboardingFixedExpenseWarning => _t('onboarding_fixed_expense_warning');
+  String get onboardingEyebrowEmergency => _t('onboarding_eyebrow_emergency');
+  String get onboardingEmergencySubtitle => _t('onboarding_emergency_subtitle');
+  String get onboardingEmergencyQuestion => _t('onboarding_emergency_question');
+  String get onboardingEmergencySkip => _t('onboarding_emergency_skip');
+  String get onboardingDailyBudgetLabel => _t('onboarding_daily_budget_label');
+  String get onboardingDailyBudgetSuffix => _t('onboarding_daily_budget_suffix');
+  String onboardingDailyBudgetDaysLeft(int days) =>
+      _t('onboarding_daily_budget_days_left').replaceAll('{days}', '$days');
+  String onboardingDailyBudgetMonthlyLeft(String amount) =>
+      _t('onboarding_daily_budget_monthly_left').replaceAll('{amount}', amount);
+
   // Survival Tips page & banner
   String get survivalTipsPageTitle => _t('survival_tips_page_title');
   String get survivalTipsEyebrow => _t('survival_tips_eyebrow');

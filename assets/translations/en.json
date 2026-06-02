@@ -34,7 +34,7 @@
   "error_network": "No connection. Data saved locally.",
   "error_auth": "Sign in failed. Please try again.",
   "loading": "Loading...",
-  "onboarding_income_title": "How much is your monthly allowance?",
+  "onboarding_income_title": "What's your monthly income?",
   "onboarding_income_label": "Monthly amount",
   "onboarding_income_hint": "Enter amount in Rupiah",
   "onboarding_fixed_title": "Monthly fixed expenses",
@@ -210,5 +210,16 @@
   "dashboard_tip_text": "Bring a water bottle — save Rp 6,000/day.",
   "dashboard_tx_empty": "No transactions yet. Record your first expense today.",
   "category_health": "Health",
-  "category_internet": "Internet"
+  "category_internet": "Internet",
+  "onboarding_income_subtitle": "Allowance, salary, or any regular income — we'll calculate your daily budget from this.",
+  "onboarding_emergency_title": "Emergency fund",
+  "onboarding_fixed_expense_warning": "Almost all your income is allocated to fixed costs. You can still continue.",
+  "onboarding_eyebrow_emergency": "EMERGENCY FUND",
+  "onboarding_emergency_subtitle": "Set aside for unexpected days. Change anytime from the menu.",
+  "onboarding_emergency_question": "How much to save each month?",
+  "onboarding_emergency_skip": "Skip for now",
+  "onboarding_daily_budget_label": "YOUR DAILY BUDGET",
+  "onboarding_daily_budget_suffix": "/day",
+  "onboarding_daily_budget_days_left": "for {days} days ahead",
+  "onboarding_daily_budget_monthly_left": "{amount} left this month"
 }
