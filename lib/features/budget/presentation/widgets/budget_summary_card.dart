@@ -3,47 +3,22 @@ import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 
-class DaysToLiveCard extends StatelessWidget {
-  const DaysToLiveCard({
-    super.key,
-    required this.daysToLive,
-    required this.remainingDays,
-    required this.status,
-  });
-
-  final int daysToLive;
-  final int remainingDays;
-  final BudgetStatus status;
-
-  String _safeUntilDate() {
-    // #62: clamp agar tidak melampaui akhir siklus; tambah "(est.)" jika DTL > sisa hari
-    final safeDays = daysToLive.clamp(0, remainingDays);
-    final date = DateTime.now().add(Duration(days: safeDays));
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    final suffix = daysToLive > remainingDays ? ' (est.)' : '';
-    return '${date.day} ${months[date.month - 1]}$suffix';
-  }
-
-  double get _dtlRatio =>
-      remainingDays > 0 ? (daysToLive / remainingDays).clamp(0.0, 1.0) : 1.0;
+/// Hero card for the budget overview — mirrors DaysToLiveCard's structure.
+///
+/// Displays remaining operational budget + overall status badge.
+/// Returns [SizedBox.shrink] if no budget settings have been configured.
+class BudgetSummaryCard extends StatelessWidget {
+  const BudgetSummaryCard({super.key, required this.overview});
+  final BudgetOverviewEntity overview;
 
   @override
   Widget build(BuildContext context) {
+    if (overview.totalSpendable <= 0) return const SizedBox.shrink();
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);
 
@@ -52,6 +27,8 @@ class DaysToLiveCard extends StatelessWidget {
     final textSoft = Colors.white.withValues(alpha: 0.75);
     final trackColor = Colors.white.withValues(alpha: 0.18);
     final fillColor = Colors.white.withValues(alpha: 0.90);
+
+    final usagePct = overview.operationalUsagePct;
 
     return Container(
       width: double.infinity,
@@ -64,67 +41,70 @@ class DaysToLiveCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row — label + status badge
+          // ── Top row: label + status badge ──────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                l10n.dashboardDtlLabel,
+                'ANGGARAN OPERASIONAL',
                 style: AppTextStyles.caption.copyWith(color: textSoft),
               ),
-              _StatusBadge(status: status, l10n: l10n),
+              _StatusBadge(status: overview.overallStatus, l10n: l10n),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
 
-          // Number + "hari"
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$daysToLive',
-                style: AppTextStyles.numericLg.copyWith(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w700,
-                  color: textFull,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  'hari',
-                  style: AppTextStyles.h3.copyWith(color: textSoft),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-
-          // Subtitle
+          // ── Big number ─────────────────────────────────────────────────
           Text(
-            '${l10n.dashboardSafeUntil} ${_safeUntilDate()}',
+            formatRupiah(overview.operationalRemaining),
+            style: AppTextStyles.numericLg.copyWith(
+              fontSize: 40,
+              fontWeight: FontWeight.w700,
+              color: textFull,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Sisa bulan ini',
             style: AppTextStyles.bodySmall.copyWith(color: textSoft),
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: LinearProgressIndicator(
-              value: _dtlRatio,
-              backgroundColor: trackColor,
-              valueColor: AlwaysStoppedAnimation(fillColor),
-              minHeight: 8,
-            ),
+          // ── Progress bar + usage label ──────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  child: LinearProgressIndicator(
+                    value: usagePct,
+                    backgroundColor: trackColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(fillColor),
+                    minHeight: 8,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${(usagePct * 100).round()}% terpakai',
+                style: AppTextStyles.caption.copyWith(
+                  color: textSoft,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+// ── Status badge ────────────────────────────────────────────────────────────
+// Mirrors _StatusBadge from DaysToLiveCard — reuses the same l10n keys
+// and BudgetStatus switch.
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status, required this.l10n});

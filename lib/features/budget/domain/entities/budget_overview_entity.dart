@@ -23,6 +23,19 @@ class BudgetOverviewEntity extends Equatable {
   final int totalSpentInLimited;
   final BudgetStatus overallStatus;
 
+  /// Total yang sudah dibelanjakan di semua kategori operasional.
+  int get totalOperationalSpent =>
+      categoryItems.fold(0, (sum, i) => sum + i.spentAmount);
+
+  /// Sisa anggaran operasional = totalSpendable - totalOperationalSpent (min 0).
+  int get operationalRemaining =>
+      (totalSpendable - totalOperationalSpent).clamp(0, totalSpendable);
+
+  /// Persentase pemakaian operasional 0.0–1.0.
+  double get operationalUsagePct => totalSpendable > 0
+      ? (totalOperationalSpent / totalSpendable).clamp(0.0, 1.0)
+      : 0.0;
+
   @override
   List<Object> get props => [
         monthlyIncome, totalFixedExpenses, emergencyFundMonthly,
@@ -49,6 +62,8 @@ class CategoryBudgetItem extends Equatable {
   final BudgetStatus? status;
 
   bool get hasLimit => limitAmount != null;
+
+  // ── Computed helpers ────────────────────────────────────────────────────
 
   @override
   List<Object?> get props =>

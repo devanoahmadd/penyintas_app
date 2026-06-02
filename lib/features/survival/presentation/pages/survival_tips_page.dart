@@ -147,7 +147,7 @@ class _TipsBody extends StatelessWidget {
   List<Widget> _skeletonCards(bool isDark) {
     final skeletonColor =
         isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return List.generate(
@@ -297,7 +297,7 @@ class _TipCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;

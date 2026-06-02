@@ -43,6 +43,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart
 import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
@@ -158,6 +159,7 @@ void _initAuth() {
         getCurrentUser: sl(),
         watchAuthState: sl(),
         wipeLocalData: sl(),
+        deleteAccount: sl(),
       ));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
@@ -167,6 +169,7 @@ void _initAuth() {
   sl.registerLazySingleton(() => WatchAuthStateUseCase(sl()));
 
   sl.registerLazySingleton(() => WipeLocalDataUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
   sl.registerLazySingleton(() => SyncUserSettingsUseCase(sl()));
   sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
 
@@ -182,7 +185,7 @@ void _initAuth() {
   );
 
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl()),
+    () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
   );
 }
 

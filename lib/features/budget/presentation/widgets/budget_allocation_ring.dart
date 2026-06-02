@@ -6,6 +6,10 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 
+/// Donut chart showing income allocation: Operasional / Tetap / Dana Darurat.
+///
+/// Center of the donut shows total monthly income + "/bulan" label.
+/// Returns [SizedBox.shrink] if total income is not configured.
 class BudgetAllocationRing extends StatelessWidget {
   const BudgetAllocationRing({super.key, required this.overview});
   final BudgetOverviewEntity overview;
@@ -13,7 +17,8 @@ class BudgetAllocationRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textMain = isDark ? AppColors.textDark : AppColors.textLight;
 
     final fixed = overview.totalFixedExpenses.toDouble();
     final emergency = overview.emergencyFundMonthly.toDouble();
@@ -21,44 +26,72 @@ class BudgetAllocationRing extends StatelessWidget {
     final total = fixed + emergency + spendable;
     if (total <= 0) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: Column(
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+          // ── Section title ───────────────────────────────────────────────
+          Text('ALOKASI PENDAPATAN', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Donut + center overlay ──────────────────────────────────────
           SizedBox(
-            height: 180,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 56,
-                sections: [
-                  PieChartSectionData(
-                    value: fixed,
-                    color: AppColors.warn,
-                    title: '',
-                    radius: 28,
+            height: 200,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 60,
+                    sections: [
+                      PieChartSectionData(
+                        value: spendable,
+                        color: AppColors.primary,
+                        title: '',
+                        radius: 30,
+                      ),
+                      PieChartSectionData(
+                        value: fixed,
+                        color: AppColors.warn,
+                        title: '',
+                        radius: 30,
+                      ),
+                      PieChartSectionData(
+                        value: emergency,
+                        color: AppColors.caution,
+                        title: '',
+                        radius: 30,
+                      ),
+                    ],
                   ),
-                  PieChartSectionData(
-                    value: emergency,
-                    color: AppColors.caution,
-                    title: '',
-                    radius: 28,
-                  ),
-                  PieChartSectionData(
-                    value: spendable,
-                    color: AppColors.primary,
-                    title: '',
-                    radius: 28,
-                  ),
-                ],
-              ),
+                ),
+                // Center total overlay
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      formatRupiahCompact(overview.monthlyIncome),
+                      style: AppTextStyles.numericMd.copyWith(
+                        color: textMain,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      '/bulan',
+                      style: AppTextStyles.caption.copyWith(
+                        color: muted,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // ── Legend ──────────────────────────────────────────────────────
           _LegendRow(
             color: AppColors.primary,
             label: 'Operasional',
@@ -74,15 +107,18 @@ class BudgetAllocationRing extends StatelessWidget {
             label: 'Dana Darurat',
             amount: overview.emergencyFundMonthly,
           ),
-        ],
-      ),
+      ],
     );
   }
 }
 
 class _LegendRow extends StatelessWidget {
-  const _LegendRow(
-      {required this.color, required this.label, required this.amount});
+  const _LegendRow({
+    required this.color,
+    required this.label,
+    required this.amount,
+  });
+
   final Color color;
   final String label;
   final int amount;
@@ -91,6 +127,7 @@ class _LegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -104,7 +141,7 @@ class _LegendRow extends StatelessWidget {
           Text(label, style: AppTextStyles.bodySmall),
           const Spacer(),
           Text(
-            formatRupiah(amount),
+            formatRupiahCompact(amount),
             style: AppTextStyles.numericSm.copyWith(color: muted),
           ),
         ],

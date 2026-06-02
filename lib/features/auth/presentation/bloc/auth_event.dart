@@ -41,6 +41,16 @@ final class SignOutRequested extends AuthEvent {
   const SignOutRequested();
 }
 
+final class DeleteAccountRequested extends AuthEvent {
+  const DeleteAccountRequested({required this.password});
+  final String password;
+
+  @override
+  // password dikecualikan dari props agar tidak bocor lewat toString()
+  // jika BlocObserver logging ditambahkan kelak.
+  List<Object> get props => [];
+}
+
 final class _AuthStateChanged extends AuthEvent {
   final UserEntity? user;
   const _AuthStateChanged(this.user);

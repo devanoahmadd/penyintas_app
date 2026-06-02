@@ -10,6 +10,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -20,11 +21,13 @@ class MockSignOutUseCase extends Mock implements SignOutUseCase {}
 class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
+class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
 class FakeSignUpParams extends Fake implements SignUpParams {}
 class FakeNoParams extends Fake implements NoParams {}
+class FakeDeleteAccountParams extends Fake implements DeleteAccountParams {}
 
 void main() {
   late MockSignInUseCase mockSignIn;
@@ -33,6 +36,7 @@ void main() {
   late MockGetCurrentUserUseCase mockGetCurrentUser;
   late MockWatchAuthStateUseCase mockWatchAuthState;
   late MockWipeLocalDataUseCase mockWipe;
+  late MockDeleteAccountUseCase mockDeleteAccount;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -45,6 +49,7 @@ void main() {
     registerFallbackValue(FakeSignInParams());
     registerFallbackValue(FakeSignUpParams());
     registerFallbackValue(FakeNoParams());
+    registerFallbackValue(FakeDeleteAccountParams());
   });
 
   setUp(() {
@@ -57,6 +62,8 @@ void main() {
     mockWipe = MockWipeLocalDataUseCase();
     when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
 
+    mockDeleteAccount = MockDeleteAccountUseCase();
+
     // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
     when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
   });
@@ -68,6 +75,7 @@ void main() {
         getCurrentUser: mockGetCurrentUser,
         watchAuthState: mockWatchAuthState,
         wipeLocalData: mockWipe,
+        deleteAccount: mockDeleteAccount,
       );
 
   group('SignInRequested', () {
@@ -219,6 +227,94 @@ void main() {
       },
       act: (bloc) => bloc.add(const AuthCheckRequested()),
       expect: () => [const Unauthenticated()],
+    );
+  });
+
+  group('DeleteAccountRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'deleteAccount sukses → wipe sukses → signOut sukses → [DeleteAccountInProgress, Unauthenticated]',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(() => mockDeleteAccount(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any()))
+            .thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const Unauthenticated(),
+      ],
+      verify: (_) {
+        verify(() => mockDeleteAccount(any())).called(1);
+        verify(() => mockWipe(any())).called(1);
+        verify(() => mockSignOut(any())).called(1);
+      },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'deleteAccount gagal → [DeleteAccountInProgress, DeleteAccountFailure], wipe & signOut tidak dipanggil',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(() => mockDeleteAccount(any())).thenAnswer(
+          (_) async => const Left(AuthFailure('Password salah.')),
+        );
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const DeleteAccountFailure('Password salah.'),
+      ],
+      verify: (_) {
+        verifyNever(() => mockWipe(any()));
+        verifyNever(() => mockSignOut(any()));
+      },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'deleteAccount sukses tapi wipe gagal → [DeleteAccountInProgress, DeleteAccountFailure]',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(() => mockDeleteAccount(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer(
+          (_) async => const Left(CacheFailure('Gagal membersihkan data.')),
+        );
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const DeleteAccountFailure('Gagal membersihkan data.'),
+      ],
+      verify: (_) {
+        verifyNever(() => mockSignOut(any()));
+      },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'deleteAccount & wipe sukses tapi signOut gagal → [DeleteAccountInProgress, Unauthenticated]',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(() => mockDeleteAccount(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any()))
+            .thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any())).thenAnswer(
+          (_) async => const Left(AuthFailure('Gagal keluar.')),
+        );
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const Unauthenticated(),
+      ],
+      verify: (_) {
+        verify(() => mockDeleteAccount(any())).called(1);
+        verify(() => mockWipe(any())).called(1);
+        verify(() => mockSignOut(any())).called(1);
+      },
     );
   });
 }

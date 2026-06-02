@@ -9,6 +9,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 
 part 'auth_event.dart';
@@ -22,11 +23,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUser,
     required this.watchAuthState,
     required this.wipeLocalData,
+    required this.deleteAccount,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
+    on<DeleteAccountRequested>(_onDeleteAccountRequested);
     on<_AuthStateChanged>(_onAuthStateChanged);
   }
 
@@ -36,6 +39,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUserUseCase getCurrentUser;
   final WatchAuthStateUseCase watchAuthState;
   final WipeLocalDataUseCase wipeLocalData;
+  final DeleteAccountUseCase deleteAccount;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -49,10 +53,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onAuthStateChanged(
-    _AuthStateChanged event,
-    Emitter<AuthState> emit,
-  ) {
+  void _onAuthStateChanged(_AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
       emit(Authenticated(event.user!));
     } else {
@@ -98,13 +99,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     final wipeResult = await wipeLocalData(const NoParams());
-    await wipeResult.fold(
-      (failure) async => emit(AuthError(failure.message)),
+    await wipeResult.fold((failure) async => emit(AuthError(failure.message)), (
+      _,
+    ) async {
+      final signOutResult = await signOut(const NoParams());
+      signOutResult.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (_) => emit(const Unauthenticated()),
+      );
+    });
+  }
+
+  Future<void> _onDeleteAccountRequested(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _authSubscription?.cancel(); // prevent auth stream race
+    _authSubscription = null;
+    emit(const DeleteAccountInProgress());
+    final result = await deleteAccount(
+      DeleteAccountParams(password: event.password),
+    );
+    await result.fold(
+      (failure) async => emit(DeleteAccountFailure(failure.message)),
       (_) async {
-        final signOutResult = await signOut(const NoParams());
-        signOutResult.fold(
-          (failure) => emit(AuthError(failure.message)),
-          (_) => emit(const Unauthenticated()),
+        // Hapus data lokal Drift
+        final wipeResult = await wipeLocalData(const NoParams());
+        await wipeResult.fold(
+          (failure) async => emit(DeleteAccountFailure(failure.message)),
+          (_) async {
+            // Account already deleted — even if signOut fails, treat as logged out
+            await signOut(const NoParams());
+            emit(const Unauthenticated());
+          },
         );
       },
     );
