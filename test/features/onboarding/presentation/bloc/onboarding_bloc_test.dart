@@ -107,6 +107,25 @@ void main() {
             .having((s) => s.fixedExpenses, 'fixedExpenses', tFixedExpenses),
       ],
     );
+
+    blocTest<OnboardingBloc, OnboardingState>(
+      'remainingDays menggunakan daysInCycle() bukan 30 ketika hari ini = paymentDate',
+      build: buildBloc,
+      seed: () => OnboardingStep2(
+        income: tIncome,
+        // paymentDate = hari ini → remainingDaysInCycle() returns 0
+        paymentDate: DateTime.now().day,
+      ),
+      act: (bloc) =>
+          bloc.add(const Step2Submitted(otherFixedExpense: tFixedExpenses)),
+      expect: () => [
+        isA<OnboardingStep3>().having(
+          (s) => s.remainingDays,
+          'remainingDays',
+          greaterThan(0),
+        ),
+      ],
+    );
   });
 
   group('OnboardingBackPressed', () {

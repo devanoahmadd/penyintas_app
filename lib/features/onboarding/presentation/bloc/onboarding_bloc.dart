@@ -66,7 +66,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       internetExpense: event.internetExpense,
       phoneExpense: event.phoneExpense,
       otherFixedExpense: event.otherFixedExpense,
-      remainingDays: days > 0 ? days : 30,
+      remainingDays: days > 0 ? days : daysInCycle(s.paymentDate),
     ));
   }
 
