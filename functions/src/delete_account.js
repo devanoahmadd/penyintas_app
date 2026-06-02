@@ -9,6 +9,16 @@ exports.deleteAccount = onCall({ enforceAppCheck: false }, async (request) => {
     throw new HttpsError('unauthenticated', 'Login dulu.');
   }
 
+  // Tolak token yang auth_time-nya >5 menit — cegah replay dengan token curian.
+  // reauthenticateWithCredential client-side memperbarui auth_time.
+  const authTime = request.auth.token.auth_time;
+  if (!authTime || Date.now() / 1000 - authTime > 300) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Sesi konfirmasi sudah habis. Ulangi proses hapus akun.'
+    );
+  }
+
   const uid = request.auth.uid;
   const db = getFirestore();
   const auth = getAuth();
