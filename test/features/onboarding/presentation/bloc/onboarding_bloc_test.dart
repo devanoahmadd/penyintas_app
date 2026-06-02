@@ -240,5 +240,41 @@ void main() {
       act: (bloc) => bloc.add(const OnboardingRetryRequested()),
       expect: () => [const OnboardingStep1()],
     );
+
+    blocTest<OnboardingBloc, OnboardingState>(
+      'emits cached OnboardingStep3 when _lastStep3 is populated',
+      build: () {
+        // Wire up mocks so Step3 submission fails and caches _lastStep3
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Left(CacheFailure('Gagal menyimpan.')));
+        when(() => mockAnalytics.logOnboardingCompleted()).thenAnswer((_) async {});
+        return buildBloc();
+      },
+      seed: () => const OnboardingStep3(
+        income: tIncome,
+        paymentDate: tPaymentDate,
+        otherFixedExpense: tFixedExpenses,
+        remainingDays: 30,
+        emergencyFundPct: tEmergencyPct,
+      ),
+      act: (bloc) async {
+        // First submit Step3 → triggers save failure → caches _lastStep3 → emits OnboardingError
+        bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct));
+        // Wait for the async save to complete
+        await Future<void>.delayed(Duration.zero);
+        // Now trigger retry
+        bloc.add(const OnboardingRetryRequested());
+      },
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingError(message: 'Gagal menyimpan.'),
+        isA<OnboardingStep3>()
+            .having((s) => s.income, 'income', tIncome)
+            .having((s) => s.paymentDate, 'paymentDate', tPaymentDate)
+            .having((s) => s.emergencyFundPct, 'emergencyFundPct', tEmergencyPct),
+      ],
+    );
   });
 }

@@ -70,7 +70,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             listenWhen: (prev, curr) {
               return _stateToPage(prev) != _stateToPage(curr) ||
                   curr is OnboardingSuccess ||
-                  curr is OnboardingError;
+                  curr is OnboardingError ||
+                  prev is OnboardingError;
             },
             listener: (context, state) {
               if (state is OnboardingStep2) {
