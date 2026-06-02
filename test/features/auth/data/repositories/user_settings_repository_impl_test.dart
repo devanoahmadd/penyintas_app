@@ -33,17 +33,17 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<void> seedLocal({required bool completed, int rent = 0}) async {
+  Future<void> seedLocal({required bool completed, int income = 0}) async {
     await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
           id: const Value(1),
           onboardingCompleted: Value(completed),
-          rentExpense: Value(rent),
+          monthlyIncome: Value(income),
         ));
   }
 
   group('wipeLocalData', () {
     test('mengosongkan tabel dan return Right(unit)', () async {
-      await seedLocal(completed: true, rent: 500000);
+      await seedLocal(completed: true, income: 500000);
 
       final result = await repo.wipeLocalData();
 
@@ -53,16 +53,9 @@ void main() {
   });
 
   group('syncFromRemote', () {
-    test('remote ada → tulis ke lokal, return Right(unit)', () async {
+    test('remote ada → tulis flag ke lokal, return Right(unit)', () async {
       when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
-          const UserSettingsModel(
-            onboardingCompleted: true,
-            rentExpense: 800000,
-            utilitiesExpense: 0,
-            internetExpense: 0,
-            phoneExpense: 0,
-            otherFixedExpense: 0,
-          ));
+          const UserSettingsModel(onboardingCompleted: true));
 
       final result = await repo.syncFromRemote();
 
@@ -71,12 +64,31 @@ void main() {
             ..where((t) => t.id.equals(1)))
           .getSingleOrNull();
       expect(row!.onboardingCompleted, true);
-      expect(row.rentExpense, 800000);
       verifyNever(() => remote.saveUserSettings(any()));
     });
 
+    test('syncFromRemote não reseta kolom finansial lokal', () async {
+      await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
+            id: const Value(1),
+            onboardingCompleted: const Value(false),
+            monthlyIncome: const Value(2000000),
+            rentExpense: const Value(450000),
+          ));
+      when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
+          const UserSettingsModel(onboardingCompleted: true));
+
+      await repo.syncFromRemote();
+
+      final row = await (db.select(db.appSettings)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+      expect(row!.onboardingCompleted, true);
+      expect(row.monthlyIncome, 2000000); // tidak ter-reset
+      expect(row.rentExpense, 450000);
+    });
+
     test('remote null + lokal completed → push lokal (self-heal)', () async {
-      await seedLocal(completed: true, rent: 300000);
+      await seedLocal(completed: true, income: 300000);
       when(() => remote.fetchUserSettings()).thenAnswer((_) async => null);
       when(() => remote.saveUserSettings(any())).thenAnswer((_) async {});
 
@@ -87,7 +99,6 @@ void main() {
           .captured
           .single as UserSettingsModel;
       expect(captured.onboardingCompleted, true);
-      expect(captured.rentExpense, 300000);
     });
 
     test('remote null + lokal belum completed → no-op', () async {
@@ -122,7 +133,7 @@ void main() {
 
   group('pushToRemote', () {
     test('baca lokal lalu push ke remote, return Right(unit)', () async {
-      await seedLocal(completed: true, rent: 750000);
+      await seedLocal(completed: true, income: 750000);
       when(() => remote.saveUserSettings(any())).thenAnswer((_) async {});
 
       final result = await repo.pushToRemote();
@@ -132,7 +143,6 @@ void main() {
           .captured
           .single as UserSettingsModel;
       expect(captured.onboardingCompleted, true);
-      expect(captured.rentExpense, 750000);
     });
   });
 }

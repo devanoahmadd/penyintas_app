@@ -78,23 +78,15 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
         .getSingleOrNull();
     return UserSettingsModel(
       onboardingCompleted: row?.onboardingCompleted ?? false,
-      rentExpense: row?.rentExpense ?? 0,
-      utilitiesExpense: row?.utilitiesExpense ?? 0,
-      internetExpense: row?.internetExpense ?? 0,
-      phoneExpense: row?.phoneExpense ?? 0,
-      otherFixedExpense: row?.otherFixedExpense ?? 0,
     );
   }
 
   Future<void> _writeIdentity(UserSettingsModel s) async {
+    // Companion minimal: hanya sentuh flag onboarding, jangan reset kolom
+    // finansial (monthlyIncome/rentExpense/dst.) yang dihydrate jalur lain.
     await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
           id: const Value(1),
           onboardingCompleted: Value(s.onboardingCompleted),
-          rentExpense: Value(s.rentExpense),
-          utilitiesExpense: Value(s.utilitiesExpense),
-          internetExpense: Value(s.internetExpense),
-          phoneExpense: Value(s.phoneExpense),
-          otherFixedExpense: Value(s.otherFixedExpense),
         ));
   }
 }
