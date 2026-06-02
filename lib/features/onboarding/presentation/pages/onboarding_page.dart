@@ -942,49 +942,28 @@ class _Step3Widget extends StatefulWidget {
 }
 
 class _Step3WidgetState extends State<_Step3Widget> {
-  double _emergencyPct = 0.10;
-  final _targetController = TextEditingController();
+  // null = "Lewati dulu" → emergencyFundPct = 0.0
+  double? _selectedPct = 0.10;
 
-  @override
-  void dispose() {
-    _targetController.dispose();
-    super.dispose();
-  }
+  static const _kPctOptions = <double?>[null, 0.05, 0.10, 0.15];
 
-  int get _available {
-    final a = widget.income - widget.fixedExpenses;
-    return a < 0 ? 0 : a;
-  }
-
-  int get _monthlyInstallment => (_available * _emergencyPct).round();
-  int get _monthlyRemaining => _available - _monthlyInstallment;
+  int get _available =>
+      (widget.income - widget.fixedExpenses).clamp(0, 999999999);
+  int get _monthlyInstallment =>
+      _selectedPct != null ? (_available * _selectedPct!).round() : 0;
+  int get _monthlySpendable => _available - _monthlyInstallment;
   int get _dailyBudget => widget.remainingDays > 0
-      ? (_monthlyRemaining / widget.remainingDays).floor()
+      ? (_monthlySpendable / widget.remainingDays).floor()
       : 0;
-  int get _targetAmount =>
-      int.tryParse(_targetController.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
-      0;
-  int get _monthsToTarget =>
-      _monthlyInstallment > 0 && _targetAmount > 0
-          ? (_targetAmount / _monthlyInstallment).ceil()
-          : 0;
 
-  String _buildSubtext() {
-    final parts = <String>[];
-    if (widget.remainingDays == 0) {
-      parts.add('Siklus baru dimulai hari ini');
-    } else if (_dailyBudget > 0) {
-      parts.add('≈ ${formatRupiah(_dailyBudget)} / hari');
-    }
-    if (_monthsToTarget > 0) {
-      parts.add('target tercapai dalam $_monthsToTarget bulan');
-    }
-    return parts.join(' · ');
+  String _chipLabel(double? pct, AppLocalizations l10n) {
+    if (pct == null) return l10n.onboardingEmergencySkip;
+    return '${(pct * 100).round()}%';
   }
 
   void _submit() {
     context.read<OnboardingBloc>().add(
-          Step3Submitted(emergencyFundPct: _emergencyPct),
+          Step3Submitted(emergencyFundPct: _selectedPct ?? 0.0),
         );
   }
 
@@ -999,288 +978,130 @@ class _Step3WidgetState extends State<_Step3Widget> {
         widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor =
         widget.isDark ? AppColors.borderDark : AppColors.borderLight;
-
-    final pctInt = (_emergencyPct * 100).round();
-    final targetAmount = _targetAmount;
-    final subtext = _buildSubtext();
-
-    final isOverBudget =
-        widget.income > 0 && widget.fixedExpenses >= widget.income;
+    final mutedColor =
+        widget.isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.sm),
+                // Eyebrow — consistent with Steps 1 & 2
+                Row(
+                  children: [
+                    const Icon(Icons.savings_outlined,
+                        color: AppColors.primary, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.onboardingEyebrowEmergency,
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Dana darurat & cicilan',
+                  l10n.onboardingEmergencyTitle,
                   style: AppTextStyles.h1.copyWith(
                     fontWeight: FontWeight.w800,
                     color: textColor,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.8,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Sisihkan untuk hari tak terduga. Lentur, tak patah.',
-                  style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
+                  l10n.onboardingEmergencySubtitle,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: textSoftColor),
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
-                // Over-budget warning (#49)
-                if (isOverBudget) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.warn.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.warn.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: AppColors.warn,
-                          size: 18,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            l10n.onboardingErrorFixedExceedsIncome,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.warn),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-
-                // Target dana darurat
-                AppTextField(
-                  controller: _targetController,
-                  label: l10n.onboardingEmergencyTargetLabel,
-                  hintText: 'Contoh: 5.000.000',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [_DotFormatter()],
-                  textInputAction: TextInputAction.done,
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (targetAmount > 0) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    formatRupiah(targetAmount),
-                    style: AppTextStyles.h3.copyWith(
-                      color: AppColors.primary,
-                      fontFeatures: [const FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-
-                // Alokasi label (dinamis, berubah dengan slider)
+                // Single question + chip options
                 Text(
-                  l10n.onboardingEmergencyPerMonth(pctInt),
+                  l10n.onboardingEmergencyQuestion,
                   style: AppTextStyles.label.copyWith(color: textColor),
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    border: Border.all(color: borderColor),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    formatRupiah(_monthlyInstallment),
-                    style: AppTextStyles.body.copyWith(color: textColor),
+                const SizedBox(height: AppSpacing.sm),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _kPctOptions
+                        .map((pct) => _QuickChip(
+                              label: _chipLabel(pct, l10n),
+                              selected: _selectedPct == pct,
+                              isDark: widget.isDark,
+                              onTap: () =>
+                                  setState(() => _selectedPct = pct),
+                            ))
+                        .toList(),
                   ),
                 ),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: AppColors.primary,
-                    inactiveTrackColor: borderColor,
-                    thumbColor: AppColors.primary,
-                    overlayColor: AppColors.primary.withAlpha(30),
-                    trackHeight: 4,
-                  ),
-                  child: Semantics(
-                    label: l10n.onboardingEmergencyTargetLabel,
-                    value: '$pctInt%',
-                    child: Slider(
-                      value: _emergencyPct,
-                      min: 0.05,
-                      max: 0.25,
-                      divisions: 20,
-                      onChanged: widget.isLoading
-                          ? null
-                          : (val) => setState(() => _emergencyPct = val),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.onboardingSliderMin,
-                      style: AppTextStyles.caption
-                          .copyWith(color: textSoftColor),
-                    ),
-                    Text(
-                      l10n.onboardingSliderMax,
-                      style: AppTextStyles.caption
-                          .copyWith(color: textSoftColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
 
-                // Kalkulasi bulanan card
+                // Dynamic microcopy (only when non-skip option selected and there's available amount)
+                if (_selectedPct != null && _available > 0) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${(_selectedPct! * 100).round()}% dari sisa = '
+                    '${formatRupiah(_monthlyInstallment)}/bulan',
+                    style: AppTextStyles.caption
+                        .copyWith(color: textSoftColor),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.xl),
+
+                // Daily budget result card
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(
                     color: surfaceColor,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: borderColor),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'KALKULASI BULANAN',
+                        l10n.onboardingDailyBudgetLabel,
                         style: AppTextStyles.caption
                             .copyWith(color: textSoftColor),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      _CalcRow(
-                        label: 'Kiriman / gaji',
-                        value: '+ ${formatRupiah(widget.income)}',
-                        textColor: textColor,
-                        valueColor: textColor,
-                      ),
                       const SizedBox(height: AppSpacing.sm),
-                      _CalcRow(
-                        label: 'Pengeluaran tetap',
-                        value: '− ${formatRupiah(widget.fixedExpenses)}',
-                        textColor: textSoftColor,
-                        valueColor: AppColors.warn,
+                      Text(
+                        _dailyBudget > 0
+                            ? formatRupiah(_dailyBudget)
+                            : '—',
+                        style: AppTextStyles.numericLg
+                            .copyWith(color: AppColors.primary),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _CalcRow(
-                        label: 'Alokasi dana darurat',
-                        value: '− ${formatRupiah(_monthlyInstallment)}',
-                        textColor: textSoftColor,
-                        valueColor: AppColors.caution,
+                      Text(
+                        l10n.onboardingDailyBudgetSuffix,
+                        style: AppTextStyles.caption
+                            .copyWith(color: textSoftColor),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.sm,
-                        ),
-                        child: Divider(color: borderColor, height: 1),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Sisa operasional/bulan',
-                            style:
-                                AppTextStyles.label.copyWith(color: textColor),
-                          ),
-                          Text(
-                            formatRupiah(_monthlyRemaining),
-                            style: AppTextStyles.h3.copyWith(
-                              color: AppColors.primary,
-                              fontFeatures: [
-                                const FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (subtext.isNotEmpty) ...[
+                      if (widget.remainingDays > 0) ...[
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          subtext,
-                          style: AppTextStyles.caption
+                          l10n.onboardingDailyBudgetDaysLeft(
+                              widget.remainingDays),
+                          style: AppTextStyles.bodySmall
                               .copyWith(color: textSoftColor),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // DTL preview card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.lg,
-                  ),
-                  decoration: BoxDecoration(
-                    color: widget.isDark
-                        ? AppColors.primaryDeep
-                        : AppColors.primary,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'SISA HARI SIKLUS INI',
-                              style: AppTextStyles.caption.copyWith(
-                                color: Colors.white.withValues(alpha: 0.75),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '≈ ${widget.remainingDays} hari',
-                              style: AppTextStyles.h2.copyWith(
-                                color: Colors.white,
-                                fontFeatures: [
-                                  const FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Prediksi DTL tersedia setelah riwayat belanja terbentuk',
-                              style: AppTextStyles.caption.copyWith(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                letterSpacing: 0,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
+                      if (_monthlySpendable > 0) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          l10n.onboardingDailyBudgetMonthlyLeft(
+                              formatRupiah(_monthlySpendable)),
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: mutedColor),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1290,7 +1111,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
           ),
         ),
 
-        // CTA pinned ke bawah (#48)
+        // CTA pinned to bottom
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.xl,
@@ -1302,38 +1123,6 @@ class _Step3WidgetState extends State<_Step3Widget> {
             label: 'Mulai Bertahan',
             onPressed: _submit,
             isLoading: widget.isLoading,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CalcRow extends StatelessWidget {
-  const _CalcRow({
-    required this.label,
-    required this.value,
-    required this.textColor,
-    required this.valueColor,
-  });
-
-  final String label;
-  final String value;
-  final Color textColor;
-  final Color valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: AppTextStyles.bodySmall.copyWith(color: textColor)),
-        Text(
-          value,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: valueColor,
-            fontFeatures: [const FontFeature.tabularFigures()],
           ),
         ),
       ],

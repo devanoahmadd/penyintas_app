@@ -66,6 +66,17 @@ class _TestLocalizationsDelegate
           'onboarding_slider_min': '5%',
           'onboarding_slider_max': '25%',
           'category_other': 'Lainnya',
+          // Audit fixes — Step 3 redesign
+          'onboarding_emergency_title': 'Dana darurat',
+          'onboarding_eyebrow_emergency': 'DANA DARURAT',
+          'onboarding_emergency_subtitle':
+              'Sisihkan untuk hari tak terduga. Bisa diubah kapan saja dari menu.',
+          'onboarding_emergency_question': 'Sisihkan berapa tiap bulan?',
+          'onboarding_emergency_skip': 'Lewati dulu',
+          'onboarding_daily_budget_label': 'ANGGARAN HARIANMU',
+          'onboarding_daily_budget_suffix': '/hari',
+          'onboarding_daily_budget_days_left': 'untuk {days} hari ke depan',
+          'onboarding_daily_budget_monthly_left': '{amount} tersisa bulan ini',
         }),
       );
 
@@ -205,47 +216,115 @@ void main() {
     });
   });
 
-  group('OnboardingPage — Step 3 label', () {
-    setUp(() {
-      when(() => mockBloc.state).thenReturn(
-        const OnboardingStep3(
-          income: 2000000,
-          paymentDate: 25,
-          remainingDays: 20,
-          otherFixedExpense: 800000,
-        ),
+  group('OnboardingPage — Step 3 redesign', () {
+    const step3State = OnboardingStep3(
+      income: 2000000,
+      paymentDate: 25,
+      remainingDays: 20,
+      otherFixedExpense: 800000,
+    );
+
+    // Drive a Step2 → Step3 transition so the PageView animates to page 3.
+    // The page only navigates via the BlocConsumer listener, which fires on
+    // state change; seeding a static Step3 state leaves the view on page 1.
+    void seedStep3() {
+      whenListen(
+        mockBloc,
+        Stream<OnboardingState>.fromIterable(const [step3State]),
+        initialState: const OnboardingStep2(income: 2000000, paymentDate: 25),
       );
-      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
-    });
+    }
 
-    testWidgets('tidak menampilkan label "Sisa harian"', (tester) async {
+    testWidgets('menampilkan eyebrow "DANA DARURAT"', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      seedStep3();
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Sisa harian'), findsNothing);
+      expect(find.text('DANA DARURAT', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('menampilkan label "Sisa operasional/bulan"', (tester) async {
+    testWidgets('menampilkan 4 chip pilihan termasuk "Lewati dulu"', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      seedStep3();
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
       ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lewati dulu', skipOffstage: false), findsOneWidget);
+      expect(find.text('5%', skipOffstage: false), findsOneWidget);
+      expect(find.text('10%', skipOffstage: false), findsOneWidget);
+      expect(find.text('15%', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('menampilkan card "ANGGARAN HARIANMU"', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      seedStep3();
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ANGGARAN HARIANMU', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('tidak menampilkan Slider atau input target darurat', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      seedStep3();
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Slider), findsNothing);
+      expect(find.text('Target dana darurat', skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('tap "Lewati dulu" + CTA mengirim Step3Submitted emergencyFundPct=0.0',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      seedStep3();
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Lewati dulu', skipOffstage: false));
+      await tester.pump();
+      await tester.tap(find.text('Mulai Bertahan'));
       await tester.pump();
 
-      expect(find.text('Sisa operasional/bulan'), findsOneWidget);
+      verify(() => mockBloc.add(
+            const Step3Submitted(emergencyFundPct: 0.0),
+          )).called(1);
     });
   });
 
