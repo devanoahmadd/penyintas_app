@@ -1134,7 +1134,7 @@ class _Step3WidgetState extends State<_Step3Widget> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Sisa harian',
+                            'Sisa operasional/bulan',
                             style:
                                 AppTextStyles.label.copyWith(color: textColor),
                           ),

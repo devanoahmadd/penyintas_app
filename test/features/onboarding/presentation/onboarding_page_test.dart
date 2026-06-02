@@ -205,6 +205,50 @@ void main() {
     });
   });
 
+  group('OnboardingPage — Step 3 label', () {
+    setUp(() {
+      when(() => mockBloc.state).thenReturn(
+        const OnboardingStep3(
+          income: 2000000,
+          paymentDate: 25,
+          remainingDays: 20,
+          otherFixedExpense: 800000,
+        ),
+      );
+      when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
+    });
+
+    testWidgets('tidak menampilkan label "Sisa harian"', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      expect(find.text('Sisa harian'), findsNothing);
+    });
+
+    testWidgets('menampilkan label "Sisa operasional/bulan"', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      expect(find.text('Sisa operasional/bulan'), findsOneWidget);
+    });
+  });
+
   group('OnboardingPage — Semantics (#129)', () {
     testWidgets('Step 1: date segment chips have button semantics', (tester) async {
       when(() => mockBloc.state).thenReturn(const OnboardingStep1());
