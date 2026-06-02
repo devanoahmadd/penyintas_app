@@ -7,7 +7,7 @@ class UserSettingsModel {
 
   factory UserSettingsModel.fromFirestore(Map<String, dynamic> data) {
     return UserSettingsModel(
-      onboardingCompleted: data['onboardingCompleted'] as bool? ?? false,
+      onboardingCompleted: data['onboardingCompleted'] == true,
     );
   }
 

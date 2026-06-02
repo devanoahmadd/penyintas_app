@@ -12,6 +12,11 @@ void main() {
     expect(model.onboardingCompleted, false);
   });
 
+  test('fromFirestore valor truthy non-bool → false', () {
+    final model = UserSettingsModel.fromFirestore({'onboardingCompleted': 1});
+    expect(model.onboardingCompleted, false);
+  });
+
   test('toFirestore hanya menulis onboardingCompleted + updatedAt', () {
     const model = UserSettingsModel(onboardingCompleted: true);
     final map = model.toFirestore();
