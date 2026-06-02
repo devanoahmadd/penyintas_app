@@ -42,11 +42,13 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final bottomPad = MediaQuery.of(context).padding.bottom + AppSpacing.xl;
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom +
+        MediaQuery.of(context).padding.bottom +
+        AppSpacing.xl;
     final l10n = AppLocalizations.of(context);
 
     return BlocListener<AuthBloc, AuthState>(
