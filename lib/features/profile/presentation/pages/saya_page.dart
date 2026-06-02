@@ -16,6 +16,7 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
+import 'package:penyintas_app/features/auth/presentation/widgets/delete_account_sheet.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 
 class SayaPage extends StatelessWidget {
@@ -61,6 +62,7 @@ class SayaPage extends StatelessWidget {
                 _QuickAccess(isDark: isDark),
                 _SettingsSection(isDark: isDark, settingsState: settingsState),
                 _AccountSection(isDark: isDark),
+                _DangerZoneSection(isDark: isDark),
               ],
             );
           },
@@ -556,6 +558,74 @@ class _AccountSection extends StatelessWidget {
                   onTap: () => _onLogout(context),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Danger Zone Section ────────────────────────────────────────────────────
+
+class _DangerZoneSection extends StatelessWidget {
+  const _DangerZoneSection({required this.isDark});
+  final bool isDark;
+
+  Future<void> _onDeleteAccount(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<AuthBloc>(),
+        child: const DeleteAccountSheet(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.sayaSectionDanger,
+            style: AppTextStyles.caption.copyWith(color: mutedColor),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Material(
+            color: surfaceColor,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              side: BorderSide(color: borderColor),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.xs,
+              ),
+              title: Text(
+                l10n.sayaDeleteAccount,
+                style: AppTextStyles.body.copyWith(color: AppColors.warn),
+              ),
+              trailing: const Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: AppColors.warn,
+              ),
+              onTap: () => _onDeleteAccount(context),
             ),
           ),
         ],
