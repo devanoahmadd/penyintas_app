@@ -8,6 +8,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
+import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
@@ -41,7 +42,20 @@ class _SplashPageState extends State<SplashPage>
   Future<void> _syncThenNavigate() async {
     if (_syncStarted) return;
     _syncStarted = true;
+    // 1) Restore flag onboarding dari settings/app.
     await sl<SyncUserSettingsUseCase>()(const NoParams());
+    // 2) Restore data finansial dari budget_settings/current (remote→lokal).
+    //    Reuse jalur hydration onboarding yang sudah ada: baca lokal dulu,
+    //    jika kosong (monthlyIncome==0) fetch remote lalu simpan ke Drift.
+    //    Timeout 3s agar splash gate tak menggantung jika jaringan lambat
+    //    (paritas dengan _syncTimeout di syncFromRemote).
+    try {
+      await sl<OnboardingRepository>()
+          .getBudgetSettings()
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Hydration gagal/timeout — lanjut; data finansial terisi saat online berikutnya.
+    }
     resetOnboardingCache();
     if (!mounted) return;
     _navigateWhenReady(() => context.go('/dashboard'));
