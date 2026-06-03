@@ -1,3 +1,4 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -42,19 +43,22 @@ class _SplashPageState extends State<SplashPage>
   Future<void> _syncThenNavigate() async {
     if (_syncStarted) return;
     _syncStarted = true;
-    // 1) Restore flag onboarding dari settings/app.
-    await sl<SyncUserSettingsUseCase>()(const NoParams());
-    // 2) Restore data finansial dari budget_settings/current (remote→lokal).
-    //    Reuse jalur hydration onboarding yang sudah ada: baca lokal dulu,
-    //    jika kosong (monthlyIncome==0) fetch remote lalu simpan ke Drift.
-    //    Timeout 3s agar splash gate tak menggantung jika jaringan lambat
-    //    (paritas dengan _syncTimeout di syncFromRemote).
+    // Restaurasi flag onboarding (settings/app) dan data finansial
+    // (budget_settings/current) secara paralel — keduanya independen.
+    // Timeout tiap step 3s agar splash gate tak menggantung di jaringan lemot.
     try {
-      await sl<OnboardingRepository>()
-          .getBudgetSettings()
-          .timeout(const Duration(seconds: 3));
-    } catch (_) {
-      // Hydration gagal/timeout — lanjut; data finansial terisi saat online berikutnya.
+      await Future.wait([
+        sl<SyncUserSettingsUseCase>()(const NoParams()),
+        sl<OnboardingRepository>()
+            .getBudgetSettings()
+            .timeout(const Duration(seconds: 3)),
+      ]);
+    } catch (e, s) {
+      // Sync gagal/timeout — lanjut; data akan terisi saat online berikutnya.
+      debugPrint('[Splash] sync skipped: $e');
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
+      } catch (_) {}
     }
     resetOnboardingCache();
     if (!mounted) return;
