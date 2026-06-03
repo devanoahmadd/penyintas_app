@@ -19,7 +19,7 @@ class TransactionModel {
 
   final String id;
   final int amount;
-  final TransactionCategory category;
+  final String category;
   final TransactionType type;
   final String? note;
   final DateTime date;
@@ -60,7 +60,7 @@ class TransactionModel {
   static TransactionModel fromDrift(Transaction row) => TransactionModel(
         id: row.txId,
         amount: row.amount,
-        category: _categoryFromString(row.category),
+        category: row.category,
         type: TransactionType.values.byName(row.type),
         note: row.note,
         date: row.date,
@@ -74,7 +74,7 @@ class TransactionModel {
   TransactionsCompanion toDriftCompanion() => TransactionsCompanion(
         txId: Value(id),
         amount: Value(amount),
-        category: Value(category.name),
+        category: Value(category),
         type: Value(type.name),
         note: Value(note),
         date: Value(date),
@@ -97,12 +97,13 @@ class TransactionModel {
         isSynced: true,
         createdAt: DateTime.parse(data['createdAt'] as String),
         updatedAt: DateTime.parse(data['updatedAt'] as String),
+        goalId: data['goalId'] as int?,
       );
 
   Map<String, dynamic> toFirestore() => {
         'id': id,
         'amount': amount,
-        'category': category.name,
+        'category': category,
         'type': type.name,
         'note': note,
         'date': date.toIso8601String(),
@@ -110,6 +111,7 @@ class TransactionModel {
         'isSynced': true,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        'goalId': goalId,
       };
 
   TransactionModel copyWith({bool? isSynced}) => TransactionModel(
@@ -126,26 +128,20 @@ class TransactionModel {
         goalId: goalId,
       );
 
-  static TransactionCategory _categoryFromString(String s) {
+  static String _categoryFromString(String s) {
     switch (s) {
       case 'food':
-        return TransactionCategory.food;
       case 'transport':
-        return TransactionCategory.transport;
       case 'shopping':
-        return TransactionCategory.shopping;
       case 'health':
-        return TransactionCategory.health;
       case 'internet':
       case 'data': // backward compat
-        return TransactionCategory.internet;
       case 'fixed':
-        return TransactionCategory.fixed;
       case 'income':
-        return TransactionCategory.income;
+        return s;
       case 'campus': // backward compat → other
       default:
-        return TransactionCategory.other;
+        return 'other';
     }
   }
 

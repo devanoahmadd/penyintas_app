@@ -9,7 +9,7 @@ abstract class TransactionRepository {
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
     required DateTime from,
     required DateTime to,
-    TransactionCategory? categoryFilter,
+    String? categoryFilter,
   });
   Stream<Either<Failure, List<TransactionEntity>>> watchTodayTransactions();
 }

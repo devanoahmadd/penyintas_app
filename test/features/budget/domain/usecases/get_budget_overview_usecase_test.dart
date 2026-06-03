@@ -37,8 +37,8 @@ final _settings = BudgetSettingsEntity(
 // emergencyFundMonthly = 500_000
 // totalSpendable = 5_000_000 - 1_500_000 - 500_000 = 3_000_000
 
-TransactionEntity _tx(TransactionCategory cat, int amount) => TransactionEntity(
-      id: 'tx_${cat.name}_$amount',
+TransactionEntity _tx(String cat, int amount) => TransactionEntity(
+      id: 'tx_${cat}_$amount',
       amount: amount,
       category: cat,
       type: TransactionType.expense,
@@ -96,7 +96,7 @@ void main() {
   test('kategori dengan limit dan spending ≤50%: status safe', () {
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 400000)],
+      txns: [_tx('food', 400000)],
     ));
     final food = result.categoryItems.firstWhere((i) => i.category.slug == 'food');
     expect(food.spentAmount, 400000);
@@ -108,7 +108,7 @@ void main() {
   test('kategori dengan spending 50–80%: status caution', () {
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 700000)],
+      txns: [_tx('food', 700000)],
     ));
     final food = result.categoryItems.firstWhere((i) => i.category.slug == 'food');
     expect(food.status, BudgetStatus.caution);
@@ -117,7 +117,7 @@ void main() {
   test('kategori dengan spending >80%: status danger', () {
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 900000)],
+      txns: [_tx('food', 900000)],
     ));
     final food = result.categoryItems.firstWhere((i) => i.category.slug == 'food');
     expect(food.status, BudgetStatus.danger);
@@ -128,7 +128,7 @@ void main() {
     final disabledLimit = _foodLimit.copyWith(isEnabled: false);
     final result = usecase(params(
       limits: [disabledLimit],
-      txns: [_tx(TransactionCategory.food, 900000)],
+      txns: [_tx('food', 900000)],
     ));
     final food = result.categoryItems.firstWhere((i) => i.category.slug == 'food');
     expect(food.hasLimit, false);
@@ -155,7 +155,7 @@ void main() {
     // dailyBurn = 25k/hari → projected = 750k / 25k = 30 hari >= 20 → safe
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 250000)],
+      txns: [_tx('food', 250000)],
       daysElapsed: 10,
       remainingDays: 20,
     ));
@@ -171,7 +171,7 @@ void main() {
     // 10 < 20 tapi 10 >= ceil(20*0.5)=10 → caution
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 500000)],
+      txns: [_tx('food', 500000)],
       daysElapsed: 10,
       remainingDays: 20,
     ));
@@ -186,7 +186,7 @@ void main() {
     // dailyBurn = 90k/hari → projected = 100k / 90k = 1 hari < ceil(10) → danger
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 900000)],
+      txns: [_tx('food', 900000)],
       daysElapsed: 10,
       remainingDays: 20,
     ));
@@ -200,7 +200,7 @@ void main() {
     // spent == limitAmount → catRemaining = 0 → projectedDaysLeft = 0
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 1000000)],
+      txns: [_tx('food', 1000000)],
       daysElapsed: 10,
       remainingDays: 20,
     ));
@@ -213,7 +213,7 @@ void main() {
   test('pace: paceStatus null saat remainingDays == 0 (edge case bulan pendek)', () {
     final result = usecase(params(
       limits: [_foodLimit],
-      txns: [_tx(TransactionCategory.food, 900000)],
+      txns: [_tx('food', 900000)],
       daysElapsed: 1,
       remainingDays: 0,
     ));
@@ -230,7 +230,7 @@ void main() {
     // operationalRemaining = 3M - 300k = 2.7M
     // projectedDays = floor(2.7M / 30k) = 90 >= 20 → safe
     final result = usecase(params(
-      txns: [_tx(TransactionCategory.food, 300000)],
+      txns: [_tx('food', 300000)],
       daysElapsed: 10,
       remainingDays: 20,
     ));

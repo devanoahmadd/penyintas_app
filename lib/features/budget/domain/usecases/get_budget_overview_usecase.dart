@@ -25,7 +25,7 @@ class GetBudgetOverviewUseCase {
           .where((l) => l.category == cat.slug && l.isEnabled)
           .firstOrNull;
       final spent = params.currentPeriodTransactions
-          .where((t) => t.category.name == cat.slug && t.type == TransactionType.expense)
+          .where((t) => t.category == cat.slug && t.type == TransactionType.expense)
           .fold(0, (sum, t) => sum + t.amount);
 
       if (limit == null) {
