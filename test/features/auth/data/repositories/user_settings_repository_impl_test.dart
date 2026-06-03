@@ -67,7 +67,7 @@ void main() {
       verifyNever(() => remote.saveUserSettings(any()));
     });
 
-    test('syncFromRemote não reseta kolom finansial lokal', () async {
+    test('syncFromRemote tidak mereset kolom finansial lokal', () async {
       await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
             id: const Value(1),
             onboardingCompleted: const Value(false),
@@ -88,7 +88,7 @@ void main() {
     });
 
     test('remote null + lokal completed → push lokal (self-heal)', () async {
-      await seedLocal(completed: true, income: 300000);
+      await seedLocal(completed: true);
       when(() => remote.fetchUserSettings()).thenAnswer((_) async => null);
       when(() => remote.saveUserSettings(any())).thenAnswer((_) async {});
 
@@ -133,7 +133,7 @@ void main() {
 
   group('pushToRemote', () {
     test('baca lokal lalu push ke remote, return Right(unit)', () async {
-      await seedLocal(completed: true, income: 750000);
+      await seedLocal(completed: true);
       when(() => remote.saveUserSettings(any())).thenAnswer((_) async {});
 
       final result = await repo.pushToRemote();
