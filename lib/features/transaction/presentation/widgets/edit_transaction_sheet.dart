@@ -8,6 +8,7 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/edit_transaction_bloc.dart';
@@ -553,13 +554,13 @@ class _EditCategoryGrid extends StatelessWidget {
   final bool isDark;
 
   static const _cats = [
-    TransactionCategory.food,
-    TransactionCategory.transport,
-    TransactionCategory.shopping,
-    TransactionCategory.health,
-    TransactionCategory.internet,
-    TransactionCategory.fixed,
-    TransactionCategory.other,
+    'food',
+    'transport',
+    'shopping',
+    'health',
+    'internet',
+    'fixed',
+    'other',
   ];
 
   @override
@@ -568,7 +569,7 @@ class _EditCategoryGrid extends StatelessWidget {
       builder: (context, state) {
         final selected = state is EditTransactionInProgress
             ? state.category
-            : TransactionCategory.food;
+            : 'food';
 
         return GridView.count(
           crossAxisCount: 4,
@@ -599,7 +600,7 @@ class _EditCategoryCell extends StatelessWidget {
     required this.isDark,
     required this.onTap,
   });
-  final TransactionCategory category;
+  final String category;
   final bool isSelected;
   final bool isDark;
   final VoidCallback onTap;
@@ -609,6 +610,7 @@ class _EditCategoryCell extends StatelessWidget {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final (icon, _) = CategoryMetadata.of(category);
 
     return GestureDetector(
       onTap: onTap,
@@ -625,13 +627,13 @@ class _EditCategoryCell extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _icon(category),
+              icon,
               size: 22,
               color: isSelected ? Colors.white : textColor,
             ),
             const SizedBox(height: 4),
             Text(
-              _label(category).toUpperCase(),
+              category.toUpperCase(),
               style: AppTextStyles.caption.copyWith(
                 fontSize: 10,
                 color: isSelected ? Colors.white : textColor,
@@ -645,28 +647,6 @@ class _EditCategoryCell extends StatelessWidget {
       ),
     );
   }
-
-  static IconData _icon(TransactionCategory cat) => switch (cat) {
-        TransactionCategory.food => Icons.restaurant_outlined,
-        TransactionCategory.transport => Icons.directions_bus_outlined,
-        TransactionCategory.shopping => Icons.shopping_bag_outlined,
-        TransactionCategory.health => Icons.favorite_border,
-        TransactionCategory.internet => Icons.wifi_outlined,
-        TransactionCategory.fixed => Icons.home_outlined,
-        TransactionCategory.other => Icons.more_horiz_rounded,
-        TransactionCategory.income => Icons.arrow_downward_rounded,
-      };
-
-  static String _label(TransactionCategory cat) => switch (cat) {
-        TransactionCategory.food => 'Makan',
-        TransactionCategory.transport => 'Transport',
-        TransactionCategory.shopping => 'Belanja',
-        TransactionCategory.health => 'Kesehatan',
-        TransactionCategory.internet => 'Internet',
-        TransactionCategory.fixed => 'Kos',
-        TransactionCategory.other => 'Lainnya',
-        TransactionCategory.income => 'Masuk',
-      };
 }
 
 // ── Note Field ─────────────────────────────────────────────────────────────

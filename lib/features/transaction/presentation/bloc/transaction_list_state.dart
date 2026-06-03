@@ -30,7 +30,7 @@ final class TransactionListLoaded extends TransactionListState {
   final TransactionType? typeFilter;
   final DateTime from;
   final DateTime to;
-  final Set<TransactionCategory>? categoryFilter; // null = all
+  final Set<String>? categoryFilter; // null = all
   final int? minAmount;
   final int? maxAmount;
   final String? deleteError;
@@ -40,7 +40,7 @@ final class TransactionListLoaded extends TransactionListState {
     List<TransactionEntity>? filtered,
     int? totalSpent,
     TransactionType? Function()? typeFilter,
-    Set<TransactionCategory>? Function()? categoryFilter,
+    Set<String>? Function()? categoryFilter,
     int? Function()? minAmount,
     int? Function()? maxAmount,
     String? Function()? deleteError,

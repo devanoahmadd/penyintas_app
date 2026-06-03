@@ -53,7 +53,7 @@ class ReportRepositoryImpl implements ReportRepository {
           'totalSpent': report.totalSpent,
           'totalIncome': report.totalIncome,
           'categoryBreakdown':
-              report.categoryBreakdown.map((k, v) => MapEntry(k.name, v)),
+              report.categoryBreakdown.map((k, v) => MapEntry(k, v)),
         },
         settingsData: {
           'monthlyIncome': settings.monthlyIncome,

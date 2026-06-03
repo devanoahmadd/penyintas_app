@@ -19,7 +19,7 @@ final class EditTransactionInProgress extends EditTransactionState {
   final String originalId;
   final DateTime originalCreatedAt;
   final int amount;
-  final TransactionCategory category;
+  final String category;
   final TransactionType type;
   final String note;
   final DateTime date;
@@ -29,7 +29,7 @@ final class EditTransactionInProgress extends EditTransactionState {
 
   EditTransactionInProgress copyWith({
     int? amount,
-    TransactionCategory? category,
+    String? category,
     TransactionType? type,
     String? note,
     DateTime? date,

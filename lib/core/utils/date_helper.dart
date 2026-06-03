@@ -1,28 +1,35 @@
 import 'package:intl/intl.dart';
 
-/// Hari tersisa hingga tanggal kiriman berikutnya.
-/// Jika hari ini = paymentDate, kembalikan 0 (kiriman hari ini).
-int remainingDaysInCycle(int paymentDate) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+// ── Private helpers ───────────────────────────────────────────────────────────
 
-  DateTime nextPayment;
-  if (today.day < paymentDate) {
-    nextPayment = _clampedDate(today.year, today.month, paymentDate);
-  } else {
-    // Bulan depan — handle overflow (mis. tanggal 31 di bulan 30 hari)
-    final nextMonth = today.month == 12 ? 1 : today.month + 1;
-    final nextYear = today.month == 12 ? today.year + 1 : today.year;
-    nextPayment = _clampedDate(nextYear, nextMonth, paymentDate);
-  }
-
-  return nextPayment.difference(today).inDays;
-}
-
-/// Buat DateTime dengan tanggal yang di-clamp ke hari terakhir bulan tersebut.
+/// Buat DateTime midnight yang di-clamp ke hari terakhir bulan tersebut.
 DateTime _clampedDate(int year, int month, int day) {
   final lastDay = DateTime(year, month + 1, 0).day;
   return DateTime(year, month, day.clamp(1, lastDay));
+}
+
+/// Tanggal pembayaran berikutnya relatif terhadap [today] (midnight).
+/// Digunakan bersama oleh [remainingDaysInCycle] dan [cycleEnd] — fix #7.
+DateTime _nextPaymentDate(DateTime today, int paymentDate) {
+  if (today.day < paymentDate) {
+    return _clampedDate(today.year, today.month, paymentDate);
+  } else {
+    final nextMonth = today.month == 12 ? 1 : today.month + 1;
+    final nextYear = today.month == 12 ? today.year + 1 : today.year;
+    return _clampedDate(nextYear, nextMonth, paymentDate);
+  }
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/// Hari tersisa hingga tanggal kiriman berikutnya.
+/// Jika hari ini = paymentDate, kembalikan 0 (kiriman hari ini).
+///
+/// Parameter [now] opsional — lihat [cycleStart] untuk penjelasan (#4).
+int remainingDaysInCycle(int paymentDate, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
+  final today = DateTime(ref.year, ref.month, ref.day);
+  return _nextPaymentDate(today, paymentDate).difference(today).inDays;
 }
 
 /// "12 Jan", "3 Des" — format pendek untuk list
@@ -37,11 +44,56 @@ String formatDateLong(DateTime date) =>
 /// Digunakan sebagai fallback saat remainingDays == 0 (hari kiriman).
 int daysInCycle(int paymentDate) {
   final now = DateTime.now();
-  final start = _clampedDate(now.year, now.month, paymentDate);
-  final nextMonth = now.month == 12 ? 1 : now.month + 1;
-  final nextYear = now.month == 12 ? now.year + 1 : now.year;
-  final end = _clampedDate(nextYear, nextMonth, paymentDate);
+  final today = DateTime(now.year, now.month, now.day);
+  // Pakai _nextPaymentDate untuk menghindari duplikasi logika rollover (#F2-4)
+  final start = _clampedDate(today.year, today.month, paymentDate);
+  final end = _nextPaymentDate(start, paymentDate);
   return end.difference(start).inDays;
+}
+
+/// Awal siklus pembayaran yang sedang berjalan.
+/// - today.day >= paymentDate → tanggal [paymentDate] bulan ini
+/// - today.day < paymentDate → tanggal [paymentDate] bulan lalu
+///
+/// Parameter [now] opsional — gunakan satu instance `DateTime.now()` yang sama
+/// untuk semua pemanggilan date-helper dalam satu komputasi agar tidak ada
+/// perbedaan "hari" akibat eksekusi melintas tengah malam (#4).
+DateTime cycleStart(int paymentDate, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
+  final today = DateTime(ref.year, ref.month, ref.day);
+  if (today.day >= paymentDate) {
+    return _clampedDate(today.year, today.month, paymentDate);
+  } else {
+    final prevMonth = today.month == 1 ? 12 : today.month - 1;
+    final prevYear = today.month == 1 ? today.year - 1 : today.year;
+    return _clampedDate(prevYear, prevMonth, paymentDate);
+  }
+}
+
+/// Akhir siklus pembayaran yang sedang berjalan — 23:59:59 pada hari terakhir
+/// siklus (sehari sebelum tanggal pembayaran berikutnya).
+///
+/// Guard: jika [paymentDate] > hari terakhir bulan berikutnya (mis. paymentDate=30
+/// di Februari), _clampedDate menggeser [nextPayment] ke belakang, sehingga
+/// `nextPayment - 1 hari` bisa jatuh sebelum hari ini. Guard ini memastikan
+/// siklus selalu mencakup setidaknya hingga akhir hari ini.
+///
+/// Parameter [now] opsional — lihat [cycleStart] untuk penjelasan (#4).
+DateTime cycleEnd(int paymentDate, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
+  final today = DateTime(ref.year, ref.month, ref.day);
+  final nextPayment = _nextPaymentDate(today, paymentDate);
+  // Hari terakhir siklus = sehari sebelum pembayaran berikutnya.
+  // Guard: bila clamp menggeser nextPayment ke hari ini atau sebelumnya,
+  // gunakan hari ini agar transaksi hari ini selalu masuk dalam window.
+  final lastDay = nextPayment.subtract(const Duration(days: 1));
+  final effectiveLastDay = lastDay.isBefore(today) ? today : lastDay;
+  return DateTime(
+    effectiveLastDay.year,
+    effectiveLastDay.month,
+    effectiveLastDay.day,
+    23, 59, 59, 999,
+  );
 }
 
 bool isSameDay(DateTime a, DateTime b) =>

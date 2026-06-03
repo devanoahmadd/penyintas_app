@@ -84,9 +84,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
         await _remote.saveBudgetLimit(model);
       } else {
         await _local.addToSyncQueue(
-          itemId: 'budget_limit_${limit.category.name}',
+          itemId: 'budget_limit_${limit.category}',
           collectionPath: 'users/{uid}/budget_limits',
-          data: {'docId': limit.category.name, ...model.toFirestore()},
+          data: {'docId': limit.category, ...model.toFirestore()},
           operation: SyncOperation.update,
         );
       }

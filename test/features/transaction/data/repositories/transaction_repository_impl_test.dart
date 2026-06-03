@@ -28,7 +28,7 @@ void main() {
   final tEntity = TransactionEntity(
     id: 'tx-1',
     amount: 50000,
-    category: TransactionCategory.food,
+    category: 'food',
     type: TransactionType.expense,
     date: DateTime(2026, 5, 8),
     isFixed: false,

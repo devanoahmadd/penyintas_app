@@ -30,7 +30,7 @@ class GetTransactionsParams extends Equatable {
 
   final DateTime from;
   final DateTime to;
-  final TransactionCategory? categoryFilter;
+  final String? categoryFilter;
 
   @override
   List<Object?> get props => [from, to, categoryFilter];

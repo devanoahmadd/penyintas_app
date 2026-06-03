@@ -13,7 +13,7 @@ final class EditAmountChanged extends EditTransactionEvent {
 
 final class EditCategorySelected extends EditTransactionEvent {
   const EditCategorySelected(this.category);
-  final TransactionCategory category;
+  final String category;
   @override
   List<Object> get props => [category];
 }

@@ -18,7 +18,7 @@ void main() {
   final tTransaction = TransactionEntity(
     id: 'tx-001',
     amount: 45000,
-    category: TransactionCategory.food,
+    category: 'food',
     type: TransactionType.expense,
     note: 'Makan siang',
     date: DateTime(2026, 5, 28, 12, 0),
@@ -47,7 +47,7 @@ void main() {
       final s = bloc.state as EditTransactionInProgress;
       expect(s.originalId, 'tx-001');
       expect(s.amount, 45000);
-      expect(s.category, TransactionCategory.food);
+      expect(s.category, 'food');
       expect(s.type, TransactionType.expense);
       expect(s.note, 'Makan siang');
     });
@@ -70,10 +70,10 @@ void main() {
       'update category di state',
       build: buildBloc,
       act: (b) =>
-          b.add(const EditCategorySelected(TransactionCategory.transport)),
+          b.add(const EditCategorySelected('transport')),
       expect: () => [
         isA<EditTransactionInProgress>().having(
-            (s) => s.category, 'category', TransactionCategory.transport),
+            (s) => s.category, 'category', 'transport'),
       ],
     );
   });

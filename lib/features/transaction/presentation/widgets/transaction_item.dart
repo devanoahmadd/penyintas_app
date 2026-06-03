@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
@@ -28,6 +29,9 @@ class TransactionItem extends StatelessWidget {
         : (isDark ? AppColors.expenseDark : AppColors.warn);
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
+    final (icon, _) = CategoryMetadata.of(transaction.category);
+    final categorySlug = transaction.category;
+
     return Container(
         decoration: BoxDecoration(
           color: bgColor,
@@ -45,8 +49,7 @@ class TransactionItem extends StatelessWidget {
                 color: surfaceColor,
                 borderRadius: BorderRadius.circular(AppSpacing.sm),
               ),
-              child: Icon(_categoryIcon(transaction.category),
-                  size: 18, color: textColor),
+              child: Icon(icon, size: 18, color: textColor),
             ),
             const SizedBox(width: AppSpacing.sm2),
             Expanded(
@@ -55,7 +58,7 @@ class TransactionItem extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    transaction.note ?? transaction.category.label,
+                    transaction.note ?? categorySlug,
                     style: AppTextStyles.label.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -69,7 +72,7 @@ class TransactionItem extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        transaction.category.label.toUpperCase(),
+                        categorySlug.toUpperCase(),
                         style: AppTextStyles.caption.copyWith(
                           fontSize: 10,
                           color: mutedColor,
@@ -123,18 +126,4 @@ class TransactionItem extends StatelessWidget {
         ),
     );
   }
-
-  static IconData _categoryIcon(TransactionCategory cat) {
-    return switch (cat) {
-      TransactionCategory.food => Icons.restaurant_outlined,
-      TransactionCategory.transport => Icons.directions_bus_outlined,
-      TransactionCategory.shopping => Icons.shopping_bag_outlined,
-      TransactionCategory.health => Icons.favorite_border,
-      TransactionCategory.internet => Icons.wifi_outlined,
-      TransactionCategory.fixed => Icons.home_outlined,
-      TransactionCategory.income => Icons.arrow_downward_rounded,
-      TransactionCategory.other => Icons.more_horiz_rounded,
-    };
-  }
-
 }

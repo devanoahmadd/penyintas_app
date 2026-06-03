@@ -52,21 +52,26 @@ class DashboardRepositoryImpl implements DashboardRepository {
         }
 
         final now = DateTime.now();
-        final monthStart = DateTime(now.year, now.month, 1);
-        final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
+        // Satu `now` untuk semua date-helper — hindari divergence di tengah
+        // malam (#4). Window siklus berbasis paymentDate (#fase0-sinkron-siklus).
+        final cycleBegin = cycleStart(settings.paymentDate, now: now);
+        final cycleFinish = cycleEnd(settings.paymentDate, now: now);
         final sevenDaysAgo = now.subtract(const Duration(days: 7));
 
         // #36 — parallelise dua DB query yang independen
         final [monthResult, last7Result] = await Future.wait([
-          _transactions.getTransactions(from: monthStart, to: monthEnd),
+          _transactions.getTransactions(from: cycleBegin, to: cycleFinish),
           _transactions.getTransactions(from: sevenDaysAgo, to: now),
         ]);
 
         final monthTxns = monthResult.fold((l) => <TransactionEntity>[], (r) => r);
         final last7Txns = last7Result.fold((l) => <TransactionEntity>[], (r) => r);
 
+        // Teruskan `now` yang sama ke _compute agar remainingDaysInCycle
+        // konsisten dengan cycleBegin/cycleFinish (fix finding #2).
         yield Right<Failure, DashboardEntity>(_compute(
           settings: settings,
+          now: now,
           todayTxns: todayTxns,
           monthTxns: monthTxns,
           last7Txns: last7Txns,
@@ -80,11 +85,12 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
   DashboardEntity _compute({
     required BudgetSettingsEntity settings,
+    required DateTime now,
     required List<TransactionEntity> todayTxns,
     required List<TransactionEntity> monthTxns,
     required List<TransactionEntity> last7Txns,
   }) {
-    final remainingDays = remainingDaysInCycle(settings.paymentDate);
+    final remainingDays = remainingDaysInCycle(settings.paymentDate, now: now);
     // #38: fallback ke panjang siklus penuh berikutnya, bukan hardcode 30
     final effectiveDays = remainingDays > 0 ? remainingDays : daysInCycle(settings.paymentDate);
 
@@ -104,7 +110,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
     final totalSpentThisMonth = monthTxns
         .where((t) =>
             t.type == TransactionType.expense &&
-            t.category != TransactionCategory.fixed)
+            t.category != 'fixed')
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;

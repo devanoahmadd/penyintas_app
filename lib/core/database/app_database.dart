@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_cycle.dart';
 
 part 'app_database.g.dart';
 
@@ -15,6 +16,19 @@ class SyncOperationConverter extends TypeConverter<SyncOperation, String> {
   SyncOperation fromSql(String s) => SyncOperation.values.byName(s);
   @override
   String toSql(SyncOperation v) => v.name;
+}
+
+class BudgetCycleConverter extends TypeConverter<BudgetCycle, String> {
+  const BudgetCycleConverter();
+  @override
+  BudgetCycle fromSql(String s) {
+    // Fallback ke BudgetCycle.cycle jika nilai DB tidak dikenal (data lama /
+    // korup) agar app tidak crash. Lebih aman daripada byName() yang throw.
+    return BudgetCycle.values.where((e) => e.name == s).firstOrNull ??
+        BudgetCycle.cycle;
+  }
+  @override
+  String toSql(BudgetCycle v) => v.name;
 }
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
@@ -94,23 +108,47 @@ class Goals extends Table {
   DateTimeColumn get updatedAt => dateTime()();
 }
 
+/// Kategori transaksi — built-in dan custom buatan user.
+/// Built-in: label via labelKey (l10n). Custom: label via labelOverride.
+/// Icon dan warna tidak disimpan di DB — lihat CategoryMetadata di Dart.
+class Categories extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get slug => text()(); // unique key: matches TransactionCategory.name for built-in
+  TextColumn get labelKey => text().nullable()(); // l10n key (mis. 'category_food')
+  TextColumn get labelOverride => text().nullable()(); // nama custom buatan user
+  BoolColumn get isBuiltIn => boolean().withDefault(const Constant(true))();
+  BoolColumn get isLimitable => boolean().withDefault(const Constant(false))();
+  TextColumn get type => text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {slug},
+      ];
+}
+
 class BudgetLimits extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get category => text()();
   IntColumn get limitAmount => integer()();
-  TextColumn get cycleType => text().withDefault(const Constant('cycle'))();
+  // TypeConverter: stored as TEXT ('cycle'/'monthly'), mapped ke BudgetCycle enum.
+  // Tidak perlu SQL migration — nilai lama sudah sesuai dengan nama enum.
+  // Return type tetap TextColumn (Drift pattern, lihat SyncQueue.operation).
+  TextColumn get cycleType => text()
+      .withDefault(const Constant('cycle'))
+      .map(const BudgetCycleConverter())();
   BoolColumn get isEnabled => boolean().withDefault(const Constant(true))();
   DateTimeColumn get updatedAt => dateTime()();
 }
 
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits])
+@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits, Categories])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -188,6 +226,52 @@ class AppDatabase extends _$AppDatabase {
           )
         ''');
       }
+      if (from < 6) {
+        // BudgetCycleConverter ditambahkan — TypeConverter adalah Dart-level.
+        // SQL schema (TEXT) tidak berubah; nilai lama 'cycle'/'monthly' sudah
+        // sesuai dengan BudgetCycle.values.byName(). Tidak ada SQL yang diperlukan.
+      }
+      if (from < 7) {
+        // Backward compat: rename kategori lama yang sudah tidak dipakai
+        await m.database.customStatement(
+          "UPDATE transactions SET category = 'internet' WHERE category = 'data'",
+        );
+        await m.database.customStatement(
+          "UPDATE transactions SET category = 'other' WHERE category = 'campus'",
+        );
+
+        // Tabel Categories baru — built-in seed di bawah
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS categories (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug          TEXT NOT NULL,
+            label_key     TEXT,
+            label_override TEXT,
+            is_built_in   INTEGER NOT NULL DEFAULT 1,
+            is_limitable  INTEGER NOT NULL DEFAULT 0,
+            type          TEXT NOT NULL DEFAULT 'expense',
+            sort_order    INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(slug)
+          )
+        ''');
+
+        // Seed 8 built-in categories (INSERT OR IGNORE agar aman dijalankan ulang)
+        const seeds = [
+          "(NULL,'food',    'category_food',     NULL, 1, 1, 'expense', 0)",
+          "(NULL,'transport','category_transport',NULL, 1, 1, 'expense', 1)",
+          "(NULL,'shopping','category_shopping',  NULL, 1, 1, 'expense', 2)",
+          "(NULL,'health',  'category_health',    NULL, 1, 1, 'expense', 3)",
+          "(NULL,'internet','category_internet',  NULL, 1, 1, 'expense', 4)",
+          "(NULL,'other',   'category_other',     NULL, 1, 1, 'expense', 5)",
+          "(NULL,'fixed',   'category_fixed',     NULL, 1, 0, 'expense', 6)",
+          "(NULL,'income',  'category_income',    NULL, 1, 0, 'income',  7)",
+        ];
+        for (final row in seeds) {
+          await m.database.customStatement(
+            'INSERT OR IGNORE INTO categories VALUES $row',
+          );
+        }
+      }
     },
   );
 
@@ -200,6 +284,8 @@ class AppDatabase extends _$AppDatabase {
       await delete(budgetLimits).go();
       await delete(syncQueue).go();
       await delete(appSettings).go();
+      // Hapus hanya custom kategori; built-in akan di-seed ulang saat onboarding
+      await (delete(categories)..where((c) => c.isBuiltIn.not())).go();
     });
     await customStatement('VACUUM');
   }

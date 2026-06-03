@@ -76,7 +76,7 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
   @override
   Future<int> saveBudgetLimit(BudgetLimitEntity limit) async {
     final existing = await (_db.select(_db.budgetLimits)
-          ..where((t) => t.category.equals(limit.category.name)))
+          ..where((t) => t.category.equals(limit.category)))
         .getSingleOrNull();
     if (existing != null) {
       final model = BudgetLimitModel.fromEntity(

@@ -31,7 +31,7 @@ void main() {
   TransactionEntity makeTxn({
     String id = 'id',
     required int amount,
-    required TransactionCategory category,
+    required String category,
     TransactionType type = TransactionType.expense,
     DateTime? date,
   }) {
@@ -66,8 +66,8 @@ void main() {
 
   group('_compute — totalSpentThisMonth', () {
     test('excludes fixed-category expenses (fix #25)', () async {
-      final fixedTxn = makeTxn(id: 'f1', amount: 400000, category: TransactionCategory.fixed);
-      final foodTxn = makeTxn(id: 'f2', amount: 50000, category: TransactionCategory.food);
+      final fixedTxn = makeTxn(id: 'f1', amount: 400000, category: 'fixed');
+      final foodTxn = makeTxn(id: 'f2', amount: 50000, category: 'food');
 
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
@@ -82,8 +82,8 @@ void main() {
     });
 
     test('income-type transactions do not affect totalSpentThisMonth', () async {
-      final incomeTxn = makeTxn(id: 'i1', amount: 500000, category: TransactionCategory.income, type: TransactionType.income);
-      final foodTxn = makeTxn(id: 'f1', amount: 30000, category: TransactionCategory.food);
+      final incomeTxn = makeTxn(id: 'i1', amount: 500000, category: 'income', type: TransactionType.income);
+      final foodTxn = makeTxn(id: 'f1', amount: 30000, category: 'food');
 
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
@@ -99,7 +99,7 @@ void main() {
   group('_compute — totalRemaining', () {
     test('clamps totalRemaining to 0 when over budget', () async {
       // safeMonthlyBudget = 2_200_000; spend 3_000_000 → remaining should be 0
-      final bigSpend = makeTxn(id: 'b1', amount: 3000000, category: TransactionCategory.food);
+      final bigSpend = makeTxn(id: 'b1', amount: 3000000, category: 'food');
 
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
@@ -136,8 +136,8 @@ void main() {
 
   group('_compute — spentToday', () {
     test('sums only expense-type today transactions', () async {
-      final expense = makeTxn(id: 'e1', amount: 25000, category: TransactionCategory.food);
-      final income = makeTxn(id: 'i1', amount: 100000, category: TransactionCategory.income, type: TransactionType.income);
+      final expense = makeTxn(id: 'e1', amount: 25000, category: 'food');
+      final income = makeTxn(id: 'i1', amount: 100000, category: 'income', type: TransactionType.income);
 
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(Right([expense, income])));
@@ -148,7 +148,7 @@ void main() {
     });
 
     test('todayTransactions list is passed through to entity', () async {
-      final txn = makeTxn(id: 'x1', amount: 15000, category: TransactionCategory.food);
+      final txn = makeTxn(id: 'x1', amount: 15000, category: 'food');
 
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(Right([txn])));
@@ -166,7 +166,7 @@ void main() {
         (i) => makeTxn(
           id: 'w$i',
           amount: 70000,
-          category: TransactionCategory.food,
+          category: 'food',
           date: DateTime.now().subtract(Duration(days: i)),
         ),
       );
@@ -205,7 +205,7 @@ void main() {
 
     test('status is caution when remaining 15–30% of budget', () async {
       // safeMonthly = 2_200_000; spend 1_595_001 → remaining = 604_999 ≈ 27.5% → caution
-      final spend = makeTxn(id: 'c1', amount: 1595001, category: TransactionCategory.food);
+      final spend = makeTxn(id: 'c1', amount: 1595001, category: 'food');
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
       when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
@@ -218,7 +218,7 @@ void main() {
 
     test('status is danger when remaining < 15% of budget', () async {
       // safeMonthly = 2_200_000; spend 1_871_001 → remaining = 328_999 ≈ 14.9% → danger
-      final spend = makeTxn(id: 'd1', amount: 1871001, category: TransactionCategory.food);
+      final spend = makeTxn(id: 'd1', amount: 1871001, category: 'food');
       when(() => mockTxRepo.watchTodayTransactions())
           .thenAnswer((_) => Stream.value(const Right([])));
       when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))

@@ -7,7 +7,7 @@ import 'package:penyintas_app/features/transaction/presentation/widgets/transact
 final _mockTx = TransactionEntity(
   id: 'test-1',
   amount: 80000,
-  category: TransactionCategory.other,
+  category: 'other',
   type: TransactionType.expense,
   date: DateTime(2026, 5, 29, 0, 34),
   isFixed: false,

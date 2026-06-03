@@ -27,9 +27,9 @@ void main() {
     totalSpent: 500000,
     totalIncome: 1000000,
     netBalance: 500000,
-    categoryBreakdown: const {TransactionCategory.food: 500000},
+    categoryBreakdown: const {'food': 500000},
     dailyAverageSpend: 16666.67,
-    topCategory: TransactionCategory.food,
+    topCategory: 'food',
     weeklyBreakdown: const [
       WeeklySpendEntity(weekNumber: 1, totalSpent: 200000),
       WeeklySpendEntity(weekNumber: 2, totalSpent: 150000),

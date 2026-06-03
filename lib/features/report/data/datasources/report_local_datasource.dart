@@ -30,9 +30,8 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
     final totalSpent = expenses.fold(0, (s, t) => s + t.amount);
     final totalIncome = incomeRows.fold(0, (s, t) => s + t.amount);
 
-    final breakdown = <TransactionCategory, int>{};
-    for (final t
-        in expenses.where((t) => t.category != TransactionCategory.income)) {
+    final breakdown = <String, int>{};
+    for (final t in expenses.where((t) => t.category != 'income')) {
       breakdown[t.category] = (breakdown[t.category] ?? 0) + t.amount;
     }
 

@@ -3,30 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
-
-const _categoryColors = <TransactionCategory, Color>{
-  TransactionCategory.food: AppColors.primary,
-  TransactionCategory.transport: AppColors.primaryBright,
-  TransactionCategory.shopping: AppColors.caution,
-  TransactionCategory.health: AppColors.warn,
-  TransactionCategory.internet: AppColors.shoot,
-  TransactionCategory.fixed: AppColors.primaryDeep,
-  TransactionCategory.other: AppColors.mutedLight,
-  TransactionCategory.income: AppColors.success,
-};
-
-const _categoryLabels = <TransactionCategory, String>{
-  TransactionCategory.food: 'Makan',
-  TransactionCategory.transport: 'Transport',
-  TransactionCategory.shopping: 'Belanja',
-  TransactionCategory.health: 'Kesehatan',
-  TransactionCategory.internet: 'Internet',
-  TransactionCategory.fixed: 'Kos',
-  TransactionCategory.other: 'Lainnya',
-  TransactionCategory.income: 'Pemasukan',
-};
 
 class CategoryPieChart extends StatefulWidget {
   const CategoryPieChart({
@@ -34,7 +12,7 @@ class CategoryPieChart extends StatefulWidget {
     required this.breakdown,
   });
 
-  final Map<TransactionCategory, int> breakdown;
+  final Map<String, int> breakdown;
 
   @override
   State<CategoryPieChart> createState() => _CategoryPieChartState();
@@ -93,15 +71,14 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
                 final idx = entry.key;
                 final e = entry.value;
                 final isTouched = idx == _touchedIndex;
-                final color =
-                    _categoryColors[e.key] ?? AppColors.mutedLight;
+                final (_, color) = CategoryMetadata.of(e.key);
                 return PieChartSectionData(
                   value: e.value.toDouble(),
                   color: color,
                   radius: isTouched ? 70 : 60,
                   showTitle: isTouched,
                   title: isTouched
-                      ? '${_categoryLabels[e.key] ?? e.key.name}\n${formatRupiah(e.value)}'
+                      ? '${e.key}\n${formatRupiah(e.value)}'
                       : '',
                   titleStyle: AppTextStyles.caption.copyWith(
                     color: Colors.white,
@@ -120,7 +97,7 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
           runSpacing: AppSpacing.xs,
           children: entries.map((e) {
             final pct = total > 0 ? (e.value / total * 100).round() : 0;
-            final color = _categoryColors[e.key] ?? AppColors.mutedLight;
+            final (_, color) = CategoryMetadata.of(e.key);
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -134,8 +111,7 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  '${_categoryLabels[e.key] ?? e.key.name} $pct%'
-                  ' (${formatRupiah(e.value)})',
+                  '${e.key} $pct% (${formatRupiah(e.value)})',
                   style: AppTextStyles.caption.copyWith(color: textColor),
                 ),
               ],

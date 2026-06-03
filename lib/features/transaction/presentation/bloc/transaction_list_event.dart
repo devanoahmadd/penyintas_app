@@ -38,7 +38,7 @@ final class FilterSheetApplied extends TransactionListEvent {
     this.minAmount,
     this.maxAmount,
   });
-  final Set<TransactionCategory>? categories; // null = all categories
+  final Set<String>? categories; // null = all categories
   final int? minAmount;
   final int? maxAmount;
   @override

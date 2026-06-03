@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 class ReportEntity extends Equatable {
   const ReportEntity({
@@ -20,9 +19,9 @@ class ReportEntity extends Equatable {
   final int totalSpent;
   final int totalIncome;
   final int netBalance;
-  final Map<TransactionCategory, int> categoryBreakdown;
+  final Map<String, int> categoryBreakdown;
   final double dailyAverageSpend;
-  final TransactionCategory? topCategory;
+  final String? topCategory;
   final List<WeeklySpendEntity> weeklyBreakdown;
   final double comparedToPreviousMonth;
   final List<String>? aiInsights;
@@ -36,8 +35,8 @@ class ReportEntity extends Equatable {
         netBalance,
         // Spread entries sorted by key — Map insertion order not guaranteed (#118)
         ...(categoryBreakdown.entries.toList()
-              ..sort((a, b) => a.key.name.compareTo(b.key.name)))
-            .map((e) => '${e.key.name}:${e.value}'),
+              ..sort((a, b) => a.key.compareTo(b.key)))
+            .map((e) => '${e.key}:${e.value}'),
         dailyAverageSpend,
         topCategory,
         weeklyBreakdown,

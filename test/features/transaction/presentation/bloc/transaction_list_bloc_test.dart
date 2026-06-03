@@ -26,7 +26,7 @@ void main() {
   final tTransaction = TransactionEntity(
     id: 'tx-1',
     amount: 50000,
-    category: TransactionCategory.food,
+    category: 'food',
     type: TransactionType.expense,
     date: DateTime(2026, 5, 8),
     isFixed: false,
@@ -142,7 +142,7 @@ void main() {
       ),
       act: (bloc) => bloc.add(
         const FilterSheetApplied(
-          categories: {TransactionCategory.shopping},
+          categories: {'shopping'},
         ),
       ),
       expect: () => [
@@ -151,7 +151,7 @@ void main() {
             .having(
               (s) => s.categoryFilter,
               'categoryFilter set',
-              {TransactionCategory.shopping},
+              {'shopping'},
             ),
       ],
     );
@@ -164,7 +164,7 @@ void main() {
         filtered: [],
         totalSpent: 50000,
         typeFilter: null,
-        categoryFilter: {TransactionCategory.shopping},
+        categoryFilter: {'shopping'},
         from: tFrom,
         to: tTo,
       ),

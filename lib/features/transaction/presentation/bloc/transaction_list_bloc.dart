@@ -126,7 +126,7 @@ class TransactionListBloc
     DateTime to,
     TransactionType? typeFilter,
     Emitter<TransactionListState> emit, {
-    Set<TransactionCategory>? categoryFilter,
+    Set<String>? categoryFilter,
     int? minAmount,
     int? maxAmount,
   }) async {
@@ -164,7 +164,7 @@ class TransactionListBloc
   static List<TransactionEntity> _applyFilters(
     List<TransactionEntity> transactions, {
     TransactionType? typeFilter,
-    Set<TransactionCategory>? categoryFilter,
+    Set<String>? categoryFilter,
     int? minAmount,
     int? maxAmount,
   }) {

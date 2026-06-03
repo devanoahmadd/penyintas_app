@@ -655,7 +655,7 @@ class _V2Timeline extends StatelessWidget {
   static bool _matchesSearch(TransactionEntity t, String q) {
     final lower = q.toLowerCase();
     if (t.note?.toLowerCase().contains(lower) ?? false) { return true; }
-    return t.category.label.toLowerCase().contains(lower);
+    return t.category.toLowerCase().contains(lower);
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
@@ -142,7 +143,7 @@ class TransactionDetailSheet extends StatelessWidget {
                       color: amtBg,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(_categoryIcon(transaction.category),
+                    child: Icon(CategoryMetadata.of(transaction.category).$1,
                         size: 20, color: amtColor),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -151,7 +152,7 @@ class TransactionDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          transaction.note ?? transaction.category.label,
+                          transaction.note ?? transaction.category,
                           style: AppTextStyles.label.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -161,7 +162,7 @@ class TransactionDetailSheet extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          transaction.category.label.toUpperCase(),
+                          transaction.category.toUpperCase(),
                           style: AppTextStyles.caption.copyWith(
                             fontSize: 10,
                             color: mutedColor,
@@ -292,18 +293,6 @@ class TransactionDetailSheet extends StatelessWidget {
         : const Color(0xFFE07A3C).withOpacity(0.08);
   }
 
-  static IconData _categoryIcon(TransactionCategory cat) {
-    return switch (cat) {
-      TransactionCategory.food      => Icons.restaurant_outlined,
-      TransactionCategory.transport => Icons.directions_bus_outlined,
-      TransactionCategory.shopping  => Icons.shopping_bag_outlined,
-      TransactionCategory.health    => Icons.favorite_border,
-      TransactionCategory.internet  => Icons.wifi_outlined,
-      TransactionCategory.fixed     => Icons.home_outlined,
-      TransactionCategory.income    => Icons.arrow_downward_rounded,
-      TransactionCategory.other     => Icons.more_horiz_rounded,
-    };
-  }
 }
 
 // ── Delete Confirm Sheet ──────────────────────────────────────────────────
@@ -388,8 +377,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                   child: Row(
                     children: [
                       Icon(
-                        TransactionDetailSheet._categoryIcon(
-                            widget.transaction.category),
+                        CategoryMetadata.of(widget.transaction.category).$1,
                         size: 18,
                         color: amtColor,
                       ),
@@ -397,7 +385,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                       Expanded(
                         child: Text(
                           widget.transaction.note ??
-                              widget.transaction.category.label,
+                              widget.transaction.category,
                           style: AppTextStyles.bodySmall.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w500,

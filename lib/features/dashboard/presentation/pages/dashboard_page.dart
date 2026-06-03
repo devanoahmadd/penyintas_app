@@ -5,11 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
@@ -556,7 +556,7 @@ class _TxnRow extends StatelessWidget {
 
     final h = transaction.date.hour.toString().padLeft(2, '0');
     final m = transaction.date.minute.toString().padLeft(2, '0');
-    final catLabel = _categoryLabel(l10n, transaction.category);
+    final catLabel = CategoryMetadata.resolveLabelFromSlug(transaction.category, l10n);
 
     return Column(
       children: [
@@ -578,7 +578,7 @@ class _TxnRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppSpacing.sm),
                     ),
                     child: Icon(
-                      _categoryIcon(transaction.category),
+                      CategoryMetadata.of(transaction.category).$1,
                       color: textColor,
                       size: 18,
                     ),
@@ -635,47 +635,6 @@ class _TxnRow extends StatelessWidget {
     );
   }
 
-  static IconData _categoryIcon(TransactionCategory cat) {
-    switch (cat) {
-      case TransactionCategory.food:
-        return Icons.restaurant_outlined;
-      case TransactionCategory.transport:
-        return Icons.directions_bus_outlined;
-      case TransactionCategory.shopping:
-        return Icons.shopping_bag_outlined;
-      case TransactionCategory.health:
-        return Icons.favorite_border;
-      case TransactionCategory.internet:
-        return Icons.wifi_outlined;
-      case TransactionCategory.fixed:
-        return Icons.home_outlined;
-      case TransactionCategory.income:
-        return Icons.arrow_upward_rounded;
-      case TransactionCategory.other:
-        return Icons.more_horiz_rounded;
-    }
-  }
-
-  static String _categoryLabel(AppLocalizations l10n, TransactionCategory cat) {
-    switch (cat) {
-      case TransactionCategory.food:
-        return l10n.categoryFood;
-      case TransactionCategory.transport:
-        return l10n.categoryTransport;
-      case TransactionCategory.shopping:
-        return l10n.categoryShopping;
-      case TransactionCategory.health:
-        return l10n.categoryHealth;
-      case TransactionCategory.internet:
-        return l10n.categoryInternet;
-      case TransactionCategory.fixed:
-        return l10n.categoryFixed;
-      case TransactionCategory.income:
-        return l10n.categoryIncome;
-      case TransactionCategory.other:
-        return l10n.categoryOther;
-    }
-  }
 }
 
 // ── Section header ────────────────────────────────────────────────────────

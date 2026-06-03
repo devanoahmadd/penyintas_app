@@ -21,13 +21,13 @@ void main() {
     required String id,
     required int amount,
     required TransactionType type,
-    required TransactionCategory category,
+    required String category,
     required DateTime date,
   }) async {
     await db.into(db.transactions).insert(TransactionsCompanion.insert(
           txId: id,
           amount: amount,
-          category: category.name,
+          category: category,
           type: type.name,
           date: date,
           createdAt: date,
@@ -40,14 +40,14 @@ void main() {
       id: '1',
       amount: 50000,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'food',
       date: DateTime(2025, 11, 5),
     );
     await insertTx(
       id: '2',
       amount: 30000,
       type: TransactionType.expense,
-      category: TransactionCategory.transport,
+      category: 'transport',
       date: DateTime(2025, 11, 10),
     );
 
@@ -61,7 +61,7 @@ void main() {
       id: '1',
       amount: 1000000,
       type: TransactionType.income,
-      category: TransactionCategory.income,
+      category: 'income',
       date: DateTime(2025, 11, 1),
     );
 
@@ -75,28 +75,28 @@ void main() {
       id: '1',
       amount: 100000,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'food',
       date: DateTime(2025, 11, 5),
     );
     await insertTx(
       id: '2',
       amount: 50000,
       type: TransactionType.expense,
-      category: TransactionCategory.transport,
+      category: 'transport',
       date: DateTime(2025, 11, 6),
     );
     await insertTx(
       id: '3',
       amount: 40000,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'food',
       date: DateTime(2025, 11, 7),
     );
 
     final report = await datasource.getMonthlyReport(tMonth);
 
-    expect(report.categoryBreakdown[TransactionCategory.food], 140000);
-    expect(report.categoryBreakdown[TransactionCategory.transport], 50000);
+    expect(report.categoryBreakdown['food'], 140000);
+    expect(report.categoryBreakdown['transport'], 50000);
   });
 
   test('empty month returns all zeros and null topCategory', () async {
@@ -114,7 +114,7 @@ void main() {
       id: '1',
       amount: 200000,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'food',
       date: DateTime(2025, 11, 10),
     );
 
@@ -128,14 +128,14 @@ void main() {
       id: '1',
       amount: 50000,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'food',
       date: DateTime(2025, 11, 3), // week 1
     );
     await insertTx(
       id: '2',
       amount: 30000,
       type: TransactionType.expense,
-      category: TransactionCategory.transport,
+      category: 'transport',
       date: DateTime(2025, 11, 10), // week 2
     );
 

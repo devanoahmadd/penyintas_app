@@ -55,7 +55,7 @@ class BudgetRemoteDatasourceImpl implements BudgetRemoteDatasource {
           .collection('users')
           .doc(_uid)
           .collection('budget_limits')
-          .doc(limit.category.name)
+          .doc(limit.category)
           .set(limit.toFirestore());
     } catch (e, stack) {
       _logError(e, stack);

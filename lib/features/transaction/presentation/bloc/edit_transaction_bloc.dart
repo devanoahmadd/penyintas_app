@@ -93,7 +93,7 @@ class EditTransactionBloc
       type: s.type,
       note: s.note.isEmpty ? null : s.note,
       date: s.date,
-      isFixed: s.category == TransactionCategory.fixed,
+      isFixed: s.category == 'fixed',
       isSynced: false,
       createdAt: s.originalCreatedAt,
       updatedAt: DateTime.now(),

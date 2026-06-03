@@ -157,7 +157,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
     required DateTime from,
     required DateTime to,
-    TransactionCategory? categoryFilter,
+    String? categoryFilter,
   }) async {
     try {
       var models = await _local.getTransactionsByDateRange(from, to);
