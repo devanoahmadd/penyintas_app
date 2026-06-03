@@ -27,7 +27,8 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
     BudgetSettingsEntity settings,
   ) async {
     try {
-      // Lokal dulu — dipakai router untuk cek onboardingCompleted
+      // Lokal dulu — dipakai router untuk cek onboardingCompleted.
+      // Remote flag ditulis via _pushUserSettings → UserSettingsRemoteDatasource (settings/app).
       await localDataSource.saveBudgetSettings(settings);
 
       final uid = auth.currentUser?.uid;
