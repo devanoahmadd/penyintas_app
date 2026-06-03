@@ -11,8 +11,10 @@ import 'package:penyintas_app/features/budget/domain/usecases/get_budget_limits_
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_overview_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/save_budget_limit_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
 
 part 'budget_limits_event.dart';
 part 'budget_limits_state.dart';
@@ -25,12 +27,14 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     required DeleteBudgetLimitUseCase deleteBudgetLimit,
     required GetBudgetOverviewUseCase getBudgetOverview,
     required TransactionRepository transactionRepository,
+    required GetLimitableCategoriesUseCase getLimitableCategories,
   })  : _getSettings = getBudgetSettings,
         _getLimits = getBudgetLimits,
         _save = saveBudgetLimit,
         _delete = deleteBudgetLimit,
         _getOverview = getBudgetOverview,
         _txRepo = transactionRepository,
+        _getLimitableCategories = getLimitableCategories,
         super(const BudgetLimitsInitial()) {
     on<LoadBudgetLimits>(_onLoad, transformer: droppable());
     on<SaveBudgetLimit>(_onSave, transformer: sequential());
@@ -44,6 +48,7 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
   final DeleteBudgetLimitUseCase _delete;
   final GetBudgetOverviewUseCase _getOverview;
   final TransactionRepository _txRepo;
+  final GetLimitableCategoriesUseCase _getLimitableCategories;
 
   Future<void> _onLoad(
     LoadBudgetLimits event,
@@ -78,22 +83,7 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final result = await _save(event.limit);
     await result.fold(
       (f) async => emit(BudgetLimitsError(f.message)),
-      (_) async {
-        final limitsResult = await _getLimits(const NoParams());
-        await limitsResult.fold(
-          (f) async => emit(BudgetLimitsError(f.message)),
-          (limits) async {
-            final settingsResult = await _getSettings(const NoParams());
-            await settingsResult.fold(
-              (f) async => emit(BudgetLimitsError(f.message)),
-              (settings) async {
-                final overview = await _computeOverview(settings, limits);
-                emit(BudgetLimitsLoaded(limits: limits, overview: overview));
-              },
-            );
-          },
-        );
-      },
+      (_) async => _reloadAfterMutation(emit),
     );
   }
 
@@ -107,15 +97,12 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final result = await _delete(
       DeleteLimitParams(id: event.id, categoryName: event.categoryName),
     );
-    result.fold(
-      (f) => emit(BudgetLimitsError(f.message)),
-      (_) {
+    await result.fold(
+      (f) async => emit(BudgetLimitsError(f.message)),
+      (_) async {
         final updatedLimits =
             current.limits.where((l) => l.id != event.id).toList();
-        emit(BudgetLimitsLoaded(
-          limits: updatedLimits,
-          overview: current.overview,
-        ));
+        await _reloadAfterMutation(emit, updatedLimits: updatedLimits);
       },
     );
   }
@@ -136,25 +123,41 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
       updatedAt: DateTime.now(),
     );
 
-    // Inline save logic (avoids calling add() which can deadlock with sequential transformer)
+    // Inline save (avoids calling add() which can deadlock with sequential transformer)
     final result = await _save(updated);
     await result.fold(
       (f) async => emit(BudgetLimitsError(f.message)),
-      (_) async {
-        final limitsResult = await _getLimits(const NoParams());
-        await limitsResult.fold(
-          (f) async => emit(BudgetLimitsError(f.message)),
-          (limits) async {
-            final settingsResult = await _getSettings(const NoParams());
-            await settingsResult.fold(
-              (f) async => emit(BudgetLimitsError(f.message)),
-              (settings) async {
-                final overview = await _computeOverview(settings, limits);
-                emit(BudgetLimitsLoaded(limits: limits, overview: overview));
-              },
-            );
-          },
-        );
+      (_) async => _reloadAfterMutation(emit),
+    );
+  }
+
+  /// Reload state setelah mutasi (save/toggle/delete) — fix #8.
+  /// Jika [updatedLimits] diberikan (misal setelah delete), pakai langsung.
+  /// Jika null, re-fetch limits dari DB.
+  Future<void> _reloadAfterMutation(
+    Emitter<BudgetLimitsState> emit, {
+    List<BudgetLimitEntity>? updatedLimits,
+  }) async {
+    final List<BudgetLimitEntity> limits;
+    if (updatedLimits != null) {
+      limits = updatedLimits;
+    } else {
+      final limitsResult = await _getLimits(const NoParams());
+      // Emit f.message (konsisten dengan _onLoad) dan return jika gagal.
+      List<BudgetLimitEntity>? fetchedLimits;
+      limitsResult.fold(
+        (f) => emit(BudgetLimitsError(f.message)),
+        (l) => fetchedLimits = l,
+      );
+      if (fetchedLimits == null) return;
+      limits = fetchedLimits!;
+    }
+    final settingsResult = await _getSettings(const NoParams());
+    await settingsResult.fold(
+      (f) async => emit(BudgetLimitsError(f.message)),
+      (settings) async {
+        final overview = await _computeOverview(settings, limits);
+        emit(BudgetLimitsLoaded(limits: limits, overview: overview));
       },
     );
   }
@@ -163,19 +166,33 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     BudgetSettingsEntity settings,
     List<BudgetLimitEntity> limits,
   ) async {
+    // Satu `now` untuk semua pemanggilan date-helper — hindari divergence
+    // jika eksekusi melintas tengah malam (fix finding #4).
     final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month, 1);
-    final txResult = await _txRepo.getTransactions(from: monthStart, to: now);
+    final start = cycleStart(settings.paymentDate, now: now);
+    final txResult = await _txRepo.getTransactions(from: start, to: now);
     final txns = txResult.fold(
       (_) => <TransactionEntity>[],
       (list) => list,
     );
-    final remaining = remainingDaysInCycle(settings.paymentDate);
+    final remaining = remainingDaysInCycle(settings.paymentDate, now: now);
+    // cycleStart() sudah return midnight — tidak perlu re-extract (fix F1-8)
+    final daysElapsed = now.difference(start).inDays.clamp(1, 366);
+
+    // Fetch limitable categories dari DB (#Fase3B — bridge mapping dihapus)
+    final categoriesResult = await _getLimitableCategories(const NoParams());
+    final limitableCategories = categoriesResult.fold(
+      (_) => <CategoryEntity>[],
+      (cats) => cats,
+    );
+
     return _getOverview(OverviewParams(
       settings: settings,
       limits: limits,
       currentPeriodTransactions: txns,
       remainingDays: remaining,
+      daysElapsed: daysElapsed,
+      limitableCategories: limitableCategories,
     ));
   }
 }
