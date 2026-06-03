@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_cycle.dart';
 
 class BudgetLimitEntity extends Equatable {
   const BudgetLimitEntity({
@@ -12,19 +12,19 @@ class BudgetLimitEntity extends Equatable {
   });
 
   final int id;
-  final TransactionCategory category;
+  final String category;
   final int limitAmount;
-  final String cycleType; // 'monthly' | 'cycle'
+  final BudgetCycle cycleType;
   final bool isEnabled;
   final DateTime updatedAt;
 
-  bool get isMonthly => cycleType == 'monthly';
+  // isMonthly dihapus — dead code (#F2-5). Gunakan cycleType == BudgetCycle.monthly langsung.
 
   BudgetLimitEntity copyWith({
     int? id,
-    TransactionCategory? category,
+    String? category,
     int? limitAmount,
-    String? cycleType,
+    BudgetCycle? cycleType,
     bool? isEnabled,
     DateTime? updatedAt,
   }) =>
@@ -38,5 +38,6 @@ class BudgetLimitEntity extends Equatable {
       );
 
   @override
-  List<Object> get props => [id, category, limitAmount, cycleType, isEnabled, updatedAt];
+  List<Object> get props =>
+      [id, category, limitAmount, cycleType, isEnabled, updatedAt];
 }
