@@ -44,7 +44,6 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
         'otherFixedExpense': settings.otherFixedExpense,
         'emergencyFundPct': settings.emergencyFundPct,
         'createdAt': settings.createdAt.toIso8601String(),
-        'onboardingCompleted': true,
       };
 
       if (await networkInfo.isConnected) {

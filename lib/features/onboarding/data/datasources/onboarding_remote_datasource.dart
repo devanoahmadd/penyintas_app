@@ -31,11 +31,6 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
           .collection('budget_settings')
           .doc('current')
           .set(model.toFirestore());
-
-      await firestore
-          .collection('users')
-          .doc(uid)
-          .update({'onboardingCompleted': true});
     } on AuthException {
       rethrow;
     } catch (e, s) {
