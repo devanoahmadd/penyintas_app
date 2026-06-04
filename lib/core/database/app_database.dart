@@ -113,7 +113,7 @@ class Goals extends Table {
 /// Icon dan warna tidak disimpan di DB — lihat CategoryMetadata di Dart.
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get slug => text()(); // unique key: matches TransactionCategory.name for built-in
+  TextColumn get slug => text()(); // unique key for category identifier
   TextColumn get labelKey => text().nullable()(); // l10n key (mis. 'category_food')
   TextColumn get labelOverride => text().nullable()(); // nama custom buatan user
   BoolColumn get isBuiltIn => boolean().withDefault(const Constant(true))();
