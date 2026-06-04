@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
@@ -30,6 +31,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
   Future<Either<Failure, CategoryEntity>> createCategory(CategoryEntity category) async {
     try {
       return Right(await _local.createCategory(category));
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
     } catch (e) {
       return Left(CacheFailure(e.toString()));
     }
