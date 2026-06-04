@@ -67,7 +67,7 @@ class BudgetSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Sisa bulan ini',
+            'Sisa siklus ini',
             style: AppTextStyles.bodySmall.copyWith(color: textSoft),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -96,10 +96,52 @@ class BudgetSummaryCard extends StatelessWidget {
               ),
             ],
           ),
+
+          // ── Pace projection — tampil bila paceStatus non-null (ada data & siklus belum habis) ─────
+          if (overview.paceStatus != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${formatRupiah(overview.dailyBurnRate.round())}/hari',
+                  style: AppTextStyles.caption.copyWith(
+                    color: textSoft,
+                    letterSpacing: 0,
+                  ),
+                ),
+                Text(
+                  _paceLabel(overview),
+                  style: AppTextStyles.caption.copyWith(
+                    color: _paceColor(overview.paceStatus),
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+
+  String _paceLabel(BudgetOverviewEntity overview) {
+    // projectedOperationalDays selalu non-null di sini — guard dailyBurnRate > 0
+    // di call site memastikan ini (#F2-6).
+    final projected = overview.projectedOperationalDays!;
+    if (overview.paceStatus == BudgetStatus.safe) {
+      return 'Cukup sampai akhir siklus';
+    }
+    final clamped = projected.clamp(0, overview.remainingDays);
+    return 'Habis ~$clamped hari lagi';
+  }
+
+  Color _paceColor(BudgetStatus? status) => switch (status) {
+        BudgetStatus.safe => Colors.white.withValues(alpha: 0.75),
+        BudgetStatus.caution => AppColors.caution,
+        BudgetStatus.danger => AppColors.warn,
+        _ => Colors.white.withValues(alpha: 0.75),
+      };
 }
 
 // ── Status badge ────────────────────────────────────────────────────────────

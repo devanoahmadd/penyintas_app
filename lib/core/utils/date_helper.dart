@@ -45,9 +45,13 @@ String formatDateLong(DateTime date) =>
 int daysInCycle(int paymentDate) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  // Pakai _nextPaymentDate untuk menghindari duplikasi logika rollover (#F2-4)
   final start = _clampedDate(today.year, today.month, paymentDate);
-  final end = _nextPaymentDate(start, paymentDate);
+  // Tidak pakai _nextPaymentDate(start) karena bila paymentDate > lastDayOfMonth,
+  // start sudah di-clamp ke lastDay dan start.day < paymentDate masih true →
+  // _nextPaymentDate mengembalikan start lagi → selisih = 0.
+  final nextMonth = start.month == 12 ? 1 : start.month + 1;
+  final nextYear = start.month == 12 ? start.year + 1 : start.year;
+  final end = _clampedDate(nextYear, nextMonth, paymentDate);
   return end.difference(start).inDays;
 }
 
