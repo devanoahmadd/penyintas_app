@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_categories_usecase.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 
 enum _Period { thisWeek, thisMonth, threeMonths, custom }
@@ -22,11 +27,12 @@ class TransactionFilterSheet extends StatefulWidget {
 class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
   static const double _maxNominal = 5000000;
 
-  late Set<TransactionCategory> _selectedCategories;
+  late Set<String> _selectedCategories;
   late _Period _selectedPeriod;
   late DateTime _customFrom;
   late DateTime _customTo;
   late RangeValues _nominalRange;
+  List<CategoryEntity> _allCategories = [];
 
   @override
   void initState() {
@@ -41,6 +47,17 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
       (s.maxAmount ?? _maxNominal).toDouble(),
     );
     _selectedPeriod = _inferPeriod(s.from, s.to);
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final result = await sl<GetCategoriesUseCase>().call(const NoParams());
+    result.fold(
+      (_) {},
+      (cats) {
+        if (mounted) setState(() => _allCategories = cats);
+      },
+    );
   }
 
   _Period _inferPeriod(DateTime from, DateTime to) {
@@ -100,46 +117,52 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                           fontWeight: FontWeight.w700,
                           color: textColor)),
                   const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: TransactionCategory.values.map((cat) {
-                      final isSelected = _selectedCategories.contains(cat);
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          if (isSelected) {
-                            _selectedCategories.remove(cat);
-                          } else {
-                            _selectedCategories.add(cat);
-                          }
-                        }),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.pill),
-                            border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : borderColor),
-                          ),
-                          child: Text(
-                            cat.label,
-                            style: AppTextStyles.label.copyWith(
-                              fontSize: 12,
-                              color: isSelected ? Colors.white : textColor,
+                  if (_allCategories.isEmpty)
+                    const SizedBox(height: 32)
+                  else
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: _allCategories.map((cat) {
+                        final isSelected =
+                            _selectedCategories.contains(cat.slug);
+                        final label =
+                            CategoryMetadata.resolveLabel(cat, context.l10n);
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            if (isSelected) {
+                              _selectedCategories.remove(cat.slug);
+                            } else {
+                              _selectedCategories.add(cat.slug);
+                            }
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.pill),
+                              border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : borderColor),
+                            ),
+                            child: Text(
+                              label,
+                              style: AppTextStyles.label.copyWith(
+                                fontSize: 12,
+                                color: isSelected ? Colors.white : textColor,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                        );
+                      }).toList(),
+                    ),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Periode',
                       style: AppTextStyles.label.copyWith(

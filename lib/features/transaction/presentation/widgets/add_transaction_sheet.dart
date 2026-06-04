@@ -8,7 +8,9 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 
@@ -41,10 +43,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final bloc = context.read<AddTransactionBloc>();
+      // Load categories for the current type first
+      bloc.add(const LoadTransactionCategories());
       final init = widget.initial;
       if (init != null) {
-        final bloc = context.read<AddTransactionBloc>();
         bloc.add(AmountChanged(init.amount));
+        // Pre-fill category slug from existing transaction
         bloc.add(CategorySelected(init.category));
         bloc.add(TypeSet(init.type));
         if (init.note != null && init.note!.isNotEmpty) {
@@ -590,23 +595,19 @@ class _CategoryGrid extends StatelessWidget {
   const _CategoryGrid({required this.isDark});
   final bool isDark;
 
-  static const _cats = [
-    TransactionCategory.food,
-    TransactionCategory.transport,
-    TransactionCategory.shopping,
-    TransactionCategory.health,
-    TransactionCategory.internet,
-    TransactionCategory.fixed,
-    TransactionCategory.other,
-  ];
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AddTransactionBloc, AddTransactionState>(
       builder: (context, state) {
-        final selected = state is AddTransactionInProgress
-            ? state.category
-            : TransactionCategory.food;
+        if (state is! AddTransactionInProgress) {
+          return const SizedBox.shrink();
+        }
+        final cats = state.availableCategories;
+        final selectedSlug = state.selectedCategory;
+
+        if (cats.isEmpty) {
+          return const SizedBox(height: 48);
+        }
 
         return GridView.count(
           crossAxisCount: 4,
@@ -614,14 +615,14 @@ class _CategoryGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
-          children: _cats
+          children: cats
               .map((cat) => _CategoryCell(
                     category: cat,
-                    isSelected: cat == selected,
+                    isSelected: cat.slug == selectedSlug,
                     isDark: isDark,
                     onTap: () => context
                         .read<AddTransactionBloc>()
-                        .add(CategorySelected(cat)),
+                        .add(CategorySelected(cat.slug)),
                   ))
               .toList(),
         );
@@ -637,7 +638,7 @@ class _CategoryCell extends StatelessWidget {
     required this.isDark,
     required this.onTap,
   });
-  final TransactionCategory category;
+  final CategoryEntity category;
   final bool isSelected;
   final bool isDark;
   final VoidCallback onTap;
@@ -647,6 +648,9 @@ class _CategoryCell extends StatelessWidget {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+
+    final (icon, _) = CategoryMetadata.of(category.slug);
+    final label = CategoryMetadata.resolveLabel(category, context.l10n);
 
     return GestureDetector(
       onTap: onTap,
@@ -663,13 +667,13 @@ class _CategoryCell extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _icon(category),
+              icon,
               size: 22,
               color: isSelected ? Colors.white : textColor,
             ),
             const SizedBox(height: 4),
             Text(
-              _label(category).toUpperCase(),
+              label.toUpperCase(),
               style: AppTextStyles.caption.copyWith(
                 fontSize: 10,
                 color: isSelected ? Colors.white : textColor,
@@ -682,48 +686,6 @@ class _CategoryCell extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static IconData _icon(TransactionCategory cat) {
-    switch (cat) {
-      case TransactionCategory.food:
-        return Icons.restaurant_outlined;
-      case TransactionCategory.transport:
-        return Icons.directions_bus_outlined;
-      case TransactionCategory.shopping:
-        return Icons.shopping_bag_outlined;
-      case TransactionCategory.health:
-        return Icons.favorite_border;
-      case TransactionCategory.internet:
-        return Icons.wifi_outlined;
-      case TransactionCategory.fixed:
-        return Icons.home_outlined;
-      case TransactionCategory.other:
-        return Icons.more_horiz_rounded;
-      case TransactionCategory.income:
-        return Icons.arrow_downward_rounded;
-    }
-  }
-
-  static String _label(TransactionCategory cat) {
-    switch (cat) {
-      case TransactionCategory.food:
-        return 'Makan';
-      case TransactionCategory.transport:
-        return 'Transport';
-      case TransactionCategory.shopping:
-        return 'Belanja';
-      case TransactionCategory.health:
-        return 'Kesehatan';
-      case TransactionCategory.internet:
-        return 'Internet';
-      case TransactionCategory.fixed:
-        return 'Kos';
-      case TransactionCategory.other:
-        return 'Lainnya';
-      case TransactionCategory.income:
-        return 'Masuk';
-    }
   }
 }
 

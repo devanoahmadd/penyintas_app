@@ -100,6 +100,11 @@ import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_u
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_categories_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/repositories/category_repository.dart';
+import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
+import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
 
 final sl = GetIt.instance;
 
@@ -110,6 +115,7 @@ Future<void> init({required AppDatabase db}) async {
   _initAuth();
   _initOnboarding();
   _initTransaction();
+  _initCategory(); // harus sebelum _initBudget (BudgetLimitsBloc depends on GetLimitableCategoriesUseCase)
   _initBudget();
   _initDashboard();
   _initSync();
@@ -218,7 +224,10 @@ void _initOnboarding() {
 
 void _initTransaction() {
   sl.registerFactory(
-    () => AddTransactionBloc(addTransaction: sl()),
+    () => AddTransactionBloc(
+      addTransaction: sl(),
+      getCategories: sl(),
+    ),
   );
   sl.registerFactory(
     () => TransactionListBloc(
@@ -259,6 +268,18 @@ void _initSync() {
       ));
 }
 
+void _initCategory() {
+  sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
+  sl.registerLazySingleton(() => GetLimitableCategoriesUseCase(sl()));
+
+  sl.registerLazySingleton<CategoryRepository>(
+    () => CategoryRepositoryImpl(sl()),
+  );
+  sl.registerLazySingleton<CategoryLocalDatasource>(
+    () => CategoryLocalDatasourceImpl(sl()),
+  );
+}
+
 void _initBudget() {
   sl.registerFactory(() => BudgetSettingsBloc(
         getBudgetSettings: sl(),
@@ -271,6 +292,7 @@ void _initBudget() {
         deleteBudgetLimit: sl(),
         getBudgetOverview: sl(),
         transactionRepository: sl(),
+        getLimitableCategories: sl(),
       ));
 
   sl.registerLazySingleton(() => GetBudgetSettingsUseCase(sl()));

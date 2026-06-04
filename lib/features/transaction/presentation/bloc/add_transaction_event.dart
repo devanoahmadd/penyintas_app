@@ -12,10 +12,10 @@ final class AmountChanged extends AddTransactionEvent {
 }
 
 final class CategorySelected extends AddTransactionEvent {
-  const CategorySelected(this.category);
-  final TransactionCategory category;
+  const CategorySelected(this.categorySlug);
+  final String categorySlug;
   @override
-  List<Object> get props => [category];
+  List<Object> get props => [categorySlug];
 }
 
 final class TypeToggled extends AddTransactionEvent {
@@ -56,4 +56,10 @@ final class GoalSelected extends AddTransactionEvent {
   final int? goalId;
   @override
   List<Object?> get props => [goalId];
+}
+
+final class LoadTransactionCategories extends AddTransactionEvent {
+  const LoadTransactionCategories();
+  @override
+  List<Object> get props => [];
 }
