@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:equatable/equatable.dart';
 
 /// Entitas kategori — built-in maupun custom buatan user.
@@ -60,7 +61,7 @@ class CategoryEntity extends Equatable {
     bool? isLimitable,
     String? type,
     int? sortOrder,
-    String? iconSlug,
+    Value<String?> iconSlug = const Value.absent(),
   }) => CategoryEntity(
     id: id ?? this.id,
     slug: slug ?? this.slug,
@@ -70,6 +71,6 @@ class CategoryEntity extends Equatable {
     isLimitable: isLimitable ?? this.isLimitable,
     type: type ?? this.type,
     sortOrder: sortOrder ?? this.sortOrder,
-    iconSlug: iconSlug ?? this.iconSlug,
+    iconSlug: iconSlug.present ? iconSlug.value : this.iconSlug,
   );
 }
