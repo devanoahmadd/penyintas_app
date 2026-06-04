@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/features/report/domain/entities/report_entity.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 void main() {
   final base = ReportEntity(

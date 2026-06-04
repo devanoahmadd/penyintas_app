@@ -9,7 +9,6 @@ import 'package:penyintas_app/features/report/data/datasources/report_local_data
 import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
 import 'package:penyintas_app/features/report/data/repositories/report_repository_impl.dart';
 import 'package:penyintas_app/features/report/domain/entities/report_entity.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 class MockReportLocalDatasource extends Mock implements ReportLocalDatasource {}
 

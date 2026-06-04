@@ -5,7 +5,6 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/features/report/domain/entities/report_entity.dart';
 import 'package:penyintas_app/features/report/domain/repositories/report_repository.dart';
 import 'package:penyintas_app/features/report/domain/usecases/get_monthly_report_usecase.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 class MockReportRepository extends Mock implements ReportRepository {}
 
