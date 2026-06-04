@@ -302,6 +302,28 @@ class AppLocalizations {
   // Categories (extended)
   String get categoryHealth => _t('category_health');
   String get categoryInternet => _t('category_internet');
+
+  // Manage categories
+  String get manageCategoriesTitle => _t('manage_categories_title');
+  String get manageCategoriesSectionBuiltIn => _t('manage_categories_section_built_in');
+  String get manageCategoriesSectionCustom => _t('manage_categories_section_custom');
+  String get manageCategoriesEmpty => _t('manage_categories_empty');
+  String get manageCategoriesEmptyHint => _t('manage_categories_empty_hint');
+  String get manageCategoriesDeleteTitle => _t('manage_categories_delete_title');
+  String manageCategoriesDeleteBody(String name) =>
+      _t('manage_categories_delete_body').replaceAll('{name}', name);
+  String get manageCategoriesDeleteConfirm => _t('manage_categories_delete_confirm');
+  String get addCategoryTitle => _t('add_category_title');
+  String get editCategoryTitle => _t('edit_category_title');
+  String get addCategoryNameLabel => _t('add_category_name_label');
+  String get addCategoryNameHint => _t('add_category_name_hint');
+  String get addCategoryIconLabel => _t('add_category_icon_label');
+  String get addCategoryLimitableLabel => _t('add_category_limitable_label');
+  String get addCategoryLimitableSub => _t('add_category_limitable_sub');
+  String get categorySuccessCreated => _t('category_success_created');
+  String get categorySuccessUpdated => _t('category_success_updated');
+  String get categorySuccessDeleted => _t('category_success_deleted');
+  String get categoryErrorDuplicate => _t('category_error_duplicate');
 }
 
 class _AppLocalizationsDelegate
