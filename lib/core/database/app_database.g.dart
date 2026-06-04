@@ -2661,18 +2661,16 @@ class $BudgetLimitsTable extends BudgetLimits
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _cycleTypeMeta = const VerificationMeta(
-    'cycleType',
-  );
   @override
-  late final GeneratedColumn<String> cycleType = GeneratedColumn<String>(
-    'cycle_type',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('cycle'),
-  );
+  late final GeneratedColumnWithTypeConverter<BudgetCycle, String> cycleType =
+      GeneratedColumn<String>(
+        'cycle_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('cycle'),
+      ).withConverter<BudgetCycle>($BudgetLimitsTable.$convertercycleType);
   static const VerificationMeta _isEnabledMeta = const VerificationMeta(
     'isEnabled',
   );
@@ -2742,12 +2740,6 @@ class $BudgetLimitsTable extends BudgetLimits
     } else if (isInserting) {
       context.missing(_limitAmountMeta);
     }
-    if (data.containsKey('cycle_type')) {
-      context.handle(
-        _cycleTypeMeta,
-        cycleType.isAcceptableOrUnknown(data['cycle_type']!, _cycleTypeMeta),
-      );
-    }
     if (data.containsKey('is_enabled')) {
       context.handle(
         _isEnabledMeta,
@@ -2783,10 +2775,12 @@ class $BudgetLimitsTable extends BudgetLimits
         DriftSqlType.int,
         data['${effectivePrefix}limit_amount'],
       )!,
-      cycleType: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}cycle_type'],
-      )!,
+      cycleType: $BudgetLimitsTable.$convertercycleType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}cycle_type'],
+        )!,
+      ),
       isEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_enabled'],
@@ -2802,13 +2796,16 @@ class $BudgetLimitsTable extends BudgetLimits
   $BudgetLimitsTable createAlias(String alias) {
     return $BudgetLimitsTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<BudgetCycle, String> $convertercycleType =
+      const BudgetCycleConverter();
 }
 
 class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
   final int id;
   final String category;
   final int limitAmount;
-  final String cycleType;
+  final BudgetCycle cycleType;
   final bool isEnabled;
   final DateTime updatedAt;
   const BudgetLimit({
@@ -2825,7 +2822,11 @@ class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
     map['id'] = Variable<int>(id);
     map['category'] = Variable<String>(category);
     map['limit_amount'] = Variable<int>(limitAmount);
-    map['cycle_type'] = Variable<String>(cycleType);
+    {
+      map['cycle_type'] = Variable<String>(
+        $BudgetLimitsTable.$convertercycleType.toSql(cycleType),
+      );
+    }
     map['is_enabled'] = Variable<bool>(isEnabled);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2851,7 +2852,7 @@ class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
       id: serializer.fromJson<int>(json['id']),
       category: serializer.fromJson<String>(json['category']),
       limitAmount: serializer.fromJson<int>(json['limitAmount']),
-      cycleType: serializer.fromJson<String>(json['cycleType']),
+      cycleType: serializer.fromJson<BudgetCycle>(json['cycleType']),
       isEnabled: serializer.fromJson<bool>(json['isEnabled']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2863,7 +2864,7 @@ class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
       'id': serializer.toJson<int>(id),
       'category': serializer.toJson<String>(category),
       'limitAmount': serializer.toJson<int>(limitAmount),
-      'cycleType': serializer.toJson<String>(cycleType),
+      'cycleType': serializer.toJson<BudgetCycle>(cycleType),
       'isEnabled': serializer.toJson<bool>(isEnabled),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2873,7 +2874,7 @@ class BudgetLimit extends DataClass implements Insertable<BudgetLimit> {
     int? id,
     String? category,
     int? limitAmount,
-    String? cycleType,
+    BudgetCycle? cycleType,
     bool? isEnabled,
     DateTime? updatedAt,
   }) => BudgetLimit(
@@ -2929,7 +2930,7 @@ class BudgetLimitsCompanion extends UpdateCompanion<BudgetLimit> {
   final Value<int> id;
   final Value<String> category;
   final Value<int> limitAmount;
-  final Value<String> cycleType;
+  final Value<BudgetCycle> cycleType;
   final Value<bool> isEnabled;
   final Value<DateTime> updatedAt;
   const BudgetLimitsCompanion({
@@ -2972,7 +2973,7 @@ class BudgetLimitsCompanion extends UpdateCompanion<BudgetLimit> {
     Value<int>? id,
     Value<String>? category,
     Value<int>? limitAmount,
-    Value<String>? cycleType,
+    Value<BudgetCycle>? cycleType,
     Value<bool>? isEnabled,
     Value<DateTime>? updatedAt,
   }) {
@@ -2999,7 +3000,9 @@ class BudgetLimitsCompanion extends UpdateCompanion<BudgetLimit> {
       map['limit_amount'] = Variable<int>(limitAmount.value);
     }
     if (cycleType.present) {
-      map['cycle_type'] = Variable<String>(cycleType.value);
+      map['cycle_type'] = Variable<String>(
+        $BudgetLimitsTable.$convertercycleType.toSql(cycleType.value),
+      );
     }
     if (isEnabled.present) {
       map['is_enabled'] = Variable<bool>(isEnabled.value);
@@ -3024,6 +3027,520 @@ class BudgetLimitsCompanion extends UpdateCompanion<BudgetLimit> {
   }
 }
 
+class $CategoriesTable extends Categories
+    with TableInfo<$CategoriesTable, Category> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _slugMeta = const VerificationMeta('slug');
+  @override
+  late final GeneratedColumn<String> slug = GeneratedColumn<String>(
+    'slug',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelKeyMeta = const VerificationMeta(
+    'labelKey',
+  );
+  @override
+  late final GeneratedColumn<String> labelKey = GeneratedColumn<String>(
+    'label_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelOverrideMeta = const VerificationMeta(
+    'labelOverride',
+  );
+  @override
+  late final GeneratedColumn<String> labelOverride = GeneratedColumn<String>(
+    'label_override',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isBuiltInMeta = const VerificationMeta(
+    'isBuiltIn',
+  );
+  @override
+  late final GeneratedColumn<bool> isBuiltIn = GeneratedColumn<bool>(
+    'is_built_in',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_built_in" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _isLimitableMeta = const VerificationMeta(
+    'isLimitable',
+  );
+  @override
+  late final GeneratedColumn<bool> isLimitable = GeneratedColumn<bool>(
+    'is_limitable',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_limitable" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('expense'),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    slug,
+    labelKey,
+    labelOverride,
+    isBuiltIn,
+    isLimitable,
+    type,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categories';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Category> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('slug')) {
+      context.handle(
+        _slugMeta,
+        slug.isAcceptableOrUnknown(data['slug']!, _slugMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slugMeta);
+    }
+    if (data.containsKey('label_key')) {
+      context.handle(
+        _labelKeyMeta,
+        labelKey.isAcceptableOrUnknown(data['label_key']!, _labelKeyMeta),
+      );
+    }
+    if (data.containsKey('label_override')) {
+      context.handle(
+        _labelOverrideMeta,
+        labelOverride.isAcceptableOrUnknown(
+          data['label_override']!,
+          _labelOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_built_in')) {
+      context.handle(
+        _isBuiltInMeta,
+        isBuiltIn.isAcceptableOrUnknown(data['is_built_in']!, _isBuiltInMeta),
+      );
+    }
+    if (data.containsKey('is_limitable')) {
+      context.handle(
+        _isLimitableMeta,
+        isLimitable.isAcceptableOrUnknown(
+          data['is_limitable']!,
+          _isLimitableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {slug},
+  ];
+  @override
+  Category map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Category(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      slug: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slug'],
+      )!,
+      labelKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label_key'],
+      ),
+      labelOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label_override'],
+      ),
+      isBuiltIn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_built_in'],
+      )!,
+      isLimitable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_limitable'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $CategoriesTable createAlias(String alias) {
+    return $CategoriesTable(attachedDatabase, alias);
+  }
+}
+
+class Category extends DataClass implements Insertable<Category> {
+  final int id;
+  final String slug;
+  final String? labelKey;
+  final String? labelOverride;
+  final bool isBuiltIn;
+  final bool isLimitable;
+  final String type;
+  final int sortOrder;
+  const Category({
+    required this.id,
+    required this.slug,
+    this.labelKey,
+    this.labelOverride,
+    required this.isBuiltIn,
+    required this.isLimitable,
+    required this.type,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['slug'] = Variable<String>(slug);
+    if (!nullToAbsent || labelKey != null) {
+      map['label_key'] = Variable<String>(labelKey);
+    }
+    if (!nullToAbsent || labelOverride != null) {
+      map['label_override'] = Variable<String>(labelOverride);
+    }
+    map['is_built_in'] = Variable<bool>(isBuiltIn);
+    map['is_limitable'] = Variable<bool>(isLimitable);
+    map['type'] = Variable<String>(type);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  CategoriesCompanion toCompanion(bool nullToAbsent) {
+    return CategoriesCompanion(
+      id: Value(id),
+      slug: Value(slug),
+      labelKey: labelKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(labelKey),
+      labelOverride: labelOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(labelOverride),
+      isBuiltIn: Value(isBuiltIn),
+      isLimitable: Value(isLimitable),
+      type: Value(type),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory Category.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Category(
+      id: serializer.fromJson<int>(json['id']),
+      slug: serializer.fromJson<String>(json['slug']),
+      labelKey: serializer.fromJson<String?>(json['labelKey']),
+      labelOverride: serializer.fromJson<String?>(json['labelOverride']),
+      isBuiltIn: serializer.fromJson<bool>(json['isBuiltIn']),
+      isLimitable: serializer.fromJson<bool>(json['isLimitable']),
+      type: serializer.fromJson<String>(json['type']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'slug': serializer.toJson<String>(slug),
+      'labelKey': serializer.toJson<String?>(labelKey),
+      'labelOverride': serializer.toJson<String?>(labelOverride),
+      'isBuiltIn': serializer.toJson<bool>(isBuiltIn),
+      'isLimitable': serializer.toJson<bool>(isLimitable),
+      'type': serializer.toJson<String>(type),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  Category copyWith({
+    int? id,
+    String? slug,
+    Value<String?> labelKey = const Value.absent(),
+    Value<String?> labelOverride = const Value.absent(),
+    bool? isBuiltIn,
+    bool? isLimitable,
+    String? type,
+    int? sortOrder,
+  }) => Category(
+    id: id ?? this.id,
+    slug: slug ?? this.slug,
+    labelKey: labelKey.present ? labelKey.value : this.labelKey,
+    labelOverride: labelOverride.present
+        ? labelOverride.value
+        : this.labelOverride,
+    isBuiltIn: isBuiltIn ?? this.isBuiltIn,
+    isLimitable: isLimitable ?? this.isLimitable,
+    type: type ?? this.type,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  Category copyWithCompanion(CategoriesCompanion data) {
+    return Category(
+      id: data.id.present ? data.id.value : this.id,
+      slug: data.slug.present ? data.slug.value : this.slug,
+      labelKey: data.labelKey.present ? data.labelKey.value : this.labelKey,
+      labelOverride: data.labelOverride.present
+          ? data.labelOverride.value
+          : this.labelOverride,
+      isBuiltIn: data.isBuiltIn.present ? data.isBuiltIn.value : this.isBuiltIn,
+      isLimitable: data.isLimitable.present
+          ? data.isLimitable.value
+          : this.isLimitable,
+      type: data.type.present ? data.type.value : this.type,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Category(')
+          ..write('id: $id, ')
+          ..write('slug: $slug, ')
+          ..write('labelKey: $labelKey, ')
+          ..write('labelOverride: $labelOverride, ')
+          ..write('isBuiltIn: $isBuiltIn, ')
+          ..write('isLimitable: $isLimitable, ')
+          ..write('type: $type, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    slug,
+    labelKey,
+    labelOverride,
+    isBuiltIn,
+    isLimitable,
+    type,
+    sortOrder,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Category &&
+          other.id == this.id &&
+          other.slug == this.slug &&
+          other.labelKey == this.labelKey &&
+          other.labelOverride == this.labelOverride &&
+          other.isBuiltIn == this.isBuiltIn &&
+          other.isLimitable == this.isLimitable &&
+          other.type == this.type &&
+          other.sortOrder == this.sortOrder);
+}
+
+class CategoriesCompanion extends UpdateCompanion<Category> {
+  final Value<int> id;
+  final Value<String> slug;
+  final Value<String?> labelKey;
+  final Value<String?> labelOverride;
+  final Value<bool> isBuiltIn;
+  final Value<bool> isLimitable;
+  final Value<String> type;
+  final Value<int> sortOrder;
+  const CategoriesCompanion({
+    this.id = const Value.absent(),
+    this.slug = const Value.absent(),
+    this.labelKey = const Value.absent(),
+    this.labelOverride = const Value.absent(),
+    this.isBuiltIn = const Value.absent(),
+    this.isLimitable = const Value.absent(),
+    this.type = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  });
+  CategoriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String slug,
+    this.labelKey = const Value.absent(),
+    this.labelOverride = const Value.absent(),
+    this.isBuiltIn = const Value.absent(),
+    this.isLimitable = const Value.absent(),
+    this.type = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  }) : slug = Value(slug);
+  static Insertable<Category> custom({
+    Expression<int>? id,
+    Expression<String>? slug,
+    Expression<String>? labelKey,
+    Expression<String>? labelOverride,
+    Expression<bool>? isBuiltIn,
+    Expression<bool>? isLimitable,
+    Expression<String>? type,
+    Expression<int>? sortOrder,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (slug != null) 'slug': slug,
+      if (labelKey != null) 'label_key': labelKey,
+      if (labelOverride != null) 'label_override': labelOverride,
+      if (isBuiltIn != null) 'is_built_in': isBuiltIn,
+      if (isLimitable != null) 'is_limitable': isLimitable,
+      if (type != null) 'type': type,
+      if (sortOrder != null) 'sort_order': sortOrder,
+    });
+  }
+
+  CategoriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? slug,
+    Value<String?>? labelKey,
+    Value<String?>? labelOverride,
+    Value<bool>? isBuiltIn,
+    Value<bool>? isLimitable,
+    Value<String>? type,
+    Value<int>? sortOrder,
+  }) {
+    return CategoriesCompanion(
+      id: id ?? this.id,
+      slug: slug ?? this.slug,
+      labelKey: labelKey ?? this.labelKey,
+      labelOverride: labelOverride ?? this.labelOverride,
+      isBuiltIn: isBuiltIn ?? this.isBuiltIn,
+      isLimitable: isLimitable ?? this.isLimitable,
+      type: type ?? this.type,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (slug.present) {
+      map['slug'] = Variable<String>(slug.value);
+    }
+    if (labelKey.present) {
+      map['label_key'] = Variable<String>(labelKey.value);
+    }
+    if (labelOverride.present) {
+      map['label_override'] = Variable<String>(labelOverride.value);
+    }
+    if (isBuiltIn.present) {
+      map['is_built_in'] = Variable<bool>(isBuiltIn.value);
+    }
+    if (isLimitable.present) {
+      map['is_limitable'] = Variable<bool>(isLimitable.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('slug: $slug, ')
+          ..write('labelKey: $labelKey, ')
+          ..write('labelOverride: $labelOverride, ')
+          ..write('isBuiltIn: $isBuiltIn, ')
+          ..write('isLimitable: $isLimitable, ')
+          ..write('type: $type, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3032,6 +3549,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $GoalsTable goals = $GoalsTable(this);
   late final $BudgetLimitsTable budgetLimits = $BudgetLimitsTable(this);
+  late final $CategoriesTable categories = $CategoriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3042,6 +3560,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     goals,
     budgetLimits,
+    categories,
   ];
 }
 
@@ -4301,7 +4820,7 @@ typedef $$BudgetLimitsTableCreateCompanionBuilder =
       Value<int> id,
       required String category,
       required int limitAmount,
-      Value<String> cycleType,
+      Value<BudgetCycle> cycleType,
       Value<bool> isEnabled,
       required DateTime updatedAt,
     });
@@ -4310,7 +4829,7 @@ typedef $$BudgetLimitsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> category,
       Value<int> limitAmount,
-      Value<String> cycleType,
+      Value<BudgetCycle> cycleType,
       Value<bool> isEnabled,
       Value<DateTime> updatedAt,
     });
@@ -4339,9 +4858,10 @@ class $$BudgetLimitsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get cycleType => $composableBuilder(
+  ColumnWithTypeConverterFilters<BudgetCycle, BudgetCycle, String>
+  get cycleType => $composableBuilder(
     column: $table.cycleType,
-    builder: (column) => ColumnFilters(column),
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<bool> get isEnabled => $composableBuilder(
@@ -4415,7 +4935,7 @@ class $$BudgetLimitsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get cycleType =>
+  GeneratedColumnWithTypeConverter<BudgetCycle, String> get cycleType =>
       $composableBuilder(column: $table.cycleType, builder: (column) => column);
 
   GeneratedColumn<bool> get isEnabled =>
@@ -4459,7 +4979,7 @@ class $$BudgetLimitsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> category = const Value.absent(),
                 Value<int> limitAmount = const Value.absent(),
-                Value<String> cycleType = const Value.absent(),
+                Value<BudgetCycle> cycleType = const Value.absent(),
                 Value<bool> isEnabled = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => BudgetLimitsCompanion(
@@ -4475,7 +4995,7 @@ class $$BudgetLimitsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String category,
                 required int limitAmount,
-                Value<String> cycleType = const Value.absent(),
+                Value<BudgetCycle> cycleType = const Value.absent(),
                 Value<bool> isEnabled = const Value.absent(),
                 required DateTime updatedAt,
               }) => BudgetLimitsCompanion.insert(
@@ -4511,6 +5031,255 @@ typedef $$BudgetLimitsTableProcessedTableManager =
       BudgetLimit,
       PrefetchHooks Function()
     >;
+typedef $$CategoriesTableCreateCompanionBuilder =
+    CategoriesCompanion Function({
+      Value<int> id,
+      required String slug,
+      Value<String?> labelKey,
+      Value<String?> labelOverride,
+      Value<bool> isBuiltIn,
+      Value<bool> isLimitable,
+      Value<String> type,
+      Value<int> sortOrder,
+    });
+typedef $$CategoriesTableUpdateCompanionBuilder =
+    CategoriesCompanion Function({
+      Value<int> id,
+      Value<String> slug,
+      Value<String?> labelKey,
+      Value<String?> labelOverride,
+      Value<bool> isBuiltIn,
+      Value<bool> isLimitable,
+      Value<String> type,
+      Value<int> sortOrder,
+    });
+
+class $$CategoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slug => $composableBuilder(
+    column: $table.slug,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get labelKey => $composableBuilder(
+    column: $table.labelKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get labelOverride => $composableBuilder(
+    column: $table.labelOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBuiltIn => $composableBuilder(
+    column: $table.isBuiltIn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isLimitable => $composableBuilder(
+    column: $table.isLimitable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CategoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slug => $composableBuilder(
+    column: $table.slug,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get labelKey => $composableBuilder(
+    column: $table.labelKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get labelOverride => $composableBuilder(
+    column: $table.labelOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isBuiltIn => $composableBuilder(
+    column: $table.isBuiltIn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isLimitable => $composableBuilder(
+    column: $table.isLimitable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CategoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get slug =>
+      $composableBuilder(column: $table.slug, builder: (column) => column);
+
+  GeneratedColumn<String> get labelKey =>
+      $composableBuilder(column: $table.labelKey, builder: (column) => column);
+
+  GeneratedColumn<String> get labelOverride => $composableBuilder(
+    column: $table.labelOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isBuiltIn =>
+      $composableBuilder(column: $table.isBuiltIn, builder: (column) => column);
+
+  GeneratedColumn<bool> get isLimitable => $composableBuilder(
+    column: $table.isLimitable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+}
+
+class $$CategoriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoriesTable,
+          Category,
+          $$CategoriesTableFilterComposer,
+          $$CategoriesTableOrderingComposer,
+          $$CategoriesTableAnnotationComposer,
+          $$CategoriesTableCreateCompanionBuilder,
+          $$CategoriesTableUpdateCompanionBuilder,
+          (Category, BaseReferences<_$AppDatabase, $CategoriesTable, Category>),
+          Category,
+          PrefetchHooks Function()
+        > {
+  $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> slug = const Value.absent(),
+                Value<String?> labelKey = const Value.absent(),
+                Value<String?> labelOverride = const Value.absent(),
+                Value<bool> isBuiltIn = const Value.absent(),
+                Value<bool> isLimitable = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CategoriesCompanion(
+                id: id,
+                slug: slug,
+                labelKey: labelKey,
+                labelOverride: labelOverride,
+                isBuiltIn: isBuiltIn,
+                isLimitable: isLimitable,
+                type: type,
+                sortOrder: sortOrder,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String slug,
+                Value<String?> labelKey = const Value.absent(),
+                Value<String?> labelOverride = const Value.absent(),
+                Value<bool> isBuiltIn = const Value.absent(),
+                Value<bool> isLimitable = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CategoriesCompanion.insert(
+                id: id,
+                slug: slug,
+                labelKey: labelKey,
+                labelOverride: labelOverride,
+                isBuiltIn: isBuiltIn,
+                isLimitable: isLimitable,
+                type: type,
+                sortOrder: sortOrder,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CategoriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoriesTable,
+      Category,
+      $$CategoriesTableFilterComposer,
+      $$CategoriesTableOrderingComposer,
+      $$CategoriesTableAnnotationComposer,
+      $$CategoriesTableCreateCompanionBuilder,
+      $$CategoriesTableUpdateCompanionBuilder,
+      (Category, BaseReferences<_$AppDatabase, $CategoriesTable, Category>),
+      Category,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4525,4 +5294,6 @@ class $AppDatabaseManager {
       $$GoalsTableTableManager(_db, _db.goals);
   $$BudgetLimitsTableTableManager get budgetLimits =>
       $$BudgetLimitsTableTableManager(_db, _db.budgetLimits);
+  $$CategoriesTableTableManager get categories =>
+      $$CategoriesTableTableManager(_db, _db.categories);
 }
