@@ -273,7 +273,14 @@ class _PageHeader extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.category_outlined),
                 tooltip: 'Kelola kategori',
-                onPressed: () => context.push('/budget/categories'),
+                onPressed: () async {
+                  await context.push('/budget/categories');
+                  if (context.mounted) {
+                    context
+                        .read<BudgetLimitsBloc>()
+                        .add(const LoadBudgetLimits());
+                  }
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.settings_outlined),

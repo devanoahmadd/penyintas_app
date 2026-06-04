@@ -8,6 +8,7 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
@@ -345,7 +346,14 @@ class _BudgetEditSettingsPageState
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/budget/categories'),
+                  onTap: () async {
+                    await context.push('/budget/categories');
+                    if (context.mounted) {
+                      context
+                          .read<BudgetLimitsBloc>()
+                          .add(const LoadBudgetLimits());
+                    }
+                  },
                 ),
                 const SizedBox(height: AppSpacing.lg),
 

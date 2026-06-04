@@ -45,6 +45,18 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
     }
     final existing = widget.existing;
     final slug = existing?.slug ?? _generateSlug(name);
+
+    // Guard against all-special-char names that produce empty slug
+    if (slug.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Nama harus mengandung minimal satu huruf atau angka.'),
+        ),
+      );
+      return;
+    }
+
     final entity = CategoryEntity(
       id: existing?.id ?? 0,
       slug: slug,
