@@ -11,6 +11,7 @@ class CategoryModel extends CategoryEntity {
     required super.isLimitable,
     required super.type,
     required super.sortOrder,
+    super.iconSlug,
   });
 
   factory CategoryModel.fromRow(Category row) => CategoryModel(
@@ -22,5 +23,6 @@ class CategoryModel extends CategoryEntity {
         isLimitable: row.isLimitable,
         type: row.type,
         sortOrder: row.sortOrder,
+        iconSlug: row.iconSlug,
       );
 }

@@ -3129,6 +3129,17 @@ class $CategoriesTable extends Categories
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _iconSlugMeta = const VerificationMeta(
+    'iconSlug',
+  );
+  @override
+  late final GeneratedColumn<String> iconSlug = GeneratedColumn<String>(
+    'icon_slug',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3139,6 +3150,7 @@ class $CategoriesTable extends Categories
     isLimitable,
     type,
     sortOrder,
+    iconSlug,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3205,6 +3217,12 @@ class $CategoriesTable extends Categories
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('icon_slug')) {
+      context.handle(
+        _iconSlugMeta,
+        iconSlug.isAcceptableOrUnknown(data['icon_slug']!, _iconSlugMeta),
+      );
+    }
     return context;
   }
 
@@ -3250,6 +3268,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      iconSlug: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_slug'],
+      ),
     );
   }
 
@@ -3268,6 +3290,7 @@ class Category extends DataClass implements Insertable<Category> {
   final bool isLimitable;
   final String type;
   final int sortOrder;
+  final String? iconSlug;
   const Category({
     required this.id,
     required this.slug,
@@ -3277,6 +3300,7 @@ class Category extends DataClass implements Insertable<Category> {
     required this.isLimitable,
     required this.type,
     required this.sortOrder,
+    this.iconSlug,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3293,6 +3317,9 @@ class Category extends DataClass implements Insertable<Category> {
     map['is_limitable'] = Variable<bool>(isLimitable);
     map['type'] = Variable<String>(type);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || iconSlug != null) {
+      map['icon_slug'] = Variable<String>(iconSlug);
+    }
     return map;
   }
 
@@ -3310,6 +3337,9 @@ class Category extends DataClass implements Insertable<Category> {
       isLimitable: Value(isLimitable),
       type: Value(type),
       sortOrder: Value(sortOrder),
+      iconSlug: iconSlug == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconSlug),
     );
   }
 
@@ -3327,6 +3357,7 @@ class Category extends DataClass implements Insertable<Category> {
       isLimitable: serializer.fromJson<bool>(json['isLimitable']),
       type: serializer.fromJson<String>(json['type']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      iconSlug: serializer.fromJson<String?>(json['iconSlug']),
     );
   }
   @override
@@ -3341,6 +3372,7 @@ class Category extends DataClass implements Insertable<Category> {
       'isLimitable': serializer.toJson<bool>(isLimitable),
       'type': serializer.toJson<String>(type),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'iconSlug': serializer.toJson<String?>(iconSlug),
     };
   }
 
@@ -3353,6 +3385,7 @@ class Category extends DataClass implements Insertable<Category> {
     bool? isLimitable,
     String? type,
     int? sortOrder,
+    Value<String?> iconSlug = const Value.absent(),
   }) => Category(
     id: id ?? this.id,
     slug: slug ?? this.slug,
@@ -3364,6 +3397,7 @@ class Category extends DataClass implements Insertable<Category> {
     isLimitable: isLimitable ?? this.isLimitable,
     type: type ?? this.type,
     sortOrder: sortOrder ?? this.sortOrder,
+    iconSlug: iconSlug.present ? iconSlug.value : this.iconSlug,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -3379,6 +3413,7 @@ class Category extends DataClass implements Insertable<Category> {
           : this.isLimitable,
       type: data.type.present ? data.type.value : this.type,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      iconSlug: data.iconSlug.present ? data.iconSlug.value : this.iconSlug,
     );
   }
 
@@ -3392,7 +3427,8 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('isBuiltIn: $isBuiltIn, ')
           ..write('isLimitable: $isLimitable, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('iconSlug: $iconSlug')
           ..write(')'))
         .toString();
   }
@@ -3407,6 +3443,7 @@ class Category extends DataClass implements Insertable<Category> {
     isLimitable,
     type,
     sortOrder,
+    iconSlug,
   );
   @override
   bool operator ==(Object other) =>
@@ -3419,7 +3456,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.isBuiltIn == this.isBuiltIn &&
           other.isLimitable == this.isLimitable &&
           other.type == this.type &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.iconSlug == this.iconSlug);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -3431,6 +3469,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<bool> isLimitable;
   final Value<String> type;
   final Value<int> sortOrder;
+  final Value<String?> iconSlug;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.slug = const Value.absent(),
@@ -3440,6 +3479,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.isLimitable = const Value.absent(),
     this.type = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.iconSlug = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
@@ -3450,6 +3490,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.isLimitable = const Value.absent(),
     this.type = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.iconSlug = const Value.absent(),
   }) : slug = Value(slug);
   static Insertable<Category> custom({
     Expression<int>? id,
@@ -3460,6 +3501,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<bool>? isLimitable,
     Expression<String>? type,
     Expression<int>? sortOrder,
+    Expression<String>? iconSlug,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3470,6 +3512,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (isLimitable != null) 'is_limitable': isLimitable,
       if (type != null) 'type': type,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (iconSlug != null) 'icon_slug': iconSlug,
     });
   }
 
@@ -3482,6 +3525,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<bool>? isLimitable,
     Value<String>? type,
     Value<int>? sortOrder,
+    Value<String?>? iconSlug,
   }) {
     return CategoriesCompanion(
       id: id ?? this.id,
@@ -3492,6 +3536,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       isLimitable: isLimitable ?? this.isLimitable,
       type: type ?? this.type,
       sortOrder: sortOrder ?? this.sortOrder,
+      iconSlug: iconSlug ?? this.iconSlug,
     );
   }
 
@@ -3522,6 +3567,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (iconSlug.present) {
+      map['icon_slug'] = Variable<String>(iconSlug.value);
+    }
     return map;
   }
 
@@ -3535,7 +3583,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('isBuiltIn: $isBuiltIn, ')
           ..write('isLimitable: $isLimitable, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('iconSlug: $iconSlug')
           ..write(')'))
         .toString();
   }
@@ -5041,6 +5090,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<bool> isLimitable,
       Value<String> type,
       Value<int> sortOrder,
+      Value<String?> iconSlug,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
     CategoriesCompanion Function({
@@ -5052,6 +5102,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<bool> isLimitable,
       Value<String> type,
       Value<int> sortOrder,
+      Value<String?> iconSlug,
     });
 
 class $$CategoriesTableFilterComposer
@@ -5100,6 +5151,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconSlug => $composableBuilder(
+    column: $table.iconSlug,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5152,6 +5208,11 @@ class $$CategoriesTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get iconSlug => $composableBuilder(
+    column: $table.iconSlug,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -5190,6 +5251,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get iconSlug =>
+      $composableBuilder(column: $table.iconSlug, builder: (column) => column);
 }
 
 class $$CategoriesTableTableManager
@@ -5228,6 +5292,7 @@ class $$CategoriesTableTableManager
                 Value<bool> isLimitable = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> iconSlug = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
                 slug: slug,
@@ -5237,6 +5302,7 @@ class $$CategoriesTableTableManager
                 isLimitable: isLimitable,
                 type: type,
                 sortOrder: sortOrder,
+                iconSlug: iconSlug,
               ),
           createCompanionCallback:
               ({
@@ -5248,6 +5314,7 @@ class $$CategoriesTableTableManager
                 Value<bool> isLimitable = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> iconSlug = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
                 slug: slug,
@@ -5257,6 +5324,7 @@ class $$CategoriesTableTableManager
                 isLimitable: isLimitable,
                 type: type,
                 sortOrder: sortOrder,
+                iconSlug: iconSlug,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

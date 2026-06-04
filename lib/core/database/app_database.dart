@@ -110,7 +110,7 @@ class Goals extends Table {
 
 /// Kategori transaksi — built-in dan custom buatan user.
 /// Built-in: label via labelKey (l10n). Custom: label via labelOverride.
-/// Icon dan warna tidak disimpan di DB — lihat CategoryMetadata di Dart.
+/// iconSlug disimpan di DB untuk custom kategori (null = built-in, gunakan CategoryMetadata).
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get slug => text()(); // unique key for category identifier
@@ -120,6 +120,7 @@ class Categories extends Table {
   BoolColumn get isLimitable => boolean().withDefault(const Constant(false))();
   TextColumn get type => text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get iconSlug => text().nullable()(); // null=built-in, diisi=custom
 
   @override
   List<Set<Column>> get uniqueKeys => [
@@ -148,7 +149,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -271,6 +272,12 @@ class AppDatabase extends _$AppDatabase {
             'INSERT OR IGNORE INTO categories VALUES $row',
           );
         }
+      }
+      if (from < 8) {
+        // Fase 3C: tambah kolom iconSlug untuk custom kategori
+        await m.database.customStatement(
+          'ALTER TABLE categories ADD COLUMN icon_slug TEXT',
+        );
       }
     },
   );
