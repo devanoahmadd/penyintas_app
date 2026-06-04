@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -330,7 +331,23 @@ class _BudgetEditSettingsPageState
                 // ── Preview card ─────────────────────────────────────────
                 _PreviewCard(
                     dailyBudget: _dailyPreview, isDark: isDark),
-                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Kelola Kategori ───────────────────────────────────────
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Kelola Kategori'),
+                  subtitle: Text(
+                    'Tambah atau hapus kategori kustom',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/budget/categories'),
+                ),
+                const SizedBox(height: AppSpacing.lg),
 
                 // ── Save button ──────────────────────────────────────────
                 PrimaryButton(

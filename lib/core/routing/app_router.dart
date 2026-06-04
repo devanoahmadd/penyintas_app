@@ -30,6 +30,7 @@ import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bl
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/pages/budget_edit_settings_page.dart';
 import 'package:penyintas_app/features/budget/presentation/pages/budget_overview_page.dart';
+import 'package:penyintas_app/features/budget/presentation/pages/manage_categories_page.dart';
 
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
@@ -145,6 +146,10 @@ GoRouter createAppRouter() => GoRouter(
               child: const BudgetEditSettingsPage(),
             ),
           ),
+        ),
+        GoRoute(
+          path: 'categories',
+          builder: (context, state) => const ManageCategoriesPage(),
         ),
       ],
     ),

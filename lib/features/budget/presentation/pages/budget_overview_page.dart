@@ -267,10 +267,20 @@ class _PageHeader extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Atur anggaran',
-            onPressed: onSettingsTap,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.category_outlined),
+                tooltip: 'Kelola kategori',
+                onPressed: () => context.push('/budget/categories'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Atur anggaran',
+                onPressed: onSettingsTap,
+              ),
+            ],
           ),
         ],
       ),
