@@ -13,12 +13,13 @@ import 'package:penyintas_app/features/budget/presentation/widgets/budget_alloca
 import 'package:penyintas_app/features/budget/presentation/widgets/budget_limit_card.dart';
 import 'package:penyintas_app/features/budget/presentation/widgets/budget_overview_skeleton.dart';
 import 'package:penyintas_app/features/budget/presentation/widgets/budget_summary_card.dart';
-import 'package:penyintas_app/features/budget/presentation/widgets/category_limit_sheet.dart'
-    show CategoryLimitSheet, categoryIcon;
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
+import 'package:penyintas_app/features/budget/presentation/widgets/category_limit_sheet.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
@@ -47,13 +48,15 @@ class BudgetOverviewPage extends StatelessWidget {
 
     if (saved == true && context.mounted) {
       sl<GoalBloc>().add(const LoadGoals());
+      // Refresh overview agar angka budget ikut update setelah transaksi baru
+      context.read<BudgetLimitsBloc>().add(const LoadBudgetLimits());
     }
   }
 
   // ── Limit sheet ───────────────────────────────────────────────────────────
   void _showLimitSheet(
     BuildContext context,
-    TransactionCategory category, {
+    CategoryEntity category, {
     BudgetLimitEntity? existing,
   }) {
     showModalBottomSheet(
@@ -76,7 +79,7 @@ class BudgetOverviewPage extends StatelessWidget {
 
   // ── Category picker sheet — icon grid ────────────────────────────────────
   void _showAddPicker(
-      BuildContext context, List<TransactionCategory> categories) {
+      BuildContext context, List<CategoryEntity> categories) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final hintColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -170,7 +173,17 @@ class BudgetOverviewPage extends StatelessWidget {
             children: [
               // ── Inline header ─────────────────────────────────────────
               _PageHeader(
-                onSettingsTap: () => context.push('/budget/edit-settings'),
+                onSettingsTap: () => context
+                    .push('/budget/edit-settings')
+                    .then((saved) {
+                  // Reload hanya jika setelan benar-benar disimpan (fix #6).
+                  // BudgetEditSettingsPage.pop(true) hanya dipanggil saat save.
+                  if (saved == true && context.mounted) {
+                    context
+                        .read<BudgetLimitsBloc>()
+                        .add(const LoadBudgetLimits());
+                  }
+                }),
               ),
               // ── Content ───────────────────────────────────────────────
               Expanded(
@@ -280,11 +293,11 @@ class _LoadedBody extends StatelessWidget {
 
   final BudgetOverviewEntity overview;
   final List<BudgetLimitEntity> limits;
-  final void Function(TransactionCategory) onAddLimit;
-  final void Function(TransactionCategory, BudgetLimitEntity) onEditLimit;
+  final void Function(CategoryEntity) onAddLimit;
+  final void Function(CategoryEntity, BudgetLimitEntity) onEditLimit;
   final void Function(int, String) onDeleteLimit;
   final void Function(int, bool) onToggleLimit;
-  final void Function(List<TransactionCategory>) onShowPicker;
+  final void Function(List<CategoryEntity>) onShowPicker;
 
   @override
   Widget build(BuildContext context) {
@@ -330,14 +343,21 @@ class _LoadedBody extends StatelessWidget {
           )
         else
           ...withLimit.map((item) {
-            final entity =
-                limits.firstWhere((l) => l.category == item.category);
+            // Guard: skip item tanpa matching entity (state desync sesaat, fix #9).
+            final matches =
+                limits.where((l) => l.category == item.category.slug);
+            if (matches.isEmpty) {
+              assert(false,
+                  'BudgetOverviewPage: category ${item.category.slug} in overview but not in limits — state desync');
+              return const SizedBox.shrink();
+            }
+            final entity = matches.first;
             return BudgetLimitCard(
               item: item,
               isEnabled: entity.isEnabled,
               onEdit: () => onEditLimit(item.category, entity),
               onDelete: () =>
-                  onDeleteLimit(entity.id, entity.category.name),
+                  onDeleteLimit(entity.id, entity.category),
               onToggle: (v) => onToggleLimit(entity.id, v),
             );
           }),
@@ -365,14 +385,15 @@ class _CategoryGridTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final TransactionCategory category;
+  final CategoryEntity category;
   final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final (icon, accentColor) = categoryIcon(category);
+    final (icon, accentColor) = CategoryMetadata.of(category.slug);
     final iconBg = accentColor.withValues(alpha: isDark ? 0.20 : 0.12);
 
     return Material(
@@ -402,7 +423,7 @@ class _CategoryGridTile extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  category.label,
+                  CategoryMetadata.resolveLabel(category, l10n),
                   style: AppTextStyles.label.copyWith(color: textColor),
                   overflow: TextOverflow.ellipsis,
                 ),

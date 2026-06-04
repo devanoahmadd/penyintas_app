@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_cycle.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 /// Per-category budget limit card.
 ///
@@ -46,6 +48,7 @@ class BudgetLimitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
     final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -53,8 +56,7 @@ class BudgetLimitCard extends StatelessWidget {
     final limit = item.limitAmount ?? 0;
     final remaining = (limit - item.spentAmount).clamp(0, limit);
     final usagePct = item.usagePct ?? 0.0;
-    final cycleLabel =
-        item.cycleType == 'monthly' ? 'per bulan' : 'per siklus';
+    final cycleLabel = item.cycleType?.label ?? BudgetCycle.cycle.label;
     final barColor = _barColor(item.status);
     final pctColor = _pctColor(item.status, isDark);
 
@@ -83,7 +85,7 @@ class BudgetLimitCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          item.category.label,
+                          CategoryMetadata.resolveLabel(item.category, l10n),
                           style: AppTextStyles.h3,
                         ),
                       ),
@@ -149,9 +151,25 @@ class BudgetLimitCard extends StatelessWidget {
                         'Sisa ${formatRupiah(remaining)}',
                         style: AppTextStyles.bodySmall,
                       ),
-                      Text(
-                        cycleLabel,
-                        style: AppTextStyles.caption.copyWith(color: muted),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Pace hint — hanya tampil jika ada proyeksi
+                          if (item.projectedDaysLeft != null) ...[
+                            Text(
+                              '~${item.projectedDaysLeft} hari · ',
+                              style: AppTextStyles.caption.copyWith(
+                                color: _pctColor(item.paceStatus, isDark),
+                                letterSpacing: 0,
+                              ),
+                            ),
+                          ],
+                          Text(
+                            cycleLabel,
+                            style:
+                                AppTextStyles.caption.copyWith(color: muted),
+                          ),
+                        ],
                       ),
                     ],
                   ),

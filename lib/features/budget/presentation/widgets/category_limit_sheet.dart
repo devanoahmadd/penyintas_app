@@ -1,34 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_cycle.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_limit_entity.dart';
-import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
-
-// ── Category metadata ─────────────────────────────────────────────────────────
-
-(IconData, Color) categoryIcon(TransactionCategory cat) => switch (cat) {
-      TransactionCategory.food => (Icons.restaurant_outlined, AppColors.warn),
-      TransactionCategory.transport => (
-        Icons.directions_car_outlined,
-        AppColors.primary
-      ),
-      TransactionCategory.shopping => (
-        Icons.shopping_bag_outlined,
-        AppColors.caution
-      ),
-      TransactionCategory.health => (
-        Icons.favorite_outline,
-        AppColors.primaryBright
-      ),
-      TransactionCategory.internet => (
-        Icons.wifi_rounded,
-        AppColors.primaryDeep
-      ),
-      _ => (Icons.grid_view_outlined, AppColors.primary),
-    };
 
 // ── Main sheet ────────────────────────────────────────────────────────────────
 
@@ -45,7 +25,7 @@ class CategoryLimitSheet extends StatefulWidget {
     this.onDelete,
   });
 
-  final TransactionCategory category;
+  final CategoryEntity category;
   final BudgetLimitEntity? existing;
   final void Function(BudgetLimitEntity) onSave;
   final void Function(int id, String categoryName)? onDelete;
@@ -56,7 +36,7 @@ class CategoryLimitSheet extends StatefulWidget {
 
 class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
   late int _amount;
-  late String _cycleType;
+  late BudgetCycle _cycleType;
   late bool _isEnabled;
 
   @override
@@ -64,7 +44,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
     super.initState();
     final e = widget.existing;
     _amount = e?.limitAmount ?? 0;
-    _cycleType = e?.cycleType ?? 'cycle';
+    _cycleType = e?.cycleType ?? BudgetCycle.cycle;
     _isEnabled = e?.isEnabled ?? true;
   }
 
@@ -87,7 +67,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
     widget.onSave(
       BudgetLimitEntity(
         id: widget.existing?.id ?? 0,
-        category: widget.category,
+        category: widget.category.slug,
         limitAmount: _amount,
         cycleType: _cycleType,
         isEnabled: _isEnabled,
@@ -109,7 +89,11 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
     final isEdit = widget.existing != null;
 
     final bottomPad = MediaQuery.of(context).padding.bottom + AppSpacing.xl;
-    final (icon, accentColor) = categoryIcon(widget.category);
+    final l10n = AppLocalizations.of(context);
+    final (icon, accentColor) = CategoryMetadata.of(
+      widget.category.slug,
+      iconSlug: widget.category.isBuiltIn ? null : widget.category.slug,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -140,7 +124,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
 
           // ── Category chip ────────────────────────────────────────────────
           _CategoryChip(
-            label: widget.category.label,
+            label: CategoryMetadata.resolveLabel(widget.category, l10n),
             icon: icon,
             accentColor: accentColor,
             isDark: isDark,
@@ -173,6 +157,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
             isDark: isDark,
             borderColor: borderColor,
           ),
+
           const SizedBox(height: AppSpacing.lg),
 
           // ── Aktif switch (edit only) ──────────────────────────────────────
@@ -198,7 +183,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
                 TextButton(
                   onPressed: () {
                     widget.onDelete!(
-                        widget.existing!.id, widget.category.name);
+                        widget.existing!.id, widget.category.slug);
                     Navigator.of(context).pop();
                   },
                   child: Text(
@@ -598,37 +583,33 @@ class _CyclePicker extends StatelessWidget {
     required this.borderColor,
   });
 
-  final String value;
-  final void Function(String) onChanged;
+  final BudgetCycle value;
+  final void Function(BudgetCycle) onChanged;
   final bool isDark;
   final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: [
-        Expanded(
-          child: _PillOption(
-            label: 'Per Siklus',
-            sublabel: 'Reset tiap gajian',
-            isActive: value == 'cycle',
-            isDark: isDark,
-            borderColor: borderColor,
-            onTap: () => onChanged('cycle'),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _PillOption(
-            label: 'Per Bulan',
-            sublabel: 'Reset tiap 1 bulan',
-            isActive: value == 'monthly',
-            isDark: isDark,
-            borderColor: borderColor,
-            onTap: () => onChanged('monthly'),
-          ),
-        ),
-      ],
+      children: BudgetCycle.values
+          .map(
+            (cycle) => Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: cycle != BudgetCycle.values.last ? AppSpacing.sm : 0,
+                ),
+                child: _PillOption(
+                  label: cycle.pickerLabel,
+                  sublabel: cycle.pickerSublabel,
+                  isActive: value == cycle,
+                  isDark: isDark,
+                  borderColor: borderColor,
+                  onTap: () => onChanged(cycle),
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
