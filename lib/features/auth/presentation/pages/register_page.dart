@@ -18,7 +18,8 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -29,15 +30,54 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _passwordError;
   String? _confirmError;
 
-  // Live valid state — ditampilkan sebagai checkmark hijau
+  bool _nameValid = false;
   bool _emailValid = false;
+  bool _passwordValid = false;
   bool _confirmValid = false;
 
-  // Gunakan shared regex dengan anchor — lihat AuthValidators.
   static RegExp get _emailRegex => AuthValidators.emailRegex;
+
+  late final AnimationController _anim;
+  late final Animation<double> _fadeHeader;
+  late final Animation<Offset> _slideHeader;
+  late final Animation<double> _fadeBody;
+  late final Animation<Offset> _slideBody;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+    _fadeHeader = CurvedAnimation(
+      parent: _anim,
+      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+    );
+    _slideHeader = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _anim,
+      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+    ));
+    _fadeBody = CurvedAnimation(
+      parent: _anim,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+    );
+    _slideBody = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _anim,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+    ));
+    _anim.forward();
+  }
 
   @override
   void dispose() {
+    _anim.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -66,8 +106,6 @@ class _RegisterPageState extends State<RegisterPage> {
         _passwordError = l10n.errorPasswordMin;
         valid = false;
       }
-      // Hitung ulang langsung dari controller — tidak andalkan flag _confirmValid
-      // yang bisa basi jika password diedit setelah confirm diisi.
       final confirmOk = _confirmController.text.isNotEmpty &&
           _confirmController.text == _passwordController.text;
       if (!confirmOk) {
@@ -87,6 +125,36 @@ class _RegisterPageState extends State<RegisterPage> {
         ));
   }
 
+  SnackBar _buildErrorSnackBar(String message, bool isDark) {
+    return SnackBar(
+      content: Row(
+        children: [
+          Icon(Icons.warning_rounded, color: AppColors.warn, size: 18),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: isDark ? AppColors.textDark : AppColors.textLight,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -94,21 +162,16 @@ class _RegisterPageState extends State<RegisterPage> {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoftColor =
         isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final iconColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
     return BlocConsumer<AuthBloc, AuthState>(
-      // Navigasi pasca-auth ditangani oleh go_router redirect (GoRouterRefreshStream
-      // mendengar Firebase authStateChanges) — tidak perlu context.go manual di sini.
       listenWhen: (_, state) => state is AuthError,
-      listener: (context, state) {
+      listener: (ctx, state) {
         if (state is AuthError) {
-          ScaffoldMessenger.of(context)
+          ScaffoldMessenger.of(ctx)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(
-              content: Text(state.message,
-                  style: AppTextStyles.bodySmall.copyWith(color: Colors.white)),
-              backgroundColor: AppColors.warn,
-              behavior: SnackBarBehavior.floating,
-            ));
+            ..showSnackBar(_buildErrorSnackBar(state.message, isDark));
         }
       },
       buildWhen: (_, state) =>
@@ -121,141 +184,242 @@ class _RegisterPageState extends State<RegisterPage> {
 
         return Scaffold(
           backgroundColor: bgColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: iconColor,
+                size: 20,
+              ),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/login'),
+              tooltip: 'Kembali',
+            ),
+          ),
           body: SafeArea(
+            top: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Scrollable content ──────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
+                      AppSpacing.lg,
                       AppSpacing.xl,
-                      AppSpacing.xl,
-                      0,
+                      AppSpacing.lg,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: AppSpacing.xl),
-                        const PenyintasLogo(size: 48),
-                        const SizedBox(height: AppSpacing.xl),
-                        Text(
-                          l10n.authRegisterTitle,
-                          style: AppTextStyles.h1.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: textColor,
-                            letterSpacing: -0.8,
+                        // Header: logo + heading + subtitle
+                        FadeTransition(
+                          opacity: _fadeHeader,
+                          child: SlideTransition(
+                            position: _slideHeader,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const PenyintasLogo(size: 48),
+                                const SizedBox(height: AppSpacing.xxl),
+                                Text(
+                                  l10n.authRegisterTitle,
+                                  style: AppTextStyles.h1.copyWith(
+                                    color: textColor,
+                                    letterSpacing: -0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  l10n.authRegisterSubtitle,
+                                  style: AppTextStyles.body
+                                      .copyWith(color: textSoftColor),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          l10n.authRegisterSubtitle,
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: textSoftColor),
-                        ),
                         const SizedBox(height: AppSpacing.xxl),
-                        AppTextField(
-                          controller: _nameController,
-                          label: l10n.authNameLabel,
-                          hintText: l10n.authNameHint,
-                          errorText: _nameError,
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        AppTextField(
-                          controller: _emailController,
-                          label: l10n.authEmailLabel,
-                          hintText: l10n.authEmailHint,
-                          errorText: _emailError,
-                          isValid: _emailValid,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (value) {
-                            final valid =
-                                _emailRegex.hasMatch(value.trim());
-                            if (valid != _emailValid) {
-                              setState(() => _emailValid = valid);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        AppTextField(
-                          controller: _passwordController,
-                          label: l10n.authPasswordLabel,
-                          hintText: l10n.authPasswordHintReg,
-                          errorText: _passwordError,
-                          isPassword: true,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (value) {
-                            // Sinkronkan _confirmValid saat password berubah
-                            // supaya confirm tidak basi saat user edit ulang.
-                            final confirmNowValid =
-                                _confirmController.text.isNotEmpty &&
-                                    _confirmController.text == value;
-                            if (confirmNowValid != _confirmValid) {
-                              setState(() => _confirmValid = confirmNowValid);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        AppTextField(
-                          controller: _confirmController,
-                          label: l10n.authConfirmLabel,
-                          hintText: l10n.authConfirmHint,
-                          errorText: _confirmError,
-                          isValid: _confirmValid,
-                          isPassword: true,
-                          textInputAction: TextInputAction.done,
-                          onChanged: (value) {
-                            final valid = value.isNotEmpty &&
-                                value == _passwordController.text;
-                            if (valid != _confirmValid) {
-                              setState(() => _confirmValid = valid);
-                            }
-                          },
-                          // Gate enter-key seperti tombol PrimaryButton
-                          onSubmitted: isLoading ? null : (_) => _submit(context),
+
+                        // Form
+                        FadeTransition(
+                          opacity: _fadeBody,
+                          child: SlideTransition(
+                            position: _slideBody,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppTextField(
+                                  controller: _nameController,
+                                  label: l10n.authNameLabel,
+                                  hintText: l10n.authNameHint,
+                                  errorText: _nameError,
+                                  isValid: _nameValid,
+                                  enabled: !isLoading,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    final valid =
+                                        value.trim().length >= 2;
+                                    if (valid != _nameValid) {
+                                      setState(() => _nameValid = valid);
+                                    }
+                                    if (_nameError != null && valid) {
+                                      setState(() => _nameError = null);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                AppTextField(
+                                  controller: _emailController,
+                                  label: l10n.authEmailLabel,
+                                  hintText: l10n.authEmailHint,
+                                  errorText: _emailError,
+                                  isValid: _emailValid,
+                                  enabled: !isLoading,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    final valid =
+                                        _emailRegex.hasMatch(value.trim());
+                                    if (valid != _emailValid) {
+                                      setState(() => _emailValid = valid);
+                                    }
+                                    if (_emailError != null && valid) {
+                                      setState(() => _emailError = null);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                AppTextField(
+                                  controller: _passwordController,
+                                  label: l10n.authPasswordLabel,
+                                  hintText: l10n.authPasswordHintReg,
+                                  helperText: 'Minimal 8 karakter',
+                                  errorText: _passwordError,
+                                  isValid: _passwordValid,
+                                  isPassword: true,
+                                  enabled: !isLoading,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    final pwValid = value.length >= 8;
+                                    if (pwValid != _passwordValid) {
+                                      setState(() => _passwordValid = pwValid);
+                                    }
+                                    if (_passwordError != null && pwValid) {
+                                      setState(() => _passwordError = null);
+                                    }
+                                    // Sinkronkan _confirmValid saat password berubah
+                                    final confirmNowValid =
+                                        _confirmController.text.isNotEmpty &&
+                                            _confirmController.text == value;
+                                    if (confirmNowValid != _confirmValid) {
+                                      setState(
+                                          () => _confirmValid = confirmNowValid);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                AppTextField(
+                                  controller: _confirmController,
+                                  label: l10n.authConfirmLabel,
+                                  hintText: l10n.authConfirmHint,
+                                  errorText: _confirmError,
+                                  isValid: _confirmValid,
+                                  isPassword: true,
+                                  enabled: !isLoading,
+                                  textInputAction: TextInputAction.done,
+                                  onChanged: (value) {
+                                    final valid = value.isNotEmpty &&
+                                        value == _passwordController.text;
+                                    if (valid != _confirmValid) {
+                                      setState(() => _confirmValid = valid);
+                                    }
+                                    if (_confirmError != null && valid) {
+                                      setState(() => _confirmError = null);
+                                    }
+                                  },
+                                  onSubmitted: isLoading
+                                      ? null
+                                      : (_) => _submit(context),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                    AppSpacing.xl,
-                    AppSpacing.xxl,
-                  ),
-                  child: Column(
-                    children: [
-                      PrimaryButton(
-                        label: l10n.authCreateAccount,
-                        onPressed: () => _submit(context),
-                        isLoading: isLoading,
+
+                // ── Pinned bottom actions ───────────────────────────────
+                FadeTransition(
+                  opacity: _fadeBody,
+                  child: SlideTransition(
+                    position: _slideBody,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.sm,
+                        AppSpacing.xl,
+                        AppSpacing.xxl,
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            text: l10n.authHasAccount,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: textSoftColor),
-                            children: [
-                              TextSpan(
-                                text: l10n.authSignInLink,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w700,
+                      child: Column(
+                        children: [
+                          PrimaryButton(
+                            label: l10n.authCreateAccount,
+                            onPressed: () => _submit(context),
+                            isLoading: isLoading,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          _OrDivider(mutedColor: mutedColor),
+                          const SizedBox(height: AppSpacing.lg),
+                          _GoogleButton(
+                            label: 'Daftar dengan Google',
+                            isLoading: isLoading,
+                            onPressed: () => context
+                                .read<AuthBloc>()
+                                .add(const GoogleSignInRequested()),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Semantics(
+                            button: true,
+                            label:
+                                '${l10n.authHasAccount} ${l10n.authSignInLink}',
+                            child: TextButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () => context.go('/login'),
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size.fromHeight(44),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.sm),
+                              ),
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  text: l10n.authHasAccount,
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: textSoftColor),
+                                  children: [
+                                    TextSpan(
+                                      text: l10n.authSignInLink,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -263,6 +427,93 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Shared auth screen widgets ─────────────────────────────────────────────
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider({required this.mutedColor});
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: mutedColor.withAlpha(80))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            'atau',
+            style: AppTextStyles.caption.copyWith(color: mutedColor),
+          ),
+        ),
+        Expanded(child: Container(height: 1, color: mutedColor.withAlpha(80))),
+      ],
+    );
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: Material(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: InkWell(
+            onTap: isLoading ? null : onPressed,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            splashColor: AppColors.primary.withAlpha(20),
+            highlightColor: AppColors.primary.withAlpha(10),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: borderColor),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'G',
+                    style: AppTextStyles.label.copyWith(
+                      color: const Color(0xFF4285F4),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Text(
+                    label,
+                    style: AppTextStyles.label.copyWith(color: textColor),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

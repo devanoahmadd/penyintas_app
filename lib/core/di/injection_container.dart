@@ -44,6 +44,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_u
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
@@ -169,6 +170,7 @@ void _initAuth() {
         watchAuthState: sl(),
         wipeLocalData: sl(),
         deleteAccount: sl(),
+        sendPasswordReset: sl(),
       ));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
@@ -179,6 +181,7 @@ void _initAuth() {
 
   sl.registerLazySingleton(() => WipeLocalDataUseCase(sl()));
   sl.registerLazySingleton(() => DeleteAccountUseCase(sl()));
+  sl.registerLazySingleton(() => SendPasswordResetUseCase(sl()));
   sl.registerLazySingleton(() => SyncUserSettingsUseCase(sl()));
   sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
 

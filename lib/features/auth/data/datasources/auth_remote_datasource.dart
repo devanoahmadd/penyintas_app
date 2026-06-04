@@ -17,6 +17,7 @@ abstract class AuthRemoteDataSource {
   Stream<UserModel?> get authStateChanges;
   Future<void> reauthenticate({required String password});
   Future<void> callDeleteAccount();
+  Future<void> sendPasswordResetEmail(String email);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -172,6 +173,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e, s) {
       try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const AuthException('Gagal menghapus akun.');
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapFirebaseCode(e.code));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException();
     }
   }
 
