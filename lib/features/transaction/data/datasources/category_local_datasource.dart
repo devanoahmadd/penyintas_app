@@ -64,9 +64,11 @@ class CategoryLocalDatasourceImpl implements CategoryLocalDatasource {
 
   @override
   Future<void> deleteCategory(String slug) async {
-    // 1. Cascade: hapus budget_limits yang pakai slug ini
-    await (_db.delete(_db.budgetLimits)..where((b) => b.category.equals(slug))).go();
-    // 2. Hapus kategori itu sendiri
-    await (_db.delete(_db.categories)..where((c) => c.slug.equals(slug))).go();
+    await _db.transaction(() async {
+      // 1. Cascade: hapus budget_limits yang pakai slug ini
+      await (_db.delete(_db.budgetLimits)..where((b) => b.category.equals(slug))).go();
+      // 2. Hapus kategori itu sendiri
+      await (_db.delete(_db.categories)..where((c) => c.slug.equals(slug))).go();
+    });
   }
 }

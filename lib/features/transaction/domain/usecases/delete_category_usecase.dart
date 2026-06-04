@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:penyintas_app/core/error/failures.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/category_repository.dart';
 
 class DeleteCategoryParams extends Equatable {
@@ -12,10 +13,11 @@ class DeleteCategoryParams extends Equatable {
   List<Object> get props => [slug, isBuiltIn];
 }
 
-class DeleteCategoryUseCase {
+class DeleteCategoryUseCase implements UseCase<void, DeleteCategoryParams> {
   DeleteCategoryUseCase(this._repo);
   final CategoryRepository _repo;
 
+  @override
   Future<Either<Failure, void>> call(DeleteCategoryParams params) async {
     if (params.isBuiltIn) {
       return const Left(ValidationFailure('Tidak bisa menghapus kategori bawaan.'));
