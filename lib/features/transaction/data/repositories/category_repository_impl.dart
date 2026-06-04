@@ -25,4 +25,33 @@ class CategoryRepositoryImpl implements CategoryRepository {
       return Left(CacheFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, CategoryEntity>> createCategory(CategoryEntity category) async {
+    try {
+      return Right(await _local.createCategory(category));
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateCategory(CategoryEntity category) async {
+    try {
+      await _local.updateCategory(category);
+      return const Right(null);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCategory(String slug) async {
+    try {
+      await _local.deleteCategory(slug);
+      return const Right(null);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
 }
