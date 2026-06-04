@@ -105,6 +105,7 @@ class BudgetLimitCard extends StatelessWidget {
                         child: PopupMenuButton<String>(
                           padding: EdgeInsets.zero,
                           iconSize: 20,
+                          tooltip: 'Opsi limit kategori',
                           onSelected: (v) {
                             if (v == 'toggle') onToggle(!isEnabled);
                             if (v == 'delete') onDelete();

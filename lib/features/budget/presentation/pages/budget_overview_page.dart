@@ -27,6 +27,14 @@ import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 class BudgetOverviewPage extends StatelessWidget {
   const BudgetOverviewPage({super.key});
 
+  // ── Settings: push ke edit-settings, reload bloc jika disimpan ──────────
+  Future<void> _openSettings(BuildContext context) async {
+    final saved = await context.push<bool>('/budget/edit-settings');
+    if ((saved ?? false) && context.mounted) {
+      context.read<BudgetLimitsBloc>().add(const LoadBudgetLimits());
+    }
+  }
+
   // ── FAB: open add-transaction sheet (same as other tab pages) ────────────
   Future<void> _openAddSheet(BuildContext context) async {
     final goalsResult = await sl<LoadGoalsUseCase>().call(const NoParams());
@@ -83,75 +91,76 @@ class BudgetOverviewPage extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final hintColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final bottomPad =
-        MediaQuery.of(context).padding.bottom + AppSpacing.xl;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
+      builder: (sheetCtx) {
+        // viewPadding tidak terpengaruh keyboard — stabil untuk sheet ini
+        // yang tidak punya text field.
+        final bottomPad =
+            MediaQuery.viewPaddingOf(sheetCtx).bottom + AppSpacing.xl;
+        return Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
           ),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.md,
-          AppSpacing.xl,
-          bottomPad,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle
-            Align(
-              alignment: Alignment.center,
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: hintColor.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.xl,
+            bottomPad,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: hintColor.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text('Pilih Kategori', style: AppTextStyles.h3),
-            const SizedBox(height: 4),
-            Text(
-              'Kategori mana yang ingin kamu batasi?',
-              style:
-                  AppTextStyles.bodySmall.copyWith(color: hintColor),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            // Icon grid (2 columns)
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: AppSpacing.md,
-              childAspectRatio: 2.0,
-              children: categories
-                  .map(
-                    (cat) => _CategoryGridTile(
-                      category: cat,
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        _showLimitSheet(context, cat);
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: AppSpacing.xl),
+              Text('Pilih Kategori', style: AppTextStyles.h3),
+              const SizedBox(height: 4),
+              Text(
+                'Kategori mana yang ingin kamu batasi?',
+                style: AppTextStyles.bodySmall.copyWith(color: hintColor),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisSpacing: AppSpacing.md,
+                childAspectRatio: 2.0,
+                children: categories
+                    .map(
+                      (cat) => _CategoryGridTile(
+                        category: cat,
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showLimitSheet(context, cat);
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -173,17 +182,7 @@ class BudgetOverviewPage extends StatelessWidget {
             children: [
               // ── Inline header ─────────────────────────────────────────
               _PageHeader(
-                onSettingsTap: () => context
-                    .push('/budget/edit-settings')
-                    .then((saved) {
-                  // Reload hanya jika setelan benar-benar disimpan (fix #6).
-                  // BudgetEditSettingsPage.pop(true) hanya dipanggil saat save.
-                  if (saved == true && context.mounted) {
-                    context
-                        .read<BudgetLimitsBloc>()
-                        .add(const LoadBudgetLimits());
-                  }
-                }),
+                onSettingsTap: () => _openSettings(context),
               ),
               // ── Content ───────────────────────────────────────────────
               Expanded(
@@ -206,6 +205,7 @@ class BudgetOverviewPage extends StatelessWidget {
                       return _LoadedBody(
                         overview: state.overview,
                         limits: state.limits,
+                        onSettingsTap: () => _openSettings(context),
                         onAddLimit: (cat) => _showLimitSheet(context, cat),
                         onEditLimit: (cat, existing) =>
                             _showLimitSheet(context, cat, existing: existing),
@@ -284,6 +284,7 @@ class _LoadedBody extends StatelessWidget {
   const _LoadedBody({
     required this.overview,
     required this.limits,
+    required this.onSettingsTap,
     required this.onAddLimit,
     required this.onEditLimit,
     required this.onDeleteLimit,
@@ -293,6 +294,7 @@ class _LoadedBody extends StatelessWidget {
 
   final BudgetOverviewEntity overview;
   final List<BudgetLimitEntity> limits;
+  final VoidCallback onSettingsTap;
   final void Function(CategoryEntity) onAddLimit;
   final void Function(CategoryEntity, BudgetLimitEntity) onEditLimit;
   final void Function(int, String) onDeleteLimit;
@@ -320,7 +322,7 @@ class _LoadedBody extends StatelessWidget {
       ),
       children: [
         // 1. Hero summary card
-        BudgetSummaryCard(overview: overview),
+        BudgetSummaryCard(overview: overview, onSettingsTap: onSettingsTap),
         const SizedBox(height: AppSpacing.xl),
 
         // 2. Allocation (flat, no card surface)

@@ -114,10 +114,11 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final current = state;
     if (current is! BudgetLimitsLoaded) return;
 
-    final target = current.limits.firstWhere(
-      (l) => l.id == event.id,
-      orElse: () => current.limits.first,
-    );
+    final target = current.limits
+        .where((l) => l.id == event.id)
+        .firstOrNull;
+    if (target == null) return; // id tidak ditemukan — event stale, skip aman
+
     final updated = target.copyWith(
       isEnabled: event.isEnabled,
       updatedAt: DateTime.now(),

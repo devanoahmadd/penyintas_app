@@ -46,8 +46,17 @@ class CategoryMetadata {
     'category_other'     => l10n.categoryOther,
     'category_fixed'     => l10n.categoryFixed,
     'category_income'    => l10n.categoryIncome,
-    _                    => key,
+    _                    => _unregisteredLabelKey(key),
   };
+
+  static String _unregisteredLabelKey(String key) {
+    assert(
+      false,
+      'CategoryMetadata._fromLabelKey: "$key" tidak terdaftar — '
+      'tambahkan entry ke switch dan ke id.json/en.json',
+    );
+    return key;
+  }
 
   static const _slugToLabelKey = <String, String>{
     'food':      'category_food',
