@@ -6,9 +6,12 @@ import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
+import 'package:penyintas_app/features/budget/presentation/widgets/add_category_sheet.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/delete_category_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/get_categories_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/update_category_usecase.dart';
 
 class ManageCategoriesPage extends StatefulWidget {
   const ManageCategoriesPage({super.key});
@@ -59,8 +62,43 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
   }
 
   Future<void> _showAddSheet({CategoryEntity? existing}) async {
-    // TODO Task 4: wire AddCategorySheet
-    // Will be implemented in Task 4
+    final result = await showModalBottomSheet<CategoryEntity>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddCategorySheet(existing: existing),
+    );
+    if (result != null && mounted) {
+      if (existing == null) {
+        // Mode tambah
+        final usecase = sl<CreateCategoryUseCase>();
+        final either = await usecase(result);
+        either.fold(
+          (f) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(f.message)),
+              );
+            }
+          },
+          (_) => _loadCategories(),
+        );
+      } else {
+        // Mode edit
+        final usecase = sl<UpdateCategoryUseCase>();
+        final either = await usecase(result);
+        either.fold(
+          (f) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(f.message)),
+              );
+            }
+          },
+          (_) => _loadCategories(),
+        );
+      }
+    }
   }
 
   Future<void> _confirmDelete(CategoryEntity category) async {
