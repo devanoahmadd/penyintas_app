@@ -109,6 +109,7 @@ import 'package:penyintas_app/features/transaction/domain/usecases/update_catego
 import 'package:penyintas_app/features/transaction/domain/repositories/category_repository.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -280,6 +281,13 @@ void _initCategory() {
   sl.registerLazySingleton(() => CreateCategoryUseCase(sl()));
   sl.registerLazySingleton(() => UpdateCategoryUseCase(sl()));
   sl.registerLazySingleton(() => DeleteCategoryUseCase(sl()));
+
+  sl.registerFactory(() => CategoryBloc(
+    getCategories: sl(),
+    createCategory: sl(),
+    updateCategory: sl(),
+    deleteCategory: sl(),
+  ));
 
   sl.registerLazySingleton<CategoryRepository>(
     () => CategoryRepositoryImpl(sl()),
