@@ -181,6 +181,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await auth.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
+      // user-not-found: jangan bocorkan. Return normal = same UX as success.
+      // Firebase Auth tidak expose info apakah email terdaftar — kita match itu.
+      if (e.code == 'user-not-found') return;
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
       try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
