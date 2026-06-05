@@ -221,5 +221,14 @@
   "onboarding_daily_budget_label": "ANGGARAN HARIANMU",
   "onboarding_daily_budget_suffix": "/hari",
   "onboarding_daily_budget_days_left": "untuk {days} hari ke depan",
-  "onboarding_daily_budget_monthly_left": "{amount} tersisa bulan ini"
+  "onboarding_daily_budget_monthly_left": "{amount} tersisa bulan ini",
+
+  "auth_reset_email_sent": "Email reset terkirim. Cek inbox kamu ya.",
+  "auth_reset_password_title": "Reset password",
+  "auth_reset_password_body": "Kami kirim link reset ke emailmu.",
+  "auth_reset_password_cta": "Kirim link reset",
+  "auth_email_invalid_short": "Masukkan email yang valid",
+  "auth_back": "Kembali",
+  "auth_password_min8": "Minimal 8 karakter",
+  "auth_or": "atau"
 }

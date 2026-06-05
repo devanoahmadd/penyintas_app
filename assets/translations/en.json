@@ -221,5 +221,14 @@
   "onboarding_daily_budget_label": "YOUR DAILY BUDGET",
   "onboarding_daily_budget_suffix": "/day",
   "onboarding_daily_budget_days_left": "for {days} days ahead",
-  "onboarding_daily_budget_monthly_left": "{amount} left this month"
+  "onboarding_daily_budget_monthly_left": "{amount} left this month",
+
+  "auth_reset_email_sent": "Reset email sent. Check your inbox.",
+  "auth_reset_password_title": "Reset password",
+  "auth_reset_password_body": "We'll send a reset link to your email.",
+  "auth_reset_password_cta": "Send reset link",
+  "auth_email_invalid_short": "Enter a valid email",
+  "auth_back": "Back",
+  "auth_password_min8": "At least 8 characters",
+  "auth_or": "or"
 }
