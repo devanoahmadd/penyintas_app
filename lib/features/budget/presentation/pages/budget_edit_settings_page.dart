@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
@@ -99,7 +102,10 @@ class _BudgetEditSettingsPageState
     final emergency = (income * _emergencyPct).round();
     final spendable =
         (income - _totalFixed - emergency).clamp(0, income);
-    return spendable > 0 ? (spendable / 30).floor() : 0;
+    if (spendable <= 0) return 0;
+    // Pakai hari nyata dalam siklus (bukan hardcode 30)
+    final cycleDays = daysInCycle(_paymentDate);
+    return (spendable / cycleDays).floor();
   }
 
   // ── Money field — AppTextField-consistent styling with Rp prefix ─────────
@@ -195,7 +201,9 @@ class _BudgetEditSettingsPageState
     return BlocConsumer<BudgetSettingsBloc, BudgetSettingsState>(
       listener: (context, state) {
         if (state is BudgetSettingsLoaded) _populateFrom(state.settings);
-        if (state is BudgetSettingsSaved) Navigator.of(context).pop();
+        // Kirim `true` sebagai result agar caller tahu ada perubahan yang disimpan
+        // (fix finding #6 — conditional reload di budget_overview_page).
+        if (state is BudgetSettingsSaved) Navigator.of(context).pop(true);
         if (state is BudgetSettingsError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
@@ -324,7 +332,30 @@ class _BudgetEditSettingsPageState
                 // ── Preview card ─────────────────────────────────────────
                 _PreviewCard(
                     dailyBudget: _dailyPreview, isDark: isDark),
-                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Kelola Kategori ───────────────────────────────────────
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Kelola Kategori'),
+                  subtitle: Text(
+                    'Tambah atau hapus kategori kustom',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    await context.push('/budget/categories');
+                    if (context.mounted) {
+                      context
+                          .read<BudgetLimitsBloc>()
+                          .add(const LoadBudgetLimits());
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
 
                 // ── Save button ──────────────────────────────────────────
                 PrimaryButton(

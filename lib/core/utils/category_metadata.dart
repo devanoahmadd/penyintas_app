@@ -22,6 +22,9 @@ class CategoryMetadata {
   /// Resolve icon dari slug string yang disimpan DB untuk custom kategori.
   static IconData iconFromSlug(String slug) => _iconMap[slug] ?? _defaultIcon;
 
+  /// Daftar slug ikon yang tersedia untuk custom kategori.
+  static List<String> get availableIconSlugs => _iconMap.keys.toList();
+
   /// Resolve label dari full [CategoryEntity].
   /// Built-in: dari labelKey + l10n. Custom: labelOverride. Fallback: slug.
   static String resolveLabel(CategoryEntity cat, AppLocalizations l10n) {

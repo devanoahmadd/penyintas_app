@@ -100,8 +100,11 @@ import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_u
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/delete_category_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/get_categories_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/update_category_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/category_repository.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
@@ -271,6 +274,9 @@ void _initSync() {
 void _initCategory() {
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetLimitableCategoriesUseCase(sl()));
+  sl.registerLazySingleton(() => CreateCategoryUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateCategoryUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteCategoryUseCase(sl()));
 
   sl.registerLazySingleton<CategoryRepository>(
     () => CategoryRepositoryImpl(sl()),
