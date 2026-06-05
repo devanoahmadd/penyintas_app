@@ -51,6 +51,18 @@ final class DeleteAccountRequested extends AuthEvent {
   List<Object> get props => [];
 }
 
+final class GoogleSignInRequested extends AuthEvent {
+  const GoogleSignInRequested();
+}
+
+final class ForgotPasswordRequested extends AuthEvent {
+  const ForgotPasswordRequested({required this.email});
+  final String email;
+
+  @override
+  List<Object> get props => [email];
+}
+
 final class _AuthStateChanged extends AuthEvent {
   final UserEntity? user;
   const _AuthStateChanged(this.user);

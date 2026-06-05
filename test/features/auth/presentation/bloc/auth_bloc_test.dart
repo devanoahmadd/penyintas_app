@@ -11,6 +11,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dar
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -22,12 +23,14 @@ class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
 class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
+class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
 class FakeSignUpParams extends Fake implements SignUpParams {}
 class FakeNoParams extends Fake implements NoParams {}
 class FakeDeleteAccountParams extends Fake implements DeleteAccountParams {}
+class FakeSendPasswordResetParams extends Fake implements SendPasswordResetParams {}
 
 void main() {
   late MockSignInUseCase mockSignIn;
@@ -37,6 +40,7 @@ void main() {
   late MockWatchAuthStateUseCase mockWatchAuthState;
   late MockWipeLocalDataUseCase mockWipe;
   late MockDeleteAccountUseCase mockDeleteAccount;
+  late MockSendPasswordResetUseCase mockSendPasswordReset;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -50,6 +54,7 @@ void main() {
     registerFallbackValue(FakeSignUpParams());
     registerFallbackValue(FakeNoParams());
     registerFallbackValue(FakeDeleteAccountParams());
+    registerFallbackValue(FakeSendPasswordResetParams());
   });
 
   setUp(() {
@@ -63,6 +68,7 @@ void main() {
     when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
 
     mockDeleteAccount = MockDeleteAccountUseCase();
+    mockSendPasswordReset = MockSendPasswordResetUseCase();
 
     // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
     when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
@@ -76,6 +82,7 @@ void main() {
         watchAuthState: mockWatchAuthState,
         wipeLocalData: mockWipe,
         deleteAccount: mockDeleteAccount,
+        sendPasswordReset: mockSendPasswordReset,
       );
 
   group('SignInRequested', () {

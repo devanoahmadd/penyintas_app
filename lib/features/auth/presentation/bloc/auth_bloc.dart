@@ -10,6 +10,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dar
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 
 part 'auth_event.dart';
@@ -24,12 +25,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.watchAuthState,
     required this.wipeLocalData,
     required this.deleteAccount,
+    required this.sendPasswordReset,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
     on<DeleteAccountRequested>(_onDeleteAccountRequested);
+    on<GoogleSignInRequested>(_onGoogleSignInRequested);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
     on<_AuthStateChanged>(_onAuthStateChanged);
   }
 
@@ -40,6 +44,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final WatchAuthStateUseCase watchAuthState;
   final WipeLocalDataUseCase wipeLocalData;
   final DeleteAccountUseCase deleteAccount;
+  final SendPasswordResetUseCase sendPasswordReset;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -134,6 +139,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _onGoogleSignInRequested(
+    GoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    // TODO: implement with google_sign_in package after configuring OAuth credentials
+    emit(const AuthError('Google Sign-In belum tersedia. Gunakan email dan password.'));
+  }
+
+  Future<void> _onForgotPasswordRequested(
+    ForgotPasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    final result = await sendPasswordReset(
+      SendPasswordResetParams(email: event.email),
+    );
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(const PasswordResetEmailSent()),
     );
   }
 
