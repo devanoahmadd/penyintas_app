@@ -11,6 +11,9 @@ import 'package:penyintas_app/widgets/common/app_text_field.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
+// Flip ke true saat google_sign_in package terintegrasi untuk free users.
+const _googleSignInEnabled = false;
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -365,17 +368,19 @@ class _LoginPageState extends State<LoginPage>
                             onPressed: () => _submit(context),
                             isLoading: isLoading,
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _OrDivider(mutedColor: mutedColor),
-                          const SizedBox(height: AppSpacing.lg),
-                          _GoogleButton(
-                            label: 'Lanjutkan dengan Google',
-                            isLoading: isLoading,
-                            onPressed: () => context
-                                .read<AuthBloc>()
-                                .add(const GoogleSignInRequested()),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
+                          if (_googleSignInEnabled) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            _OrDivider(mutedColor: mutedColor),
+                            const SizedBox(height: AppSpacing.lg),
+                            _GoogleButton(
+                              label: 'Lanjutkan dengan Google',
+                              isLoading: isLoading,
+                              onPressed: () => context
+                                  .read<AuthBloc>()
+                                  .add(const GoogleSignInRequested()),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
                           Semantics(
                             button: true,
                             label: '${l10n.authNoAccount} ${l10n.authSignUpLink}',
