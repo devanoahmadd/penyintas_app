@@ -139,6 +139,14 @@ class AppLocalizations {
   String get authCreateAccount => _t('auth_create_account');
   String get authHasAccount => _t('auth_has_account');
   String get authSignInLink => _t('auth_sign_in_link');
+  String get authResetEmailSent => _t('auth_reset_email_sent');
+  String get authResetPasswordTitle => _t('auth_reset_password_title');
+  String get authResetPasswordBody => _t('auth_reset_password_body');
+  String get authResetPasswordCta => _t('auth_reset_password_cta');
+  String get authEmailInvalidShort => _t('auth_email_invalid_short');
+  String get authBack => _t('auth_back');
+  String get authPasswordMin8 => _t('auth_password_min8');
+  String get authOr => _t('auth_or');
 
   // Validation errors
   String get errorEmailEmpty => _t('error_email_empty');

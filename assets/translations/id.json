@@ -240,5 +240,13 @@
   "category_success_created": "Kategori berhasil ditambahkan.",
   "category_success_updated": "Kategori berhasil diperbarui.",
   "category_success_deleted": "Kategori dihapus.",
-  "category_error_duplicate": "Kategori dengan nama serupa sudah ada."
+  "category_error_duplicate": "Kategori dengan nama serupa sudah ada.",
+  "auth_reset_email_sent": "Email reset terkirim. Cek inbox kamu ya.",
+  "auth_reset_password_title": "Reset password",
+  "auth_reset_password_body": "Kami kirim link reset ke emailmu.",
+  "auth_reset_password_cta": "Kirim link reset",
+  "auth_email_invalid_short": "Masukkan email yang valid",
+  "auth_back": "Kembali",
+  "auth_password_min8": "Minimal 8 karakter",
+  "auth_or": "atau"
 }

@@ -240,5 +240,13 @@
   "category_success_created": "Category added.",
   "category_success_updated": "Category updated.",
   "category_success_deleted": "Category deleted.",
-  "category_error_duplicate": "A similar category name already exists."
+  "category_error_duplicate": "A similar category name already exists.",
+  "auth_reset_email_sent": "Reset email sent. Check your inbox.",
+  "auth_reset_password_title": "Reset password",
+  "auth_reset_password_body": "We'll send a reset link to your email.",
+  "auth_reset_password_cta": "Send reset link",
+  "auth_email_invalid_short": "Enter a valid email",
+  "auth_back": "Back",
+  "auth_password_min8": "At least 8 characters",
+  "auth_or": "or"
 }

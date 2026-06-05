@@ -11,6 +11,9 @@ import 'package:penyintas_app/widgets/common/app_text_field.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
+// Flip ke true saat google_sign_in package terintegrasi untuk free users.
+const _googleSignInEnabled = false;
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -196,7 +199,7 @@ class _RegisterPageState extends State<RegisterPage>
               ),
               onPressed: () =>
                   context.canPop() ? context.pop() : context.go('/login'),
-              tooltip: 'Kembali',
+              tooltip: l10n.authBack,
             ),
           ),
           body: SafeArea(
@@ -298,7 +301,7 @@ class _RegisterPageState extends State<RegisterPage>
                                   controller: _passwordController,
                                   label: l10n.authPasswordLabel,
                                   hintText: l10n.authPasswordHintReg,
-                                  helperText: 'Minimal 8 karakter',
+                                  helperText: l10n.authPasswordMin8,
                                   errorText: _passwordError,
                                   isValid: _passwordValid,
                                   isPassword: true,
@@ -374,17 +377,19 @@ class _RegisterPageState extends State<RegisterPage>
                             onPressed: () => _submit(context),
                             isLoading: isLoading,
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _OrDivider(mutedColor: mutedColor),
-                          const SizedBox(height: AppSpacing.lg),
-                          _GoogleButton(
-                            label: 'Daftar dengan Google',
-                            isLoading: isLoading,
-                            onPressed: () => context
-                                .read<AuthBloc>()
-                                .add(const GoogleSignInRequested()),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
+                          if (_googleSignInEnabled) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            _OrDivider(mutedColor: mutedColor),
+                            const SizedBox(height: AppSpacing.lg),
+                            _GoogleButton(
+                              label: 'Daftar dengan Google',
+                              isLoading: isLoading,
+                              onPressed: () => context
+                                  .read<AuthBloc>()
+                                  .add(const GoogleSignInRequested()),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
                           Semantics(
                             button: true,
                             label:
@@ -445,7 +450,7 @@ class _OrDivider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
-            'atau',
+            context.l10n.authOr,
             style: AppTextStyles.caption.copyWith(color: mutedColor),
           ),
         ),

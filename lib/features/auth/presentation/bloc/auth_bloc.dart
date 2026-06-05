@@ -154,7 +154,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ForgotPasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
     final result = await sendPasswordReset(
       SendPasswordResetParams(email: event.email),
     );

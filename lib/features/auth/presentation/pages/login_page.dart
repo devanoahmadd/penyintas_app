@@ -11,6 +11,9 @@ import 'package:penyintas_app/widgets/common/app_text_field.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
+// Flip ke true saat google_sign_in package terintegrasi untuk free users.
+const _googleSignInEnabled = false;
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -208,7 +211,7 @@ class _LoginPageState extends State<LoginPage>
           ScaffoldMessenger.of(ctx)
             ..hideCurrentSnackBar()
             ..showSnackBar(
-                _buildSuccessSnackBar('Email reset terkirim. Cek inbox kamu ya.'));
+                _buildSuccessSnackBar(ctx.l10n.authResetEmailSent));
         }
       },
       buildWhen: (_, state) =>
@@ -365,17 +368,19 @@ class _LoginPageState extends State<LoginPage>
                             onPressed: () => _submit(context),
                             isLoading: isLoading,
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _OrDivider(mutedColor: mutedColor),
-                          const SizedBox(height: AppSpacing.lg),
-                          _GoogleButton(
-                            label: 'Lanjutkan dengan Google',
-                            isLoading: isLoading,
-                            onPressed: () => context
-                                .read<AuthBloc>()
-                                .add(const GoogleSignInRequested()),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
+                          if (_googleSignInEnabled) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            _OrDivider(mutedColor: mutedColor),
+                            const SizedBox(height: AppSpacing.lg),
+                            _GoogleButton(
+                              label: 'Lanjutkan dengan Google',
+                              isLoading: isLoading,
+                              onPressed: () => context
+                                  .read<AuthBloc>()
+                                  .add(const GoogleSignInRequested()),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
                           Semantics(
                             button: true,
                             label: '${l10n.authNoAccount} ${l10n.authSignUpLink}',
@@ -440,7 +445,7 @@ class _OrDivider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
-            'atau',
+            context.l10n.authOr,
             style: AppTextStyles.caption.copyWith(color: mutedColor),
           ),
         ),
@@ -541,7 +546,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
   void _send() {
     final email = widget.emailCtrl.text.trim();
     if (!AuthValidators.emailRegex.hasMatch(email)) {
-      setState(() => _emailError = 'Masukkan email yang valid');
+      setState(() => _emailError = context.l10n.authEmailInvalidShort);
       return;
     }
     widget.onSend(email);
@@ -589,19 +594,19 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'Reset password',
+              context.l10n.authResetPasswordTitle,
               style: AppTextStyles.h2.copyWith(color: textColor),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Kami kirim link reset ke emailmu.',
+              context.l10n.authResetPasswordBody,
               style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
             ),
             const SizedBox(height: AppSpacing.xl),
             AppTextField(
               controller: widget.emailCtrl,
               label: 'Email',
-              hintText: 'kamu@email.com',
+              hintText: context.l10n.authEmailHint,
               errorText: _emailError,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
@@ -611,7 +616,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
               onSubmitted: (_) => _send(),
             ),
             const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(label: 'Kirim link reset', onPressed: _send),
+            PrimaryButton(label: context.l10n.authResetPasswordCta, onPressed: _send),
           ],
         ),
       ),
