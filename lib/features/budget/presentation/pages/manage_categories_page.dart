@@ -1,178 +1,210 @@
 import 'package:flutter/material.dart';
-import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
-import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/features/budget/presentation/widgets/add_category_sheet.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
-import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
-import 'package:penyintas_app/features/transaction/domain/usecases/delete_category_usecase.dart';
-import 'package:penyintas_app/features/transaction/domain/usecases/get_categories_usecase.dart';
-import 'package:penyintas_app/features/transaction/domain/usecases/update_category_usecase.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
-class ManageCategoriesPage extends StatefulWidget {
+class ManageCategoriesPage extends StatelessWidget {
   const ManageCategoriesPage({super.key});
 
-  @override
-  State<ManageCategoriesPage> createState() => _ManageCategoriesPageState();
-}
-
-class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
-  List<CategoryEntity> _builtIn = [];
-  List<CategoryEntity> _custom = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final result = await sl<GetCategoriesUseCase>()(const NoParams());
-
-    result.fold(
-      (failure) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _errorMessage = failure.message;
-        });
-      },
-      (categories) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _builtIn = categories.where((c) => c.isBuiltIn).toList()
-            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-          _custom = categories.where((c) => !c.isBuiltIn).toList()
-            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-        });
-      },
-    );
-  }
-
-  Future<void> _showAddSheet({CategoryEntity? existing}) async {
-    final result = await showModalBottomSheet<CategoryEntity>(
+  Future<void> _openAddSheet(BuildContext context,
+      {CategoryEntity? existing}) async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddCategorySheet(existing: existing),
+      builder: (_) => BlocProvider.value(
+        value: context.read<CategoryBloc>(),
+        child: AddCategorySheet(existing: existing),
+      ),
     );
-    if (result != null && mounted) {
-      if (existing == null) {
-        // Mode tambah
-        final usecase = sl<CreateCategoryUseCase>();
-        final either = await usecase(result);
-        either.fold(
-          (f) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(f.message)),
-              );
-            }
-          },
-          (_) => _loadCategories(),
-        );
-      } else {
-        // Mode edit
-        final usecase = sl<UpdateCategoryUseCase>();
-        final either = await usecase(result);
-        either.fold(
-          (f) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(f.message)),
-              );
-            }
-          },
-          (_) => _loadCategories(),
-        );
-      }
-    }
   }
 
-  Future<void> _confirmDelete(CategoryEntity category) async {
+  Future<void> _confirmDelete(
+      BuildContext context, CategoryEntity category) async {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final label = CategoryMetadata.resolveLabel(category, l10n);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor:
-            isDark ? AppColors.cardDark : AppColors.cardLight,
+        backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         title: Text(
-          'Hapus kategori?',
+          l10n.manageCategoriesDeleteTitle,
           style: AppTextStyles.h3.copyWith(
             color: isDark ? AppColors.textDark : AppColors.textLight,
           ),
         ),
         content: Text(
-          'Kategori "${category.labelOverride ?? category.slug}" akan dihapus permanen.',
+          l10n.manageCategoriesDeleteBody(label),
           style: AppTextStyles.body.copyWith(
-            color:
-                isDark ? AppColors.textSoftDark : AppColors.textSoftLight,
+            color: isDark ? AppColors.textSoftDark : AppColors.textSoftLight,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
-              'Batal',
+              l10n.btnCancel,
               style: AppTextStyles.label.copyWith(
-                color:
-                    isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
               ),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
-              'Hapus',
-              style:
-                  AppTextStyles.label.copyWith(color: AppColors.warn),
+              l10n.manageCategoriesDeleteConfirm,
+              style: AppTextStyles.label.copyWith(color: AppColors.warn),
             ),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) return;
-
-    final result = await sl<DeleteCategoryUseCase>()(
-      DeleteCategoryParams(slug: category.slug, isBuiltIn: category.isBuiltIn),
-    );
-
-    result.fold(
-      (failure) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(failure.message),
-          ),
-        );
-      },
-      (_) => _loadCategories(),
-    );
+    if (confirmed != true || !context.mounted) return;
+    context.read<CategoryBloc>().add(DeleteCategory(category.slug));
   }
 
-  Widget _buildSectionHeader(String title, bool isDark) {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        title: Text(l10n.manageCategoriesTitle, style: AppTextStyles.h3),
+        backgroundColor: bg,
+        elevation: 0,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openAddSheet(context),
+        backgroundColor: AppColors.primary,
+        tooltip: l10n.addCategoryTitle,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: BlocConsumer<CategoryBloc, CategoryState>(
+        listenWhen: (previous, current) =>
+            (current is CategoryLoaded && current.successType != null) ||
+            (current is CategoryError && previous is CategoryActionLoading),
+        listener: (context, state) {
+          if (state is CategoryLoaded && state.successType != null) {
+            final msg = switch (state.successType!) {
+              CategorySuccessType.created => l10n.categorySuccessCreated,
+              CategorySuccessType.updated => l10n.categorySuccessUpdated,
+              CategorySuccessType.deleted => l10n.categorySuccessDeleted,
+            };
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(msg)),
+            );
+          } else if (state is CategoryError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.warn,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is CategoryInitial || state is CategoryLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is CategoryError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      state.message,
+                      style: AppTextStyles.body
+                          .copyWith(color: AppColors.warn),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    TextButton(
+                      onPressed: () => context
+                          .read<CategoryBloc>()
+                          .add(const LoadCategories()),
+                      child: const Text('Coba lagi'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final categories = state is CategoryLoaded
+              ? state.categories
+              : (state as CategoryActionLoading).categories;
+
+          final builtIn = categories
+              .where((c) => c.isBuiltIn)
+              .toList()
+            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          final custom = categories
+              .where((c) => !c.isBuiltIn)
+              .toList()
+            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+          return Stack(
+            children: [
+              ListView(
+                padding: const EdgeInsets.only(
+                  bottom: AppSpacing.xxxl + AppSpacing.xxl,
+                ),
+                children: [
+                  _SectionHeader(title: l10n.manageCategoriesSectionBuiltIn),
+                  ...builtIn.map(
+                    (cat) => _BuiltInItem(category: cat, l10n: l10n),
+                  ),
+                  _SectionHeader(title: l10n.manageCategoriesSectionCustom),
+                  if (custom.isEmpty)
+                    _EmptyCustomState(l10n: l10n)
+                  else
+                    ...custom.map(
+                      (cat) => _CustomItem(
+                        category: cat,
+                        onEdit: () => _openAddSheet(context, existing: cat),
+                        onDelete: () => _confirmDelete(context, cat),
+                      ),
+                    ),
+                ],
+              ),
+              if (state is CategoryActionLoading)
+                const _LoadingOverlay(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.sm,
+        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.sm,
       ),
       child: Text(
         title,
@@ -182,56 +214,75 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
       ),
     );
   }
+}
 
-  Widget _buildBuiltInItem(CategoryEntity category, AppLocalizations l10n,
-      bool isDark) {
-    final (icon, _) = CategoryMetadata.of(category.slug, iconSlug: category.iconSlug);
+class _BuiltInItem extends StatelessWidget {
+  const _BuiltInItem({required this.category, required this.l10n});
+  final CategoryEntity category;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (icon, _) =
+        CategoryMetadata.of(category.slug, iconSlug: category.iconSlug);
     final label = CategoryMetadata.resolveLabel(category, l10n);
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.lg, vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: ListTile(
         minVerticalPadding: AppSpacing.md,
-        leading: Icon(icon, color: mutedColor, size: 22),
+        leading: Icon(
+          icon,
+          color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+          size: 22,
+        ),
         title: Text(
           label,
-          style: AppTextStyles.body.copyWith(color: textColor),
+          style: AppTextStyles.body.copyWith(
+            color: isDark ? AppColors.textDark : AppColors.textLight,
+          ),
         ),
         trailing: Icon(
           Icons.lock_outline,
           size: 16,
-          color: mutedColor,
+          color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
         ),
       ),
     );
   }
+}
 
-  Widget _buildCustomItem(CategoryEntity category, AppLocalizations l10n,
-      bool isDark) {
+class _CustomItem extends StatelessWidget {
+  const _CustomItem({
+    required this.category,
+    required this.onEdit,
+    required this.onDelete,
+  });
+  final CategoryEntity category;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final (icon, _) =
         CategoryMetadata.of(category.slug, iconSlug: category.iconSlug);
     final label = category.labelOverride ?? category.slug;
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
+        horizontal: AppSpacing.lg, vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: ListTile(
@@ -239,7 +290,9 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
         leading: Icon(icon, color: AppColors.primary, size: 22),
         title: Text(
           label,
-          style: AppTextStyles.body.copyWith(color: textColor),
+          style: AppTextStyles.body.copyWith(
+            color: isDark ? AppColors.textDark : AppColors.textLight,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -249,12 +302,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
               height: 48,
               child: IconButton(
                 tooltip: 'Edit kategori',
-                icon: Icon(
-                  Icons.edit_outlined,
-                  size: 20,
-                  color: mutedColor,
-                ),
-                onPressed: () => _showAddSheet(existing: category),
+                icon: Icon(Icons.edit_outlined, size: 20, color: mutedColor),
+                onPressed: onEdit,
               ),
             ),
             SizedBox(
@@ -262,12 +311,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
               height: 48,
               child: IconButton(
                 tooltip: 'Hapus kategori',
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: 20,
-                  color: AppColors.warn,
-                ),
-                onPressed: () => _confirmDelete(category),
+                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.warn),
+                onPressed: onDelete,
               ),
             ),
           ],
@@ -275,32 +320,33 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
       ),
     );
   }
+}
 
-  Widget _buildCustomEmptyState(bool isDark) {
+class _EmptyCustomState extends StatelessWidget {
+  const _EmptyCustomState({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xl,
+        horizontal: AppSpacing.lg, vertical: AppSpacing.xl,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.category_outlined,
-            size: 40,
-            color: mutedColor,
-          ),
+          Icon(Icons.category_outlined, size: 40, color: mutedColor),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Belum ada kategori kustom.',
+            l10n.manageCategoriesEmpty,
             style: AppTextStyles.body.copyWith(color: mutedColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Ketuk + untuk membuat kategori baru.',
+            l10n.manageCategoriesEmptyHint,
             style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
             textAlign: TextAlign.center,
           ),
@@ -308,63 +354,18 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
       ),
     );
   }
+}
+
+class _LoadingOverlay extends StatelessWidget {
+  const _LoadingOverlay();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final l10n = AppLocalizations.of(context);
-
-    return Scaffold(
-      backgroundColor: bg,
-      appBar: AppBar(
-        title: Text('Kelola Kategori', style: AppTextStyles.h3),
-        backgroundColor: bg,
-        elevation: 0,
+    return AbsorbPointer(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.1),
+        child: const Center(child: CircularProgressIndicator()),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSheet(),
-        backgroundColor: AppColors.primary,
-        tooltip: 'Tambah kategori',
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(AppSpacing.xl),
-                    child: Text(
-                      _errorMessage!,
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.warn,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.only(
-                    bottom: AppSpacing.xxxl + AppSpacing.xxl,
-                  ),
-                  children: [
-                    // ── Section: Bawaan ─────────────────────────────────
-                    _buildSectionHeader('BAWAAN', isDark),
-                    ..._builtIn.map(
-                      (cat) => _buildBuiltInItem(cat, l10n, isDark),
-                    ),
-
-                    // ── Section: Kustom ─────────────────────────────────
-                    _buildSectionHeader('KUSTOM', isDark),
-                    if (_custom.isEmpty)
-                      _buildCustomEmptyState(isDark)
-                    else
-                      ..._custom.map(
-                        (cat) => _buildCustomItem(cat, l10n, isDark),
-                      ),
-                  ],
-                ),
     );
   }
 }
