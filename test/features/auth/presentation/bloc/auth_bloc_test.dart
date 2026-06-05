@@ -213,6 +213,37 @@ void main() {
     );
   });
 
+  group('ForgotPasswordRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'success: emits [PasswordResetEmailSent] — AuthLoading TIDAK di-emit',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockSendPasswordReset(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        const ForgotPasswordRequested(email: 'test@email.com'),
+      ),
+      expect: () => [const PasswordResetEmailSent()],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'failure: emits [AuthError] — AuthLoading TIDAK di-emit',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockSendPasswordReset(any())).thenAnswer(
+          (_) async => const Left(AuthFailure('Terjadi kesalahan. Coba lagi.')),
+        );
+      },
+      act: (bloc) => bloc.add(
+        const ForgotPasswordRequested(email: 'test@email.com'),
+      ),
+      expect: () => [
+        const AuthError('Terjadi kesalahan. Coba lagi.'),
+      ],
+    );
+  });
+
   group('AuthCheckRequested', () {
     blocTest<AuthBloc, AuthState>(
       'should emit Authenticated when auth stream emits a user',
