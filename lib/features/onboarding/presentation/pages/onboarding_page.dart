@@ -1,20 +1,150 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
-import 'package:penyintas_app/core/l10n/app_localizations.dart';
-import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
-import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_progress_dots.dart' show OnboardingProgressBar;
-import 'package:penyintas_app/widgets/common/app_text_field.dart';
-import 'package:penyintas_app/widgets/common/primary_button.dart';
+import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
+import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
+import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
+import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const _kIncomePresets = [800000, 1500000, 3000000, 5000000];
+const _kPaydayPresets = [1, 5, 15, 25];
+const _kPctPresets = [0, 5, 10, 15]; // chip; 25 = Ekstrem
+
+class _ExpRow {
+  const _ExpRow(this.id, this.icon);
+  final String id;
+  final IconData icon;
+
+  String label(AppLocalizations l) {
+    switch (id) {
+      case 'kos': return l.onboardingExpenseRent;
+      case 'listrik': return l.onboardingExpenseUtilities;
+      case 'internet': return l.onboardingExpenseInternet;
+      case 'pulsa': return l.onboardingExpensePhone;
+      default: return l.categoryOther;
+    }
+  }
+}
+
+const _kExpRows = [
+  _ExpRow('kos', Icons.home_outlined),
+  _ExpRow('listrik', Icons.bolt_outlined),
+  _ExpRow('internet', Icons.wifi_rounded),
+  _ExpRow('pulsa', Icons.phone_android_outlined),
+  _ExpRow('lain', Icons.more_horiz_rounded),
+];
+
+// ── Calc ───────────────────────────────────────────────────────────────────
+class _Calc {
+  const _Calc({
+    required this.fixed,
+    required this.sisa,
+    required this.cicilan,
+    required this.spendable,
+    required this.daily,
+    required this.fixedPct,
+  });
+  final int fixed, sisa, cicilan, spendable, daily, fixedPct;
+}
+
+_Calc _calcBudget({
+  required int income,
+  required int payday,
+  required Map<String, int> expenses,
+  required int pct,
+}) {
+  final fixed = expenses.values.fold(0, (s, v) => s + v);
+  final sisa = math.max(0, income - fixed);
+  final cicilan = sisa > 0 ? (sisa * pct / 100).round() : 0;
+  final spendable = math.max(0, sisa - cicilan);
+  int days = remainingDaysInCycle(payday);
+  if (days == 0) days = daysInCycle(payday);
+  final daily = days > 0 ? (spendable / days).floor() : 0;
+  final fixedPct = income > 0 ? (fixed / income * 100).round() : 0;
+  return _Calc(
+    fixed: fixed,
+    sisa: sisa,
+    cicilan: cicilan,
+    spendable: spendable,
+    daily: daily,
+    fixedPct: fixedPct,
+  );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+String _rpShort(int n) {
+  if (n >= 1000000) {
+    final jt = n / 1000000;
+    final s = jt % 1 == 0
+        ? '${jt.toInt()}'
+        : jt.toStringAsFixed(1).replaceAll('.', ',');
+    return 'Rp ${s}jt';
+  }
+  if (n >= 1000) return 'Rp ${(n / 1000).round()}rb';
+  return formatRupiah(n);
+}
+
+String _fmtId(int n) => NumberFormat('#,##0', 'id_ID').format(n);
+
+({String label, String note}) _pctFb(int pct, AppLocalizations l) {
+  if (pct == 0) return (label: l.onboardingEmergencySkip, note: l.onboardingPctNoteSkip);
+  if (pct <= 7) return (label: l.onboardingPctLabelLow, note: l.onboardingPctNoteLow);
+  if (pct <= 12) return (label: l.onboardingPctLabelMid, note: l.onboardingPctNoteMid);
+  if (pct <= 19) return (label: l.onboardingPctLabelHigh, note: l.onboardingPctNoteHigh);
+  return (label: l.onboardingPctLabelMax, note: l.onboardingPctNoteMax);
+}
+
+// ── Exit dialog ─────────────────────────────────────────────────────────────
+Future<void> _showExitDialog(BuildContext context) async {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+  final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+  final textSoftColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: Text('Tutup setup sekarang?',
+          style: AppTextStyles.h3.copyWith(color: textColor)),
+      content: Text('Progress belum tersimpan.',
+          style: AppTextStyles.bodySmall.copyWith(color: textSoftColor)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text('Lanjut isi',
+              style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text('Ya, keluar',
+              style: AppTextStyles.label.copyWith(color: AppColors.warn)),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) SystemNavigator.pop();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -23,100 +153,155 @@ class OnboardingPage extends StatefulWidget {
   State<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
-  late final PageController _pageController;
+class _OnboardingPageState extends State<OnboardingPage>
+    with TickerProviderStateMixin {
+  // ── Local reactive model ─────────────────────────────────────────
+  int _income = 2500000;
+  int _payday = 1;
+  final Map<String, int> _exp = {
+    'kos': 450000,
+    'listrik': 0,
+    'internet': 0,
+    'pulsa': 0,
+    'lain': 0,
+  };
+  int _pct = 10;
+  int _step = 0;
+  String? _activeRow; // step 1 sheet
 
-  // Cached data for rendering during state transitions
-  int _cachedIncome = 0;
-  int _cachedFixedExpenses = 0;
-  int _cachedRemainingDays = 30;
+  // ── Animation ────────────────────────────────────────────────────
+  late final AnimationController _staggerCtrl;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _staggerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 585), // step 0 = 520+65
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _playEntrance());
     context.read<OnboardingBloc>().add(const OnboardingStarted());
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _staggerCtrl.dispose();
     super.dispose();
   }
 
-  int _stateToPage(OnboardingState state) {
-    if (state is OnboardingStep2) return 1;
-    if (state is OnboardingStep3) return 2;
-    if (state is OnboardingCalculating) return 2;
-    return 0;
+  void _playEntrance() {
+    if (!mounted) return;
+    if (MediaQuery.of(context).disableAnimations) {
+      _staggerCtrl.value = 1.0;
+      return;
+    }
+    final n = _childCount(_step);
+    if (_step == 3) {
+      _staggerCtrl.duration = const Duration(milliseconds: 670);
+    } else {
+      _staggerCtrl.duration = Duration(milliseconds: 520 + 65 * (n - 1));
+    }
+    _staggerCtrl.forward(from: 0);
   }
 
+  int _childCount(int step) {
+    switch (step) {
+      case 0: return 2;
+      case 1: return 3;
+      case 2: return 6;
+      default: return 5; // done = 5 reveal items
+    }
+  }
+
+  void _next() {
+    setState(() {
+      _step = math.min(3, _step + 1);
+      _activeRow = null;
+    });
+    _playEntrance();
+  }
+
+  void _back() {
+    setState(() {
+      _step = math.max(0, _step - 1);
+      _activeRow = null;
+    });
+    _playEntrance();
+  }
+
+  _Calc get _calc => _calcBudget(
+        income: _income,
+        payday: _payday,
+        expenses: _exp,
+        pct: _pct,
+      );
+
+  // ── Animation helpers ─────────────────────────────────────────────
+  Widget _stagger(Widget child, int i, int n) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    final base = 520.0, gap = 65.0;
+    final total = base + gap * (n - 1);
+    final start = (gap * i / total).clamp(0.0, 1.0);
+    final end = ((gap * i + base) / total).clamp(0.0, 1.0);
+    final anim = CurvedAnimation(
+      parent: _staggerCtrl,
+      curve: Interval(start, end, curve: const Cubic(0.2, 0.7, 0.3, 1.0)),
+    );
+    return _FadeSlide(anim: anim, child: child);
+  }
+
+  Widget _reveal(Widget child, int delayMs) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    const total = 670.0, dur = 500.0;
+    final start = (delayMs / total).clamp(0.0, 1.0);
+    final end = ((delayMs + dur) / total).clamp(0.0, 1.0);
+    final anim = CurvedAnimation(
+      parent: _staggerCtrl,
+      curve: Interval(start, end, curve: const Cubic(0.2, 0.7, 0.3, 1.0)),
+    );
+    return _FadeSlide(anim: anim, child: child);
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final l = AppLocalizations.of(context);
+    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
-          context.read<OnboardingBloc>().add(const OnboardingBackPressed());
+          if (_step == 0) {
+            _showExitDialog(context);
+          } else {
+            _back();
+          }
         }
       },
       child: Scaffold(
-        backgroundColor: bgColor,
+        backgroundColor: bg,
         body: SafeArea(
           child: BlocConsumer<OnboardingBloc, OnboardingState>(
-            listenWhen: (prev, curr) {
-              return _stateToPage(prev) != _stateToPage(curr) ||
-                  curr is OnboardingSuccess ||
-                  curr is OnboardingError ||
-                  prev is OnboardingError;
-            },
+            listenWhen: (_, c) =>
+                c is OnboardingSuccess || c is OnboardingError,
             listener: (context, state) {
-              if (state is OnboardingStep2) {
-                _cachedIncome = state.income;
-              } else if (state is OnboardingStep3) {
-                _cachedIncome = state.income;
-                _cachedFixedExpenses = state.fixedExpenses;
-                _cachedRemainingDays = state.remainingDays;
-              }
-
-              // Jangan animate page untuk terminal states — OnboardingError
-              // mengembalikan 0 dari _stateToPage (default), yang menyebabkan
-              // PageController kembali ke Step 1 saat submit gagal.
-              if (state is! OnboardingError && state is! OnboardingSuccess) {
-                final page = _stateToPage(state);
-                if (_pageController.hasClients) {
-                  _pageController.animateToPage(
-                    page,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              }
-
               if (state is OnboardingSuccess) {
-                // Minta izin notifikasi setelah onboarding selesai
-                context
-                    .read<NotificationBloc>()
-                    .add(const RequestPermission());
-                // Invalidasi cache agar router baca ulang DB (onboardingCompleted=true)
+                context.read<NotificationBloc>().add(const RequestPermission());
                 resetOnboardingCache();
                 context.go('/dashboard');
               } else if (state is OnboardingError) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
                   ..showSnackBar(SnackBar(
-                    content: Text(
-                      state.message,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: Colors.white),
-                    ),
+                    content: Text(state.message,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: Colors.white)),
                     backgroundColor: AppColors.warn,
                     behavior: SnackBarBehavior.floating,
                     action: SnackBarAction(
-                      label: 'Coba lagi',
+                      label: l.retry,
                       textColor: Colors.white,
                       onPressed: () => context
                           .read<OnboardingBloc>()
@@ -126,35 +311,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
               }
             },
             builder: (context, state) {
-              final currentPage = _stateToPage(state);
-              final isLoading = state is OnboardingCalculating;
-
+              final isSubmitting = state is OnboardingCalculating;
+              final calc = _calc;
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _OnboardingHeader(
-                    currentStep: currentPage,
-                    canGoBack: currentPage > 0 && !isLoading,
-                    isDark: isDark,
-                  ),
+                  if (_step < 3) _buildHeader(isDark, l),
                   Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _Step1Widget(isDark: isDark),
-                        _Step2Widget(
-                          isDark: isDark,
-                          income: _cachedIncome,
-                        ),
-                        _Step3Widget(
-                          isDark: isDark,
-                          income: _cachedIncome,
-                          remainingDays: _cachedRemainingDays,
-                          fixedExpenses: _cachedFixedExpenses,
-                          isLoading: isLoading,
-                        ),
-                      ],
-                    ),
+                    child: _buildContent(isDark, l, calc, isSubmitting),
                   ),
                 ],
               );
@@ -164,130 +328,1153 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
     );
   }
-}
 
-// ── Exit dialog (Step 1 → "Nanti") ────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────
+  Widget _buildHeader(bool isDark, AppLocalizations l) {
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+      child: SizedBox(
+        height: 44,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 44,
+              child: _step == 0
+                  ? GestureDetector(
+                      onTap: () => _showExitDialog(context),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l.onboardingSkipLater,
+                          style: TextStyle(
+                            fontFamily: 'InterTight',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: muted,
+                          ),
+                        ),
+                      ),
+                    )
+                  : GestureDetector(
+                      onTap: _back,
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 18,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OnboardingRuasProgress(step: _step, isDark: isDark),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 28,
+              child: Text(
+                '${_step + 1}/3',
+                style: TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 11,
+                  color: muted,
+                  height: 1,
+                ),
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-Future<void> _showExitDialog(BuildContext context) async {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
-  final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-  final textSoftColor =
-      isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+  // ── Step dispatcher ────────────────────────────────────────────────
+  Widget _buildContent(
+    bool isDark,
+    AppLocalizations l,
+    _Calc calc,
+    bool isSubmitting,
+  ) {
+    switch (_step) {
+      case 0:
+        return _buildStep0(isDark, l);
+      case 1:
+        return _buildStep1(isDark, l, calc);
+      case 2:
+        return _buildStep2(isDark, l, calc);
+      default:
+        return _buildDone(isDark, l, calc, isSubmitting);
+    }
+  }
 
-  final confirmed = await showDialog<bool>(
-    context: context,
-    barrierDismissible: true,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: cardBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      title: Text(
-        'Tutup setup sekarang?',
-        style: AppTextStyles.h3.copyWith(color: textColor),
-      ),
-      content: Text(
-        'Progress belum tersimpan.',
-        style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            'Lanjut isi',
-            style: AppTextStyles.label.copyWith(color: AppColors.primary),
+  // ════════════════════════════════════════════════════════════════
+  //  RUAS 1 · Pemasukan
+  // ════════════════════════════════════════════════════════════════
+  Widget _buildStep0(bool isDark, AppLocalizations l) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+
+    const n = 2;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // child 0: upper centered content
+        Expanded(
+          child: _stagger(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // eyebrow
+                  Text(
+                    l.onboardingEyebrowStep1,
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
+                      fontSize: 11,
+                      letterSpacing: 0.14 * 11,
+                      color: AppColors.primary,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // title
+                  Text(
+                    l.onboardingTitleIncome,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      letterSpacing: -0.02 * 20,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Rp + amount
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        'Rp',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: muted,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _fmtId(_income),
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 40,
+                          fontWeight: FontWeight.w800,
+                          color: _income > 0 ? textColor : muted,
+                          letterSpacing: -0.03 * 40,
+                          height: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // divider
+                  Container(width: 176, height: 2, color: border),
+                  const SizedBox(height: 14),
+                  // income preset chips
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: _kIncomePresets.map((v) {
+                      final on = _income == v;
+                      return _PresetChip(
+                        label: _rpShort(v),
+                        active: on,
+                        isDark: isDark,
+                        onTap: () => setState(() => _income = v),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  // payday label
+                  Text(
+                    l.onboardingPaydayLabel,
+                    style: TextStyle(
+                      fontFamily: 'InterTight',
+                      fontSize: 12,
+                      color: muted,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  // payday chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ..._kPaydayPresets.map((d) {
+                          final on = _payday == d;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _PaydayChipWidget(
+                              label: '$d',
+                              active: on,
+                              isDark: isDark,
+                              onTap: () => setState(() => _payday = d),
+                            ),
+                          );
+                        }),
+                        _PaydayChipWidget(
+                          label: l.onboardingChipOtherDate,
+                          active: !_kPaydayPresets.contains(_payday),
+                          isDark: isDark,
+                          wide: true,
+                          onTap: () => _openPaydayPicker(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            0, n,
           ),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Ya, keluar',
-            style: AppTextStyles.label.copyWith(color: AppColors.warn),
+        // child 1: docked keypad panel
+        _stagger(
+          _DockedPanel(
+            isDark: isDark,
+            surfaceAlt: surfaceAlt,
+            keypad: OnboardingKeypad(
+              isDark: isDark,
+              onKey: (k) => setState(() {
+                _income = applyOnboardingKey(_income, k);
+              }),
+            ),
+            cta: _CtaBtn(
+              label: l.btnNext,
+              height: 52,
+              onPressed: _next,
+            ),
+          ),
+          1, n,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openPaydayPicker() async {
+    final initial = _kPaydayPresets.contains(_payday) ? 28 : _payday;
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DatePickerSheet(
+        initialDate: initial,
+        onConfirm: (v) {},
+      ),
+    );
+    if (picked != null && mounted) setState(() => _payday = picked);
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  RUAS 2 · Pengeluaran tetap
+  // ════════════════════════════════════════════════════════════════
+  Widget _buildStep1(bool isDark, AppLocalizations l, _Calc calc) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+
+    final activeRowDef = _kExpRows.where((r) => r.id == _activeRow).firstOrNull;
+    const n = 3;
+
+    return Stack(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // child 0: eyebrow + title
+            _stagger(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                child: Column(
+                  children: [
+                    Text(
+                      l.onboardingEyebrowStep2,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontSize: 11,
+                        letterSpacing: 0.14 * 11,
+                        color: AppColors.primary,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      l.onboardingTitleFixed,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                        letterSpacing: -0.02 * 24,
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              0, n,
+            ),
+            // child 1: expense rows
+            Expanded(
+              child: _stagger(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: List.generate(_kExpRows.length, (i) {
+                      final row = _kExpRows[i];
+                      final v = _exp[row.id] ?? 0;
+                      final on = _activeRow == row.id;
+                      return _ExpRowWidget(
+                        row: row,
+                        value: v,
+                        active: on,
+                        isDark: isDark,
+                        isFirst: i == 0,
+                        l: l,
+                        onTap: () => setState(() {
+                          _activeRow = on ? null : row.id;
+                        }),
+                      );
+                    }),
+                  ),
+                ),
+                1, n,
+              ),
+            ),
+            // child 2: total card
+            _stagger(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: _TotalCard(
+                  fixed: calc.fixed,
+                  fixedPct: calc.fixedPct,
+                  l: l,
+                ),
+              ),
+              2, n,
+            ),
+            // CTA — only when sheet closed
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              child: _activeRow == null
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+                      child: _CtaBtn(
+                        label: l.btnNext,
+                        height: 58,
+                        onPressed: _next,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        // Bottom sheet keypad
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: activeRowDef == null,
+            child: AnimatedOpacity(
+              opacity: activeRowDef != null ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.ease,
+              child: AnimatedSlide(
+                offset: activeRowDef != null
+                    ? Offset.zero
+                    : const Offset(0, 0.4),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.ease,
+                child: activeRowDef != null
+                    ? _SheetKeypad(
+                        activeRow: activeRowDef,
+                        value: _exp[_activeRow ?? 'kos'] ?? 0,
+                        calc: calc,
+                        isDark: isDark,
+                        surfaceAlt: surfaceAlt,
+                        surface: surface,
+                        l: l,
+                        onKey: (k) {
+                          final id = _activeRow ?? 'kos';
+                          setState(() {
+                            _exp[id] = applyOnboardingKey(_exp[id] ?? 0, k);
+                          });
+                        },
+                        onDone: () => setState(() => _activeRow = null),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
           ),
         ),
       ],
-    ),
-  );
-
-  if (confirmed == true) {
-    SystemNavigator.pop();
+    );
   }
-}
 
-// ── Header dengan step counter + segmented progress bar ───────────────────
+  // ════════════════════════════════════════════════════════════════
+  //  RUAS 3 · Dana darurat
+  // ════════════════════════════════════════════════════════════════
+  Widget _buildStep2(bool isDark, AppLocalizations l, _Calc calc) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final grow = (_pct / 25).clamp(0.12, 1.0);
+    final fb = _pctFb(_pct, l);
+    final fillColor = _pct >= 20 ? AppColors.primaryBright : AppColors.primary;
+    const n = 6;
 
-class _OnboardingHeader extends StatelessWidget {
-  const _OnboardingHeader({
-    required this.currentStep,
-    required this.canGoBack,
-    required this.isDark,
-  });
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 0: eyebrow + title
+                _stagger(
+                  Column(children: [
+                    const SizedBox(height: 14),
+                    Text(l.onboardingEyebrowStep3,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          fontSize: 11,
+                          letterSpacing: 0.14 * 11,
+                          color: AppColors.primary,
+                          height: 1,
+                        )),
+                    const SizedBox(height: 7),
+                    Text(l.onboardingTitleDarurat,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          letterSpacing: -0.02 * 24,
+                          height: 1.15,
+                        )),
+                  ]),
+                  0, n,
+                ),
+                // 1: hero — GrowShoot + daily
+                _stagger(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Column(children: [
+                      GrowShoot(grow: grow, size: 54, isDark: isDark),
+                      const SizedBox(height: 12),
+                      Text(
+                        l.onboardingDailyBudgetLabel,
+                        style: TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          fontSize: 10.5,
+                          letterSpacing: 0.14 * 10.5,
+                          color: muted,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      OnboardingCountUp(
+                        value: calc.daily,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 54,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                          letterSpacing: -0.04 * 54,
+                          height: 0.95,
+                        ),
+                        format: formatRupiah,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '/hari · ${_pct == 0 ? l.onboardingDailySubNoEmergency : l.onboardingDailySubSaving(formatRupiah(calc.cicilan))}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'InterTight',
+                          fontSize: 12.5,
+                          color: textSoft,
+                          height: 1.45,
+                        ),
+                      ),
+                    ]),
+                  ),
+                  1, n,
+                ),
+                // 2: feedback + pct row
+                _stagger(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(fb.label,
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: fillColor,
+                              height: 1,
+                            )),
+                        Text('$_pct%',
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                              height: 1,
+                            )),
+                      ],
+                    ),
+                  ),
+                  2, n,
+                ),
+                // 3: slider
+                _stagger(
+                  _OSlider(
+                    value: _pct,
+                    fillColor: fillColor,
+                    borderColor: border,
+                    onChange: (v) => setState(() => _pct = v),
+                  ),
+                  3, n,
+                ),
+                // 4: note
+                _stagger(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 34),
+                      child: Text(fb.note,
+                          style: TextStyle(
+                            fontFamily: 'InterTight',
+                            fontSize: 12.5,
+                            color: textSoft,
+                            height: 1.45,
+                          )),
+                    ),
+                  ),
+                  4, n,
+                ),
+                // 5: pct chips
+                _stagger(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        ..._kPctPresets.map((p) {
+                          final on = _pct == p;
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 7),
+                              child: _PctChipWidget(
+                                label: p == 0 ? 'Lewati' : '$p%',
+                                active: on,
+                                isDark: isDark,
+                                surfaceAlt: surfaceAlt,
+                                onTap: () => setState(() => _pct = p),
+                              ),
+                            ),
+                          );
+                        }),
+                        Expanded(
+                          child: _ExtremChip(
+                            active: _pct >= 20,
+                            isDark: isDark,
+                            surfaceAlt: surfaceAlt,
+                            onTap: () => setState(() => _pct = 25),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  5, n,
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+        // CTA
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+          child: _CtaBtn(
+            label: l.onboardingCtaStart,
+            height: 58,
+            onPressed: _next,
+          ),
+        ),
+      ],
+    );
+  }
 
-  final int currentStep;
-  final bool canGoBack;
-  final bool isDark;
+  // ════════════════════════════════════════════════════════════════
+  //  DONE screen
+  // ════════════════════════════════════════════════════════════════
+  Widget _buildDone(
+    bool isDark,
+    AppLocalizations l,
+    _Calc calc,
+    bool isSubmitting,
+  ) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
 
-  @override
-  Widget build(BuildContext context) {
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final iconColor = isDark ? AppColors.textDark : AppColors.textLight;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '${currentStep + 1} dari 3',
-                style: AppTextStyles.caption.copyWith(color: textSoftColor),
-              ),
-              const Spacer(),
-              if (currentStep == 0)
-                GestureDetector(
-                  onTap: () => _showExitDialog(context),
-                  child: SizedBox(
-                    width: 44,
-                    height: 32,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        'Nanti',
-                        style: AppTextStyles.label
-                            .copyWith(color: textSoftColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // GrowShoot — delay 0
+                _reveal(
+                  Center(child: GrowShoot(grow: 1.0, size: 108, isDark: isDark)),
+                  0,
+                ),
+                // eyebrow + title — delay 70
+                _reveal(
+                  Column(children: [
+                    const SizedBox(height: 16),
+                    Text(l.onboardingDoneEyebrow,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          fontSize: 11,
+                          letterSpacing: 0.14 * 11,
+                          color: AppColors.primary,
+                          height: 1,
+                        )),
+                    const SizedBox(height: 6),
+                    Text(l.onboardingDoneTitle,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          letterSpacing: -0.025 * 24,
+                          height: 1.12,
+                        )),
+                  ]),
+                  70,
+                ),
+                // sub — delay 120
+                _reveal(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(l.onboardingDoneSub,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'InterTight',
+                          fontSize: 13.5,
+                          color: textSoft,
+                          height: 1.5,
+                        )),
+                  ),
+                  120,
+                ),
+                // stats card — delay 170
+                _reveal(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(children: [
+                            Expanded(
+                              child: _StatWidget(
+                                label: l.onboardingStatDaily,
+                                value: formatRupiah(calc.daily),
+                                big: true,
+                                isDark: isDark,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: _StatWidget(
+                                label: l.onboardingStatEmergency,
+                                value: '${formatRupiah(calc.cicilan)}/bln',
+                                isDark: isDark,
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(
+                              child: _StatWidget(
+                                label: l.onboardingStatIncome,
+                                value: formatRupiah(_income),
+                                isDark: isDark,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: _StatWidget(
+                                label: l.onboardingStatFixed,
+                                value: formatRupiah(calc.fixed),
+                                isDark: isDark,
+                              ),
+                            ),
+                          ]),
+                        ],
                       ),
                     ),
                   ),
-                )
-              else if (canGoBack)
-                GestureDetector(
-                  onTap: () => context
-                      .read<OnboardingBloc>()
-                      .add(const OnboardingBackPressed()),
-                  child: SizedBox(
-                    width: 44,
-                    height: 32,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Icon(Icons.arrow_back,
-                          color: iconColor, size: 20),
+                  170,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+          child: _CtaBtn(
+            label: l.onboardingCtaEnter,
+            height: 58,
+            isLoading: isSubmitting,
+            onPressed: isSubmitting ? null : _submitAll,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── BLoC burst ─────────────────────────────────────────────────────
+  void _submitAll() {
+    final bloc = context.read<OnboardingBloc>();
+    bloc.add(Step1Submitted(income: _income, paymentDate: _payday));
+    bloc.add(Step2Submitted(
+      rentExpense: _exp['kos'] ?? 0,
+      utilitiesExpense: _exp['listrik'] ?? 0,
+      internetExpense: _exp['internet'] ?? 0,
+      phoneExpense: _exp['pulsa'] ?? 0,
+      otherFixedExpense: _exp['lain'] ?? 0,
+    ));
+    bloc.add(Step3Submitted(emergencyFundPct: _pct / 100));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  ANIMATION HELPER
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _FadeSlide extends StatelessWidget {
+  const _FadeSlide({required this.anim, required this.child});
+
+  final Animation<double> anim;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: anim,
+      child: child,
+      builder: (_, child) => Opacity(
+        opacity: anim.value.clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset(0, 16 * (1 - anim.value)),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SUB-WIDGETS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Docked bottom panel (step 0) ──────────────────────────────────────────
+class _DockedPanel extends StatelessWidget {
+  const _DockedPanel({
+    required this.isDark,
+    required this.surfaceAlt,
+    required this.keypad,
+    required this.cta,
+  });
+
+  final bool isDark;
+  final Color surfaceAlt;
+  final Widget keypad;
+  final Widget cta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: -0), // full bleed via padding below
+      decoration: BoxDecoration(
+        color: surfaceAlt,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B1F14).withAlpha(71), // 28% opacity
+            blurRadius: 28,
+            spreadRadius: -16,
+            offset: const Offset(0, -10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+      child: Column(
+        children: [
+          keypad,
+          const SizedBox(height: 9),
+          cta,
+        ],
+      ),
+    );
+  }
+}
+
+// ── CTA button ────────────────────────────────────────────────────────────
+class _CtaBtn extends StatelessWidget {
+  const _CtaBtn({
+    required this.label,
+    required this.height,
+    this.onPressed,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final double height;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primaryDeep,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+        ).copyWith(
+          overlayColor: WidgetStatePropertyAll(Colors.white.withAlpha(30)),
+        ),
+        child: isLoading
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.01 * 16.5,
+                      height: 1,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_rounded,
+                      size: 18, color: Colors.white),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+// ── Income preset chip ──────────────────────────────────────────────────────
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.label,
+    required this.active,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : surfaceAlt,
+          border: Border.all(
+            color: active ? AppColors.primary : border,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'InterTight',
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : textColor,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Payday chip ─────────────────────────────────────────────────────────────
+class _PaydayChipWidget extends StatelessWidget {
+  const _PaydayChipWidget({
+    required this.label,
+    required this.active,
+    required this.isDark,
+    required this.onTap,
+    this.wide = false,
+  });
+
+  final String label;
+  final bool active;
+  final bool isDark;
+  final VoidCallback onTap;
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: wide ? null : 38,
+        height: 38,
+        padding: wide ? const EdgeInsets.symmetric(horizontal: 13) : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : Colors.transparent,
+          border: Border.all(
+            color: active ? AppColors.primary : border,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'InterTight',
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : textSoft,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Expense row (step 1) ────────────────────────────────────────────────────
+class _ExpRowWidget extends StatelessWidget {
+  const _ExpRowWidget({
+    required this.row,
+    required this.value,
+    required this.active,
+    required this.isDark,
+    required this.isFirst,
+    required this.l,
+    required this.onTap,
+  });
+
+  final _ExpRow row;
+  final int value;
+  final bool active;
+  final bool isDark;
+  final bool isFirst;
+  final AppLocalizations l;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+        decoration: BoxDecoration(
+          color: active ? surface : Colors.transparent,
+          border: isFirst
+              ? null
+              : Border(top: BorderSide(color: border, width: 1)),
+          borderRadius: active ? BorderRadius.circular(12) : null,
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: active ? surfaceAlt : surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(row.icon, size: 18, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                row.label(l),
+                style: TextStyle(
+                  fontFamily: 'InterTight',
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                  height: 1,
                 ),
+              ),
+            ),
+            Text(
+              value > 0 ? formatRupiah(value) : 'Rp —',
+              style: TextStyle(
+                fontFamily: 'JetBrainsMono',
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: value > 0 ? textColor : muted,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Total card (step 1) ─────────────────────────────────────────────────────
+class _TotalCard extends StatelessWidget {
+  const _TotalCard({
+    required this.fixed,
+    required this.fixedPct,
+    required this.l,
+  });
+
+  final int fixed;
+  final int fixedPct;
+  final AppLocalizations l;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l.onboardingTotalLabel,
+                style: const TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 10.5,
+                  letterSpacing: 0.12 * 10.5,
+                  color: Colors.white,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                l.onboardingTotalPct(fixedPct),
+                style: const TextStyle(
+                  fontFamily: 'InterTight',
+                  fontSize: 12,
+                  color: Colors.white,
+                  height: 1,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          OnboardingProgressBar(
-            currentStep: currentStep,
-            totalSteps: 3,
+          OnboardingCountUp(
+            value: fixed,
+            style: const TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.03 * 28,
+              height: 1,
+            ),
+            format: formatRupiah,
           ),
         ],
       ),
@@ -295,898 +1482,199 @@ class _OnboardingHeader extends StatelessWidget {
   }
 }
 
-// ── Step 1 — Pemasukan & Tanggal ─────────────────────────────────────────
+// ── Keypad sheet (step 1 bottom sheet) ─────────────────────────────────────
+class _SheetKeypad extends StatelessWidget {
+  const _SheetKeypad({
+    required this.activeRow,
+    required this.value,
+    required this.calc,
+    required this.isDark,
+    required this.surfaceAlt,
+    required this.surface,
+    required this.l,
+    required this.onKey,
+    required this.onDone,
+  });
 
-const _kIncomePresets = <int>[800000, 1500000, 3000000, 5000000];
-const _kDatePresets = <int>[1, 5, 15, 25];
-
-String _chipLabel(int amount, String languageCode) {
-  final isId = languageCode == 'id';
-  if (amount < 1000000) {
-    return isId ? 'Rp ${amount ~/ 1000}rb' : 'Rp ${amount ~/ 1000}K';
-  }
-  final millions = amount / 1000000;
-  if (millions == millions.truncateToDouble()) {
-    return isId ? 'Rp ${millions.toInt()}jt' : 'Rp ${millions.toInt()}M';
-  }
-  final decSep = isId ? ',' : '.';
-  final formatted = millions.toStringAsFixed(1).replaceAll('.', decSep);
-  return isId ? 'Rp ${formatted}jt' : 'Rp ${formatted}M';
-}
-
-class _Step1Widget extends StatefulWidget {
-  const _Step1Widget({required this.isDark});
+  final _ExpRow activeRow;
+  final int value;
+  final _Calc calc;
   final bool isDark;
+  final Color surfaceAlt;
+  final Color surface;
+  final AppLocalizations l;
+  final void Function(String) onKey;
+  final VoidCallback onDone;
 
   @override
-  State<_Step1Widget> createState() => _Step1WidgetState();
-}
-
-class _Step1WidgetState extends State<_Step1Widget> {
-  final _incomeController = TextEditingController();
-  String? _incomeError;
-  String? _dateError;
-  int? _selectedDatePreset;
-
-  @override
-  void dispose() {
-    _incomeController.dispose();
-    super.dispose();
-  }
-
-  int get _incomeAmount {
-    final raw = _incomeController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    return int.tryParse(raw) ?? 0;
-  }
-
-  int get _dailyIncome => _incomeAmount > 0
-      ? (_incomeAmount /
-              (_selectedDatePreset != null
-                  ? daysInCycle(_selectedDatePreset!)
-                  : 30))
-          .floor()
-      : 0;
-
-  String _contextMsg() {
-    final d = _dailyIncome;
-    if (d <= 0) return '';
-    if (d < 30000) return 'Ketat, tapi bisa diatur dengan disiplin.';
-    if (d < 80000) return 'Pas untuk anggaran mahasiswa kos.';
-    if (d < 150000) return 'Cukup nyaman untuk hidup mandiri.';
-    return 'Ruang gerak anggaran yang luas.';
-  }
-
-  void _selectPreset(int amount) {
-    _incomeController.text = formatRupiah(amount);
-    setState(() => _incomeError = null);
-  }
-
-  void _selectDate(int? date) {
-    if (date == null) {
-      _openDatePicker();
-      return;
-    }
-    setState(() {
-      _selectedDatePreset = date;
-      _dateError = null;
-    });
-  }
-
-  void _openDatePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      barrierColor: const Color(0x72000000),
-      builder: (_) => _DatePickerSheet(
-        initialDate: _selectedDatePreset,
-        onConfirm: (date) {
-          setState(() {
-            _selectedDatePreset = date;
-            _dateError = null;
-          });
-        },
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: surfaceAlt,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B1F14).withAlpha(64),
+            blurRadius: 30,
+            spreadRadius: -12,
+            offset: const Offset(0, -12),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // mini total
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l.onboardingSheetTotalLabel(calc.fixedPct),
+                  style: const TextStyle(
+                    fontFamily: 'JetBrainsMono',
+                    fontSize: 10,
+                    letterSpacing: 0.12 * 10,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+                OnboardingCountUp(
+                  value: calc.fixed,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.02 * 20,
+                    height: 1,
+                  ),
+                  format: formatRupiah,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // active row display + Selesai
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: surface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(activeRow.icon, size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeRow.label(l),
+                      style: TextStyle(
+                        fontFamily: 'InterTight',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      formatRupiah(value),
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                        letterSpacing: -0.02 * 21,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
+              FilledButton(
+                onPressed: onDone,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: const StadiumBorder(),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                ),
+                child: Text(l.onboardingSheetDone,
+                    style: const TextStyle(
+                      fontFamily: 'InterTight',
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1,
+                    )),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // keypad
+          OnboardingKeypad(isDark: isDark, onKey: onKey),
+        ],
       ),
     );
   }
-
-  bool _validate() {
-    final l10n = AppLocalizations.of(context);
-    bool valid = true;
-    setState(() {
-      _incomeError = null;
-      _dateError = null;
-
-      final income = _incomeAmount;
-      if (income <= 0) {
-        _incomeError = l10n.onboardingErrorInvalidAmount;
-        valid = false;
-      } else if (income > 100000000) {
-        _incomeError = l10n.onboardingErrorAmountTooLarge;
-        valid = false;
-      }
-
-      final date = _selectedDatePreset;
-      if (date == null || date < 1 || date > 31) {
-        _dateError = l10n.onboardingErrorSelectDate;
-        valid = false;
-      }
-    });
-    return valid;
-  }
-
-  void _submit() {
-    if (!_validate()) return;
-    context.read<OnboardingBloc>().add(
-          Step1Submitted(income: _incomeAmount, paymentDate: _selectedDatePreset!),
-        );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final langCode = Localizations.localeOf(context).languageCode;
-    final textColor =
-        widget.isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final surfaceColor =
-        widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor =
-        widget.isDark ? AppColors.borderDark : AppColors.borderLight;
-
-    final income = _incomeAmount;
-    final daily = _dailyIncome;
-    final ctxMsg = _contextMsg();
-
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.sm),
-                // Eyebrow
-                Row(
-                  children: [
-                    const Icon(Icons.attach_money,
-                        color: AppColors.primary, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.onboardingEyebrowIncome,
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  l10n.onboardingIncomeTitle,
-                  style: AppTextStyles.h1.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    letterSpacing: -0.8,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Kiriman orang tua, gaji, atau pemasukan rutin lain. '
-                  'Ini jadi dasar kami menghitung anggaran harianmu.',
-                  style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                // Income field dengan Rupiah formatter
-                AppTextField(
-                  controller: _incomeController,
-                  label: l10n.onboardingIncomeLabel,
-                  hintText: l10n.onboardingIncomeHint,
-                  errorText: _incomeError,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [_RupiahInputFormatter()],
-                  textInputAction: TextInputAction.next,
-                  onChanged: (_) => setState(() { _incomeError = null; }),
-                  onClear: _incomeController.text.isNotEmpty
-                      ? () {
-                          _incomeController.clear();
-                          setState(() { _incomeError = null; });
-                        }
-                      : null,
-                ),
-
-                // Quick chips — preset nominal
-                const SizedBox(height: AppSpacing.xs),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _kIncomePresets
-                        .map((amt) => _QuickChip(
-                              label: _chipLabel(amt, langCode),
-                              selected: income == amt,
-                              isDark: widget.isDark,
-                              onTap: () => _selectPreset(amt),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                // Date segmented picker
-                Text(
-                  l10n.onboardingDateTitle,
-                  style: AppTextStyles.label.copyWith(color: textColor),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _DateSegmentPicker(
-                  presets: _kDatePresets,
-                  selected: _selectedDatePreset,
-                  isDark: widget.isDark,
-                  onSelect: _selectDate,
-                ),
-                if (_dateError != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    _dateError!,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.warn, height: 1.3),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Pakai untuk hitung mundur Days-to-Live tiap siklus.',
-                  style: AppTextStyles.caption.copyWith(color: textSoftColor),
-                ),
-
-                // Preview card — muncul setelah income diisi
-                if (income > 0 && daily > 0) ...[
-                  const SizedBox(height: AppSpacing.xl),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(20),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.timer_outlined,
-                              color: AppColors.primary, size: 20),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              text: 'Pemasukan harian rata-rata ',
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: textSoftColor),
-                              children: [
-                                TextSpan(
-                                  text: formatRupiah(daily),
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: textColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontFeatures: [
-                                      const FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                                ),
-                                if (ctxMsg.isNotEmpty)
-                                  TextSpan(
-                                    text: '. $ctxMsg',
-                                    style: AppTextStyles.bodySmall
-                                        .copyWith(color: textSoftColor),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
-          ),
-        ),
-
-        // CTA pinned ke bawah
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl,
-          ),
-          child: PrimaryButton(
-            label: 'Lanjut →',
-            onPressed: _submit,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
-// ── Step 2 — Pengeluaran Tetap ────────────────────────────────────────────
-
-class _Step2Widget extends StatefulWidget {
-  const _Step2Widget({required this.isDark, required this.income});
-  final bool isDark;
-  final int income;
-
-  @override
-  State<_Step2Widget> createState() => _Step2WidgetState();
-}
-
-class _Step2WidgetState extends State<_Step2Widget>
-    with AutomaticKeepAliveClientMixin {
-  final _rentCtrl = TextEditingController();
-  final _utilitiesCtrl = TextEditingController();
-  final _internetCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _otherCtrl = TextEditingController();
-  String? _submitError;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  final List<FocusNode> _focusNodes = List.generate(5, (_) => FocusNode());
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNodes[0].requestFocus();
-    });
-  }
-
-  @override
-  void dispose() {
-    _rentCtrl.dispose();
-    _utilitiesCtrl.dispose();
-    _internetCtrl.dispose();
-    _phoneCtrl.dispose();
-    _otherCtrl.dispose();
-    for (final n in _focusNodes) {
-      n.dispose();
-    }
-    super.dispose();
-  }
-
-  int _parseCtrl(TextEditingController c) =>
-      int.tryParse(c.text.replaceAll('.', '')) ?? 0;
-
-  int get _totalExpenses =>
-      _parseCtrl(_rentCtrl) +
-      _parseCtrl(_utilitiesCtrl) +
-      _parseCtrl(_internetCtrl) +
-      _parseCtrl(_phoneCtrl) +
-      _parseCtrl(_otherCtrl);
-
-  double get _percentageOfIncome =>
-      widget.income > 0 ? (_totalExpenses / widget.income) * 100 : 0;
-
-  Color get _valueColor {
-    final pct = _percentageOfIncome;
-    if (pct > 90) return AppColors.warn;
-    if (pct > 70) return AppColors.caution;
-    return AppColors.shoot;
-  }
-
-  bool _validate() {
-    final l10n = AppLocalizations.of(context);
-    String? error;
-    if (_totalExpenses == 0) {
-      error = l10n.onboardingErrorEmptyExpenses;
-    } else if (widget.income > 0 && _totalExpenses > widget.income) {
-      error = l10n.onboardingErrorExpensesExceedIncome;
-    }
-    setState(() => _submitError = error);
-    return error == null;
-  }
-
-  void _submit() {
-    if (!_validate()) return;
-    context.read<OnboardingBloc>().add(Step2Submitted(
-          rentExpense: _parseCtrl(_rentCtrl),
-          utilitiesExpense: _parseCtrl(_utilitiesCtrl),
-          internetExpense: _parseCtrl(_internetCtrl),
-          phoneExpense: _parseCtrl(_phoneCtrl),
-          otherFixedExpense: _parseCtrl(_otherCtrl),
-        ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final l10n = AppLocalizations.of(context);
-    final textColor =
-        widget.isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final borderColor =
-        widget.isDark ? AppColors.borderDark : AppColors.borderLight;
-    final cardBg = widget.isDark ? AppColors.surfaceDark : AppColors.cardLight;
-
-    final total = _totalExpenses;
-    final pct = _percentageOfIncome;
-    final isOverBudget = widget.income > 0 && total > widget.income;
-
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.sm),
-                // Eyebrow
-                Row(
-                  children: [
-                    const Icon(Icons.home_outlined,
-                        color: AppColors.primary, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.onboardingEyebrowFixed,
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  l10n.onboardingFixedTitle,
-                  style: AppTextStyles.h1.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    letterSpacing: -0.8,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l10n.onboardingFixedHint,
-                  style:
-                      AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                // Expense list card
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      border: Border.all(color: borderColor),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        _ExpenseInputRow(
-                          icon: Icons.home_outlined,
-                          name: l10n.onboardingExpenseRent,
-                          hint: l10n.onboardingExpenseRentHint,
-                          controller: _rentCtrl,
-                          focusNode: _focusNodes[0],
-                          nextFocusNode: _focusNodes[1],
-                          isDark: widget.isDark,
-                          onChanged: (_) => setState(() { _submitError = null; }),
-                        ),
-                        Divider(height: 1, color: borderColor),
-                        _ExpenseInputRow(
-                          icon: Icons.bolt_outlined,
-                          name: l10n.onboardingExpenseUtilities,
-                          hint: l10n.onboardingExpenseUtilitiesHint,
-                          controller: _utilitiesCtrl,
-                          focusNode: _focusNodes[1],
-                          nextFocusNode: _focusNodes[2],
-                          isDark: widget.isDark,
-                          onChanged: (_) => setState(() { _submitError = null; }),
-                        ),
-                        Divider(height: 1, color: borderColor),
-                        _ExpenseInputRow(
-                          icon: Icons.wifi,
-                          name: l10n.onboardingExpenseInternet,
-                          hint: l10n.onboardingExpenseInternetHint,
-                          controller: _internetCtrl,
-                          focusNode: _focusNodes[2],
-                          nextFocusNode: _focusNodes[3],
-                          isDark: widget.isDark,
-                          onChanged: (_) => setState(() { _submitError = null; }),
-                        ),
-                        Divider(height: 1, color: borderColor),
-                        _ExpenseInputRow(
-                          icon: Icons.smartphone_outlined,
-                          name: l10n.onboardingExpensePhone,
-                          hint: l10n.onboardingExpensePhoneHint,
-                          controller: _phoneCtrl,
-                          focusNode: _focusNodes[3],
-                          nextFocusNode: _focusNodes[4],
-                          isDark: widget.isDark,
-                          onChanged: (_) => setState(() { _submitError = null; }),
-                        ),
-                        Divider(height: 1, color: borderColor),
-                        _ExpenseInputRow(
-                          icon: Icons.work_outline,
-                          name: l10n.categoryOther,
-                          hint: l10n.onboardingExpenseOtherHint,
-                          controller: _otherCtrl,
-                          focusNode: _focusNodes[4],
-                          isDark: widget.isDark,
-                          textInputAction: TextInputAction.done,
-                          onChanged: (_) => setState(() { _submitError = null; }),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // Summary card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: 18,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: widget.isDark
-                          ? [AppColors.surfaceDark, AppColors.borderDark]
-                          : [AppColors.primary, AppColors.primaryDeep],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: widget.isDark
-                        ? Border.all(
-                            color: AppColors.shoot.withValues(alpha: 0.4),
-                          )
-                        : null,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'TOTAL TETAP',
-                            style: AppTextStyles.caption.copyWith(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.income > 0
-                                ? '≈ ${pct.toStringAsFixed(1)}% dari pemasukan'
-                                : 'Isi pemasukan di langkah 1',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        formatRupiah(total),
-                        style: AppTextStyles.h2.copyWith(
-                          color: isOverBudget ? AppColors.warn : _valueColor,
-                          fontFeatures: [const FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Warnings
-                if (_percentageOfIncome > 90 && total > 0) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Pengeluaran tetap cukup tinggi — pertimbangkan mana yang bisa dikurangi.',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.warn),
-                  ),
-                ],
-                if (_submitError != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    _submitError!,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.warn),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
-          ),
-        ),
-
-        // CTA pinned ke bawah
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl,
-          ),
-          child: PrimaryButton(
-            label: 'Lanjut →',
-            onPressed: _submit,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Step 3 — Dana Darurat & Cicilan ───────────────────────────────────────
-
-class _Step3Widget extends StatefulWidget {
-  const _Step3Widget({
-    required this.isDark,
-    required this.income,
-    required this.remainingDays,
-    required this.fixedExpenses,
-    required this.isLoading,
-  });
-
-  final bool isDark;
-  final int income;
-  final int remainingDays;
-  final int fixedExpenses;
-  final bool isLoading;
-
-  @override
-  State<_Step3Widget> createState() => _Step3WidgetState();
-}
-
-class _Step3WidgetState extends State<_Step3Widget> {
-  // null = "Lewati dulu" → emergencyFundPct = 0.0
-  double? _selectedPct = 0.10;
-
-  static const _kPctOptions = <double?>[null, 0.05, 0.10, 0.15];
-
-  int get _available =>
-      (widget.income - widget.fixedExpenses).clamp(0, 999999999);
-  int get _monthlyInstallment =>
-      _selectedPct != null ? (_available * _selectedPct!).round() : 0;
-  int get _monthlySpendable => _available - _monthlyInstallment;
-  int get _dailyBudget => widget.remainingDays > 0
-      ? (_monthlySpendable / widget.remainingDays).floor()
-      : 0;
-
-  String _chipLabel(double? pct, AppLocalizations l10n) {
-    if (pct == null) return l10n.onboardingEmergencySkip;
-    return '${(pct * 100).round()}%';
-  }
-
-  void _submit() {
-    context.read<OnboardingBloc>().add(
-          Step3Submitted(emergencyFundPct: _selectedPct ?? 0.0),
-        );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final textColor =
-        widget.isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final surfaceColor =
-        widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor =
-        widget.isDark ? AppColors.borderDark : AppColors.borderLight;
-    final mutedColor =
-        widget.isDark ? AppColors.mutedDark : AppColors.mutedLight;
-
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.sm),
-                // Eyebrow — consistent with Steps 1 & 2
-                Row(
-                  children: [
-                    const Icon(Icons.savings_outlined,
-                        color: AppColors.primary, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.onboardingEyebrowEmergency,
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  l10n.onboardingEmergencyTitle,
-                  style: AppTextStyles.h1.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    letterSpacing: -0.8,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l10n.onboardingEmergencySubtitle,
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: textSoftColor),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                // Single question + chip options
-                Text(
-                  l10n.onboardingEmergencyQuestion,
-                  style: AppTextStyles.label.copyWith(color: textColor),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _kPctOptions
-                        .map((pct) => _QuickChip(
-                              label: _chipLabel(pct, l10n),
-                              selected: _selectedPct == pct,
-                              isDark: widget.isDark,
-                              onTap: () =>
-                                  setState(() => _selectedPct = pct),
-                            ))
-                        .toList(),
-                  ),
-                ),
-
-                // Dynamic microcopy (only when non-skip option selected and there's available amount)
-                if (_selectedPct != null && _available > 0) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${(_selectedPct! * 100).round()}% dari sisa = '
-                    '${formatRupiah(_monthlyInstallment)}/bulan',
-                    style: AppTextStyles.caption
-                        .copyWith(color: textSoftColor),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.xl),
-
-                // Daily budget result card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        l10n.onboardingDailyBudgetLabel,
-                        style: AppTextStyles.caption
-                            .copyWith(color: textSoftColor),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _dailyBudget > 0
-                            ? formatRupiah(_dailyBudget)
-                            : '—',
-                        style: AppTextStyles.numericLg
-                            .copyWith(color: AppColors.primary),
-                      ),
-                      Text(
-                        l10n.onboardingDailyBudgetSuffix,
-                        style: AppTextStyles.caption
-                            .copyWith(color: textSoftColor),
-                      ),
-                      if (widget.remainingDays > 0) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          l10n.onboardingDailyBudgetDaysLeft(
-                              widget.remainingDays),
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: textSoftColor),
-                        ),
-                      ],
-                      if (_monthlySpendable > 0) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          l10n.onboardingDailyBudgetMonthlyLeft(
-                              formatRupiah(_monthlySpendable)),
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: mutedColor),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-            ),
-          ),
-        ),
-
-        // CTA pinned to bottom
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.sm,
-            AppSpacing.xl,
-            AppSpacing.xxl,
-          ),
-          child: PrimaryButton(
-            label: 'Mulai Bertahan',
-            onPressed: _submit,
-            isLoading: widget.isLoading,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Quick chip ────────────────────────────────────────────────────────────
-
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
+// ── Pct chip ─────────────────────────────────────────────────────────────────
+class _PctChipWidget extends StatelessWidget {
+  const _PctChipWidget({
     required this.label,
-    required this.selected,
+    required this.active,
     required this.isDark,
+    required this.surfaceAlt,
     required this.onTap,
   });
 
   final String label;
-  final bool selected;
+  final bool active;
   final bool isDark;
+  final Color surfaceAlt;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 44,
-          margin: const EdgeInsets.only(right: AppSpacing.sm),
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
-            border: Border.all(
-              color: selected ? AppColors.primary : borderColor,
-            ),
-            borderRadius: BorderRadius.circular(999),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : surfaceAlt,
+          border: Border.all(
+            color: active ? AppColors.primary : border,
+            width: 1.5,
           ),
-          alignment: Alignment.center,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Center(
           child: Text(
             label,
-            style: AppTextStyles.label.copyWith(
-              color: selected ? Colors.white : textColor,
+            style: TextStyle(
+              fontFamily: 'InterTight',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : textColor,
+              height: 1,
             ),
           ),
         ),
@@ -1195,111 +1683,231 @@ class _QuickChip extends StatelessWidget {
   }
 }
 
-// ── Date segmented picker ─────────────────────────────────────────────────
-
-class _DateSegmentPicker extends StatelessWidget {
-  const _DateSegmentPicker({
-    required this.presets,
-    required this.selected,
+// ── Ekstrem chip ─────────────────────────────────────────────────────────────
+class _ExtremChip extends StatelessWidget {
+  const _ExtremChip({
+    required this.active,
     required this.isDark,
-    required this.onSelect,
+    required this.surfaceAlt,
+    required this.onTap,
   });
 
-  final List<int> presets;
-  final int? selected;
+  final bool active;
   final bool isDark;
-  final void Function(int?) onSelect; // null = buka bottom sheet
+  final Color surfaceAlt;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final selectedBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    final isCustomSelected =
-        selected != null && !presets.contains(selected);
-    final options = [...presets, null]; // [1, 5, 15, 25, null=Lain]
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: options.map((date) {
-          final isLain = date == null;
-          final isSelected =
-              isLain ? isCustomSelected : date == selected;
-
-          final label = isLain
-              ? (isCustomSelected ? 'Tgl $selected ✓' : 'Lain')
-              : date.toString();
-
-          final bgSegment = isSelected
-              ? (isLain && isCustomSelected ? AppColors.primary : selectedBg)
-              : Colors.transparent;
-
-          final fgSegment = isSelected
-              ? (isLain && isCustomSelected ? Colors.white : textColor)
-              : mutedColor;
-
-          final semanticLabel = isLain
-              ? (isCustomSelected ? 'Tanggal $selected' : 'Lain')
-              : 'Tanggal $date';
-
-          return Expanded(
-            child: Semantics(
-              button: true,
-              selected: isSelected,
-              label: isSelected ? '$semanticLabel, dipilih' : semanticLabel,
-              child: GestureDetector(
-                onTap: () => onSelect(date),
-                child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 44,
-                decoration: BoxDecoration(
-                  color: bgSegment,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: isSelected && !(isLain && isCustomSelected)
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(18),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: AppTextStyles.label.copyWith(
-                      color: fgSegment,
-                      fontFeatures: !isLain
-                          ? [const FontFeature.tabularFigures()]
-                          : null,
-                    ),
-                  ),
-                ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primaryBright : surfaceAlt,
+          border: Border.all(
+            color: active ? AppColors.primaryBright : border,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bolt_rounded,
+              size: 13,
+              color: active ? Colors.white : AppColors.primary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Ekstrem',
+              style: TextStyle(
+                fontFamily: 'InterTight',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: active ? Colors.white : AppColors.primary,
+                height: 1,
               ),
             ),
-          ),
-          );
-        }).toList(),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Date picker bottom sheet ──────────────────────────────────────────────
+// ── Custom slider (step 2) ────────────────────────────────────────────────
+class _OSlider extends StatefulWidget {
+  const _OSlider({
+    required this.value,
+    required this.fillColor,
+    required this.borderColor,
+    required this.onChange,
+  });
+
+  final int value;
+  final Color fillColor;
+  final Color borderColor;
+  final void Function(int) onChange;
+
+  @override
+  State<_OSlider> createState() => _OSliderState();
+}
+
+class _OSliderState extends State<_OSlider> {
+  static const _min = 0, _max = 25;
+  static const _marks = [0, 5, 10, 15, 20, 25];
+  static const _knobSize = 26.0;
+  static const _trackH = 8.0;
+
+  double _pct(int v) => (v - _min) / (_max - _min);
+
+  void _fromDx(double dx, double width) {
+    final p = (dx / width).clamp(0.0, 1.0);
+    final raw = _min + p * (_max - _min);
+    final snapped = (raw.round()).clamp(_min, _max);
+    if (snapped != widget.value) widget.onChange(snapped);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final w = constraints.maxWidth;
+      return GestureDetector(
+        onHorizontalDragUpdate: (d) => _fromDx(d.localPosition.dx, w),
+        onTapDown: (d) => _fromDx(d.localPosition.dx, w),
+        child: SizedBox(
+          height: _knobSize + 12,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // track
+              Container(
+                height: _trackH,
+                decoration: BoxDecoration(
+                  color: widget.borderColor,
+                  borderRadius: BorderRadius.circular(_trackH),
+                ),
+              ),
+              // fill
+              Positioned(
+                left: 0,
+                child: Container(
+                  width: w * _pct(widget.value),
+                  height: _trackH,
+                  decoration: BoxDecoration(
+                    color: widget.fillColor,
+                    borderRadius: BorderRadius.circular(_trackH),
+                  ),
+                ),
+              ),
+              // marks
+              ..._marks.map((m) {
+                return Positioned(
+                  left: w * _pct(m) - 1.5,
+                  child: Container(
+                    width: 3,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(46),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                );
+              }),
+              // knob
+              Positioned(
+                left: (w * _pct(widget.value) - _knobSize / 2)
+                    .clamp(0, w - _knobSize),
+                child: Container(
+                  width: _knobSize,
+                  height: _knobSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0B1F14).withAlpha(71),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withAlpha(10),
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+// ── Stat widget (done screen) ─────────────────────────────────────────────
+class _StatWidget extends StatelessWidget {
+  const _StatWidget({
+    required this.label,
+    required this.value,
+    required this.isDark,
+    this.big = false,
+  });
+
+  final String label;
+  final String value;
+  final bool isDark;
+  final bool big;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'JetBrainsMono',
+            fontSize: 9.5,
+            letterSpacing: 0.1 * 9.5,
+            color: muted,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: big ? 22 : 16,
+            fontWeight: FontWeight.w800,
+            color: big ? AppColors.primary : textColor,
+            letterSpacing: -0.02 * (big ? 22 : 16),
+            height: 1,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DATE PICKER SHEET (for payday "Lain" chip)
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _DatePickerSheet extends StatefulWidget {
-  const _DatePickerSheet({
-    required this.onConfirm,
-    this.initialDate,
-  });
+  const _DatePickerSheet({required this.onConfirm, this.initialDate});
 
   final int? initialDate;
   final ValueChanged<int> onConfirm;
@@ -1321,32 +1929,23 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final mutedColor =
-        isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textSoftColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.xxl,
+        AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xxl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
             width: 28,
             height: 3,
@@ -1356,7 +1955,6 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          // Header row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1364,16 +1962,11 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Pilih tanggal masuk',
-                      style: AppTextStyles.h3.copyWith(color: textColor),
-                    ),
+                    Text('Pilih tanggal masuk',
+                        style: AppTextStyles.h3.copyWith(color: textColor)),
                     const SizedBox(height: 2),
-                    Text(
-                      'Tanggal kiriman atau gaji tiba.',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: textSoftColor),
-                    ),
+                    Text('Tanggal kiriman atau gaji tiba.',
+                        style: AppTextStyles.bodySmall.copyWith(color: textSoftColor)),
                   ],
                 ),
               ),
@@ -1382,22 +1975,18 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                 child: Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration:
+                      BoxDecoration(color: surfaceColor, shape: BoxShape.circle),
                   child: Icon(Icons.close, size: 16, color: mutedColor),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          // Grid 1–31
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               childAspectRatio: 1,
               crossAxisSpacing: 4,
@@ -1408,45 +1997,26 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
               final date = i + 1;
               final isSelected = _selected == date;
               final isClamped = date >= 29;
-              final fgColor = isSelected
-                  ? Colors.white
-                  : isClamped
-                      ? mutedColor
-                      : textColor;
+              final fg = isSelected ? Colors.white : (isClamped ? mutedColor : textColor);
               return GestureDetector(
                 onTap: () => setState(() => _selected = date),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          date.toString(),
-                          style: AppTextStyles.label.copyWith(
-                            color: fgColor,
-                            fontFeatures: [
-                              const FontFeature.tabularFigures(),
-                            ],
-                          ),
-                        ),
-                        if (isClamped && !isSelected)
-                          Text(
-                            '*',
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('$date',
+                          style: AppTextStyles.label.copyWith(color: fg)),
+                      if (isClamped && !isSelected)
+                        Text('*',
                             style: AppTextStyles.caption.copyWith(
-                              fontSize: 8,
-                              color: mutedColor,
-                              height: 0.8,
-                            ),
-                          ),
-                      ],
-                    ),
+                                fontSize: 8, color: mutedColor, height: 0.8)),
+                    ],
                   ),
                 ),
               );
@@ -1455,239 +2025,55 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '* Bulan tertentu (Feb, Apr, Jun, Sep, Nov) otomatis disesuaikan.',
-            style: AppTextStyles.caption.copyWith(
-              color: mutedColor,
-              fontSize: 10,
-            ),
+            style: AppTextStyles.caption.copyWith(color: mutedColor, fontSize: 10),
           ),
           const SizedBox(height: AppSpacing.md),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: borderColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(
-                    'Batal',
-                    style: AppTextStyles.label
-                        .copyWith(color: textSoftColor),
-                  ),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: borderColor),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+                child: Text('Batal',
+                    style: AppTextStyles.label.copyWith(color: textSoftColor)),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                flex: 2,
-                child: FilledButton(
-                  onPressed: _selected != null
-                      ? () {
-                          widget.onConfirm(_selected!);
-                          Navigator.pop(context);
-                        }
-                      : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: borderColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(
-                    _selected != null
-                        ? (_selected! >= 29
-                            ? 'Gunakan ~tanggal $_selected*'
-                            : 'Gunakan tanggal $_selected')
-                        : 'Pilih tanggal dulu',
-                    style: AppTextStyles.label.copyWith(
-                      color: _selected != null
-                          ? Colors.white
-                          : mutedColor,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Expense input row ─────────────────────────────────────────────────────
-
-class _ExpenseInputRow extends StatelessWidget {
-  const _ExpenseInputRow({
-    required this.icon,
-    required this.name,
-    required this.hint,
-    required this.controller,
-    required this.isDark,
-    required this.onChanged,
-    this.focusNode,
-    this.nextFocusNode,
-    this.textInputAction = TextInputAction.next,
-  });
-
-  final IconData icon;
-  final String name;
-  final String hint;
-  final TextEditingController controller;
-  final bool isDark;
-  final ValueChanged<String> onChanged;
-  final FocusNode? focusNode;
-  final FocusNode? nextFocusNode;
-  final TextInputAction textInputAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          // Icon container
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          // Meta column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTextStyles.label.copyWith(color: textColor),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed: _selected != null
+                    ? () {
+                        widget.onConfirm(_selected!);
+                        Navigator.pop(context, _selected);
+                      }
+                    : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: borderColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                Text(
-                  hint,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontSize: 11,
-                    color: mutedColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          // Input column (right-aligned)
-          Semantics(
-            label: name,
-            child: SizedBox(
-              width: 130,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  textAlign: TextAlign.right,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [_DotFormatter()],
-                  textInputAction: textInputAction,
-                  onChanged: onChanged,
-                  onSubmitted: (_) {
-                    if (nextFocusNode != null) {
-                      nextFocusNode!.requestFocus();
-                    }
-                  },
+                child: Text(
+                  _selected != null
+                      ? (_selected! >= 29
+                          ? 'Gunakan ~tanggal $_selected*'
+                          : 'Gunakan tanggal $_selected')
+                      : 'Pilih tanggal dulu',
                   style: AppTextStyles.label.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
-                    fontFeatures: [const FontFeature.tabularFigures()],
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '—',
-                    hintStyle: AppTextStyles.label.copyWith(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: mutedColor.withValues(alpha: 0.5),
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
+                    color: _selected != null ? Colors.white : mutedColor,
                   ),
                 ),
-                Text(
-                  'Rp / bulan',
-                  style: AppTextStyles.caption.copyWith(
-                    fontSize: 10,
-                    color: mutedColor,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          ),
+          ]),
         ],
       ),
-    );
-  }
-}
-
-// ── Dot number formatter (separates thousands with dots, no Rp prefix) ────
-
-class _DotFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final raw = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (raw.isEmpty) return const TextEditingValue();
-    final amount = int.tryParse(raw);
-    if (amount == null) return const TextEditingValue();
-    final s = amount.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    final formatted = buf.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-// ── Rupiah input formatter ────────────────────────────────────────────────
-
-class _RupiahInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final raw = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (raw.isEmpty) return const TextEditingValue();
-    final amount = int.tryParse(raw);
-    if (amount == null) return const TextEditingValue();
-    final formatted = formatRupiah(amount);
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

@@ -311,6 +311,44 @@ class AppLocalizations {
   String get categoryHealth => _t('category_health');
   String get categoryInternet => _t('category_internet');
 
+  // Onboarding redesign — C+ stagger
+  String get onboardingEyebrowStep1 => _t('onboarding_eyebrow_step1');
+  String get onboardingEyebrowStep2 => _t('onboarding_eyebrow_step2');
+  String get onboardingEyebrowStep3 => _t('onboarding_eyebrow_step3');
+  String get onboardingTitleIncome => _t('onboarding_title_income');
+  String get onboardingTitleFixed => _t('onboarding_title_fixed');
+  String get onboardingTitleDarurat => _t('onboarding_title_darurat');
+  String get onboardingDoneEyebrow => _t('onboarding_done_eyebrow');
+  String get onboardingDoneTitle => _t('onboarding_done_title');
+  String get onboardingDoneSub => _t('onboarding_done_sub');
+  String get onboardingPaydayLabel => _t('onboarding_payday_label');
+  String get onboardingSkipLater => _t('onboarding_skip_later');
+  String get onboardingChipOtherDate => _t('onboarding_chip_other_date');
+  String get onboardingCtaStart => _t('onboarding_cta_start');
+  String get onboardingCtaEnter => _t('onboarding_cta_enter');
+  String get onboardingSheetDone => _t('onboarding_sheet_done');
+  String get onboardingTotalLabel => _t('onboarding_total_label');
+  String onboardingTotalPct(int pct) =>
+      _t('onboarding_total_pct').replaceAll('{pct}', '$pct');
+  String onboardingSheetTotalLabel(int pct) =>
+      _t('onboarding_sheet_total_label').replaceAll('{pct}', '$pct');
+  String get onboardingDailySubNoEmergency => _t('onboarding_daily_sub_no_emergency');
+  String onboardingDailySubSaving(String amount) =>
+      _t('onboarding_daily_sub_saving').replaceAll('{amount}', amount);
+  String get onboardingPctLabelLow => _t('onboarding_pct_label_low');
+  String get onboardingPctNoteLow => _t('onboarding_pct_note_low');
+  String get onboardingPctLabelMid => _t('onboarding_pct_label_mid');
+  String get onboardingPctNoteMid => _t('onboarding_pct_note_mid');
+  String get onboardingPctLabelHigh => _t('onboarding_pct_label_high');
+  String get onboardingPctNoteHigh => _t('onboarding_pct_note_high');
+  String get onboardingPctLabelMax => _t('onboarding_pct_label_max');
+  String get onboardingPctNoteMax => _t('onboarding_pct_note_max');
+  String get onboardingPctNoteSkip => _t('onboarding_pct_note_skip');
+  String get onboardingStatDaily => _t('onboarding_stat_daily');
+  String get onboardingStatEmergency => _t('onboarding_stat_emergency');
+  String get onboardingStatIncome => _t('onboarding_stat_income');
+  String get onboardingStatFixed => _t('onboarding_stat_fixed');
+
   // Manage categories
   String get manageCategoriesTitle => _t('manage_categories_title');
   String get manageCategoriesSectionBuiltIn => _t('manage_categories_section_built_in');
