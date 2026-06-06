@@ -182,7 +182,7 @@ class _Leaf extends StatelessWidget {
       left: left,
       child: Transform.rotate(
         angle: angleDeg * math.pi / 180,
-        alignment: dir > 0 ? Alignment.bottomLeft : Alignment.bottomRight,
+        alignment: Alignment.center,
         child: Container(
           width: w,
           height: h,
