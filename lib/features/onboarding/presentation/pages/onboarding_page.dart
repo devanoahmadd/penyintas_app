@@ -1714,26 +1714,29 @@ class _ExtremChip extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bolt_rounded,
-              size: 13,
-              color: active ? Colors.white : AppColors.primary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Ekstrem',
-              style: TextStyle(
-                fontFamily: 'InterTight',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.bolt_rounded,
+                size: 13,
                 color: active ? Colors.white : AppColors.primary,
-                height: 1,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                'Ekstrem',
+                style: TextStyle(
+                  fontFamily: 'InterTight',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : AppColors.primary,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
