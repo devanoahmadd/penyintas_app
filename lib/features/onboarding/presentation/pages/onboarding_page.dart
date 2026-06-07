@@ -597,7 +597,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   // ════════════════════════════════════════════════════════════════
   Widget _buildStep1(bool isDark, AppLocalizations l, _Calc calc) {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
 
     final activeRowDef = _kExpRows.where((r) => r.id == _activeRow).firstOrNull;
@@ -957,7 +957,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   ) {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = isDark ? AppColors.cardDark : AppColors.cardLight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1359,7 +1359,7 @@ class _ExpRowWidget extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
 
     return GestureDetector(
@@ -1931,7 +1931,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
@@ -1940,7 +1940,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: bgColor,
+        color: surfaceAlt,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(

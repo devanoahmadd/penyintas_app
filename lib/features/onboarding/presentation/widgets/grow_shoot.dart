@@ -57,7 +57,7 @@ class _GrowShootState extends State<GrowShoot>
 
   @override
   Widget build(BuildContext context) {
-    final surface = widget.isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = widget.isDark ? AppColors.cardDark : AppColors.cardLight;
     final soilColor = widget.isDark
         ? const Color(0xFF1F3328)
         : const Color(0xFFE2DCC8);

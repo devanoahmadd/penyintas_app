@@ -39,7 +39,7 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
 
   @override
   Widget build(BuildContext context) {
-    final surface = widget.isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = widget.isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = widget.isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
