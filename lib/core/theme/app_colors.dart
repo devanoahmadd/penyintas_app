@@ -19,7 +19,7 @@ class AppColors {
   static const Color mutedLight = Color(0xFF6B7264);
 
   // Onboarding: panel keypad / bottom sheet surface
-  static const Color surfaceAltLight = Color(0xFFFFFFFF);
+  static const Color surfaceAltLight = Color(0xFFF8F7F3);
   static const Color surfaceAltDark = Color(0xFF1A3A26);
 
   // Dark Theme
