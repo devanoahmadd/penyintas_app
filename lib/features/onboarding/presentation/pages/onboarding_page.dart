@@ -540,7 +540,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                           );
                         }),
                         _PaydayChipWidget(
-                          label: l.onboardingChipOtherDate,
+                          label: !_kPaydayPresets.contains(_payday)
+                              ? '$_payday'
+                              : l.onboardingChipOtherDate,
                           active: !_kPaydayPresets.contains(_payday),
                           isDark: isDark,
                           wide: true,
@@ -579,7 +581,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _openPaydayPicker() async {
-    final initial = _kPaydayPresets.contains(_payday) ? 28 : _payday;
+    final initial = _kPaydayPresets.contains(_payday) ? null : _payday;
     final picked = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,

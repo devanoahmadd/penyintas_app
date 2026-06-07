@@ -275,6 +275,54 @@ void main() {
       // 2500000 * 10 + 3 = 25000003
       expect(find.text('25.000.003', skipOffstage: false), findsOneWidget);
     });
+
+    testWidgets('date picker terbuka tanpa tanggal pre-selected', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      await tester.tap(find.text('Lain', skipOffstage: false));
+      await tester.pumpAndSettle();
+
+      // Tidak ada pre-selection → button disabled, label "Pilih tanggal dulu"
+      expect(find.text('Pilih tanggal dulu'), findsOneWidget);
+    });
+
+    testWidgets('chip "Lain" menampilkan tanggal setelah konfirmasi custom date', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      // Buka date picker
+      await tester.tap(find.text('Lain', skipOffstage: false));
+      await tester.pumpAndSettle();
+
+      // Pilih tanggal 14 di grid
+      await tester.tap(find.text('14').last);
+      await tester.pump();
+
+      // Konfirmasi
+      await tester.tap(find.text('Gunakan tanggal 14'));
+      await tester.pumpAndSettle();
+
+      // Chip menampilkan '14', bukan 'Lain'
+      expect(find.text('14', skipOffstage: false), findsOneWidget);
+      expect(find.text('Lain', skipOffstage: false), findsNothing);
+    });
   });
 
   // ── Navigasi step 0 → step 1 ───────────────────────────────────────────
