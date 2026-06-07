@@ -586,7 +586,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _DatePickerSheet(
         initialDate: initial,
-        onConfirm: (v) {},
       ),
     );
     if (picked != null && mounted) setState(() => _payday = picked);
@@ -1910,10 +1909,9 @@ class _StatWidget extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DatePickerSheet extends StatefulWidget {
-  const _DatePickerSheet({required this.onConfirm, this.initialDate});
+  const _DatePickerSheet({this.initialDate});
 
   final int? initialDate;
-  final ValueChanged<int> onConfirm;
 
   @override
   State<_DatePickerSheet> createState() => _DatePickerSheetState();
@@ -2050,10 +2048,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
               flex: 2,
               child: FilledButton(
                 onPressed: _selected != null
-                    ? () {
-                        widget.onConfirm(_selected!);
-                        Navigator.pop(context, _selected);
-                      }
+                    ? () => Navigator.pop(context, _selected)
                     : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
