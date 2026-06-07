@@ -323,6 +323,40 @@ void main() {
       expect(find.text('14', skipOffstage: false), findsOneWidget);
       expect(find.text('Lain', skipOffstage: false), findsNothing);
     });
+
+    testWidgets('CTA "Lanjut" disabled saat income = 0', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+
+      // Income awal = 2.500.000 → hapus semua digit via back key (7 kali)
+      // Back key (_BackIcon) dirender sebagai CustomPaint ukuran 22×22.
+      // applyOnboardingKey: 2500000→250000→25000→2500→250→25→2→0
+      final backKey = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.size == const Size(22, 22),
+      );
+      for (var i = 0; i < 7; i++) {
+        await tester.tap(backKey);
+        await tester.pump();
+      }
+
+      // Income = 0 → CTA harus disabled (onPressed == null).
+      // Cari FilledButton yang memuat teks 'Lanjut'.
+      final ctaFinder = find.ancestor(
+        of: find.text('Lanjut', skipOffstage: false),
+        matching: find.byType(FilledButton),
+        matchRoot: false,
+      );
+      final cta = tester.widget<FilledButton>(ctaFinder);
+      expect(cta.onPressed, isNull);
+    });
   });
 
   // ── Navigasi step 0 → step 1 ───────────────────────────────────────────

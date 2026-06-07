@@ -571,7 +571,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             cta: _CtaBtn(
               label: l.btnNext,
               height: 52,
-              onPressed: _next,
+              onPressed: _income > 0 ? _next : null,
             ),
           ),
           1, n,
