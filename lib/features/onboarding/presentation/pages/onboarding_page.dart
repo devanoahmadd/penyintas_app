@@ -1359,7 +1359,7 @@ class _ExpRowWidget extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.cardLight;
+    final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
 
     return GestureDetector(
