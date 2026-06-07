@@ -593,7 +593,8 @@ void main() {
       expect(find.text('Masuk ke Beranda', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('tap "Masuk ke Beranda" mengirim Step1/2/3Submitted', (tester) async {
+    // #208: _submitAll sekarang mengirim satu OnboardingSubmitted, bukan burst 3 event
+    testWidgets('tap "Masuk ke Beranda" mengirim OnboardingSubmitted', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -604,12 +605,10 @@ void main() {
       await tester.tap(find.text('Masuk ke Beranda', skipOffstage: false));
       await tester.pump();
 
-      verify(() => mockBloc.add(any(that: isA<Step1Submitted>()))).called(1);
-      verify(() => mockBloc.add(any(that: isA<Step2Submitted>()))).called(1);
-      verify(() => mockBloc.add(any(that: isA<Step3Submitted>()))).called(1);
+      verify(() => mockBloc.add(any(that: isA<OnboardingSubmitted>()))).called(1);
     });
 
-    testWidgets('Step3Submitted emergencyFundPct=0.10 untuk default pct=10', (tester) async {
+    testWidgets('OnboardingSubmitted membawa emergencyFundPct=0.10 untuk default pct=10', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -620,9 +619,13 @@ void main() {
       await tester.tap(find.text('Masuk ke Beranda', skipOffstage: false));
       await tester.pump();
 
-      verify(() => mockBloc.add(
-            const Step3Submitted(emergencyFundPct: 0.10),
-          )).called(1);
+      verify(() => mockBloc.add(any(
+            that: isA<OnboardingSubmitted>().having(
+              (e) => e.emergencyFundPct,
+              'emergencyFundPct',
+              closeTo(0.10, 0.001),
+            ),
+          ))).called(1);
     });
   });
 

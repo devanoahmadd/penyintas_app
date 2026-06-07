@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
+import 'package:penyintas_app/core/theme/app_spacing.dart';
 
 /// Growing bamboo shoot widget.
 /// grow ∈ [0,1] drives stem height, leaf count, and color.
@@ -58,9 +59,7 @@ class _GrowShootState extends State<GrowShoot>
   @override
   Widget build(BuildContext context) {
     final surface = widget.isDark ? AppColors.cardDark : AppColors.cardLight;
-    final soilColor = widget.isDark
-        ? const Color(0xFF1F3328)
-        : const Color(0xFFE2DCC8);
+    final soilColor = widget.isDark ? AppColors.soilDark : AppColors.soilLight;
 
     return AnimatedBuilder(
       animation: _ctrl,
@@ -74,7 +73,7 @@ class _GrowShootState extends State<GrowShoot>
           width: 78,
           height: widget.size,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: ColoredBox(
               color: surface,
               child: Stack(

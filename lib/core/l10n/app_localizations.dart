@@ -311,6 +311,21 @@ class AppLocalizations {
   String get categoryHealth => _t('category_health');
   String get categoryInternet => _t('category_internet');
 
+  // Onboarding — audit remediasi (#200/#201/#202)
+  String get onboardingExitDialogTitle => _t('onboarding_exit_dialog_title');
+  String get onboardingExitDialogBody => _t('onboarding_exit_dialog_body');
+  String get onboardingExitDialogContinue => _t('onboarding_exit_dialog_continue');
+  String get onboardingExitDialogConfirm => _t('onboarding_exit_dialog_confirm');
+  String get onboardingDatePickerTitle => _t('onboarding_date_picker_title');
+  String get onboardingDatePickerSubtitle => _t('onboarding_date_picker_subtitle');
+  String get onboardingDatePickerNote => _t('onboarding_date_picker_note');
+  String get onboardingDatePickerNone => _t('onboarding_date_picker_none');
+  String onboardingDatePickerUse(int date) =>
+      _t('onboarding_date_picker_use').replaceAll('{date}', '$date');
+  String onboardingDatePickerUseApprox(int date) =>
+      _t('onboarding_date_picker_use_approx').replaceAll('{date}', '$date');
+  String get onboardingWarnFixedFull => _t('onboarding_warn_fixed_full');
+
   // Onboarding redesign — C+ stagger
   String get onboardingEyebrowStep1 => _t('onboarding_eyebrow_step1');
   String get onboardingEyebrowStep2 => _t('onboarding_eyebrow_step2');

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
@@ -13,6 +11,9 @@ import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settin
 part 'onboarding_event.dart';
 part 'onboarding_state.dart';
 
+/// #208: simplified BLoC.
+/// State machine: Initial → Calculating → Success | Error
+/// Navigation between onboarding steps is handled locally by OnboardingPage.
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   OnboardingBloc({
     required SaveBudgetSettingsUseCase saveBudgetSettings,
@@ -25,114 +26,65 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         _pushUserSettings = pushUserSettings,
         super(const OnboardingInitial()) {
     on<OnboardingStarted>(_onStarted);
-    on<OnboardingBackPressed>(_onBack);
-    on<Step1Submitted>(_onStep1);
-    on<Step2Submitted>(_onStep2);
-    on<Step3Submitted>(_onStep3);
-    on<OnboardingRetryRequested>(_onRetry);
+    on<OnboardingSubmitted>(_onSubmitted);
   }
 
   final SaveBudgetSettingsUseCase _saveBudgetSettings;
   final CalculateDailyBudgetUseCase _calculateDailyBudget;
   final AnalyticsService _analyticsService;
   final PushUserSettingsUseCase _pushUserSettings;
-  OnboardingStep3? _lastStep3;
 
   void _onStarted(OnboardingStarted event, Emitter<OnboardingState> emit) {
-    emit(const OnboardingStep1());
+    emit(const OnboardingInitial());
   }
 
-  void _onBack(OnboardingBackPressed event, Emitter<OnboardingState> emit) {
-    if (state is OnboardingStep2) {
-      emit(const OnboardingStep1());
-    } else if (state is OnboardingStep3) {
-      final s = state as OnboardingStep3;
-      emit(OnboardingStep2(income: s.income, paymentDate: s.paymentDate));
-    }
-  }
-
-  void _onStep1(Step1Submitted event, Emitter<OnboardingState> emit) {
-    emit(OnboardingStep2(income: event.income, paymentDate: event.paymentDate));
-  }
-
-  void _onStep2(Step2Submitted event, Emitter<OnboardingState> emit) {
-    final s = state as OnboardingStep2;
-    final days = remainingDaysInCycle(s.paymentDate);
-    emit(OnboardingStep3(
-      income: s.income,
-      paymentDate: s.paymentDate,
-      rentExpense: event.rentExpense,
-      utilitiesExpense: event.utilitiesExpense,
-      internetExpense: event.internetExpense,
-      phoneExpense: event.phoneExpense,
-      otherFixedExpense: event.otherFixedExpense,
-      remainingDays: days > 0 ? days : daysInCycle(s.paymentDate),
-    ));
-  }
-
-  Future<void> _onStep3(
-    Step3Submitted event,
+  /// #208: single handler that receives all form data and runs the full pipeline.
+  /// Safe to call multiple times (retry-friendly) — state is reset to Calculating first.
+  Future<void> _onSubmitted(
+    OnboardingSubmitted event,
     Emitter<OnboardingState> emit,
   ) async {
-    if (state is! OnboardingStep3) return;
-    final s = state as OnboardingStep3;
-    // Simpan emergencyFundPct dari event agar tersedia saat retry (#30)
-    _lastStep3 = OnboardingStep3(
-      income: s.income,
-      paymentDate: s.paymentDate,
-      rentExpense: s.rentExpense,
-      utilitiesExpense: s.utilitiesExpense,
-      internetExpense: s.internetExpense,
-      phoneExpense: s.phoneExpense,
-      otherFixedExpense: s.otherFixedExpense,
-      remainingDays: s.remainingDays,
-      emergencyFundPct: event.emergencyFundPct,
-    );
     emit(const OnboardingCalculating());
 
+    final days = () {
+      final d = remainingDaysInCycle(event.paymentDate);
+      return d > 0 ? d : daysInCycle(event.paymentDate);
+    }();
+
     final calcResult = await _calculateDailyBudget(CalcParams(
-      income: s.income,
-      fixedExpenses: s.fixedExpenses,
+      income: event.income,
+      fixedExpenses: event.fixedExpenses,
       emergencyPct: event.emergencyFundPct,
-      remainingDays: s.remainingDays,
+      remainingDays: days,
     ));
 
     final settings = BudgetSettingsEntity(
-      monthlyIncome: s.income,
-      paymentDate: s.paymentDate,
-      rentExpense: s.rentExpense,
-      utilitiesExpense: s.utilitiesExpense,
-      internetExpense: s.internetExpense,
-      phoneExpense: s.phoneExpense,
-      otherFixedExpense: s.otherFixedExpense,
+      monthlyIncome: event.income,
+      paymentDate: event.paymentDate,
+      rentExpense: event.expenses['kos'] ?? 0,
+      utilitiesExpense: event.expenses['listrik'] ?? 0,
+      internetExpense: event.expenses['internet'] ?? 0,
+      phoneExpense: event.expenses['pulsa'] ?? 0,
+      otherFixedExpense: event.expenses['lain'] ?? 0,
       emergencyFundPct: event.emergencyFundPct,
       createdAt: DateTime.now(),
     );
 
     final saveResult = await _saveBudgetSettings(settings);
 
-    saveResult.fold(
-      (failure) => emit(OnboardingError(message: failure.message)),
-      (_) => calcResult.fold(
+    await saveResult.fold<Future<void>>(
+      (failure) async => emit(OnboardingError(message: failure.message)),
+      (_) async => calcResult.fold(
         (failure) => emit(OnboardingError(message: failure.message)),
-        (result) {
+        (result) async {
           _analyticsService.logOnboardingCompleted();
-          unawaited(_pushUserSettings(const NoParams()));
+          // #211: await remote flag; failure is non-fatal (local data is source of truth)
+          await _pushUserSettings(const NoParams())
+              .then((res) => res.fold((_) {}, (_) {}))
+              .catchError((_) {});
           emit(OnboardingSuccess(dailyBudget: result.dailyBudget));
         },
       ),
     );
-  }
-
-  void _onRetry(
-      OnboardingRetryRequested event, Emitter<OnboardingState> emit) {
-    if (state is OnboardingError) {
-      final cached = _lastStep3;
-      if (cached != null) {
-        emit(cached);
-      } else {
-        emit(const OnboardingStep1());
-      }
-    }
   }
 }

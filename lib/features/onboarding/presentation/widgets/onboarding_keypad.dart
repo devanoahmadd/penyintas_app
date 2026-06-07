@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
+import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 
 // ── applyKey — port dari onb-cplus-atoms.jsx ─────────────────────────────────
@@ -63,12 +64,12 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
   }
 
   double _calcAspect(BuildContext context) {
-    // Target height = 44dp, grid fills available width with 3 columns and gap 7
+    // Target height = 48dp (Android Material minimum tap target)
     final screenW = MediaQuery.of(context).size.width;
     // Available width = screen minus padding (2×24) minus 2 gaps (7×2)
     final availW = screenW - 48 - 14;
     final colW = availW / 3;
-    return colW / 44;
+    return colW / 48;
   }
 }
 
@@ -132,11 +133,14 @@ class _KeyButtonState extends State<_KeyButton>
       onTapCancel: _onTapCancel,
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          height: 44,
+        child: Semantics(
+          button: true,
+          label: widget.keyLabel == 'back' ? 'Hapus' : widget.keyLabel,
+          child: Container(
+          height: 48,
           decoration: BoxDecoration(
             color: isBack ? Colors.transparent : widget.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           alignment: Alignment.center,
           child: isBack
@@ -151,6 +155,7 @@ class _KeyButtonState extends State<_KeyButton>
                     height: 1,
                   ),
                 ),
+          ),
         ),
       ),
     );

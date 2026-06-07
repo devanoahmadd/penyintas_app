@@ -36,9 +36,23 @@ void main() {
 
   const tIncome = 1500000;
   const tPaymentDate = 25;
-  const tFixedExpenses = 600000;
   const tEmergencyPct = 0.10;
   const tDailyBudget = 27000;
+
+  // #208: single event, carries all fields
+  const tExpenses = {
+    'kos': 400000,
+    'listrik': 100000,
+    'internet': 50000,
+    'pulsa': 50000,
+    'lain': 0,
+  };
+  const tSubmitEvent = OnboardingSubmitted(
+    income: tIncome,
+    paymentDate: tPaymentDate,
+    expenses: tExpenses,
+    emergencyFundPct: tEmergencyPct,
+  );
 
   final tCalcResult = const DailyBudgetResult(
     dailyBudget: tDailyBudget,
@@ -68,110 +82,21 @@ void main() {
         pushUserSettings: mockPush,
       );
 
+  // ── OnboardingStarted ─────────────────────────────────────────────────
   group('OnboardingStarted', () {
     blocTest<OnboardingBloc, OnboardingState>(
-      'should emit [OnboardingStep1] when started',
+      'emit [OnboardingInitial] saat started',
       build: buildBloc,
       act: (bloc) => bloc.add(const OnboardingStarted()),
-      expect: () => [const OnboardingStep1()],
+      expect: () => [const OnboardingInitial()],
     );
   });
 
-  group('Step1Submitted', () {
+  // ── OnboardingSubmitted — sukses ──────────────────────────────────────
+  group('OnboardingSubmitted — sukses', () {
     blocTest<OnboardingBloc, OnboardingState>(
-      'should emit [OnboardingStep2] with income and paymentDate',
+      'emit [Calculating, Success] saat save & calc berhasil',
       build: buildBloc,
-      seed: () => const OnboardingStep1(),
-      act: (bloc) => bloc.add(const Step1Submitted(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-      )),
-      expect: () => [
-        const OnboardingStep2(income: tIncome, paymentDate: tPaymentDate),
-      ],
-    );
-  });
-
-  group('Step2Submitted', () {
-    blocTest<OnboardingBloc, OnboardingState>(
-      'should emit [OnboardingStep3] with accumulated data',
-      build: buildBloc,
-      seed: () =>
-          const OnboardingStep2(income: tIncome, paymentDate: tPaymentDate),
-      act: (bloc) =>
-          bloc.add(const Step2Submitted(otherFixedExpense: tFixedExpenses)),
-      expect: () => [
-        isA<OnboardingStep3>()
-            .having((s) => s.income, 'income', tIncome)
-            .having((s) => s.paymentDate, 'paymentDate', tPaymentDate)
-            .having((s) => s.fixedExpenses, 'fixedExpenses', tFixedExpenses),
-      ],
-    );
-
-    blocTest<OnboardingBloc, OnboardingState>(
-      'remainingDays menggunakan daysInCycle() bukan 30 ketika hari ini = paymentDate',
-      build: buildBloc,
-      seed: () => OnboardingStep2(
-        income: tIncome,
-        // paymentDate = hari ini → remainingDaysInCycle() returns 0
-        paymentDate: DateTime.now().day,
-      ),
-      act: (bloc) =>
-          bloc.add(const Step2Submitted(otherFixedExpense: tFixedExpenses)),
-      expect: () => [
-        isA<OnboardingStep3>().having(
-          (s) => s.remainingDays,
-          'remainingDays',
-          greaterThan(0),
-        ),
-      ],
-    );
-  });
-
-  group('OnboardingBackPressed', () {
-    blocTest<OnboardingBloc, OnboardingState>(
-      'should go back from Step2 to Step1',
-      build: buildBloc,
-      seed: () =>
-          const OnboardingStep2(income: tIncome, paymentDate: tPaymentDate),
-      act: (bloc) => bloc.add(const OnboardingBackPressed()),
-      expect: () => [const OnboardingStep1()],
-    );
-
-    blocTest<OnboardingBloc, OnboardingState>(
-      'should go back from Step3 to Step2 preserving income and paymentDate',
-      build: buildBloc,
-      seed: () => const OnboardingStep3(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-        otherFixedExpense: tFixedExpenses,
-        remainingDays: 30,
-      ),
-      act: (bloc) => bloc.add(const OnboardingBackPressed()),
-      expect: () => [
-        const OnboardingStep2(income: tIncome, paymentDate: tPaymentDate),
-      ],
-    );
-
-    blocTest<OnboardingBloc, OnboardingState>(
-      'should do nothing when pressing back on Step1',
-      build: buildBloc,
-      seed: () => const OnboardingStep1(),
-      act: (bloc) => bloc.add(const OnboardingBackPressed()),
-      expect: () => [],
-    );
-  });
-
-  group('Step3Submitted', () {
-    blocTest<OnboardingBloc, OnboardingState>(
-      'should emit [OnboardingCalculating, OnboardingSuccess] when save succeeds',
-      build: buildBloc,
-      seed: () => const OnboardingStep3(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-        otherFixedExpense: tFixedExpenses,
-        remainingDays: 30,
-      ),
       setUp: () {
         when(() => mockCalc(any()))
             .thenAnswer((_) async => Right(tCalcResult));
@@ -180,8 +105,7 @@ void main() {
         when(() => mockAnalytics.logOnboardingCompleted())
             .thenAnswer((_) async {});
       },
-      act: (bloc) =>
-          bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct)),
+      act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
         const OnboardingCalculating(),
         const OnboardingSuccess(dailyBudget: tDailyBudget),
@@ -192,38 +116,8 @@ void main() {
     );
 
     blocTest<OnboardingBloc, OnboardingState>(
-      'should emit [OnboardingCalculating, OnboardingError] when save fails',
+      'panggil pushUserSettings setelah save sukses (#211)',
       build: buildBloc,
-      seed: () => const OnboardingStep3(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-        otherFixedExpense: tFixedExpenses,
-        remainingDays: 30,
-      ),
-      setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any())).thenAnswer(
-          (_) async => const Left(CacheFailure('Gagal menyimpan.')),
-        );
-      },
-      act: (bloc) =>
-          bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct)),
-      expect: () => [
-        const OnboardingCalculating(),
-        const OnboardingError(message: 'Gagal menyimpan.'),
-      ],
-    );
-
-    blocTest<OnboardingBloc, OnboardingState>(
-      'push user settings ke Firestore setelah save sukses',
-      build: buildBloc,
-      seed: () => const OnboardingStep3(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-        otherFixedExpense: tFixedExpenses,
-        remainingDays: 30,
-      ),
       setUp: () {
         when(() => mockCalc(any()))
             .thenAnswer((_) async => Right(tCalcResult));
@@ -232,68 +126,130 @@ void main() {
         when(() => mockAnalytics.logOnboardingCompleted())
             .thenAnswer((_) async {});
       },
-      act: (bloc) =>
-          bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct)),
+      act: (bloc) => bloc.add(tSubmitEvent),
       verify: (_) {
         verify(() => mockPush(any())).called(1);
       },
     );
-  });
 
-  group('Step3Submitted guard — state bukan OnboardingStep3', () {
     blocTest<OnboardingBloc, OnboardingState>(
-      'tidak mengubah state ketika current state adalah OnboardingError',
+      'dailyBudget di Success state = nilai dari use case',
       build: buildBloc,
-      seed: () => const OnboardingError(message: 'Gagal menyimpan.'),
-      act: (bloc) =>
-          bloc.add(const Step3Submitted(emergencyFundPct: 0.10)),
-      expect: () => [], // guard harus return early, tidak ada state change
-    );
-  });
-
-  group('OnboardingRetryRequested', () {
-    blocTest<OnboardingBloc, OnboardingState>(
-      'emit OnboardingStep1 ketika _lastStep3 kosong',
-      build: buildBloc,
-      seed: () => const OnboardingError(message: 'Gagal.'),
-      act: (bloc) => bloc.add(const OnboardingRetryRequested()),
-      expect: () => [const OnboardingStep1()],
-    );
-
-    blocTest<OnboardingBloc, OnboardingState>(
-      'emits cached OnboardingStep3 when _lastStep3 is populated',
-      build: () {
-        // Wire up mocks so Step3 submission fails and caches _lastStep3
+      setUp: () {
         when(() => mockCalc(any()))
             .thenAnswer((_) async => Right(tCalcResult));
         when(() => mockSave(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('Gagal menyimpan.')));
-        when(() => mockAnalytics.logOnboardingCompleted()).thenAnswer((_) async {});
-        return buildBloc();
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockAnalytics.logOnboardingCompleted())
+            .thenAnswer((_) async {});
       },
-      seed: () => const OnboardingStep3(
-        income: tIncome,
-        paymentDate: tPaymentDate,
-        otherFixedExpense: tFixedExpenses,
-        remainingDays: 30,
-        emergencyFundPct: tEmergencyPct,
-      ),
+      act: (bloc) => bloc.add(tSubmitEvent),
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingSuccess(dailyBudget: tDailyBudget),
+      ],
+    );
+  });
+
+  // ── OnboardingSubmitted — gagal save ──────────────────────────────────
+  group('OnboardingSubmitted — gagal save', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'emit [Calculating, Error] saat save gagal',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer(
+          (_) async => const Left(CacheFailure('Gagal menyimpan.')),
+        );
+      },
+      act: (bloc) => bloc.add(tSubmitEvent),
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingError(message: 'Gagal menyimpan.'),
+      ],
+    );
+
+    blocTest<OnboardingBloc, OnboardingState>(
+      'retry dari Error state: submit ulang berhasil → Success (#207)',
+      build: buildBloc,
+      setUp: () {
+        var callCount = 0;
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) {
+            return const Left(CacheFailure('Gagal menyimpan.'));
+          }
+          return const Right(null);
+        });
+        when(() => mockAnalytics.logOnboardingCompleted())
+            .thenAnswer((_) async {});
+      },
       act: (bloc) async {
-        // First submit Step3 → triggers save failure → caches _lastStep3 → emits OnboardingError
-        bloc.add(const Step3Submitted(emergencyFundPct: tEmergencyPct));
-        // Wait for the async save to complete
+        bloc.add(tSubmitEvent);
         await Future<void>.delayed(Duration.zero);
-        // Now trigger retry
-        bloc.add(const OnboardingRetryRequested());
+        // Retry: kirim ulang event yang sama dari Error state
+        bloc.add(tSubmitEvent);
       },
       expect: () => [
         const OnboardingCalculating(),
         const OnboardingError(message: 'Gagal menyimpan.'),
-        isA<OnboardingStep3>()
-            .having((s) => s.income, 'income', tIncome)
-            .having((s) => s.paymentDate, 'paymentDate', tPaymentDate)
-            .having((s) => s.emergencyFundPct, 'emergencyFundPct', tEmergencyPct),
+        const OnboardingCalculating(),
+        const OnboardingSuccess(dailyBudget: tDailyBudget),
       ],
     );
+  });
+
+  // ── OnboardingSubmitted — remainingDays fallback ──────────────────────
+  group('remainingDays fallback', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'pakai daysInCycle() bukan 0 ketika hari ini = paymentDate',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockAnalytics.logOnboardingCompleted())
+            .thenAnswer((_) async {});
+      },
+      act: (bloc) => bloc.add(OnboardingSubmitted(
+        income: tIncome,
+        paymentDate: DateTime.now().day, // remainingDaysInCycle() → 0
+        expenses: tExpenses,
+        emergencyFundPct: tEmergencyPct,
+      )),
+      // Cukup verifikasi calc dipanggil dengan remainingDays > 0
+      verify: (_) {
+        final captured = verify(() => mockCalc(captureAny())).captured;
+        final params = captured.first as CalcParams;
+        expect(params.remainingDays, greaterThan(0));
+      },
+    );
+  });
+
+  // ── fixedExpenses getter ──────────────────────────────────────────────
+  group('OnboardingSubmitted.fixedExpenses', () {
+    test('menjumlahkan semua expense values', () {
+      const event = OnboardingSubmitted(
+        income: tIncome,
+        paymentDate: tPaymentDate,
+        expenses: {'kos': 400000, 'listrik': 100000, 'internet': 50000, 'pulsa': 50000, 'lain': 0},
+        emergencyFundPct: tEmergencyPct,
+      );
+      expect(event.fixedExpenses, 600000);
+    });
+
+    test('fixedExpenses = 0 bila semua baris 0 (default state)', () {
+      const event = OnboardingSubmitted(
+        income: tIncome,
+        paymentDate: tPaymentDate,
+        expenses: {'kos': 0, 'listrik': 0, 'internet': 0, 'pulsa': 0, 'lain': 0},
+        emergencyFundPct: tEmergencyPct,
+      );
+      expect(event.fixedExpenses, 0);
+    });
   });
 }

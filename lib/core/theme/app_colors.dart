@@ -39,4 +39,8 @@ class AppColors {
   // Semantic finansial — dark mode (AAA contrast on cardDark)
   static const Color incomeDark = Color(0xFF6EE7A0);
   static const Color expenseDark = Color(0xFFFF8F70);
+
+  // GrowShoot component — soil/pot colors
+  static const Color soilDark = Color(0xFF1F3328);
+  static const Color soilLight = Color(0xFFE2DCC8);
 }
