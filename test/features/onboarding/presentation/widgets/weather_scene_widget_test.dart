@@ -16,7 +16,7 @@ void main() {
     test('150% → overwhelmed', () => expect(weatherStateFrom(150), WeatherState.overwhelmed));
   });
 
-  Widget _pump(WeatherState state) => MaterialApp(
+  Widget pump(WeatherState state) => MaterialApp(
         home: Scaffold(
           body: SizedBox(
             width: 400,
@@ -29,14 +29,14 @@ void main() {
   group('WeatherSceneWidget smoke', () {
     for (final state in WeatherState.values) {
       testWidgets('renders state $state tanpa throw', (tester) async {
-        await tester.pumpWidget(_pump(state));
+        await tester.pumpWidget(pump(state));
         await tester.pump(const Duration(milliseconds: 700));
         expect(tester.takeException(), isNull);
       });
     }
 
     testWidgets('ClipRRect ada di tree', (tester) async {
-      await tester.pumpWidget(_pump(WeatherState.clear));
+      await tester.pumpWidget(pump(WeatherState.clear));
       expect(find.byType(ClipRRect), findsOneWidget);
     });
 
