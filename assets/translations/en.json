@@ -217,7 +217,7 @@
   "onboarding_eyebrow_emergency": "EMERGENCY FUND",
   "onboarding_emergency_subtitle": "Set aside for unexpected days. Change anytime from the menu.",
   "onboarding_emergency_question": "How much to save each month?",
-  "onboarding_emergency_skip": "Skip for now",
+  "onboarding_emergency_skip": "Skip",
   "onboarding_daily_budget_label": "YOUR DAILY BUDGET",
   "onboarding_daily_budget_suffix": "/day",
   "onboarding_daily_budget_days_left": "for {days} days ahead",
