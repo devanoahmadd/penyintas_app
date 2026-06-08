@@ -56,4 +56,103 @@ void main() {
       expect(find.byType(ClipRRect), findsNothing);
     });
   });
+
+  group('WeatherSceneWidget state transitions', () {
+    testWidgets('state change clear → storm tidak throw', (tester) async {
+      late StateSetter outerSetState;
+      WeatherState current = WeatherState.clear;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            outerSetState = setState;
+            return MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 400,
+                  height: 200,
+                  child: WeatherSceneWidget(state: current, isDark: false),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      // Trigger state change
+      outerSetState(() => current = WeatherState.storm);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('state change storm → overwhelmed tidak throw', (tester) async {
+      late StateSetter outerSetState;
+      WeatherState current = WeatherState.storm;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            outerSetState = setState;
+            return MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 400,
+                  height: 200,
+                  child: WeatherSceneWidget(state: current, isDark: false),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      outerSetState(() => current = WeatherState.overwhelmed);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('WeatherSceneWidget edge cases', () {
+    testWidgets('height tepat 60dp menampilkan ClipRRect', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 60,
+              child: WeatherSceneWidget(
+                state: WeatherState.clear,
+                isDark: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(ClipRRect), findsOneWidget);
+    });
+
+    testWidgets('tidak ada overflow pada semua states di height 80dp', (tester) async {
+      for (final state in WeatherState.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 320,
+                height: 80,
+                child: WeatherSceneWidget(state: state, isDark: false),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.takeException(), isNull,
+            reason: 'State $state: tidak boleh ada exception');
+      }
+    });
+  });
 }
