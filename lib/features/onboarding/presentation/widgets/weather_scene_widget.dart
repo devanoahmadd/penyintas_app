@@ -166,14 +166,19 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
         final skyBot = Color.lerp(from.skyBot, to.skyBot, t)!;
         final hillFar = Color.lerp(from.hillFar, to.hillFar, t)!;
         final hillNear = Color.lerp(from.hillNear, to.hillNear, t)!;
+        // ignore: unused_local_variable — used in Task 4 (sun layer)
         final sunOp = _lerp(from.sunOpacity, to.sunOpacity, t);
+        // ignore: unused_local_variable — used in Task 4 (cloud layer)
         final cloudOp = _lerp(from.cloudOpacity, to.cloudOpacity, t);
+        // ignore: unused_local_variable — used in Task 4 (rain layer)
         final rainOp = _lerp(from.rainOpacity, to.rainOpacity, t);
+        // ignore: unused_local_variable — used in Task 4 (fog layer)
         final fogOp = _lerp(from.fogOpacity, to.fogOpacity, t);
         final bamOp = _lerp(from.bamOpacity, to.bamOpacity, t);
         final swayAmp = _lerp(from.swayAmp, to.swayAmp, t);
 
         // Ambient oscillation value (-1 → +1 sinusoidal)
+        // ignore: unused_local_variable — used in Task 4 (cloud drift, fog)
         final ambient = math.sin(_ambientCtrl.value * 2 * math.pi);
 
         return LayoutBuilder(
@@ -234,13 +239,175 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                     ),
                   ),
 
-                  // Layers 4-8 added in later tasks (sun, clouds, bamboo, rain, fog)
+                  // Layer 4: Bamboo (3 batang)
+                  if (fullDetail || h >= 70)
+                    Positioned(
+                      bottom: h * 0.2, // duduk di atas near hill
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // L — terbesar, kiri
+                          Opacity(
+                            opacity: bamOp.clamp(0.0, 1.0),
+                            child: _WeatherBamboo(
+                              stemHeight: (h * 0.6).clamp(30, 80),
+                              color: AppColors.primary,
+                              swayAngle: math.sin(
+                                    _swayCtrl.value * 2 * math.pi,
+                                  ) *
+                                  swayAmp,
+                            ),
+                          ),
+                          // M — tengah
+                          Opacity(
+                            opacity: bamOp.clamp(0.0, 1.0),
+                            child: _WeatherBamboo(
+                              stemHeight: (h * 0.48).clamp(24, 64),
+                              color: AppColors.primary,
+                              swayAngle: math.sin(
+                                    _swayCtrl.value * 2 * math.pi + 2.094,
+                                  ) *
+                                  swayAmp,
+                            ),
+                          ),
+                          // S — terkecil, kanan
+                          Opacity(
+                            opacity: (bamOp * 0.75).clamp(0.0, 1.0),
+                            child: _WeatherBamboo(
+                              stemHeight: (h * 0.36).clamp(18, 48),
+                              color: AppColors.primary,
+                              swayAngle: math.sin(
+                                    _swayCtrl.value * 2 * math.pi + 4.189,
+                                  ) *
+                                  swayAmp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Layers 5-8 added in Task 4 (sun, clouds, rain, fog)
                 ],
               ),
             );
           },
         );
       },
+    );
+  }
+}
+
+class _WeatherBamboo extends StatelessWidget {
+  const _WeatherBamboo({
+    required this.stemHeight,
+    required this.color,
+    required this.swayAngle, // radians, pivot di bawah
+  });
+
+  final double stemHeight;
+  final Color color;
+  final double swayAngle;
+
+  @override
+  Widget build(BuildContext context) {
+    final stemW = (stemHeight * 0.09).clamp(4.0, 10.0);
+    final nodeH = stemW * 0.55;
+
+    return Transform.rotate(
+      angle: swayAngle,
+      alignment: Alignment.bottomCenter,
+      child: SizedBox(
+        width: stemW * 4,
+        height: stemHeight,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Stem
+            Positioned(
+              bottom: 0,
+              left: stemW * 1.5,
+              child: Container(
+                width: stemW,
+                height: stemHeight,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(stemW / 2),
+                ),
+              ),
+            ),
+            // Node bawah
+            Positioned(
+              bottom: stemHeight * 0.3,
+              left: stemW * 0.9,
+              child: Container(
+                width: stemW * 2.2,
+                height: nodeH,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            // Node atas
+            Positioned(
+              bottom: stemHeight * 0.58,
+              left: stemW * 0.9,
+              child: Container(
+                width: stemW * 2.2,
+                height: nodeH,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            // Daun kanan
+            Positioned(
+              bottom: stemHeight * 0.68,
+              left: stemW * 2.3,
+              child: Transform.rotate(
+                angle: -0.42,
+                alignment: Alignment.bottomLeft,
+                child: Container(
+                  width: stemHeight * 0.24,
+                  height: stemW * 0.85,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(14),
+                      bottomLeft: Radius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Daun kiri
+            Positioned(
+              bottom: stemHeight * 0.52,
+              left: stemW * -0.1,
+              child: Transform.rotate(
+                angle: 0.42,
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  width: stemHeight * 0.2,
+                  height: stemW * 0.85,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomRight: Radius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
