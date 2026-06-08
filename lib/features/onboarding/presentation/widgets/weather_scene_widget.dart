@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-// ignore: unused_import — used in Tasks 3–6 (dark mode, bamboo, sun layers)
 import '../../../../core/theme/app_colors.dart';
 
 enum WeatherState { clear, cloudy, overcast, storm, overwhelmed }
@@ -82,6 +81,7 @@ class WeatherSceneWidget extends StatefulWidget {
   });
 
   final WeatherState state;
+  // Reserved for future dark-mode tint — scene palette is universal for v1.
   final bool isDark;
 
   @override
