@@ -564,7 +564,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                               : l.onboardingChipOtherDate,
                           active: !_kPaydayPresets.contains(_payday),
                           isDark: isDark,
-                          wide: true,
+                          // wide only when showing placeholder text, not when showing a number
+                          wide: _kPaydayPresets.contains(_payday),
                           onTap: () => _openPaydayPicker(),
                         ),
                       ],
@@ -897,9 +898,13 @@ class _OnboardingPageState extends State<OnboardingPage>
                           padding: const EdgeInsets.only(top: 8),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.info_outline_rounded,
-                                  size: 13, color: AppColors.warn),
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(Icons.info_outline_rounded,
+                                    size: 13, color: AppColors.warn),
+                              ),
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
@@ -1799,7 +1804,8 @@ class _PctChipWidget extends StatelessWidget {
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: active ? AppColors.primary : surfaceAlt,
                 border: Border.all(
@@ -1808,7 +1814,9 @@ class _PctChipWidget extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
-              child: Center(
+              alignment: Alignment.center,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
                 child: Text(
                   label,
                   style: TextStyle(
@@ -1861,7 +1869,8 @@ class _ExtremChip extends StatelessWidget {
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: active ? AppColors.primaryBright : surfaceAlt,
                 border: Border.all(
@@ -1870,6 +1879,7 @@ class _ExtremChip extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
+              alignment: Alignment.center,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Row(
@@ -2168,7 +2178,9 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
             itemBuilder: (_, i) {
               final date = i + 1;
               final isSelected = _selected == date;
-              final isClamped = date >= 29;
+              final now = DateTime.now();
+              // realtime: clamped = tanggal melebihi jumlah hari di bulan ini
+              final isClamped = date > DateUtils.getDaysInMonth(now.year, now.month);
               final fg = isSelected ? Colors.white : (isClamped ? mutedColor : textColor);
               return GestureDetector(
                 onTap: () => setState(() => _selected = date),
