@@ -166,19 +166,14 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
         final skyBot = Color.lerp(from.skyBot, to.skyBot, t)!;
         final hillFar = Color.lerp(from.hillFar, to.hillFar, t)!;
         final hillNear = Color.lerp(from.hillNear, to.hillNear, t)!;
-        // ignore: unused_local_variable — used in Task 4 (sun layer)
         final sunOp = _lerp(from.sunOpacity, to.sunOpacity, t);
-        // ignore: unused_local_variable — used in Task 4 (cloud layer)
         final cloudOp = _lerp(from.cloudOpacity, to.cloudOpacity, t);
-        // ignore: unused_local_variable — used in Task 4 (rain layer)
         final rainOp = _lerp(from.rainOpacity, to.rainOpacity, t);
-        // ignore: unused_local_variable — used in Task 4 (fog layer)
         final fogOp = _lerp(from.fogOpacity, to.fogOpacity, t);
         final bamOp = _lerp(from.bamOpacity, to.bamOpacity, t);
         final swayAmp = _lerp(from.swayAmp, to.swayAmp, t);
 
         // Ambient oscillation value (-1 → +1 sinusoidal)
-        // ignore: unused_local_variable — used in Task 4 (cloud drift, fog)
         final ambient = math.sin(_ambientCtrl.value * 2 * math.pi);
 
         return LayoutBuilder(
@@ -289,7 +284,134 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                       ),
                     ),
 
-                  // Layers 5-8 added in Task 4 (sun, clouds, rain, fog)
+                  // Layer 5: Matahari (kanan atas, hanya clear + cloudy)
+                  if (fullDetail && sunOp > 0.01)
+                    Positioned(
+                      top: h * 0.1,
+                      right: w * 0.1,
+                      child: Opacity(
+                        opacity: sunOp.clamp(0.0, 1.0),
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFFFD54F),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Layer 6: Awan (cloudy, overcast, storm)
+                  if (fullDetail && cloudOp > 0.01) ...[
+                    // Awan 1 — kiri atas
+                    Positioned(
+                      top: h * 0.08,
+                      left: w * 0.05 + ambient * 6,
+                      child: Opacity(
+                        opacity: cloudOp.clamp(0.0, 1.0),
+                        child: _CloudShape(
+                          color: Color.lerp(
+                            const Color(0xFFF0F8FC), // clear/cloudy: putih
+                            const Color(0xFFA0ACB4), // storm: abu gelap
+                            (_lerp(
+                                  _kScene[_fromState]!.rainOpacity,
+                                  _kScene[_toState]!.rainOpacity,
+                                  t,
+                                ) *
+                                1.5)
+                                .clamp(0.0, 1.0),
+                          )!,
+                          width: w * 0.38,
+                        ),
+                      ),
+                    ),
+                    // Awan 2 — kanan atas, sedikit lebih kecil
+                    if (_lerp(
+                          _kScene[_fromState]!.cloudOpacity,
+                          _kScene[_toState]!.cloudOpacity,
+                          t,
+                        ) >
+                        0.4)
+                      Positioned(
+                        top: h * 0.04,
+                        right: w * 0.08 - ambient * 5,
+                        child: Opacity(
+                          opacity:
+                              (cloudOp * 0.85).clamp(0.0, 1.0),
+                          child: _CloudShape(
+                            color: Color.lerp(
+                              const Color(0xFFE4F0F4),
+                              const Color(0xFF8C9AA0),
+                              (_lerp(
+                                    _kScene[_fromState]!.rainOpacity,
+                                    _kScene[_toState]!.rainOpacity,
+                                    t,
+                                  ) *
+                                  1.5)
+                                  .clamp(0.0, 1.0),
+                            )!,
+                            width: w * 0.28,
+                          ),
+                        ),
+                      ),
+                  ],
+
+                  // Layer 7: Hujan (storm only)
+                  if (rainOp > 0.01)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: rainOp.clamp(0.0, 1.0),
+                        child: Stack(
+                          clipBehavior: Clip.hardEdge,
+                          children: List.generate(7, (i) {
+                            final xFrac = const [
+                              0.08, 0.20, 0.34, 0.48, 0.62, 0.76, 0.89
+                            ][i];
+                            final fallPhase =
+                                (_ambientCtrl.value + i / 7) % 1.0;
+                            return Positioned(
+                              left: w * xFrac,
+                              top: h * fallPhase - 14,
+                              child: Transform.rotate(
+                                angle: 0.22, // ~13° miring
+                                child: Container(
+                                  width: 1.5,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFA0C8E0)
+                                        .withAlpha(180),
+                                    borderRadius:
+                                        BorderRadius.circular(999),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+
+                  // Layer 8: Kabut (overwhelmed only)
+                  if (fogOp > 0.01)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity:
+                            (fogOp * (0.7 + 0.2 * ambient)).clamp(0.0, 1.0),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFE8F2E8),
+                                Color(0xFFD4E8D4),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -407,6 +529,61 @@ class _WeatherBamboo extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CloudShape extends StatelessWidget {
+  const _CloudShape({required this.color, required this.width});
+
+  final Color color;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseH = width * 0.3;
+    return SizedBox(
+      width: width,
+      height: baseH + width * 0.28,
+      child: Stack(
+        children: [
+          // Base pill
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: baseH,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          // Tonjolan kiri
+          Positioned(
+            bottom: baseH * 0.35,
+            left: width * 0.08,
+            child: Container(
+              width: width * 0.4,
+              height: width * 0.4,
+              decoration:
+                  BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          ),
+          // Tonjolan tengah
+          Positioned(
+            bottom: baseH * 0.3,
+            left: width * 0.35,
+            child: Container(
+              width: width * 0.3,
+              height: width * 0.3,
+              decoration:
+                  BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          ),
+        ],
       ),
     );
   }
