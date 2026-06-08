@@ -42,7 +42,7 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
   Widget build(BuildContext context) {
     final surface = widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = widget.isDark ? AppColors.textDark : AppColors.textLight;
-    final mutedColor = widget.isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textSoft = widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
     return GridView.count(
       crossAxisCount: 3,
@@ -56,7 +56,7 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
           keyLabel: key,
           surface: surface,
           textColor: textColor,
-          mutedColor: mutedColor,
+          backIconColor: textSoft,
           onTap: () => _handleTap(key),
         );
       }).toList(),
@@ -78,14 +78,14 @@ class _KeyButton extends StatefulWidget {
     required this.keyLabel,
     required this.surface,
     required this.textColor,
-    required this.mutedColor,
+    required this.backIconColor,
     required this.onTap,
   });
 
   final String keyLabel;
   final Color surface;
   final Color textColor;
-  final Color mutedColor;
+  final Color backIconColor;
   final VoidCallback onTap;
 
   @override
@@ -139,12 +139,12 @@ class _KeyButtonState extends State<_KeyButton>
           child: Container(
           height: 48,
           decoration: BoxDecoration(
-            color: isBack ? Colors.transparent : widget.surface,
+            color: widget.surface,
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           alignment: Alignment.center,
           child: isBack
-              ? _BackIcon(color: widget.mutedColor)
+              ? _BackIcon(color: widget.backIconColor)
               : Text(
                   widget.keyLabel,
                   style: AppTextStyles.h3.copyWith(
