@@ -18,6 +18,7 @@ import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoo
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
+import '../widgets/weather_scene_widget.dart';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const _kIncomePresets = [800000, 1500000, 3000000, 5000000];
@@ -180,6 +181,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   int _pct = 10;
   int _step = 0;
   String? _activeRow; // step 1 sheet
+  WeatherState _weatherState = WeatherState.clear;
   bool _incomePresetSelected = false; // #212: reset keypad on next tap after preset
   int? _savedDailyBudget; // #206: from use-case result, single source of truth
 
@@ -671,30 +673,47 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
               0, n,
             ),
-            // child 1: expense rows
+            // child 1: expense rows + weather scene
             Expanded(
               child: _stagger(
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(_kExpRows.length, (i) {
-                      final row = _kExpRows[i];
-                      final v = _exp[row.id] ?? 0;
-                      final on = _activeRow == row.id;
-                      return _ExpRowWidget(
-                        row: row,
-                        value: v,
-                        active: on,
-                        isDark: isDark,
-                        isFirst: i == 0,
-                        l: l,
-                        onTap: () => setState(() {
-                          _activeRow = on ? null : row.id;
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: List.generate(_kExpRows.length, (i) {
+                          final row = _kExpRows[i];
+                          final v = _exp[row.id] ?? 0;
+                          final on = _activeRow == row.id;
+                          return _ExpRowWidget(
+                            row: row,
+                            value: v,
+                            active: on,
+                            isDark: isDark,
+                            isFirst: i == 0,
+                            l: l,
+                            onTap: () => setState(() {
+                              _activeRow = on ? null : row.id;
+                            }),
+                          );
                         }),
-                      );
-                    }),
-                  ),
+                      ),
+                    ),
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                          child: WeatherSceneWidget(
+                            state: _weatherState,
+                            isDark: isDark,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 1, n,
               ),
@@ -790,7 +809,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                             _exp[id] = applyOnboardingKey(_exp[id] ?? 0, k);
                           });
                         },
-                        onDone: () => setState(() => _activeRow = null),
+                        onDone: () => setState(() {
+                          _activeRow = null;
+                          _weatherState = weatherStateFrom(calc.fixedPct);
+                        }),
                       )
                     : const SizedBox.shrink(),
               ),
