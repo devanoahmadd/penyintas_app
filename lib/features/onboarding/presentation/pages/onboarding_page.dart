@@ -1989,6 +1989,8 @@ class _OSliderState extends State<_OSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final markColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     // #204: accessibility for screen readers (TalkBack/VoiceOver)
     return Semantics(
       slider: true,
@@ -2035,7 +2037,7 @@ class _OSliderState extends State<_OSlider> {
                     width: 3,
                     height: 3,
                     decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(46),
+                      color: markColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2058,7 +2060,7 @@ class _OSliderState extends State<_OSlider> {
                         offset: const Offset(0, 2),
                       ),
                       BoxShadow(
-                        color: Colors.black.withAlpha(10),
+                        color: AppColors.bgDark.withAlpha(10),
                         spreadRadius: 1,
                       ),
                     ],
