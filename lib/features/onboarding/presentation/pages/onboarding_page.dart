@@ -2193,14 +2193,16 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration:
-                      BoxDecoration(color: surfaceColor, shape: BoxShape.circle),
-                  child: Icon(Icons.close, size: 16, color: mutedColor),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Tutup',
+                iconSize: 16,
+                icon: Icon(Icons.close_rounded, color: mutedColor),
+                style: IconButton.styleFrom(
+                  backgroundColor: surfaceColor,
+                  minimumSize: const Size(48, 48),
+                  padding: EdgeInsets.zero,
+                  shape: const CircleBorder(),
                 ),
               ),
             ],
