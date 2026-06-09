@@ -7,6 +7,7 @@ import 'package:penyintas_app/features/budget/domain/entities/budget_settings_en
 abstract class OnboardingLocalDataSource {
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings);
   Future<BudgetSettingsEntity?> getBudgetSettings();
+  Future<bool> isOnboardingCompleted();
   Future<void> addToSyncQueue({
     required String itemId,
     required String collectionPath,
@@ -60,6 +61,14 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
       phoneExpense: saved.phoneExpense,
       otherFixedExpense: saved.otherFixedExpense,
     );
+  }
+
+  @override
+  Future<bool> isOnboardingCompleted() async {
+    final saved = await (_db.select(_db.appSettings)
+          ..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    return saved?.onboardingCompleted ?? false;
   }
 
   @override
