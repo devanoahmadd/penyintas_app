@@ -2225,7 +2225,13 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
               // realtime: clamped = tanggal melebihi jumlah hari di bulan ini
               final isClamped = date > DateUtils.getDaysInMonth(now.year, now.month);
               final fg = isSelected ? Colors.white : (isClamped ? mutedColor : textColor);
-              return GestureDetector(
+              return Semantics(
+                label: isClamped
+                    ? 'Tanggal $date, tidak tersedia bulan ini'
+                    : 'Tanggal $date',
+                button: true,
+                selected: isSelected,
+                child: GestureDetector(
                 onTap: () => setState(() => _selected = date),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
@@ -2245,6 +2251,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                                 fontSize: 8, color: mutedColor, height: 0.8)),
                     ],
                   ),
+                ),
                 ),
               );
             },
