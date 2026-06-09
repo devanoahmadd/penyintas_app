@@ -171,7 +171,7 @@ class WeatherSceneWidget extends StatefulWidget {
   });
 
   final WeatherState state;
-  // Reserved for future dark-mode tint — scene palette is universal for v1.
+  /// Whether to render the scene with the dark-mode palette.
   final bool isDark;
 
   @override

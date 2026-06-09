@@ -2065,7 +2065,7 @@ class _SheetKeypad extends StatelessWidget {
                   shape: const StadiumBorder(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
-                    vertical: 9,
+                    vertical: AppSpacing.sm2,
                   ),
                 ),
                 child: Text(
