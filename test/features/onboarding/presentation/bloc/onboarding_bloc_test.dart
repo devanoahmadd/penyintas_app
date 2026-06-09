@@ -139,6 +139,28 @@ void main() {
         const OnboardingSuccess(dailyBudget: tDailyBudget),
       ],
     );
+
+    blocTest<OnboardingBloc, OnboardingState>(
+      'pushUserSettings throw exception → BLoC tetap emit Success (#224)',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockCalc(any()))
+            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockAnalytics.logOnboardingCompleted())
+            .thenAnswer((_) async {});
+        // Simulasi network error saat push ke Firestore (async throw agar
+        // .catchError di BLoC bisa menelannya)
+        when(() => mockPush(any()))
+            .thenAnswer((_) async => throw Exception('network timeout'));
+      },
+      act: (bloc) => bloc.add(tSubmitEvent),
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingSuccess(dailyBudget: tDailyBudget),
+      ],
+    );
   });
 
   // ── OnboardingSubmitted — gagal save ──────────────────────────────────
