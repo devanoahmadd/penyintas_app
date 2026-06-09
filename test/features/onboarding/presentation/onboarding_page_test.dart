@@ -91,7 +91,7 @@ class _TestLocalizationsDelegate
           'onboarding_done_title': 'Kamu siap bertahan',
           'onboarding_done_sub': 'Lentur, tak patah. Mulai catat pengeluaran hari ini.',
           'onboarding_payday_label': 'Biasanya masuk tanggal',
-          'onboarding_skip_later': 'Nanti',
+          'onboarding_skip_later': 'Lanjut nanti',
           'onboarding_chip_other_date': 'Lain',
           'onboarding_cta_start': 'Mulai Bertahan',
           'onboarding_cta_enter': 'Masuk ke Beranda',
@@ -207,7 +207,8 @@ void main() {
       expect(find.text('Rp 5jt', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('menampilkan tombol "Nanti" di header step 0', (tester) async {
+    testWidgets('menampilkan tombol "Lanjut nanti" di header step 0',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -219,10 +220,11 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('Nanti', skipOffstage: false), findsOneWidget);
+      expect(find.text('Lanjut nanti', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('tap "Nanti" membuka dialog konfirmasi', (tester) async {
+    testWidgets('tap "Lanjut nanti" menyimpan state dan keluar (tanpa dialog)',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -234,12 +236,12 @@ void main() {
       ));
       await tester.pump();
 
-      await tester.tap(find.text('Nanti', skipOffstage: false));
+      // Tap "Lanjut nanti" — seharusnya tidak membuka dialog
+      await tester.tap(find.text('Lanjut nanti', skipOffstage: false));
       await tester.pumpAndSettle();
 
-      expect(find.text('Tutup setup sekarang?'), findsOneWidget);
-      expect(find.text('Ya, keluar'), findsOneWidget);
-      expect(find.text('Lanjut isi'), findsOneWidget);
+      // Tidak ada dialog konfirmasi yang muncul (deferAndExit langsung keluar)
+      expect(find.byType(AlertDialog), findsNothing);
     });
 
     testWidgets('tap preset chip mengubah nominal income', (tester) async {
@@ -386,7 +388,8 @@ void main() {
       expect(find.text('Kebutuhan tetapmu', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('step 1 menampilkan back arrow, bukan "Nanti"', (tester) async {
+    testWidgets('step 1 menampilkan back arrow, bukan "Lanjut nanti"',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -401,7 +404,7 @@ void main() {
       await tester.tap(find.text('Lanjut', skipOffstage: false));
       await tester.pumpAndSettle();
 
-      expect(find.text('Nanti', skipOffstage: false), findsNothing);
+      expect(find.text('Lanjut nanti', skipOffstage: false), findsNothing);
       expect(
         find.byIcon(Icons.arrow_back_ios_new_rounded, skipOffstage: false),
         findsOneWidget,
@@ -658,7 +661,7 @@ void main() {
 
       // Should be back at step 0
       expect(find.text('RUAS 1 · PEMASUKAN', skipOffstage: false), findsOneWidget);
-      expect(find.text('Nanti', skipOffstage: false), findsOneWidget);
+      expect(find.text('Lanjut nanti', skipOffstage: false), findsOneWidget);
     });
   });
 

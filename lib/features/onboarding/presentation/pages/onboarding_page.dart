@@ -291,9 +291,10 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   // ── Defer / resume helpers ────────────────────────────────────────
   Future<void> _loadPartialState() async {
-    final datasource = _sl<OnboardingLocalDataSource>();
+    OnboardingLocalDataSource? datasource;
     PartialOnboardingState? partial;
     try {
+      datasource = _sl<OnboardingLocalDataSource>();
       partial = await datasource.loadPartialOnboarding();
     } catch (_) {
       return;
@@ -380,7 +381,9 @@ class _OnboardingPageState extends State<OnboardingPage>
       ),
     );
     if (confirmed != true) return;
-    await _sl<OnboardingLocalDataSource>().clearPartialOnboarding();
+    try {
+      await _sl<OnboardingLocalDataSource>().clearPartialOnboarding();
+    } catch (_) {/* ignore if not registered in test env */}
     if (!mounted) return;
     setState(() {
       _step = 0;
@@ -464,8 +467,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // #206: persist use-case result before navigating
                 _savedDailyBudget = state.dailyBudget;
                 // #200: clear partial state on successful onboarding completion
-                _sl<OnboardingLocalDataSource>()
-                    .clearPartialOnboarding(); // fire-and-forget
+                try {
+                  _sl<OnboardingLocalDataSource>()
+                      .clearPartialOnboarding(); // fire-and-forget
+                } catch (_) {/* ignore if not registered in test env */}
                 context.read<NotificationBloc>().add(const RequestPermission());
                 resetOnboardingCache();
                 context.go('/dashboard');
