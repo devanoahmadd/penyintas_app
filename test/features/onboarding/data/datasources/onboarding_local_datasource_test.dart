@@ -155,4 +155,74 @@ void main() {
       expect(items.first.operation, SyncOperation.update);
     });
   });
+
+  group('savePartialOnboarding + loadPartialOnboarding', () {
+    test('load returns null sebelum ada partial state', () async {
+      final result = await datasource.loadPartialOnboarding();
+      expect(result, isNull);
+    });
+
+    test('save lalu load → state ter-restore', () async {
+      await datasource.savePartialOnboarding(
+        step: 1,
+        income: 3000000,
+        expenses: {
+          'kos': 1000000,
+          'listrik': 150000,
+          'internet': 100000,
+          'pulsa': 50000,
+          'lain': 0,
+        },
+        pct: 10,
+        payday: 25,
+      );
+
+      final result = await datasource.loadPartialOnboarding();
+      expect(result, isNotNull);
+      expect(result!.step, 1);
+      expect(result.income, 3000000);
+      expect(result.expenses['kos'], 1000000);
+      expect(result.pct, 10);
+      expect(result.payday, 25);
+    });
+
+    test('savedAt timestamp terisi', () async {
+      final before = DateTime.now();
+      await datasource.savePartialOnboarding(
+        step: 0,
+        income: 1000000,
+        expenses: {'kos': 0, 'listrik': 0, 'internet': 0, 'pulsa': 0, 'lain': 0},
+        pct: 0,
+        payday: 1,
+      );
+      final after = DateTime.now();
+      final result = await datasource.loadPartialOnboarding();
+      expect(
+        result!.savedAt
+            .isAfter(before.subtract(const Duration(seconds: 1))),
+        true,
+      );
+      expect(
+        result.savedAt.isBefore(after.add(const Duration(seconds: 1))),
+        true,
+      );
+    });
+  });
+
+  group('clearPartialOnboarding', () {
+    test('setelah clear, load returns null', () async {
+      await datasource.savePartialOnboarding(
+        step: 2,
+        income: 2000000,
+        expenses: {'kos': 0, 'listrik': 0, 'internet': 0, 'pulsa': 0, 'lain': 0},
+        pct: 20,
+        payday: 1,
+      );
+
+      await datasource.clearPartialOnboarding();
+
+      final result = await datasource.loadPartialOnboarding();
+      expect(result, isNull);
+    });
+  });
 }
