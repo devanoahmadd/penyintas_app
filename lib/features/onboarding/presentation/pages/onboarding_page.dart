@@ -325,8 +325,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text('Mulai ulang',
-                  style: AppTextStyles.label
-                      .copyWith(color: AppColors.mutedLight)),
+                  style: AppTextStyles.label.copyWith(color: textSoft)),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
