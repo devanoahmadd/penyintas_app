@@ -14,10 +14,12 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
   OnboardingRemoteDataSourceImpl({
     required this.firestore,
     required this.auth,
+    required this.crashlytics,
   });
 
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
+  final FirebaseCrashlytics crashlytics;
 
   @override
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings) async {
@@ -34,7 +36,7 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
     } on AuthException {
       rethrow;
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try { crashlytics.recordError(e, s); } catch (_) {}
       throw const ServerException();
     }
   }
@@ -53,7 +55,7 @@ class OnboardingRemoteDataSourceImpl implements OnboardingRemoteDataSource {
       if (!doc.exists) return null;
       return BudgetSettingsModel.fromFirestore(doc);
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try { crashlytics.recordError(e, s); } catch (_) {}
       throw const ServerException();
     }
   }
