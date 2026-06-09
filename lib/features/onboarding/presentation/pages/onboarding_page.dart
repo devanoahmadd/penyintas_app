@@ -1515,7 +1515,15 @@ class _ExpRowWidget extends StatelessWidget {
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: value > 0
+          ? '${row.label(l)}, ${_rpSemanticLabel(value)}'
+          : '${row.label(l)}, belum diisi',
+      hint: value > 0
+          ? 'Ketuk dua kali untuk mengubah'
+          : 'Ketuk dua kali untuk mengisi',
+      child: GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
@@ -1581,6 +1589,7 @@ class _ExpRowWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
