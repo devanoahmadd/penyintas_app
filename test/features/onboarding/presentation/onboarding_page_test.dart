@@ -275,12 +275,12 @@ void main() {
       ));
       await tester.pump();
 
-      // Default income = 2.500.000. Tap '3' key.
-      await tester.tap(find.text('3', skipOffstage: false).first);
+      // Default income = 0. Tap preset chip 'Rp 3jt' → income = 3000000.
+      await tester.tap(find.text('Rp 3jt', skipOffstage: false));
       await tester.pump();
 
-      // 2500000 * 10 + 3 = 25000003
-      expect(find.text('25.000.003', skipOffstage: false), findsOneWidget);
+      // Preset sets income to 3000000 → display shows '3.000.000'
+      expect(find.text('3.000.000', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('date picker terbuka tanpa tanggal pre-selected', (tester) async {

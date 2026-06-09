@@ -202,7 +202,7 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
   // ── Local reactive model ─────────────────────────────────────────
-  int _income = 2500000;
+  int _income = 0;
   int _payday = 1;
   final Map<String, int> _exp = {
     'kos': 0,
@@ -716,8 +716,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                   // income preset chips
                   Wrap(
                     alignment: WrapAlignment.center,
-                    spacing: 7,
-                    runSpacing: 7,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
                     children: _kIncomePresets.map((v) {
                       final on = _income == v;
                       return _PresetChip(
@@ -733,7 +733,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl2),
                   // payday label
                   Text(
                     l.onboardingPaydayLabel,
@@ -744,7 +744,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 9),
+                  const SizedBox(height: AppSpacing.sm2),
                   // payday chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -860,7 +860,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                         height: 1,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       l.onboardingTitleFixed,
                       textAlign: TextAlign.center,
@@ -1075,7 +1075,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           height: 1,
                         ),
                       ),
-                      const SizedBox(height: 7),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         l.onboardingTitleDarurat,
                         textAlign: TextAlign.center,
@@ -1251,7 +1251,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           final on = _pct == p;
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.only(right: 7),
+                              padding: const EdgeInsets.only(right: AppSpacing.sm),
                               child: _PctChipWidget(
                                 // #201: use l10n key instead of hardcoded 'Lewati'
                                 label: p == 0
@@ -1556,7 +1556,7 @@ class _DockedPanel extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-      child: Column(children: [keypad, const SizedBox(height: 9), cta]),
+      child: Column(children: [keypad, const SizedBox(height: AppSpacing.sm2), cta]),
     );
   }
 }
@@ -1661,7 +1661,7 @@ class _PresetChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: AppSpacing.sm),
           decoration: BoxDecoration(
             color: active ? AppColors.primary : surfaceAlt,
             border: Border.all(
@@ -1792,7 +1792,7 @@ class _ExpRowWidget extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md),
           decoration: BoxDecoration(
             color: active ? surface : Colors.transparent,
             border: isFirst
@@ -1877,7 +1877,7 @@ class _TotalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(AppRadius.lg), // B2
@@ -1967,13 +1967,13 @@ class _SheetKeypad extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl2, AppSpacing.md2, AppSpacing.xl2, AppSpacing.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // mini total
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md2, vertical: AppSpacing.sm2),
             decoration: BoxDecoration(
               color: AppColors.primary,
               borderRadius: BorderRadius.circular(13),
@@ -2124,7 +2124,7 @@ class _PctChipWidget extends StatelessWidget {
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              height: 36,
+              height: AppSpacing.xxl,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: active ? AppColors.primary : surfaceAlt,
@@ -2189,7 +2189,7 @@ class _ExtremChip extends StatelessWidget {
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              height: 36,
+              height: AppSpacing.xxl,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: active ? AppColors.primaryBright : surfaceAlt,
