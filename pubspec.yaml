@@ -78,6 +78,7 @@ dev_dependencies:
   mocktail: ^1.0.0
   build_runner: ^2.4.0
   drift_dev: ^2.21.0
+  fake_cloud_firestore: ^4.1.1
 
 flutter:
   uses-material-design: true
