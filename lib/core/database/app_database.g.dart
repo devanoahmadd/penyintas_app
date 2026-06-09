@@ -223,6 +223,26 @@ class $AppSettingsTable extends AppSettings
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _partialOnboardingStepMeta =
+      const VerificationMeta('partialOnboardingStep');
+  @override
+  late final GeneratedColumn<int> partialOnboardingStep = GeneratedColumn<int>(
+    'partial_onboarding_step',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _partialOnboardingAtMeta =
+      const VerificationMeta('partialOnboardingAt');
+  @override
+  late final GeneratedColumn<int> partialOnboardingAt = GeneratedColumn<int>(
+    'partial_onboarding_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -243,6 +263,8 @@ class $AppSettingsTable extends AppSettings
     phoneExpense,
     otherFixedExpense,
     survivalModeActivatedAt,
+    partialOnboardingStep,
+    partialOnboardingAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -406,6 +428,24 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('partial_onboarding_step')) {
+      context.handle(
+        _partialOnboardingStepMeta,
+        partialOnboardingStep.isAcceptableOrUnknown(
+          data['partial_onboarding_step']!,
+          _partialOnboardingStepMeta,
+        ),
+      );
+    }
+    if (data.containsKey('partial_onboarding_at')) {
+      context.handle(
+        _partialOnboardingAtMeta,
+        partialOnboardingAt.isAcceptableOrUnknown(
+          data['partial_onboarding_at']!,
+          _partialOnboardingAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -487,6 +527,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.dateTime,
         data['${effectivePrefix}survival_mode_activated_at'],
       ),
+      partialOnboardingStep: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}partial_onboarding_step'],
+      ),
+      partialOnboardingAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}partial_onboarding_at'],
+      ),
     );
   }
 
@@ -515,6 +563,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int phoneExpense;
   final int otherFixedExpense;
   final DateTime? survivalModeActivatedAt;
+  final int? partialOnboardingStep;
+  final int? partialOnboardingAt;
   const AppSetting({
     required this.id,
     required this.locale,
@@ -534,6 +584,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.phoneExpense,
     required this.otherFixedExpense,
     this.survivalModeActivatedAt,
+    this.partialOnboardingStep,
+    this.partialOnboardingAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -562,6 +614,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         survivalModeActivatedAt,
       );
     }
+    if (!nullToAbsent || partialOnboardingStep != null) {
+      map['partial_onboarding_step'] = Variable<int>(partialOnboardingStep);
+    }
+    if (!nullToAbsent || partialOnboardingAt != null) {
+      map['partial_onboarding_at'] = Variable<int>(partialOnboardingAt);
+    }
     return map;
   }
 
@@ -589,6 +647,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       survivalModeActivatedAt: survivalModeActivatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(survivalModeActivatedAt),
+      partialOnboardingStep: partialOnboardingStep == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partialOnboardingStep),
+      partialOnboardingAt: partialOnboardingAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partialOnboardingAt),
     );
   }
 
@@ -622,6 +686,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       survivalModeActivatedAt: serializer.fromJson<DateTime?>(
         json['survivalModeActivatedAt'],
       ),
+      partialOnboardingStep: serializer.fromJson<int?>(
+        json['partialOnboardingStep'],
+      ),
+      partialOnboardingAt: serializer.fromJson<int?>(
+        json['partialOnboardingAt'],
+      ),
     );
   }
   @override
@@ -648,6 +718,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'survivalModeActivatedAt': serializer.toJson<DateTime?>(
         survivalModeActivatedAt,
       ),
+      'partialOnboardingStep': serializer.toJson<int?>(partialOnboardingStep),
+      'partialOnboardingAt': serializer.toJson<int?>(partialOnboardingAt),
     };
   }
 
@@ -670,6 +742,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     int? phoneExpense,
     int? otherFixedExpense,
     Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
+    Value<int?> partialOnboardingStep = const Value.absent(),
+    Value<int?> partialOnboardingAt = const Value.absent(),
   }) => AppSetting(
     id: id ?? this.id,
     locale: locale ?? this.locale,
@@ -693,6 +767,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     survivalModeActivatedAt: survivalModeActivatedAt.present
         ? survivalModeActivatedAt.value
         : this.survivalModeActivatedAt,
+    partialOnboardingStep: partialOnboardingStep.present
+        ? partialOnboardingStep.value
+        : this.partialOnboardingStep,
+    partialOnboardingAt: partialOnboardingAt.present
+        ? partialOnboardingAt.value
+        : this.partialOnboardingAt,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -744,6 +824,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       survivalModeActivatedAt: data.survivalModeActivatedAt.present
           ? data.survivalModeActivatedAt.value
           : this.survivalModeActivatedAt,
+      partialOnboardingStep: data.partialOnboardingStep.present
+          ? data.partialOnboardingStep.value
+          : this.partialOnboardingStep,
+      partialOnboardingAt: data.partialOnboardingAt.present
+          ? data.partialOnboardingAt.value
+          : this.partialOnboardingAt,
     );
   }
 
@@ -767,7 +853,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('internetExpense: $internetExpense, ')
           ..write('phoneExpense: $phoneExpense, ')
           ..write('otherFixedExpense: $otherFixedExpense, ')
-          ..write('survivalModeActivatedAt: $survivalModeActivatedAt')
+          ..write('survivalModeActivatedAt: $survivalModeActivatedAt, ')
+          ..write('partialOnboardingStep: $partialOnboardingStep, ')
+          ..write('partialOnboardingAt: $partialOnboardingAt')
           ..write(')'))
         .toString();
   }
@@ -792,6 +880,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     phoneExpense,
     otherFixedExpense,
     survivalModeActivatedAt,
+    partialOnboardingStep,
+    partialOnboardingAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -814,7 +904,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.internetExpense == this.internetExpense &&
           other.phoneExpense == this.phoneExpense &&
           other.otherFixedExpense == this.otherFixedExpense &&
-          other.survivalModeActivatedAt == this.survivalModeActivatedAt);
+          other.survivalModeActivatedAt == this.survivalModeActivatedAt &&
+          other.partialOnboardingStep == this.partialOnboardingStep &&
+          other.partialOnboardingAt == this.partialOnboardingAt);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -836,6 +928,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> phoneExpense;
   final Value<int> otherFixedExpense;
   final Value<DateTime?> survivalModeActivatedAt;
+  final Value<int?> partialOnboardingStep;
+  final Value<int?> partialOnboardingAt;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locale = const Value.absent(),
@@ -855,6 +949,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.phoneExpense = const Value.absent(),
     this.otherFixedExpense = const Value.absent(),
     this.survivalModeActivatedAt = const Value.absent(),
+    this.partialOnboardingStep = const Value.absent(),
+    this.partialOnboardingAt = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -875,6 +971,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.phoneExpense = const Value.absent(),
     this.otherFixedExpense = const Value.absent(),
     this.survivalModeActivatedAt = const Value.absent(),
+    this.partialOnboardingStep = const Value.absent(),
+    this.partialOnboardingAt = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -895,6 +993,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? phoneExpense,
     Expression<int>? otherFixedExpense,
     Expression<DateTime>? survivalModeActivatedAt,
+    Expression<int>? partialOnboardingStep,
+    Expression<int>? partialOnboardingAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -918,6 +1018,10 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (otherFixedExpense != null) 'other_fixed_expense': otherFixedExpense,
       if (survivalModeActivatedAt != null)
         'survival_mode_activated_at': survivalModeActivatedAt,
+      if (partialOnboardingStep != null)
+        'partial_onboarding_step': partialOnboardingStep,
+      if (partialOnboardingAt != null)
+        'partial_onboarding_at': partialOnboardingAt,
     });
   }
 
@@ -940,6 +1044,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int>? phoneExpense,
     Value<int>? otherFixedExpense,
     Value<DateTime?>? survivalModeActivatedAt,
+    Value<int?>? partialOnboardingStep,
+    Value<int?>? partialOnboardingAt,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -961,6 +1067,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       otherFixedExpense: otherFixedExpense ?? this.otherFixedExpense,
       survivalModeActivatedAt:
           survivalModeActivatedAt ?? this.survivalModeActivatedAt,
+      partialOnboardingStep:
+          partialOnboardingStep ?? this.partialOnboardingStep,
+      partialOnboardingAt: partialOnboardingAt ?? this.partialOnboardingAt,
     );
   }
 
@@ -1025,6 +1134,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
         survivalModeActivatedAt.value,
       );
     }
+    if (partialOnboardingStep.present) {
+      map['partial_onboarding_step'] = Variable<int>(
+        partialOnboardingStep.value,
+      );
+    }
+    if (partialOnboardingAt.present) {
+      map['partial_onboarding_at'] = Variable<int>(partialOnboardingAt.value);
+    }
     return map;
   }
 
@@ -1048,7 +1165,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('internetExpense: $internetExpense, ')
           ..write('phoneExpense: $phoneExpense, ')
           ..write('otherFixedExpense: $otherFixedExpense, ')
-          ..write('survivalModeActivatedAt: $survivalModeActivatedAt')
+          ..write('survivalModeActivatedAt: $survivalModeActivatedAt, ')
+          ..write('partialOnboardingStep: $partialOnboardingStep, ')
+          ..write('partialOnboardingAt: $partialOnboardingAt')
           ..write(')'))
         .toString();
   }
@@ -3633,6 +3752,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> phoneExpense,
       Value<int> otherFixedExpense,
       Value<DateTime?> survivalModeActivatedAt,
+      Value<int?> partialOnboardingStep,
+      Value<int?> partialOnboardingAt,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -3654,6 +3775,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int> phoneExpense,
       Value<int> otherFixedExpense,
       Value<DateTime?> survivalModeActivatedAt,
+      Value<int?> partialOnboardingStep,
+      Value<int?> partialOnboardingAt,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -3752,6 +3875,16 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<DateTime> get survivalModeActivatedAt => $composableBuilder(
     column: $table.survivalModeActivatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get partialOnboardingStep => $composableBuilder(
+    column: $table.partialOnboardingStep,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get partialOnboardingAt => $composableBuilder(
+    column: $table.partialOnboardingAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3854,6 +3987,16 @@ class $$AppSettingsTableOrderingComposer
     column: $table.survivalModeActivatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get partialOnboardingStep => $composableBuilder(
+    column: $table.partialOnboardingStep,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get partialOnboardingAt => $composableBuilder(
+    column: $table.partialOnboardingAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -3948,6 +4091,16 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.survivalModeActivatedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get partialOnboardingStep => $composableBuilder(
+    column: $table.partialOnboardingStep,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get partialOnboardingAt => $composableBuilder(
+    column: $table.partialOnboardingAt,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -3999,6 +4152,8 @@ class $$AppSettingsTableTableManager
                 Value<int> phoneExpense = const Value.absent(),
                 Value<int> otherFixedExpense = const Value.absent(),
                 Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
+                Value<int?> partialOnboardingStep = const Value.absent(),
+                Value<int?> partialOnboardingAt = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locale: locale,
@@ -4018,6 +4173,8 @@ class $$AppSettingsTableTableManager
                 phoneExpense: phoneExpense,
                 otherFixedExpense: otherFixedExpense,
                 survivalModeActivatedAt: survivalModeActivatedAt,
+                partialOnboardingStep: partialOnboardingStep,
+                partialOnboardingAt: partialOnboardingAt,
               ),
           createCompanionCallback:
               ({
@@ -4039,6 +4196,8 @@ class $$AppSettingsTableTableManager
                 Value<int> phoneExpense = const Value.absent(),
                 Value<int> otherFixedExpense = const Value.absent(),
                 Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
+                Value<int?> partialOnboardingStep = const Value.absent(),
+                Value<int?> partialOnboardingAt = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locale: locale,
@@ -4058,6 +4217,8 @@ class $$AppSettingsTableTableManager
                 phoneExpense: phoneExpense,
                 otherFixedExpense: otherFixedExpense,
                 survivalModeActivatedAt: survivalModeActivatedAt,
+                partialOnboardingStep: partialOnboardingStep,
+                partialOnboardingAt: partialOnboardingAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

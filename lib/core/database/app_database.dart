@@ -60,6 +60,9 @@ class AppSettings extends Table {
   IntColumn get otherFixedExpense => integer().withDefault(const Constant(0))();
   // Timestamp ketika Survival Mode aktif (null = tidak aktif) — schemaVersion 4
   DateTimeColumn get survivalModeActivatedAt => dateTime().nullable()();
+  // Partial onboarding state — untuk fitur "Lanjut nanti" (schemaVersion 9)
+  IntColumn get partialOnboardingStep => integer().nullable()();
+  IntColumn get partialOnboardingAt => integer().nullable()(); // epoch millis
 
   @override
   Set<Column> get primaryKey => {id};
@@ -149,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -277,6 +280,14 @@ class AppDatabase extends _$AppDatabase {
         // Fase 3C: tambah kolom iconSlug untuk custom kategori
         await m.database.customStatement(
           'ALTER TABLE categories ADD COLUMN icon_slug TEXT',
+        );
+      }
+      if (from < 9) {
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN partial_onboarding_step INTEGER',
+        );
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN partial_onboarding_at INTEGER',
         );
       }
     },
