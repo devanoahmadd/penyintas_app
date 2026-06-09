@@ -9,6 +9,11 @@ class CalculateDailyBudgetUseCase extends UseCase<DailyBudgetResult, CalcParams>
 
   @override
   Future<Either<Failure, DailyBudgetResult>> call(CalcParams params) async {
+    if (params.income <= 0) {
+      return const Left(
+        ValidationFailure('Income harus lebih dari 0.'),
+      );
+    }
     final available = params.income - params.fixedExpenses;
     final emergency = available > 0 ? (available * params.emergencyPct).round() : 0;
     final spendable = available - emergency;

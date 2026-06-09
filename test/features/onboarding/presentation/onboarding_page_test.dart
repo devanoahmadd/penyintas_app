@@ -154,7 +154,12 @@ void main() {
   late MockNotificationBloc mockNotifBloc;
 
   setUpAll(() {
-    registerFallbackValue(const OnboardingStarted());
+    registerFallbackValue(const OnboardingSubmitted(
+      income: 0,
+      paymentDate: 1,
+      expenses: {},
+      emergencyFundPct: 0.0,
+    ));
   });
 
   setUp(() {

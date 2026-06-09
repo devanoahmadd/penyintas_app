@@ -220,6 +220,28 @@ void main() {
     );
   });
 
+  // ── OnboardingSubmitted — calc gagal (#220) ───────────────────────────
+  group('OnboardingSubmitted — calc gagal', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'emit [Calculating, Error] saat calc return Left (#220)',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockCalc(any())).thenAnswer(
+          (_) async => const Left(
+            ValidationFailure('Income harus lebih dari 0.'),
+          ),
+        );
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(tSubmitEvent),
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingError(message: 'Income harus lebih dari 0.'),
+      ],
+    );
+  });
+
   // ── fixedExpenses getter ──────────────────────────────────────────────
   group('OnboardingSubmitted.fixedExpenses', () {
     test('menjumlahkan semua expense values', () {
