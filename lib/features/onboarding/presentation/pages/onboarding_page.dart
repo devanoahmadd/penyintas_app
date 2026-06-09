@@ -110,6 +110,8 @@ String _rpShort(int n) {
   return formatRupiah(n);
 }
 
+String _rpSemanticLabel(int n) => formatRupiah(n);
+
 String _fmtId(int n) => NumberFormat('#,##0', 'id_ID').format(n);
 
 ({String label, String note}) _pctFb(int pct, AppLocalizations l) {
@@ -520,6 +522,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       final on = _income == v;
                       return _PresetChip(
                         label: _rpShort(v),
+                        amount: v,
                         active: on,
                         isDark: isDark,
                         // #212: mark next keypad input as reset-basis
@@ -1372,12 +1375,14 @@ class _CtaBtn extends StatelessWidget {
 class _PresetChip extends StatelessWidget {
   const _PresetChip({
     required this.label,
+    required this.amount,
     required this.active,
     required this.isDark,
     required this.onTap,
   });
 
   final String label;
+  final int amount;
   final bool active;
   final bool isDark;
   final VoidCallback onTap;
@@ -1388,9 +1393,13 @@ class _PresetChip extends StatelessWidget {
     final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
+    return Semantics(
+      button: true,
+      label: _rpSemanticLabel(amount),
+      selected: active,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
@@ -1410,6 +1419,7 @@ class _PresetChip extends StatelessWidget {
             color: active ? Colors.white : textColor,
             height: 1,
           ),
+        ),
         ),
       ),
     );
