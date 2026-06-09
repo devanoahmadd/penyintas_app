@@ -32,22 +32,32 @@ class _ExpRow {
 
   String label(AppLocalizations l) {
     switch (id) {
-      case 'kos': return l.onboardingExpenseRent;
-      case 'listrik': return l.onboardingExpenseUtilities;
-      case 'internet': return l.onboardingExpenseInternet;
-      case 'pulsa': return l.onboardingExpensePhone;
-      default: return l.categoryOther;
+      case 'kos':
+        return l.onboardingExpenseRent;
+      case 'listrik':
+        return l.onboardingExpenseUtilities;
+      case 'internet':
+        return l.onboardingExpenseInternet;
+      case 'pulsa':
+        return l.onboardingExpensePhone;
+      default:
+        return l.categoryOther;
     }
   }
 
   // #205: example caption shown when value == 0
   String hint(AppLocalizations l) {
     switch (id) {
-      case 'kos': return l.onboardingExpenseRentHint;
-      case 'listrik': return l.onboardingExpenseUtilitiesHint;
-      case 'internet': return l.onboardingExpenseInternetHint;
-      case 'pulsa': return l.onboardingExpensePhoneHint;
-      default: return l.onboardingExpenseOtherHint;
+      case 'kos':
+        return l.onboardingExpenseRentHint;
+      case 'listrik':
+        return l.onboardingExpenseUtilitiesHint;
+      case 'internet':
+        return l.onboardingExpenseInternetHint;
+      case 'pulsa':
+        return l.onboardingExpensePhoneHint;
+      default:
+        return l.onboardingExpenseOtherHint;
     }
   }
 }
@@ -110,15 +120,19 @@ String _rpShort(int n) {
   return formatRupiah(n);
 }
 
-String _rpSemanticLabel(int n) => formatRupiah(n);
+String _rpSemanticLabel(int n) => formatRupiah(n).replaceAll('.', ' ');
 
 String _fmtId(int n) => NumberFormat('#,##0', 'id_ID').format(n);
 
 ({String label, String note}) _pctFb(int pct, AppLocalizations l) {
-  if (pct == 0) return (label: l.onboardingEmergencySkip, note: l.onboardingPctNoteSkip);
-  if (pct <= 7) return (label: l.onboardingPctLabelLow, note: l.onboardingPctNoteLow);
-  if (pct <= 12) return (label: l.onboardingPctLabelMid, note: l.onboardingPctNoteMid);
-  if (pct <= 19) return (label: l.onboardingPctLabelHigh, note: l.onboardingPctNoteHigh);
+  if (pct == 0)
+    return (label: l.onboardingEmergencySkip, note: l.onboardingPctNoteSkip);
+  if (pct <= 7)
+    return (label: l.onboardingPctLabelLow, note: l.onboardingPctNoteLow);
+  if (pct <= 12)
+    return (label: l.onboardingPctLabelMid, note: l.onboardingPctNoteMid);
+  if (pct <= 19)
+    return (label: l.onboardingPctLabelHigh, note: l.onboardingPctNoteHigh);
   return (label: l.onboardingPctLabelMax, note: l.onboardingPctNoteMax);
 }
 
@@ -128,28 +142,40 @@ Future<void> _showExitDialog(BuildContext context) async {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
   final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-  final textSoftColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+  final textSoftColor = isDark
+      ? AppColors.textSoftDark
+      : AppColors.textSoftLight;
 
   final confirmed = await showDialog<bool>(
     context: context,
     barrierDismissible: true,
     builder: (ctx) => AlertDialog(
       backgroundColor: cardBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-      title: Text(l.onboardingExitDialogTitle,
-          style: AppTextStyles.h3.copyWith(color: textColor)),
-      content: Text(l.onboardingExitDialogBody,
-          style: AppTextStyles.bodySmall.copyWith(color: textSoftColor)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      title: Text(
+        l.onboardingExitDialogTitle,
+        style: AppTextStyles.h3.copyWith(color: textColor),
+      ),
+      content: Text(
+        l.onboardingExitDialogBody,
+        style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(l.onboardingExitDialogContinue,
-              style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+          child: Text(
+            l.onboardingExitDialogContinue,
+            style: AppTextStyles.label.copyWith(color: AppColors.primary),
+          ),
         ),
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(l.onboardingExitDialogConfirm,
-              style: AppTextStyles.label.copyWith(color: AppColors.warn)),
+          child: Text(
+            l.onboardingExitDialogConfirm,
+            style: AppTextStyles.label.copyWith(color: AppColors.warn),
+          ),
         ),
       ],
     ),
@@ -184,7 +210,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   int _step = 0;
   String? _activeRow; // step 1 sheet
   WeatherState _weatherState = WeatherState.clear;
-  bool _incomePresetSelected = false; // #212: reset keypad on next tap after preset
+  bool _incomePresetSelected =
+      false; // #212: reset keypad on next tap after preset
   int? _savedDailyBudget; // #206: from use-case result, single source of truth
 
   // ── Animation ────────────────────────────────────────────────────
@@ -223,10 +250,14 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   int _childCount(int step) {
     switch (step) {
-      case 0: return 2;
-      case 1: return 3;
-      case 2: return 6;
-      default: return 5; // done = 5 reveal items
+      case 0:
+        return 2;
+      case 1:
+        return 3;
+      case 2:
+        return 6;
+      default:
+        return 5; // done = 5 reveal items
     }
   }
 
@@ -246,12 +277,8 @@ class _OnboardingPageState extends State<OnboardingPage>
     _playEntrance();
   }
 
-  _Calc get _calc => _calcBudget(
-        income: _income,
-        payday: _payday,
-        expenses: _exp,
-        pct: _pct,
-      );
+  _Calc get _calc =>
+      _calcBudget(income: _income, payday: _payday, expenses: _exp, pct: _pct);
 
   // ── Animation helpers ─────────────────────────────────────────────
   Widget _stagger(Widget child, int i, int n) {
@@ -313,19 +340,24 @@ class _OnboardingPageState extends State<OnboardingPage>
               } else if (state is OnboardingError) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(
-                    content: Text(state.message,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: Colors.white)),
-                    backgroundColor: AppColors.warn,
-                    behavior: SnackBarBehavior.floating,
-                    action: SnackBarAction(
-                      label: l.retry,
-                      textColor: Colors.white,
-                      // #207: retry triggers full re-submit, not just state restore
-                      onPressed: _submitAll,
+                  ..showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        state.message,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      backgroundColor: AppColors.warn,
+                      behavior: SnackBarBehavior.floating,
+                      action: SnackBarAction(
+                        label: l.retry,
+                        textColor: Colors.white,
+                        // #207: retry triggers full re-submit, not just state restore
+                        onPressed: _submitAll,
+                      ),
                     ),
-                  ));
+                  );
               }
             },
             builder: (context, state) {
@@ -335,9 +367,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_step < 3) _buildHeader(isDark, l),
-                  Expanded(
-                    child: _buildContent(isDark, l, calc, isSubmitting),
-                  ),
+                  Expanded(child: _buildContent(isDark, l, calc, isSubmitting)),
                 ],
               );
             },
@@ -438,7 +468,9 @@ class _OnboardingPageState extends State<OnboardingPage>
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
 
     const n = 2;
     return Column(
@@ -578,7 +610,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ],
               ),
             ),
-            0, n,
+            0,
+            n,
           ),
         ),
         // child 1: docked keypad panel
@@ -605,7 +638,8 @@ class _OnboardingPageState extends State<OnboardingPage>
               onPressed: _income > 0 ? _next : null,
             ),
           ),
-          1, n,
+          1,
+          n,
         ),
       ],
     );
@@ -617,9 +651,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DatePickerSheet(
-        initialDate: initial,
-      ),
+      builder: (_) => _DatePickerSheet(initialDate: initial),
     );
     if (picked != null && mounted) setState(() => _payday = picked);
   }
@@ -630,7 +662,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   Widget _buildStep1(bool isDark, AppLocalizations l, _Calc calc) {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
 
     final activeRowDef = _kExpRows.where((r) => r.id == _activeRow).firstOrNull;
     const n = 3;
@@ -673,7 +707,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                   ],
                 ),
               ),
-              0, n,
+              0,
+              n,
             ),
             // child 1: expense rows + weather scene
             Expanded(
@@ -717,7 +752,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                   ],
                 ),
-                1, n,
+                1,
+                n,
               ),
             ),
             // child 2: total card + overflow warning (#202)
@@ -740,8 +776,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                           children: [
                             const Padding(
                               padding: EdgeInsets.only(top: 1),
-                              child: Icon(Icons.info_outline_rounded,
-                                  size: 13, color: AppColors.warn),
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                size: 13,
+                                color: AppColors.warn,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -761,7 +800,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                   ],
                 ),
               ),
-              2, n,
+              2,
+              n,
             ),
             // CTA — only when sheet closed
             AnimatedSize(
@@ -833,7 +873,9 @@ class _OnboardingPageState extends State<OnboardingPage>
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final grow = (_pct / 25).clamp(0.12, 1.0);
     final fb = _pctFb(_pct, l);
     final fillColor = _pct >= 20 ? AppColors.primaryBright : AppColors.primary;
@@ -850,9 +892,11 @@ class _OnboardingPageState extends State<OnboardingPage>
               children: [
                 // 0: eyebrow + title
                 _stagger(
-                  Column(children: [
-                    const SizedBox(height: 14),
-                    Text(l.onboardingEyebrowStep3,
+                  Column(
+                    children: [
+                      const SizedBox(height: 14),
+                      Text(
+                        l.onboardingEyebrowStep3,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'JetBrainsMono',
@@ -860,9 +904,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                           letterSpacing: 0.14 * 11,
                           color: AppColors.primary,
                           height: 1,
-                        )),
-                    const SizedBox(height: 7),
-                    Text(l.onboardingTitleDarurat,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        l.onboardingTitleDarurat,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
@@ -871,83 +917,94 @@ class _OnboardingPageState extends State<OnboardingPage>
                           color: textColor,
                           letterSpacing: -0.02 * 24,
                           height: 1.15,
-                        )),
-                  ]),
-                  0, n,
+                        ),
+                      ),
+                    ],
+                  ),
+                  0,
+                  n,
                 ),
                 // 1: hero — GrowShoot + daily
                 _stagger(
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: Column(children: [
-                      GrowShoot(grow: grow, size: 54, isDark: isDark),
-                      const SizedBox(height: 12),
-                      Text(
-                        l.onboardingDailyBudgetLabel,
-                        style: TextStyle(
-                          fontFamily: 'JetBrainsMono',
-                          fontSize: 10.5,
-                          letterSpacing: 0.14 * 10.5,
-                          color: muted,
-                          height: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      OnboardingCountUp(
-                        value: calc.daily,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 54,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                          letterSpacing: -0.04 * 54,
-                          height: 0.95,
-                        ),
-                        format: formatRupiah,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '/hari · ${_pct == 0 ? l.onboardingDailySubNoEmergency : l.onboardingDailySubSaving(formatRupiah(calc.cicilan))}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'InterTight',
-                          fontSize: 12.5,
-                          color: textSoft,
-                          height: 1.45,
-                        ),
-                      ),
-                      // #202: soft warning when fixed expenses exhaust all income
-                      if (calc.daily == 0 && calc.fixed >= _income && _income > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(top: 2),
-                                child: Icon(Icons.info_outline_rounded,
-                                    size: 13, color: AppColors.warn),
-                              ),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  l.onboardingWarnFixedFull,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontFamily: 'InterTight',
-                                    fontSize: 12,
-                                    color: AppColors.warn,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    child: Column(
+                      children: [
+                        GrowShoot(grow: grow, size: 54, isDark: isDark),
+                        const SizedBox(height: 12),
+                        Text(
+                          l.onboardingDailyBudgetLabel,
+                          style: TextStyle(
+                            fontFamily: 'JetBrainsMono',
+                            fontSize: 10.5,
+                            letterSpacing: 0.14 * 10.5,
+                            color: muted,
+                            height: 1,
                           ),
                         ),
-                    ]),
+                        const SizedBox(height: 3),
+                        OnboardingCountUp(
+                          value: calc.daily,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 54,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                            letterSpacing: -0.04 * 54,
+                            height: 0.95,
+                          ),
+                          format: formatRupiah,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '/hari · ${_pct == 0 ? l.onboardingDailySubNoEmergency : l.onboardingDailySubSaving(formatRupiah(calc.cicilan))}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'InterTight',
+                            fontSize: 12.5,
+                            color: textSoft,
+                            height: 1.45,
+                          ),
+                        ),
+                        // #202: soft warning when fixed expenses exhaust all income
+                        if (calc.daily == 0 &&
+                            calc.fixed >= _income &&
+                            _income > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 13,
+                                    color: AppColors.warn,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    l.onboardingWarnFixedFull,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontFamily: 'InterTight',
+                                      fontSize: 12,
+                                      color: AppColors.warn,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  1, n,
+                  1,
+                  n,
                 ),
                 // 2: feedback + pct row
                 _stagger(
@@ -958,26 +1015,31 @@ class _OnboardingPageState extends State<OnboardingPage>
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(fb.label,
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: fillColor,
-                              height: 1,
-                            )),
-                        Text('$_pct%',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              color: textColor,
-                              height: 1,
-                            )),
+                        Text(
+                          fb.label,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: fillColor,
+                            height: 1,
+                          ),
+                        ),
+                        Text(
+                          '$_pct%',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                            height: 1,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  2, n,
+                  2,
+                  n,
                 ),
                 // 3: slider
                 _stagger(
@@ -987,7 +1049,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                     borderColor: border,
                     onChange: (v) => setState(() => _pct = v),
                   ),
-                  3, n,
+                  3,
+                  n,
                 ),
                 // 4: note
                 _stagger(
@@ -995,16 +1058,19 @@ class _OnboardingPageState extends State<OnboardingPage>
                     padding: const EdgeInsets.only(top: 4),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 34),
-                      child: Text(fb.note,
-                          style: TextStyle(
-                            fontFamily: 'InterTight',
-                            fontSize: 12.5,
-                            color: textSoft,
-                            height: 1.45,
-                          )),
+                      child: Text(
+                        fb.note,
+                        style: TextStyle(
+                          fontFamily: 'InterTight',
+                          fontSize: 12.5,
+                          color: textSoft,
+                          height: 1.45,
+                        ),
+                      ),
                     ),
                   ),
-                  4, n,
+                  4,
+                  n,
                 ),
                 // 5: pct chips
                 _stagger(
@@ -1019,7 +1085,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                               padding: const EdgeInsets.only(right: 7),
                               child: _PctChipWidget(
                                 // #201: use l10n key instead of hardcoded 'Lewati'
-                                label: p == 0 ? l.onboardingEmergencySkip : '$p%',
+                                label: p == 0
+                                    ? l.onboardingEmergencySkip
+                                    : '$p%',
                                 active: on,
                                 isDark: isDark,
                                 surfaceAlt: surfaceAlt,
@@ -1042,7 +1110,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ],
                     ),
                   ),
-                  5, n,
+                  5,
+                  n,
                 ),
                 const SizedBox(height: 8),
               ],
@@ -1086,14 +1155,18 @@ class _OnboardingPageState extends State<OnboardingPage>
               children: [
                 // GrowShoot — delay 0
                 _reveal(
-                  Center(child: GrowShoot(grow: 1.0, size: 108, isDark: isDark)),
+                  Center(
+                    child: GrowShoot(grow: 1.0, size: 108, isDark: isDark),
+                  ),
                   0,
                 ),
                 // eyebrow + title — delay 70
                 _reveal(
-                  Column(children: [
-                    const SizedBox(height: 16),
-                    Text(l.onboardingDoneEyebrow,
+                  Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Text(
+                        l.onboardingDoneEyebrow,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'JetBrainsMono',
@@ -1101,9 +1174,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                           letterSpacing: 0.14 * 11,
                           color: AppColors.primary,
                           height: 1,
-                        )),
-                    const SizedBox(height: 6),
-                    Text(l.onboardingDoneTitle,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l.onboardingDoneTitle,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
@@ -1112,22 +1187,26 @@ class _OnboardingPageState extends State<OnboardingPage>
                           color: textColor,
                           letterSpacing: -0.025 * 24,
                           height: 1.12,
-                        )),
-                  ]),
+                        ),
+                      ),
+                    ],
+                  ),
                   70,
                 ),
                 // sub — delay 120
                 _reveal(
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(l.onboardingDoneSub,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'InterTight',
-                          fontSize: 13.5,
-                          color: textSoft,
-                          height: 1.5,
-                        )),
+                    child: Text(
+                      l.onboardingDoneSub,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'InterTight',
+                        fontSize: 13.5,
+                        color: textSoft,
+                        height: 1.5,
+                      ),
+                    ),
                   ),
                   120,
                 ),
@@ -1143,43 +1222,49 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       child: Column(
                         children: [
-                          Row(children: [
-                            Expanded(
-                              child: _StatWidget(
-                                label: l.onboardingStatDaily,
-                                // #206: prefer use-case result; fall back to UI calc
-                                value: formatRupiah(_savedDailyBudget ?? calc.daily),
-                                big: true,
-                                isDark: isDark,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _StatWidget(
+                                  label: l.onboardingStatDaily,
+                                  // #206: prefer use-case result; fall back to UI calc
+                                  value: formatRupiah(
+                                    _savedDailyBudget ?? calc.daily,
+                                  ),
+                                  big: true,
+                                  isDark: isDark,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: _StatWidget(
-                                label: l.onboardingStatEmergency,
-                                value: '${formatRupiah(calc.cicilan)}/bln',
-                                isDark: isDark,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _StatWidget(
+                                  label: l.onboardingStatEmergency,
+                                  value: '${formatRupiah(calc.cicilan)}/bln',
+                                  isDark: isDark,
+                                ),
                               ),
-                            ),
-                          ]),
+                            ],
+                          ),
                           const SizedBox(height: 14),
-                          Row(children: [
-                            Expanded(
-                              child: _StatWidget(
-                                label: l.onboardingStatIncome,
-                                value: formatRupiah(_income),
-                                isDark: isDark,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _StatWidget(
+                                  label: l.onboardingStatIncome,
+                                  value: formatRupiah(_income),
+                                  isDark: isDark,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: _StatWidget(
-                                label: l.onboardingStatFixed,
-                                value: formatRupiah(calc.fixed),
-                                isDark: isDark,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _StatWidget(
+                                  label: l.onboardingStatFixed,
+                                  value: formatRupiah(calc.fixed),
+                                  isDark: isDark,
+                                ),
                               ),
-                            ),
-                          ]),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -1228,12 +1313,14 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   // ── BLoC submit (#208) ─────────────────────────────────────────────
   void _submitAll() {
-    context.read<OnboardingBloc>().add(OnboardingSubmitted(
-      income: _income,
-      paymentDate: _payday,
-      expenses: Map.unmodifiable(_exp),
-      emergencyFundPct: _pct / 100,
-    ));
+    context.read<OnboardingBloc>().add(
+      OnboardingSubmitted(
+        income: _income,
+        paymentDate: _payday,
+        expenses: Map.unmodifiable(_exp),
+        emergencyFundPct: _pct / 100,
+      ),
+    );
   }
 }
 
@@ -1284,7 +1371,9 @@ class _DockedPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: -0), // full bleed via padding below
+      margin: const EdgeInsets.symmetric(
+        horizontal: -0,
+      ), // full bleed via padding below
       decoration: BoxDecoration(
         color: surfaceAlt,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
@@ -1298,13 +1387,7 @@ class _DockedPanel extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-      child: Column(
-        children: [
-          keypad,
-          const SizedBox(height: 9),
-          cta,
-        ],
-      ),
+      child: Column(children: [keypad, const SizedBox(height: 9), cta]),
     );
   }
 }
@@ -1329,15 +1412,18 @@ class _CtaBtn extends StatelessWidget {
       height: height,
       child: FilledButton(
         onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          disabledBackgroundColor: AppColors.primaryDeep,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 0,
-          shadowColor: Colors.transparent,
-        ).copyWith(
-          overlayColor: WidgetStatePropertyAll(Colors.white.withAlpha(30)),
-        ),
+        style:
+            FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              disabledBackgroundColor: AppColors.primaryDeep,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+            ).copyWith(
+              overlayColor: WidgetStatePropertyAll(Colors.white.withAlpha(30)),
+            ),
         child: isLoading
             ? const SizedBox.square(
                 dimension: 20,
@@ -1361,8 +1447,11 @@ class _CtaBtn extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_rounded,
-                      size: 18, color: Colors.white),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
                 ],
               ),
       ),
@@ -1389,36 +1478,39 @@ class _PresetChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return Semantics(
       button: true,
       label: _rpSemanticLabel(amount),
       selected: active,
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primary : surfaceAlt,
-          border: Border.all(
-            color: active ? AppColors.primary : border,
-            width: 1.5,
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : surfaceAlt,
+            border: Border.all(
+              color: active ? AppColors.primary : border,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'InterTight',
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: active ? Colors.white : textColor,
-            height: 1,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'InterTight',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : textColor,
+              height: 1,
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -1459,7 +1551,9 @@ class _PaydayChipWidget extends StatelessWidget {
             duration: const Duration(milliseconds: 120),
             width: wide ? null : 44,
             height: 44,
-            padding: wide ? const EdgeInsets.symmetric(horizontal: 13) : EdgeInsets.zero,
+            padding: wide
+                ? const EdgeInsets.symmetric(horizontal: 13)
+                : EdgeInsets.zero,
             decoration: BoxDecoration(
               color: active ? AppColors.primary : Colors.transparent,
               border: Border.all(
@@ -1512,7 +1606,9 @@ class _ExpRowWidget extends StatelessWidget {
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
 
     return Semantics(
       button: true,
@@ -1522,73 +1618,76 @@ class _ExpRowWidget extends StatelessWidget {
       hint: value > 0
           ? 'Ketuk dua kali untuk mengubah'
           : 'Ketuk dua kali untuk mengisi',
+      excludeSemantics: true,
       child: GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? surface : Colors.transparent,
-          border: isFirst
-              ? null
-              : Border(top: BorderSide(color: border, width: 1)),
-          borderRadius: active ? BorderRadius.circular(AppRadius.md) : null, // B2
-        ),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: active ? surfaceAlt : surface,
-                borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+          decoration: BoxDecoration(
+            color: active ? surface : Colors.transparent,
+            border: isFirst
+                ? null
+                : Border(top: BorderSide(color: border, width: 1)),
+            borderRadius: active
+                ? BorderRadius.circular(AppRadius.md)
+                : null, // B2
+          ),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: active ? surfaceAlt : surface,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(row.icon, size: 18, color: AppColors.primary),
               ),
-              child: Icon(row.icon, size: 18, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            // #205: show hint caption when value is empty
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    row.label(l),
-                    style: TextStyle(
-                      fontFamily: 'InterTight',
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                      height: 1,
-                    ),
-                  ),
-                  if (value == 0)
+              const SizedBox(width: 12),
+              // #205: show hint caption when value is empty
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      row.hint(l),
+                      row.label(l),
                       style: TextStyle(
                         fontFamily: 'InterTight',
-                        fontSize: 11,
-                        color: muted,
-                        height: 1.4,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                        height: 1,
                       ),
                     ),
-                ],
+                    if (value == 0)
+                      Text(
+                        row.hint(l),
+                        style: TextStyle(
+                          fontFamily: 'InterTight',
+                          fontSize: 11,
+                          color: muted,
+                          height: 1.4,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            Text(
-              value > 0 ? formatRupiah(value) : 'Rp —',
-              style: TextStyle(
-                fontFamily: 'JetBrainsMono',
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: value > 0 ? textColor : muted,
-                height: 1,
+              Text(
+                value > 0 ? formatRupiah(value) : 'Rp —',
+                style: TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: value > 0 ? textColor : muted,
+                  height: 1,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1743,61 +1842,73 @@ class _SheetKeypad extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: surface,
-                    borderRadius: BorderRadius.circular(10),
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      activeRow.icon,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                   ),
-                  child: Icon(activeRow.icon, size: 18, color: AppColors.primary),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      activeRow.label(l),
-                      style: TextStyle(
-                        fontFamily: 'InterTight',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
-                        height: 1.1,
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        activeRow.label(l),
+                        style: TextStyle(
+                          fontFamily: 'InterTight',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppColors.mutedDark
+                              : AppColors.mutedLight,
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      formatRupiah(value),
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                        letterSpacing: -0.02 * 21,
-                        height: 1.1,
+                      const SizedBox(height: 1),
+                      Text(
+                        formatRupiah(value),
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                          letterSpacing: -0.02 * 21,
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ]),
+                    ],
+                  ),
+                ],
+              ),
               FilledButton(
                 onPressed: onDone,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: const StadiumBorder(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 9,
+                  ),
                 ),
-                child: Text(l.onboardingSheetDone,
-                    style: const TextStyle(
-                      fontFamily: 'InterTight',
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1,
-                    )),
+                child: Text(
+                  l.onboardingSheetDone,
+                  style: const TextStyle(
+                    fontFamily: 'InterTight',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1998,80 +2109,84 @@ class _OSliderState extends State<_OSlider> {
       decreasedValue: '${math.max(_min, widget.value - 1)}%',
       onIncrease: () => widget.onChange(math.min(_max, widget.value + 1)),
       onDecrease: () => widget.onChange(math.max(_min, widget.value - 1)),
-      child: LayoutBuilder(builder: (context, constraints) {
-      final w = constraints.maxWidth;
-      return GestureDetector(
-        onHorizontalDragUpdate: (d) => _fromDx(d.localPosition.dx, w),
-        onTapDown: (d) => _fromDx(d.localPosition.dx, w),
-        child: SizedBox(
-          height: _knobSize + 12,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // track
-              Container(
-                height: _trackH,
-                decoration: BoxDecoration(
-                  color: widget.borderColor,
-                  borderRadius: BorderRadius.circular(_trackH),
-                ),
-              ),
-              // fill
-              Positioned(
-                left: 0,
-                child: Container(
-                  width: w * _pct(widget.value),
-                  height: _trackH,
-                  decoration: BoxDecoration(
-                    color: widget.fillColor,
-                    borderRadius: BorderRadius.circular(_trackH),
-                  ),
-                ),
-              ),
-              // marks
-              ..._marks.map((m) {
-                return Positioned(
-                  left: w * _pct(m) - 1.5,
-                  child: Container(
-                    width: 3,
-                    height: 3,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          return GestureDetector(
+            onHorizontalDragUpdate: (d) => _fromDx(d.localPosition.dx, w),
+            onTapDown: (d) => _fromDx(d.localPosition.dx, w),
+            child: SizedBox(
+              height: _knobSize + 12,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // track
+                  Container(
+                    height: _trackH,
                     decoration: BoxDecoration(
-                      color: markColor,
-                      borderRadius: BorderRadius.circular(2),
+                      color: widget.borderColor,
+                      borderRadius: BorderRadius.circular(_trackH),
                     ),
                   ),
-                );
-              }),
-              // knob
-              Positioned(
-                left: (w * _pct(widget.value) - _knobSize / 2)
-                    .clamp(0, w - _knobSize),
-                child: Container(
-                  width: _knobSize,
-                  height: _knobSize,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0B1F14).withAlpha(71),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                  // fill
+                  Positioned(
+                    left: 0,
+                    child: Container(
+                      width: w * _pct(widget.value),
+                      height: _trackH,
+                      decoration: BoxDecoration(
+                        color: widget.fillColor,
+                        borderRadius: BorderRadius.circular(_trackH),
                       ),
-                      BoxShadow(
-                        color: AppColors.bgDark.withAlpha(10),
-                        spreadRadius: 1,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  // marks
+                  ..._marks.map((m) {
+                    return Positioned(
+                      left: w * _pct(m) - 1.5,
+                      child: Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: markColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  }),
+                  // knob
+                  Positioned(
+                    left: (w * _pct(widget.value) - _knobSize / 2).clamp(
+                      0,
+                      w - _knobSize,
+                    ),
+                    child: Container(
+                      width: _knobSize,
+                      height: _knobSize,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0B1F14).withAlpha(71),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: AppColors.bgDark.withAlpha(10),
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }),   // end LayoutBuilder (Semantics child)
-    );    // end Semantics
+            ),
+          );
+        },
+      ), // end LayoutBuilder (Semantics child)
+    ); // end Semantics
   }
 }
 
@@ -2151,11 +2266,17 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Container(
@@ -2164,7 +2285,10 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xxl,
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xxl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2174,7 +2298,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
             height: 3,
             decoration: BoxDecoration(
               color: borderColor,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -2186,11 +2310,17 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // #201: l10n strings for date picker sheet
-                    Text(AppLocalizations.of(context).onboardingDatePickerTitle,
-                        style: AppTextStyles.h3.copyWith(color: textColor)),
+                    Text(
+                      AppLocalizations.of(context).onboardingDatePickerTitle,
+                      style: AppTextStyles.h3.copyWith(color: textColor),
+                    ),
                     const SizedBox(height: 2),
-                    Text(AppLocalizations.of(context).onboardingDatePickerSubtitle,
-                        style: AppTextStyles.bodySmall.copyWith(color: textSoftColor)),
+                    Text(
+                      AppLocalizations.of(context).onboardingDatePickerSubtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: textSoftColor,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2224,35 +2354,48 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
               final isSelected = _selected == date;
               final now = DateTime.now();
               // realtime: clamped = tanggal melebihi jumlah hari di bulan ini
-              final isClamped = date > DateUtils.getDaysInMonth(now.year, now.month);
-              final fg = isSelected ? Colors.white : (isClamped ? mutedColor : textColor);
+              final isClamped =
+                  date > DateUtils.getDaysInMonth(now.year, now.month);
+              final fg = isSelected
+                  ? Colors.white
+                  : (isClamped ? mutedColor : textColor);
               return Semantics(
                 label: isClamped
                     ? 'Tanggal $date, tidak tersedia bulan ini'
                     : 'Tanggal $date',
                 button: true,
                 selected: isSelected,
+                excludeSemantics: true,
                 child: GestureDetector(
-                onTap: () => setState(() => _selected = date),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignment: Alignment.center,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('$date',
-                          style: AppTextStyles.label.copyWith(color: fg)),
-                      if (isClamped && !isSelected)
-                        Text('*',
+                  onTap: () => setState(() => _selected = date),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$date',
+                          style: AppTextStyles.label.copyWith(color: fg),
+                        ),
+                        if (isClamped && !isSelected)
+                          Text(
+                            '*',
                             style: AppTextStyles.caption.copyWith(
-                                fontSize: 8, color: mutedColor, height: 0.8)),
-                    ],
+                              fontSize: 8,
+                              color: mutedColor,
+                              height: 0.8,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
                 ),
               );
             },
@@ -2261,51 +2404,64 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
           Text(
             // #201: l10n for asterisk note
             AppLocalizations.of(context).onboardingDatePickerNote,
-            style: AppTextStyles.caption.copyWith(color: mutedColor, fontSize: 10),
+            style: AppTextStyles.caption.copyWith(
+              color: mutedColor,
+              fontSize: 10,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: borderColor),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md)), // B2
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(AppLocalizations.of(context).btnCancel,
-                    style: AppTextStyles.label.copyWith(color: textSoftColor)),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              flex: 2,
-              child: FilledButton(
-                onPressed: _selected != null
-                    ? () => Navigator.pop(context, _selected)
-                    : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  disabledBackgroundColor: borderColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md)), // B2
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(
-                  _selected != null
-                      ? (_selected! >= 29
-                          // #201: l10n button labels
-                          ? AppLocalizations.of(context).onboardingDatePickerUseApprox(_selected!)
-                          : AppLocalizations.of(context).onboardingDatePickerUse(_selected!))
-                      : AppLocalizations.of(context).onboardingDatePickerNone,
-                  style: AppTextStyles.label.copyWith(
-                    color: _selected != null ? Colors.white : mutedColor,
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: borderColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ), // B2
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context).btnCancel,
+                    style: AppTextStyles.label.copyWith(color: textSoftColor),
                   ),
                 ),
               ),
-            ),
-          ]),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                flex: 2,
+                child: FilledButton(
+                  onPressed: _selected != null
+                      ? () => Navigator.pop(context, _selected)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: borderColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ), // B2
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    _selected != null
+                        ? (_selected! >= 29
+                              // #201: l10n button labels
+                              ? AppLocalizations.of(
+                                  context,
+                                ).onboardingDatePickerUseApprox(_selected!)
+                              : AppLocalizations.of(
+                                  context,
+                                ).onboardingDatePickerUse(_selected!))
+                        : AppLocalizations.of(context).onboardingDatePickerNone,
+                    style: AppTextStyles.label.copyWith(
+                      color: _selected != null ? Colors.white : mutedColor,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
