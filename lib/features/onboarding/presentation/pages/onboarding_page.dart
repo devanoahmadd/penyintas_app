@@ -198,7 +198,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       duration: const Duration(milliseconds: 585), // step 0 = 520+65
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _playEntrance());
-    context.read<OnboardingBloc>().add(const OnboardingStarted());
   }
 
   @override

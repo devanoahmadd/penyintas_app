@@ -4,12 +4,6 @@ sealed class OnboardingEvent extends Equatable {
   const OnboardingEvent();
 }
 
-class OnboardingStarted extends OnboardingEvent {
-  const OnboardingStarted();
-  @override
-  List<Object> get props => [];
-}
-
 /// #208: single submit event replaces the fragile Step1/2/3 burst pattern.
 /// UI holds all form state; bloc receives it atomically.
 class OnboardingSubmitted extends OnboardingEvent {

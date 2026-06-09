@@ -82,16 +82,6 @@ void main() {
         pushUserSettings: mockPush,
       );
 
-  // ── OnboardingStarted ─────────────────────────────────────────────────
-  group('OnboardingStarted', () {
-    blocTest<OnboardingBloc, OnboardingState>(
-      'emit [OnboardingInitial] saat started',
-      build: buildBloc,
-      act: (bloc) => bloc.add(const OnboardingStarted()),
-      expect: () => [const OnboardingInitial()],
-    );
-  });
-
   // ── OnboardingSubmitted — sukses ──────────────────────────────────────
   group('OnboardingSubmitted — sukses', () {
     blocTest<OnboardingBloc, OnboardingState>(

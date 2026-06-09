@@ -25,7 +25,6 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         _analyticsService = analyticsService,
         _pushUserSettings = pushUserSettings,
         super(const OnboardingInitial()) {
-    on<OnboardingStarted>(_onStarted);
     on<OnboardingSubmitted>(_onSubmitted);
   }
 
@@ -33,10 +32,6 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final CalculateDailyBudgetUseCase _calculateDailyBudget;
   final AnalyticsService _analyticsService;
   final PushUserSettingsUseCase _pushUserSettings;
-
-  void _onStarted(OnboardingStarted event, Emitter<OnboardingState> emit) {
-    emit(const OnboardingInitial());
-  }
 
   /// #208: single handler that receives all form data and runs the full pipeline.
   /// Safe to call multiple times (retry-friendly) — state is reset to Calculating first.
