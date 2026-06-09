@@ -144,6 +144,37 @@ void main() {
 
       expect(result, const Left<Failure, void>(CacheFailure('disk full')));
     });
+
+    group('uid null — lokal saja, remote dilewati', () {
+      setUp(() {
+        when(() => auth.currentUser).thenReturn(null);
+        when(() => local.saveBudgetSettings(any())).thenAnswer((_) async {});
+      });
+
+      test('local save dipanggil', () async {
+        await repository.saveBudgetSettings(tSettings);
+        verify(() => local.saveBudgetSettings(any())).called(1);
+      });
+
+      test('remote datasource tidak dipanggil', () async {
+        await repository.saveBudgetSettings(tSettings);
+        verifyNever(() => remote.saveBudgetSettings(any()));
+      });
+
+      test('sync queue tidak diisi', () async {
+        await repository.saveBudgetSettings(tSettings);
+        verifyNever(() => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+        ));
+      });
+
+      test('return Right', () async {
+        final result = await repository.saveBudgetSettings(tSettings);
+        expect(result, isA<Right>());
+      });
+    });
   });
 
   group('getBudgetSettings', () {
