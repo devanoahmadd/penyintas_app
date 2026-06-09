@@ -35,38 +35,128 @@ class _SceneValues {
   final int swayMs;
 }
 
+// Light mode scene palette constants
+const _kSkyTopClear       = Color(0xFF8DD4F0);
+const _kSkyBotClear       = Color(0xFFC8EEF8);
+const _kHillFarClear      = Color(0xFF7EC87A);
+const _kHillNearClear     = Color(0xFF5AB05A);
+
+const _kSkyTopCloudy      = Color(0xFF7AAECC);
+const _kSkyBotCloudy      = Color(0xFFB8D4E0);
+const _kHillFarCloudy     = Color(0xFF5E9E6A);
+const _kHillNearCloudy    = Color(0xFF4A8A55);
+
+const _kSkyTopOvercast    = Color(0xFF4A6878);
+const _kSkyBotOvercast    = Color(0xFF788C98);
+const _kHillFarOvercast   = Color(0xFF344E38);
+const _kHillNearOvercast  = Color(0xFF263A28);
+
+const _kSkyTopStorm       = Color(0xFF2A3C48);
+const _kSkyBotStorm       = Color(0xFF445A68);
+const _kHillFarStorm      = Color(0xFF1E3028);
+const _kHillNearStorm     = Color(0xFF162218);
+
+const _kSkyTopOverwhelmed  = Color(0xFFC8D8C8);
+const _kSkyBotOverwhelmed  = Color(0xFFD8E8D8);
+const _kHillFarOverwhelmed = Color(0xFF506C50);
+const _kHillNearOverwhelmed= Color(0xFF3C5C3C);
+
+// Dark mode scene palette constants — nocturnal / deeper hues
+const _kSkyTopClearDark       = Color(0xFF0D2236);
+const _kSkyBotClearDark       = Color(0xFF1A3A52);
+const _kHillFarClearDark      = Color(0xFF1A3B22);
+const _kHillNearClearDark     = Color(0xFF0F2A18);
+
+const _kSkyTopCloudyDark      = Color(0xFF0B1D2E);
+const _kSkyBotCloudyDark      = Color(0xFF162A3E);
+const _kHillFarCloudyDark     = Color(0xFF14301C);
+const _kHillNearCloudyDark    = Color(0xFF0C2014);
+
+const _kSkyTopOvercastDark    = Color(0xFF0A1820);
+const _kSkyBotOvercastDark    = Color(0xFF121E28);
+const _kHillFarOvercastDark   = Color(0xFF0E2018);
+const _kHillNearOvercastDark  = Color(0xFF081410);
+
+const _kSkyTopStormDark       = Color(0xFF060E14);
+const _kSkyBotStormDark       = Color(0xFF0C1A24);
+const _kHillFarStormDark      = Color(0xFF0A1810);
+const _kHillNearStormDark     = Color(0xFF060E0A);
+
+const _kSkyTopOverwhelmedDark  = Color(0xFF121E18);
+const _kSkyBotOverwhelmedDark  = Color(0xFF1A2A20);
+const _kHillFarOverwhelmedDark = Color(0xFF1E3828);
+const _kHillNearOverwhelmedDark= Color(0xFF162A1C);
+
 const _kScene = <WeatherState, _SceneValues>{
   WeatherState.clear: _SceneValues(
-    skyTop: Color(0xFF8DD4F0), skyBot: Color(0xFFC8EEF8),
-    hillFar: Color(0xFF7EC87A), hillNear: Color(0xFF5AB05A),
+    skyTop: _kSkyTopClear, skyBot: _kSkyBotClear,
+    hillFar: _kHillFarClear, hillNear: _kHillNearClear,
     sunOpacity: 1.0, cloudOpacity: 0.0, rainOpacity: 0.0,
     fogOpacity: 0.0, bamOpacity: 1.0,
     swayAmp: 0.035, swayMs: 3000,
   ),
   WeatherState.cloudy: _SceneValues(
-    skyTop: Color(0xFF7AAECC), skyBot: Color(0xFFB8D4E0),
-    hillFar: Color(0xFF5E9E6A), hillNear: Color(0xFF4A8A55),
+    skyTop: _kSkyTopCloudy, skyBot: _kSkyBotCloudy,
+    hillFar: _kHillFarCloudy, hillNear: _kHillNearCloudy,
     sunOpacity: 0.5, cloudOpacity: 0.9, rainOpacity: 0.0,
     fogOpacity: 0.0, bamOpacity: 0.85,
     swayAmp: 0.052, swayMs: 2500,
   ),
   WeatherState.overcast: _SceneValues(
-    skyTop: Color(0xFF4A6878), skyBot: Color(0xFF788C98),
-    hillFar: Color(0xFF344E38), hillNear: Color(0xFF263A28),
+    skyTop: _kSkyTopOvercast, skyBot: _kSkyBotOvercast,
+    hillFar: _kHillFarOvercast, hillNear: _kHillNearOvercast,
     sunOpacity: 0.0, cloudOpacity: 1.0, rainOpacity: 0.0,
     fogOpacity: 0.0, bamOpacity: 0.65,
     swayAmp: 0.087, swayMs: 1800,
   ),
   WeatherState.storm: _SceneValues(
-    skyTop: Color(0xFF2A3C48), skyBot: Color(0xFF445A68),
-    hillFar: Color(0xFF1E3028), hillNear: Color(0xFF162218),
+    skyTop: _kSkyTopStorm, skyBot: _kSkyBotStorm,
+    hillFar: _kHillFarStorm, hillNear: _kHillNearStorm,
     sunOpacity: 0.0, cloudOpacity: 1.0, rainOpacity: 0.9,
     fogOpacity: 0.0, bamOpacity: 0.45,
     swayAmp: 0.157, swayMs: 800,
   ),
   WeatherState.overwhelmed: _SceneValues(
-    skyTop: Color(0xFFC8D8C8), skyBot: Color(0xFFD8E8D8),
-    hillFar: Color(0xFF506C50), hillNear: Color(0xFF3C5C3C),
+    skyTop: _kSkyTopOverwhelmed, skyBot: _kSkyBotOverwhelmed,
+    hillFar: _kHillFarOverwhelmed, hillNear: _kHillNearOverwhelmed,
+    sunOpacity: 0.0, cloudOpacity: 0.0, rainOpacity: 0.0,
+    fogOpacity: 0.85, bamOpacity: 0.25,
+    swayAmp: 0.0, swayMs: 3000,
+  ),
+};
+
+const _kSceneDark = <WeatherState, _SceneValues>{
+  WeatherState.clear: _SceneValues(
+    skyTop: _kSkyTopClearDark, skyBot: _kSkyBotClearDark,
+    hillFar: _kHillFarClearDark, hillNear: _kHillNearClearDark,
+    sunOpacity: 0.7, cloudOpacity: 0.0, rainOpacity: 0.0,
+    fogOpacity: 0.0, bamOpacity: 1.0,
+    swayAmp: 0.035, swayMs: 3000,
+  ),
+  WeatherState.cloudy: _SceneValues(
+    skyTop: _kSkyTopCloudyDark, skyBot: _kSkyBotCloudyDark,
+    hillFar: _kHillFarCloudyDark, hillNear: _kHillNearCloudyDark,
+    sunOpacity: 0.3, cloudOpacity: 0.9, rainOpacity: 0.0,
+    fogOpacity: 0.0, bamOpacity: 0.85,
+    swayAmp: 0.052, swayMs: 2500,
+  ),
+  WeatherState.overcast: _SceneValues(
+    skyTop: _kSkyTopOvercastDark, skyBot: _kSkyBotOvercastDark,
+    hillFar: _kHillFarOvercastDark, hillNear: _kHillNearOvercastDark,
+    sunOpacity: 0.0, cloudOpacity: 1.0, rainOpacity: 0.0,
+    fogOpacity: 0.0, bamOpacity: 0.65,
+    swayAmp: 0.087, swayMs: 1800,
+  ),
+  WeatherState.storm: _SceneValues(
+    skyTop: _kSkyTopStormDark, skyBot: _kSkyBotStormDark,
+    hillFar: _kHillFarStormDark, hillNear: _kHillNearStormDark,
+    sunOpacity: 0.0, cloudOpacity: 1.0, rainOpacity: 0.9,
+    fogOpacity: 0.0, bamOpacity: 0.45,
+    swayAmp: 0.157, swayMs: 800,
+  ),
+  WeatherState.overwhelmed: _SceneValues(
+    skyTop: _kSkyTopOverwhelmedDark, skyBot: _kSkyBotOverwhelmedDark,
+    hillFar: _kHillFarOverwhelmedDark, hillNear: _kHillNearOverwhelmedDark,
     sunOpacity: 0.0, cloudOpacity: 0.0, rainOpacity: 0.0,
     fogOpacity: 0.85, bamOpacity: 0.25,
     swayAmp: 0.0, swayMs: 3000,
@@ -108,7 +198,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
       vsync: this,
     )..value = 1.0;
 
-    final vals = _kScene[widget.state]!;
+    final vals = (widget.isDark ? _kSceneDark : _kScene)[widget.state]!;
     _swayCtrl = AnimationController(
       duration: Duration(milliseconds: vals.swayMs),
       vsync: this,
@@ -133,7 +223,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
   }
 
   void _updateSwaySpeed(WeatherState state) {
-    final vals = _kScene[state]!;
+    final vals = (widget.isDark ? _kSceneDark : _kScene)[state]!;
     if (vals.swayAmp == 0.0) {
       _swayCtrl.stop();
     } else {
@@ -158,8 +248,9 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
       animation:
           Listenable.merge([_transitionCtrl, _swayCtrl, _ambientCtrl]),
       builder: (context, _) {
-        final from = _kScene[_fromState]!;
-        final to = _kScene[_toState]!;
+        final sceneMap = widget.isDark ? _kSceneDark : _kScene;
+        final from = sceneMap[_fromState]!;
+        final to = sceneMap[_toState]!;
         final t = Curves.easeInOut.transform(_transitionCtrl.value);
 
         final skyTop = Color.lerp(from.skyTop, to.skyTop, t)!;
@@ -315,8 +406,8 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                             const Color(0xFFF0F8FC), // clear/cloudy: putih
                             const Color(0xFFA0ACB4), // storm: abu gelap
                             (_lerp(
-                                  _kScene[_fromState]!.rainOpacity,
-                                  _kScene[_toState]!.rainOpacity,
+                                  sceneMap[_fromState]!.rainOpacity,
+                                  sceneMap[_toState]!.rainOpacity,
                                   t,
                                 ) *
                                 1.5)
@@ -328,8 +419,8 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                     ),
                     // Awan 2 — kanan atas, sedikit lebih kecil
                     if (_lerp(
-                          _kScene[_fromState]!.cloudOpacity,
-                          _kScene[_toState]!.cloudOpacity,
+                          sceneMap[_fromState]!.cloudOpacity,
+                          sceneMap[_toState]!.cloudOpacity,
                           t,
                         ) >
                         0.4)
@@ -344,8 +435,8 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                               const Color(0xFFE4F0F4),
                               const Color(0xFF8C9AA0),
                               (_lerp(
-                                    _kScene[_fromState]!.rainOpacity,
-                                    _kScene[_toState]!.rainOpacity,
+                                    sceneMap[_fromState]!.rainOpacity,
+                                    sceneMap[_toState]!.rainOpacity,
                                     t,
                                   ) *
                                   1.5)
