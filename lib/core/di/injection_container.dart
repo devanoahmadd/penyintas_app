@@ -28,6 +28,7 @@ import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/datasources/user_settings_remote_datasource.dart';
@@ -223,6 +224,9 @@ void _initOnboarding() {
 
   sl.registerLazySingleton<OnboardingLocalDataSource>(
     () => OnboardingLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<OnboardingGuard>(
+    () => OnboardingGuard(sl<OnboardingLocalDataSource>()),
   );
   sl.registerLazySingleton<OnboardingRemoteDataSource>(
     () => OnboardingRemoteDataSourceImpl(auth: sl(), firestore: sl()),
