@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
@@ -13,12 +14,16 @@ import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
+import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
+import 'package:penyintas_app/features/onboarding/domain/entities/partial_onboarding_state.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
 import '../widgets/weather_scene_widget.dart';
+
+final _sl = GetIt.instance;
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const _kIncomePresets = [800000, 1500000, 3000000, 5000000];
@@ -213,6 +218,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   bool _incomePresetSelected =
       false; // #212: reset keypad on next tap after preset
   int? _savedDailyBudget; // #206: from use-case result, single source of truth
+  bool _resumeMode = false;
 
   // ── Animation ────────────────────────────────────────────────────
   late final AnimationController _staggerCtrl;
@@ -224,7 +230,10 @@ class _OnboardingPageState extends State<OnboardingPage>
       vsync: this,
       duration: const Duration(milliseconds: 585), // step 0 = 520+65
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _playEntrance());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _playEntrance();
+      _loadPartialState();
+    });
   }
 
   @override
@@ -280,6 +289,126 @@ class _OnboardingPageState extends State<OnboardingPage>
   _Calc get _calc =>
       _calcBudget(income: _income, payday: _payday, expenses: _exp, pct: _pct);
 
+  // ── Defer / resume helpers ────────────────────────────────────────
+  Future<void> _loadPartialState() async {
+    final datasource = _sl<OnboardingLocalDataSource>();
+    PartialOnboardingState? partial;
+    try {
+      partial = await datasource.loadPartialOnboarding();
+    } catch (_) {
+      return;
+    }
+    if (partial == null) return;
+    if (!mounted) return;
+
+    final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
+    if (ageInDays >= 7) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+      final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+      final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+      final resume = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: cardBg,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: Text('Lanjutkan setup?',
+              style: AppTextStyles.h3.copyWith(color: textColor)),
+          content: Text(
+            'Kamu punya data dari $ageInDays hari lalu. Lanjut dari sana atau mulai ulang?',
+            style: AppTextStyles.bodySmall.copyWith(color: textSoft),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('Mulai ulang',
+                  style: AppTextStyles.label
+                      .copyWith(color: AppColors.mutedLight)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('Lanjut dari sana',
+                  style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (resume != true) {
+        await datasource.clearPartialOnboarding();
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _step = partial!.step;
+      _income = partial.income;
+      _exp.addAll(partial.expenses);
+      _pct = partial.pct;
+      _payday = partial.payday;
+      _resumeMode = true;
+    });
+  }
+
+  Future<void> _resetToFresh() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardBg,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Text('Mulai ulang setup?',
+            style: AppTextStyles.h3.copyWith(color: textColor)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Batal',
+                style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Ya, mulai ulang',
+                style: AppTextStyles.label.copyWith(color: AppColors.warn)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _sl<OnboardingLocalDataSource>().clearPartialOnboarding();
+    if (!mounted) return;
+    setState(() {
+      _step = 0;
+      _income = 0;
+      _exp.updateAll((key, _) => 0);
+      _pct = 10;
+      _payday = 1;
+      _resumeMode = false;
+      _incomePresetSelected = false;
+      _savedDailyBudget = null;
+    });
+  }
+
+  Future<void> _deferAndExit() async {
+    try {
+      await _sl<OnboardingLocalDataSource>().savePartialOnboarding(
+        step: _step,
+        income: _income,
+        expenses: Map.from(_exp),
+        pct: _pct,
+        payday: _payday,
+      );
+    } catch (_) {
+      // Jika save gagal, tetap exit — jangan block user
+    }
+    SystemNavigator.pop();
+  }
+
   // ── Animation helpers ─────────────────────────────────────────────
   Widget _stagger(Widget child, int i, int n) {
     if (MediaQuery.of(context).disableAnimations) return child;
@@ -334,6 +463,9 @@ class _OnboardingPageState extends State<OnboardingPage>
               if (state is OnboardingSuccess) {
                 // #206: persist use-case result before navigating
                 _savedDailyBudget = state.dailyBudget;
+                // #200: clear partial state on successful onboarding completion
+                _sl<OnboardingLocalDataSource>()
+                    .clearPartialOnboarding(); // fire-and-forget
                 context.read<NotificationBloc>().add(const RequestPermission());
                 resetOnboardingCache();
                 context.go('/dashboard');
@@ -367,6 +499,39 @@ class _OnboardingPageState extends State<OnboardingPage>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_step < 3) _buildHeader(isDark, l),
+                  if (_resumeMode)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(26),
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Melanjutkan dari sesi sebelumnya',
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.primary),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _resetToFresh,
+                            child: Text(
+                              'Mulai ulang',
+                              style: AppTextStyles.label.copyWith(
+                                color: AppColors.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(child: _buildContent(isDark, l, calc, isSubmitting)),
                 ],
               );
@@ -391,7 +556,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               width: 44,
               child: _step == 0
                   ? GestureDetector(
-                      onTap: () => _showExitDialog(context),
+                      onTap: _deferAndExit,
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
