@@ -207,6 +207,33 @@ void main() {
         true,
       );
     });
+
+    test('save memetakan expenses map → 5 kolom DB + fixedExpenses sum', () async {
+      await datasource.savePartialOnboarding(
+        step: 2,
+        income: 4000000,
+        expenses: {
+          'kos': 1000000,
+          'listrik': 150000,
+          'internet': 100000,
+          'pulsa': 50000,
+          'lain': 25000,
+        },
+        pct: 10,
+        payday: 1,
+      );
+
+      final row = await (db.select(db.appSettings)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+
+      expect(row!.rentExpense, 1000000); // kos
+      expect(row.utilitiesExpense, 150000); // listrik
+      expect(row.internetExpense, 100000); // internet
+      expect(row.phoneExpense, 50000); // pulsa
+      expect(row.otherFixedExpense, 25000); // lain
+      expect(row.fixedExpenses, 1325000); // sum semua
+    });
   });
 
   group('clearPartialOnboarding', () {
@@ -223,6 +250,45 @@ void main() {
 
       final result = await datasource.loadPartialOnboarding();
       expect(result, isNull);
+    });
+
+    test('clear HANYA null-kan kolom partial — data budget tetap utuh', () async {
+      // Mulai dari state "selesai" (completed=true + income) lalu simpan partial.
+      await datasource.saveBudgetSettings(tSettings); // completed=true, income 3jt
+      await datasource.savePartialOnboarding(
+        step: 1,
+        income: 3000000,
+        expenses: {
+          'kos': 1000000,
+          'listrik': 150000,
+          'internet': 100000,
+          'pulsa': 50000,
+          'lain': 25000,
+        },
+        pct: 10,
+        payday: 25,
+      );
+
+      await datasource.clearPartialOnboarding();
+
+      final row = await (db.select(db.appSettings)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+
+      expect(row, isNotNull);
+      // Invariant: kolom partial NULL...
+      expect(row!.partialOnboardingStep, isNull);
+      expect(row.partialOnboardingAt, isNull);
+      // ...tapi SELURUH data budget tetap utuh (tak terhapus oleh clear).
+      expect(row.monthlyIncome, 3000000);
+      expect(row.rentExpense, 1000000);
+      expect(row.utilitiesExpense, 150000);
+      expect(row.internetExpense, 100000);
+      expect(row.phoneExpense, 50000);
+      expect(row.otherFixedExpense, 25000);
+      expect(row.emergencyFundPct, 0.10);
+      expect(row.paymentDate, 25);
+      expect(row.onboardingCompleted, true);
     });
   });
 
