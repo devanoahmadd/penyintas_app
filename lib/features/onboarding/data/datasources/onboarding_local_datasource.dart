@@ -78,7 +78,8 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
     final saved = await (_db.select(_db.appSettings)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
-    return saved?.onboardingCompleted ?? false;
+    return (saved?.onboardingCompleted ?? false) &&
+        (saved?.monthlyIncome ?? 0) > 0;
   }
 
   @override

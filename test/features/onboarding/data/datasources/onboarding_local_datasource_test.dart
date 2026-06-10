@@ -225,4 +225,22 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('isOnboardingCompleted — income gating (#251)', () {
+    test('income > 0 + completed → true', () async {
+      await datasource.saveBudgetSettings(tSettings); // income 3jt, completed=true
+      expect(await datasource.isOnboardingCompleted(), true);
+    });
+
+    test('income = 0 walau completed=true → false (cegah jebakan)', () async {
+      await datasource.saveBudgetSettings(BudgetSettingsEntity(
+        monthlyIncome: 0,
+        paymentDate: 25,
+        otherFixedExpense: 0,
+        emergencyFundPct: 0.10,
+        createdAt: DateTime(2026, 5, 8),
+      ));
+      expect(await datasource.isOnboardingCompleted(), false);
+    });
+  });
 }
