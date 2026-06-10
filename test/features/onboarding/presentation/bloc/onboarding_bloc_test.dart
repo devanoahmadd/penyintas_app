@@ -264,6 +264,36 @@ void main() {
     );
   });
 
+  // ── OnboardingSubmitted — guard #251 ─────────────────────────────────
+  group('OnboardingSubmitted — guard #251', () {
+    blocTest<OnboardingBloc, OnboardingState>(
+      'calc gagal (income invalid) → emit Error TANPA memanggil save',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockCalc(any())).thenAnswer(
+          (_) async =>
+              const Left(ValidationFailure('Income harus lebih dari 0.')),
+        );
+        // save di-stub sukses; kalau dipanggil, verifyNever di bawah gagal.
+        when(() => mockSave(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(const OnboardingSubmitted(
+        income: 0,
+        paymentDate: 25,
+        expenses: tExpenses,
+        emergencyFundPct: 0.10,
+      )),
+      expect: () => [
+        const OnboardingCalculating(),
+        const OnboardingError(message: 'Income harus lebih dari 0.'),
+      ],
+      verify: (_) {
+        verifyNever(() => mockSave(any()));
+      },
+    );
+  });
+
   // ── fixedExpenses getter ──────────────────────────────────────────────
   group('OnboardingSubmitted.fixedExpenses', () {
     test('menjumlahkan semua expense values', () {

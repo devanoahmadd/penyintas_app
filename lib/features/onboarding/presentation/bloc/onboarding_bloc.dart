@@ -53,6 +53,16 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       remainingDays: days,
     ));
 
+    // #251: jika kalkulasi gagal (mis. income <= 0), JANGAN tulis app_settings.
+    // budget_local_datasource menulis onboardingCompleted=true unconditional —
+    // tanpa guard ini user bisa ter-mark "done" dengan income=0 (terjebak).
+    if (calcResult.isLeft()) {
+      emit(OnboardingError(
+        message: calcResult.fold((f) => f.message, (_) => ''),
+      ));
+      return;
+    }
+
     final settings = BudgetSettingsEntity(
       monthlyIncome: event.income,
       paymentDate: event.paymentDate,
