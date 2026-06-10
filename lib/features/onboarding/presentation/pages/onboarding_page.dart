@@ -566,12 +566,14 @@ class _OnboardingPageState extends State<OnboardingPage>
           children: [
             SizedBox(
               width: 44,
+              height: 44,
               child: _step == 0
                   ? Semantics(
                       button: true,
                       label: l.onboardingSkipLater,
                       excludeSemantics: true,
                       child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
                         onTap: _deferAndExit,
                         child: Align(
                           alignment: Alignment.centerLeft,
