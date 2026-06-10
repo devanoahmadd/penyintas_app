@@ -559,17 +559,22 @@ class _OnboardingPageState extends State<OnboardingPage>
             SizedBox(
               width: 44,
               child: _step == 0
-                  ? GestureDetector(
-                      onTap: _deferAndExit,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          l.onboardingSkipLater,
-                          style: TextStyle(
-                            fontFamily: 'InterTight',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: muted,
+                  ? Semantics(
+                      button: true,
+                      label: l.onboardingSkipLater,
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: _deferAndExit,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            l.onboardingSkipLater,
+                            style: TextStyle(
+                              fontFamily: 'InterTight',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: muted,
+                            ),
                           ),
                         ),
                       ),
