@@ -308,6 +308,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
       final textColor = isDark ? AppColors.textDark : AppColors.textLight;
       final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+      final l = AppLocalizations.of(context);
       final resume = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -315,21 +316,21 @@ class _OnboardingPageState extends State<OnboardingPage>
           backgroundColor: cardBg,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: Text('Lanjutkan setup?',
+          title: Text(l.onboardingResumeDialogTitle,
               style: AppTextStyles.h3.copyWith(color: textColor)),
           content: Text(
-            'Kamu punya data dari $ageInDays hari lalu. Lanjut dari sana atau mulai ulang?',
+            l.onboardingResumeDialogBody(ageInDays),
             style: AppTextStyles.bodySmall.copyWith(color: textSoft),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text('Mulai ulang',
+              child: Text(l.onboardingResumeRestart,
                   style: AppTextStyles.label.copyWith(color: textSoft)),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text('Lanjut dari sana',
+              child: Text(l.onboardingResumeContinue,
                   style: AppTextStyles.label.copyWith(color: AppColors.primary)),
             ),
           ],
@@ -357,23 +358,24 @@ class _OnboardingPageState extends State<OnboardingPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: cardBg,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Mulai ulang setup?',
+        title: Text(l.onboardingResetDialogTitle,
             style: AppTextStyles.h3.copyWith(color: textColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Batal',
+            child: Text(l.onboardingResetDialogCancel,
                 style: AppTextStyles.label.copyWith(color: AppColors.primary)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Ya, mulai ulang',
+            child: Text(l.onboardingResetDialogConfirm,
                 style: AppTextStyles.label.copyWith(color: AppColors.warn)),
           ),
         ],
@@ -520,7 +522,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                         children: [
                           Expanded(
                             child: Text(
-                              'Melanjutkan dari sesi sebelumnya',
+                              l.onboardingResumeBanner,
                               style: AppTextStyles.bodySmall
                                   .copyWith(color: AppColors.primary),
                             ),
@@ -528,7 +530,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           TextButton(
                             onPressed: _resetToFresh,
                             child: Text(
-                              'Mulai ulang',
+                              l.onboardingResumeRestart,
                               style: AppTextStyles.label.copyWith(
                                 color: AppColors.primary,
                                 fontSize: 12,

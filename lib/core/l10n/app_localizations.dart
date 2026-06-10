@@ -316,6 +316,15 @@ class AppLocalizations {
   String get onboardingExitDialogBody => _t('onboarding_exit_dialog_body');
   String get onboardingExitDialogContinue => _t('onboarding_exit_dialog_continue');
   String get onboardingExitDialogConfirm => _t('onboarding_exit_dialog_confirm');
+  String get onboardingResumeDialogTitle => _t('onboarding_resume_dialog_title');
+  String onboardingResumeDialogBody(int days) =>
+      _t('onboarding_resume_dialog_body').replaceAll('{days}', '$days');
+  String get onboardingResumeContinue => _t('onboarding_resume_continue');
+  String get onboardingResumeRestart => _t('onboarding_resume_restart');
+  String get onboardingResumeBanner => _t('onboarding_resume_banner');
+  String get onboardingResetDialogTitle => _t('onboarding_reset_dialog_title');
+  String get onboardingResetDialogCancel => _t('onboarding_reset_dialog_cancel');
+  String get onboardingResetDialogConfirm => _t('onboarding_reset_dialog_confirm');
   String get onboardingDatePickerTitle => _t('onboarding_date_picker_title');
   String get onboardingDatePickerSubtitle => _t('onboarding_date_picker_subtitle');
   String get onboardingDatePickerNote => _t('onboarding_date_picker_note');
