@@ -56,10 +56,9 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     // #251: jika kalkulasi gagal (mis. income <= 0), JANGAN tulis app_settings.
     // budget_local_datasource menulis onboardingCompleted=true unconditional —
     // tanpa guard ini user bisa ter-mark "done" dengan income=0 (terjebak).
-    if (calcResult.isLeft()) {
-      emit(OnboardingError(
-        message: calcResult.fold((f) => f.message, (_) => ''),
-      ));
+    final String? calcError = calcResult.fold((f) => f.message, (_) => null);
+    if (calcError != null) {
+      emit(OnboardingError(message: calcError));
       return;
     }
 
