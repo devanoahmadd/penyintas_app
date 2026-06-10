@@ -467,8 +467,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                 _savedDailyBudget = state.dailyBudget;
                 // #200: clear partial state on successful onboarding completion
                 try {
+                  // #243: telan kegagalan async agar tak jadi unhandled exception.
                   _sl<OnboardingLocalDataSource>()
-                      .clearPartialOnboarding(); // fire-and-forget
+                      .clearPartialOnboarding()
+                      .catchError((_) {});
                 } catch (_) {/* ignore if not registered in test env */}
                 context.read<NotificationBloc>().add(const RequestPermission());
                 resetOnboardingCache();
