@@ -138,7 +138,14 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
     final saved = await (_db.select(_db.appSettings)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
-    if (saved == null || saved.partialOnboardingStep == null) return null;
+    if (saved == null ||
+        saved.partialOnboardingStep == null ||
+        saved.partialOnboardingAt == null ||
+        saved.partialOnboardingStep! < 0 ||
+        saved.partialOnboardingStep! > 2) {
+      // #235/#233: partial state tak utuh / step invalid → fresh start, jangan crash.
+      return null;
+    }
     return PartialOnboardingState(
       step: saved.partialOnboardingStep!,
       income: saved.monthlyIncome,
