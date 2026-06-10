@@ -351,6 +351,8 @@ class _OnboardingPageState extends State<OnboardingPage>
       _exp.addAll(partial.expenses);
       _pct = partial.pct;
       _payday = partial.payday;
+      // #240a: cuaca harus cermin kondisi keuangan yang di-restore, bukan 'clear'.
+      _weatherState = weatherStateFrom(_calc.fixedPct);
       _resumeMode = true;
     });
   }
