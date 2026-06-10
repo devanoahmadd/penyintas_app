@@ -508,36 +508,40 @@ class _OnboardingPageState extends State<OnboardingPage>
                 children: [
                   if (_step < 3) _buildHeader(isDark, l),
                   if (_resumeMode)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(26),
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l.onboardingResumeBanner,
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: AppColors.primary),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _resetToFresh,
-                            child: Text(
-                              l.onboardingResumeRestart,
-                              style: AppTextStyles.label.copyWith(
-                                color: AppColors.primary,
-                                fontSize: 12,
+                    Semantics(
+                      liveRegion: true,
+                      container: true,
+                      child: Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withAlpha(26),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l.onboardingResumeBanner,
+                                style: AppTextStyles.bodySmall
+                                    .copyWith(color: AppColors.primary),
                               ),
                             ),
-                          ),
-                        ],
+                            TextButton(
+                              onPressed: _resetToFresh,
+                              child: Text(
+                                l.onboardingResumeRestart,
+                                style: AppTextStyles.label.copyWith(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   Expanded(child: _buildContent(isDark, l, calc, isSubmitting)),
