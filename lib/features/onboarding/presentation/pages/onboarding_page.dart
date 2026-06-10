@@ -219,6 +219,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       false; // #212: reset keypad on next tap after preset
   int? _savedDailyBudget; // #206: from use-case result, single source of truth
   bool _resumeMode = false;
+  bool _deferring = false; // #237: cegah double-tap "Lanjut nanti"
 
   // ── Animation ────────────────────────────────────────────────────
   late final AnimationController _staggerCtrl;
@@ -399,6 +400,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _deferAndExit() async {
+    if (_deferring) return; // #237
+    _deferring = true;
     try {
       await _sl<OnboardingLocalDataSource>().savePartialOnboarding(
         step: _step,
@@ -409,6 +412,8 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
     } catch (_) {
       // Jika save gagal, tetap exit — jangan block user
+    } finally {
+      if (mounted) setState(() => _deferring = false);
     }
     SystemNavigator.pop();
   }
