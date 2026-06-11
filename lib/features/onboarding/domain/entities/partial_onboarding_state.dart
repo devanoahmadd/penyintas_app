@@ -1,4 +1,6 @@
-class PartialOnboardingState {
+import 'package:equatable/equatable.dart';
+
+class PartialOnboardingState extends Equatable {
   const PartialOnboardingState({
     required this.step,
     required this.income,
@@ -22,4 +24,7 @@ class PartialOnboardingState {
   /// True bila partial state sudah ≥ [staleDays] hari (perlu konfirmasi resume).
   bool isExpired({DateTime? now}) =>
       (now ?? DateTime.now()).difference(savedAt).inDays >= staleDays;
+
+  @override
+  List<Object?> get props => [step, income, expenses, pct, payday, savedAt];
 }

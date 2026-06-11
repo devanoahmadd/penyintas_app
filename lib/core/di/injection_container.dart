@@ -67,6 +67,7 @@ import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settin
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_remote_datasource.dart';
@@ -211,6 +212,12 @@ void _initOnboarding() {
         calculateDailyBudget: sl(),
         analyticsService: sl(),
         pushUserSettings: sl(),
+      ));
+
+  sl.registerFactory(() => OnboardingDraftCubit(
+        loadDraft: sl(),
+        saveDraft: sl(),
+        clearDraft: sl(),
       ));
 
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
