@@ -225,4 +225,51 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('isOnboardingCompleted — income gating (#251)', () {
+    test('income > 0 + completed → true', () async {
+      await datasource.saveBudgetSettings(tSettings); // income 3jt, completed=true
+      expect(await datasource.isOnboardingCompleted(), true);
+    });
+
+    test('income = 0 walau completed=true → false (cegah jebakan)', () async {
+      await datasource.saveBudgetSettings(BudgetSettingsEntity(
+        monthlyIncome: 0,
+        paymentDate: 25,
+        otherFixedExpense: 0,
+        emergencyFundPct: 0.10,
+        createdAt: DateTime(2026, 5, 8),
+      ));
+      expect(await datasource.isOnboardingCompleted(), false);
+    });
+  });
+
+  group('loadPartialOnboarding — integrity guard (#235/#233)', () {
+    const tExp = {
+      'kos': 1000000,
+      'listrik': 0,
+      'internet': 0,
+      'pulsa': 0,
+      'lain': 0,
+    };
+
+    test('step non-null tapi partialOnboardingAt null → return null (no crash)',
+        () async {
+      await datasource.savePartialOnboarding(
+          step: 1, income: 3000000, expenses: tExp, pct: 10, payday: 25);
+      // Buat state inkonsisten: at = null, step tetap terisi.
+      await (db.update(db.appSettings)..where((t) => t.id.equals(1)))
+          .write(const AppSettingsCompanion(partialOnboardingAt: Value(null)));
+
+      expect(await datasource.loadPartialOnboarding(), isNull);
+    });
+
+    test('step di luar 0..2 → return null (tidak restore step invalid)',
+        () async {
+      await datasource.savePartialOnboarding(
+          step: 5, income: 3000000, expenses: tExp, pct: 10, payday: 25);
+
+      expect(await datasource.loadPartialOnboarding(), isNull);
+    });
+  });
 }

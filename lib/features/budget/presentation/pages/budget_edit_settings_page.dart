@@ -12,6 +12,11 @@ import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bl
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
 
+/// #251 A1b: budget hanya boleh disimpan bila income > 0 dan memang ada
+/// perubahan. Mencegah user menulis income=0 (yang akan menjebak app).
+bool canSaveBudget({required int income, required bool hasChanges}) =>
+    hasChanges && income > 0;
+
 class BudgetEditSettingsPage extends StatefulWidget {
   const BudgetEditSettingsPage({super.key});
 
@@ -113,6 +118,7 @@ class _BudgetEditSettingsPageState
     TextEditingController ctrl,
     String label, {
     bool isDark = false,
+    String? errorText,
   }) {
     final borderColor =
         isDark ? AppColors.borderDark : AppColors.borderLight;
@@ -163,6 +169,13 @@ class _BudgetEditSettingsPageState
           ),
           onChanged: (_) => setState(() {}),
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorText,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.warn),
+          ),
+        ],
       ],
     );
   }
@@ -236,7 +249,10 @@ class _BudgetEditSettingsPageState
                   title: 'PENDAPATAN',
                   children: [
                     _moneyField(_incomeCtrl, 'Penghasilan bulanan',
-                        isDark: isDark),
+                        isDark: isDark,
+                        errorText: _parseField(_incomeCtrl) <= 0
+                            ? 'Penghasilan harus diisi dulu, ya.'
+                            : null),
                     const SizedBox(height: AppSpacing.lg),
                     Text('Tanggal gajian',
                         style: AppTextStyles.label),
@@ -361,7 +377,10 @@ class _BudgetEditSettingsPageState
                 PrimaryButton(
                   label: 'Simpan Perubahan',
                   isLoading: isSaving,
-                  isEnabled: _hasChanges,
+                  isEnabled: canSaveBudget(
+                    income: _parseField(_incomeCtrl),
+                    hasChanges: _hasChanges,
+                  ),
                   onPressed: () => context
                       .read<BudgetSettingsBloc>()
                       .add(SaveBudgetSettings(_buildEntity())),
