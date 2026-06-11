@@ -281,6 +281,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
         final skyTop = Color.lerp(from.skyTop, to.skyTop, t)!;
         final skyBot = Color.lerp(from.skyBot, to.skyBot, t)!;
         final hillFar = Color.lerp(from.hillFar, to.hillFar, t)!;
+        final hillBack  = Color.lerp(from.hillBack,  to.hillBack,  t)!;
         final hillNear = Color.lerp(from.hillNear, to.hillNear, t)!;
         final sunOp = _lerp(from.sunOpacity, to.sunOpacity, t);
         final cloudOp = _lerp(from.cloudOpacity, to.cloudOpacity, t);
@@ -313,6 +314,41 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [skyTop, skyBot],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Layer 2A: Hill back (paling jauh)
+                  Positioned(
+                    bottom: h * 0.40,
+                    left: -w * 0.12,
+                    right: -w * 0.12,
+                    child: Container(
+                      height: h * 0.50,
+                      decoration: BoxDecoration(
+                        color: hillBack,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(999),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Layer 2B: Mist strip (horizon haze)
+                  Positioned(
+                    bottom: h * 0.38,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 14,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withAlpha(widget.isDark ? 10 : 46),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),

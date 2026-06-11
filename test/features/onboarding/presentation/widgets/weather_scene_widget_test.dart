@@ -167,4 +167,24 @@ void main() {
       expect(AppWeatherPalette.fogNightStart, isNotNull);
     });
   });
+
+  group('WeatherSceneWidget dark mode smoke', () {
+    Widget pumpDark(WeatherState state) => MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 200,
+              child: WeatherSceneWidget(state: state, isDark: true),
+            ),
+          ),
+        );
+
+    for (final state in WeatherState.values) {
+      testWidgets('dark mode state $state renders tanpa throw', (tester) async {
+        await tester.pumpWidget(pumpDark(state));
+        await tester.pump(const Duration(milliseconds: 700));
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
 }
