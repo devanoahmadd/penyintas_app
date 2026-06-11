@@ -4,15 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
-import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/domain/entities/partial_onboarding_state.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 
 class MockOnboardingBloc
@@ -23,8 +22,8 @@ class MockNotificationBloc
     extends MockBloc<NotificationEvent, NotificationState>
     implements NotificationBloc {}
 
-class MockOnboardingLocalDataSource extends Mock
-    implements OnboardingLocalDataSource {}
+class MockOnboardingDraftCubit extends MockCubit<OnboardingDraftState>
+    implements OnboardingDraftCubit {}
 
 /// Synchronous delegate — avoids async asset loading in tests.
 class _TestLocalizationsDelegate
@@ -149,11 +148,14 @@ class _TestLocalizationsDelegate
 Widget _buildHarness({
   required OnboardingBloc onboardingBloc,
   required NotificationBloc notificationBloc,
+  OnboardingDraftCubit? draftCubit,
 }) {
   return MultiBlocProvider(
     providers: [
       BlocProvider<OnboardingBloc>.value(value: onboardingBloc),
       BlocProvider<NotificationBloc>.value(value: notificationBloc),
+      BlocProvider<OnboardingDraftCubit>.value(
+          value: draftCubit ?? MockOnboardingDraftCubit()),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -174,6 +176,7 @@ Widget _buildHarness({
 void main() {
   late MockOnboardingBloc mockBloc;
   late MockNotificationBloc mockNotifBloc;
+  late MockOnboardingDraftCubit mockDraftCubit;
 
   setUpAll(() {
     registerFallbackValue(const OnboardingSubmitted(
@@ -187,10 +190,14 @@ void main() {
   setUp(() {
     mockBloc = MockOnboardingBloc();
     mockNotifBloc = MockNotificationBloc();
+    mockDraftCubit = MockOnboardingDraftCubit();
     when(() => mockNotifBloc.state).thenReturn(const NotificationInitial());
     when(() => mockNotifBloc.stream).thenAnswer((_) => const Stream.empty());
     when(() => mockBloc.state).thenReturn(const OnboardingInitial());
     when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockDraftCubit.state).thenReturn(const OnboardingDraftInitial());
+    when(() => mockDraftCubit.stream).thenAnswer((_) => const Stream.empty());
+    when(() => mockDraftCubit.loadDraft()).thenAnswer((_) async {});
   });
 
   // ── Ruas 1 (step 0) ────────────────────────────────────────────────────
@@ -204,6 +211,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -220,6 +228,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -239,6 +248,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -252,9 +262,18 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      when(() => mockDraftCubit.saveDraft(
+            step: any(named: 'step'),
+            income: any(named: 'income'),
+            expenses: any(named: 'expenses'),
+            pct: any(named: 'pct'),
+            payday: any(named: 'payday'),
+          )).thenAnswer((_) async {});
+
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -275,6 +294,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -294,6 +314,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -314,6 +335,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -333,6 +355,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -360,6 +383,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -397,6 +421,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -423,6 +448,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
 
@@ -448,6 +474,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
@@ -512,6 +539,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
@@ -604,6 +632,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
@@ -692,6 +721,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
@@ -715,8 +745,6 @@ void main() {
 
   // ── Resume (#244) ─────────────────────────────────────────────────────
   group('Resume (#244)', () {
-    late MockOnboardingLocalDataSource mockDs;
-
     PartialOnboardingState partial(DateTime savedAt, {int step = 0}) =>
         PartialOnboardingState(
           step: step,
@@ -733,18 +761,6 @@ void main() {
           savedAt: savedAt,
         );
 
-    setUp(() {
-      mockDs = MockOnboardingLocalDataSource();
-      when(() => mockDs.clearPartialOnboarding()).thenAnswer((_) async {});
-      final sl = GetIt.instance;
-      if (sl.isRegistered<OnboardingLocalDataSource>()) {
-        sl.unregister<OnboardingLocalDataSource>();
-      }
-      sl.registerFactory<OnboardingLocalDataSource>(() => mockDs);
-    });
-
-    tearDown(() => GetIt.instance.reset());
-
     void sizeView(WidgetTester tester) {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
@@ -754,12 +770,18 @@ void main() {
 
     testWidgets('partial < 7 hari → banner muncul', (tester) async {
       sizeView(tester);
-      when(() => mockDs.loadPartialOnboarding())
-          .thenAnswer((_) async => partial(DateTime.now()));
+      final resumeCubit = MockOnboardingDraftCubit();
+      when(() => resumeCubit.state).thenReturn(
+          OnboardingDraftLoaded(partial(DateTime.now())));
+      when(() => resumeCubit.stream).thenAnswer((_) => Stream.value(
+          OnboardingDraftLoaded(partial(DateTime.now()))));
+      when(() => resumeCubit.loadDraft()).thenAnswer((_) async {});
+      when(() => resumeCubit.clearDraft()).thenAnswer((_) async {});
 
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: resumeCubit,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
@@ -773,12 +795,18 @@ void main() {
     testWidgets('tap "Mulai ulang" → konfirmasi → clear + banner hilang',
         (tester) async {
       sizeView(tester);
-      when(() => mockDs.loadPartialOnboarding())
-          .thenAnswer((_) async => partial(DateTime.now()));
+      final resumeCubit = MockOnboardingDraftCubit();
+      when(() => resumeCubit.state).thenReturn(
+          OnboardingDraftLoaded(partial(DateTime.now())));
+      when(() => resumeCubit.stream).thenAnswer((_) => Stream.value(
+          OnboardingDraftLoaded(partial(DateTime.now()))));
+      when(() => resumeCubit.loadDraft()).thenAnswer((_) async {});
+      when(() => resumeCubit.clearDraft()).thenAnswer((_) async {});
 
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: resumeCubit,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
@@ -796,19 +824,27 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      verify(() => mockDs.clearPartialOnboarding()).called(1);
+      verify(() => resumeCubit.clearDraft()).called(1);
       expect(find.text('Melanjutkan dari sesi sebelumnya', skipOffstage: false),
           findsNothing);
     });
 
     testWidgets('partial ≥ 7 hari → dialog stale muncul', (tester) async {
       sizeView(tester);
-      when(() => mockDs.loadPartialOnboarding()).thenAnswer(
-          (_) async => partial(DateTime.now().subtract(const Duration(days: 8))));
+      final staleCubit = MockOnboardingDraftCubit();
+      final stalePartial = partial(
+          DateTime.now().subtract(const Duration(days: 8)));
+      when(() => staleCubit.state).thenReturn(
+          OnboardingDraftLoaded(stalePartial));
+      when(() => staleCubit.stream).thenAnswer((_) => Stream.value(
+          OnboardingDraftLoaded(stalePartial)));
+      when(() => staleCubit.loadDraft()).thenAnswer((_) async {});
+      when(() => staleCubit.clearDraft()).thenAnswer((_) async {});
 
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: staleCubit,
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
@@ -835,6 +871,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(
         onboardingBloc: mockBloc,
         notificationBloc: mockNotifBloc,
+        draftCubit: mockDraftCubit,
       ));
       await tester.pump(); // initial frame
       await tester.pump(); // stream delivers Calculating

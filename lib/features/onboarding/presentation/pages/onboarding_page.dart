@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
@@ -14,16 +14,13 @@ import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
-import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
-import 'package:penyintas_app/features/onboarding/domain/entities/partial_onboarding_state.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
 import '../widgets/weather_scene_widget.dart';
-
-final _sl = GetIt.instance;
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const _kIncomePresets = [800000, 1500000, 3000000, 5000000];
@@ -240,7 +237,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _playEntrance();
-      _loadPartialState();
+      context.read<OnboardingDraftCubit>().loadDraft();
     });
   }
 
@@ -298,71 +295,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       _calcBudget(income: _income, payday: _payday, expenses: _exp, pct: _pct);
 
   // ── Defer / resume helpers ────────────────────────────────────────
-  Future<void> _loadPartialState() async {
-    OnboardingLocalDataSource? datasource;
-    PartialOnboardingState? partial;
-    try {
-      datasource = _sl<OnboardingLocalDataSource>();
-      partial = await datasource.loadPartialOnboarding();
-    } catch (_) {
-      return;
-    }
-    if (partial == null) return;
-    if (!mounted) return;
-
-    final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
-    if (partial.isExpired()) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
-      final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-      final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-      final l = AppLocalizations.of(context);
-      final resume = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: cardBg,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: Text(l.onboardingResumeDialogTitle,
-              style: AppTextStyles.h3.copyWith(color: textColor)),
-          content: Text(
-            l.onboardingResumeDialogBody(ageInDays),
-            style: AppTextStyles.bodySmall.copyWith(color: textSoft),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l.onboardingResumeRestart,
-                  style: AppTextStyles.label.copyWith(color: textSoft)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(l.onboardingResumeContinue,
-                  style: AppTextStyles.label.copyWith(color: AppColors.primary)),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      if (resume != true) {
-        await datasource.clearPartialOnboarding();
-        return;
-      }
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _step = partial!.step;
-      _income = partial.income;
-      _exp.addAll(partial.expenses);
-      _pct = partial.pct;
-      _payday = partial.payday;
-      // #240a: cuaca harus cermin kondisi keuangan yang di-restore, bukan 'clear'.
-      _weatherState = weatherStateFrom(_calc.fixedPct);
-      _resumeMode = true;
-    });
-  }
 
   Future<void> _resetToFresh() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -392,9 +324,8 @@ class _OnboardingPageState extends State<OnboardingPage>
       ),
     );
     if (confirmed != true) return;
-    try {
-      await _sl<OnboardingLocalDataSource>().clearPartialOnboarding();
-    } catch (_) {/* ignore if not registered in test env */}
+    if (!mounted) return;
+    await context.read<OnboardingDraftCubit>().clearDraft();
     if (!mounted) return;
     setState(() {
       _step = 0;
@@ -412,7 +343,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (_deferring) return; // #237
     _deferring = true;
     try {
-      await _sl<OnboardingLocalDataSource>().savePartialOnboarding(
+      await context.read<OnboardingDraftCubit>().saveDraft(
         step: _step,
         income: _income,
         expenses: Map.from(_exp),
@@ -460,34 +391,92 @@ class _OnboardingPageState extends State<OnboardingPage>
     final l = AppLocalizations.of(context);
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          if (_step == 0) {
-            _showExitDialog(context);
-          } else {
-            _back();
+    return BlocListener<OnboardingDraftCubit, OnboardingDraftState>(
+      listenWhen: (_, s) => s is OnboardingDraftLoaded,
+      listener: (listenerContext, state) async {
+        if (state is! OnboardingDraftLoaded) return;
+        final partial = state.partial;
+        if (partial == null) return;
+        if (!mounted) return;
+        final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
+        if (partial.isExpired()) {
+          final isDark =
+              Theme.of(listenerContext).brightness == Brightness.dark;
+          final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+          final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+          final textSoft =
+              isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+          final l = AppLocalizations.of(listenerContext);
+          final resume = await showDialog<bool>(
+            context: listenerContext,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
+              title: Text(l.onboardingResumeDialogTitle,
+                  style: AppTextStyles.h3.copyWith(color: textColor)),
+              content: Text(
+                l.onboardingResumeDialogBody(ageInDays),
+                style: AppTextStyles.bodySmall.copyWith(color: textSoft),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(l.onboardingResumeRestart,
+                      style: AppTextStyles.label.copyWith(color: textSoft)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(l.onboardingResumeContinue,
+                      style: AppTextStyles.label
+                          .copyWith(color: AppColors.primary)),
+                ),
+              ],
+            ),
+          );
+          if (!mounted) return;
+          if (resume != true) {
+            // ignore: use_build_context_synchronously — guarded by mounted above
+            listenerContext.read<OnboardingDraftCubit>().clearDraft();
+            return;
           }
         }
+        if (!mounted) return;
+        setState(() {
+          _step = partial.step;
+          _income = partial.income;
+          _exp.addAll(partial.expenses);
+          _pct = partial.pct;
+          _payday = partial.payday;
+          // #240a: cuaca harus cermin kondisi keuangan yang di-restore, bukan 'clear'.
+          _weatherState = weatherStateFrom(_calc.fixedPct);
+          _resumeMode = true;
+        });
       },
-      child: Scaffold(
-        backgroundColor: bg,
-        body: SafeArea(
-          child: BlocConsumer<OnboardingBloc, OnboardingState>(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            if (_step == 0) {
+              _showExitDialog(context);
+            } else {
+              _back();
+            }
+          }
+        },
+        child: Scaffold(
+          backgroundColor: bg,
+          body: SafeArea(
+            child: BlocConsumer<OnboardingBloc, OnboardingState>(
             listenWhen: (_, c) =>
                 c is OnboardingSuccess || c is OnboardingError,
             listener: (context, state) {
               if (state is OnboardingSuccess) {
                 // #206: persist use-case result before navigating
                 _savedDailyBudget = state.dailyBudget;
-                // #200: clear partial state on successful onboarding completion
-                try {
-                  // #243: telan kegagalan async agar tak jadi unhandled exception.
-                  _sl<OnboardingLocalDataSource>()
-                      .clearPartialOnboarding()
-                      .catchError((_) {});
-                } catch (_) {/* ignore if not registered in test env */}
+                // #200/#243: clear draft on success; fire-and-forget, telan kegagalan.
+                unawaited(context.read<OnboardingDraftCubit>().clearDraft());
                 context.read<NotificationBloc>().add(const RequestPermission());
                 resetOnboardingCache();
                 context.go('/dashboard');
@@ -565,7 +554,8 @@ class _OnboardingPageState extends State<OnboardingPage>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   // ── Header ────────────────────────────────────────────────────────
