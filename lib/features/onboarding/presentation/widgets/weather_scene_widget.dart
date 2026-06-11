@@ -19,6 +19,7 @@ class _SceneValues {
   const _SceneValues({
     required this.skyTop,
     required this.skyBot,
+    required this.hillBack,
     required this.hillFar,
     required this.hillNear,
     required this.sunOpacity,
@@ -30,7 +31,7 @@ class _SceneValues {
     required this.swayMs,
   });
 
-  final Color skyTop, skyBot, hillFar, hillNear;
+  final Color skyTop, skyBot, hillBack, hillFar, hillNear;
   final double sunOpacity, cloudOpacity, rainOpacity, fogOpacity, bamOpacity;
   final double swayAmp;
   final int swayMs;
@@ -40,6 +41,7 @@ const _kScene = <WeatherState, _SceneValues>{
   WeatherState.clear: _SceneValues(
     skyTop: AppWeatherPalette.skyTopClear,
     skyBot: AppWeatherPalette.skyBotClear,
+    hillBack: AppWeatherPalette.hillBackClear,
     hillFar: AppWeatherPalette.hillFarClear,
     hillNear: AppWeatherPalette.hillNearClear,
     sunOpacity: 1.0,
@@ -53,6 +55,7 @@ const _kScene = <WeatherState, _SceneValues>{
   WeatherState.cloudy: _SceneValues(
     skyTop: AppWeatherPalette.skyTopCloudy,
     skyBot: AppWeatherPalette.skyBotCloudy,
+    hillBack: AppWeatherPalette.hillBackCloudy,
     hillFar: AppWeatherPalette.hillFarCloudy,
     hillNear: AppWeatherPalette.hillNearCloudy,
     sunOpacity: 0.5,
@@ -66,6 +69,7 @@ const _kScene = <WeatherState, _SceneValues>{
   WeatherState.overcast: _SceneValues(
     skyTop: AppWeatherPalette.skyTopOvercast,
     skyBot: AppWeatherPalette.skyBotOvercast,
+    hillBack: AppWeatherPalette.hillBackOvercast,
     hillFar: AppWeatherPalette.hillFarOvercast,
     hillNear: AppWeatherPalette.hillNearOvercast,
     sunOpacity: 0.0,
@@ -79,6 +83,7 @@ const _kScene = <WeatherState, _SceneValues>{
   WeatherState.storm: _SceneValues(
     skyTop: AppWeatherPalette.skyTopStorm,
     skyBot: AppWeatherPalette.skyBotStorm,
+    hillBack: AppWeatherPalette.hillBackStorm,
     hillFar: AppWeatherPalette.hillFarStorm,
     hillNear: AppWeatherPalette.hillNearStorm,
     sunOpacity: 0.0,
@@ -92,6 +97,7 @@ const _kScene = <WeatherState, _SceneValues>{
   WeatherState.overwhelmed: _SceneValues(
     skyTop: AppWeatherPalette.skyTopOverwhelmed,
     skyBot: AppWeatherPalette.skyBotOverwhelmed,
+    hillBack: AppWeatherPalette.hillBackOverwhelmed,
     hillFar: AppWeatherPalette.hillFarOverwhelmed,
     hillNear: AppWeatherPalette.hillNearOverwhelmed,
     sunOpacity: 0.0,
@@ -108,6 +114,7 @@ const _kSceneDark = <WeatherState, _SceneValues>{
   WeatherState.clear: _SceneValues(
     skyTop: AppWeatherPalette.skyTopClearDark,
     skyBot: AppWeatherPalette.skyBotClearDark,
+    hillBack: AppWeatherPalette.hillBackClearDark,
     hillFar: AppWeatherPalette.hillFarClearDark,
     hillNear: AppWeatherPalette.hillNearClearDark,
     sunOpacity: 0.7,
@@ -121,6 +128,7 @@ const _kSceneDark = <WeatherState, _SceneValues>{
   WeatherState.cloudy: _SceneValues(
     skyTop: AppWeatherPalette.skyTopCloudyDark,
     skyBot: AppWeatherPalette.skyBotCloudyDark,
+    hillBack: AppWeatherPalette.hillBackCloudyDark,
     hillFar: AppWeatherPalette.hillFarCloudyDark,
     hillNear: AppWeatherPalette.hillNearCloudyDark,
     sunOpacity: 0.3,
@@ -134,6 +142,7 @@ const _kSceneDark = <WeatherState, _SceneValues>{
   WeatherState.overcast: _SceneValues(
     skyTop: AppWeatherPalette.skyTopOvercastDark,
     skyBot: AppWeatherPalette.skyBotOvercastDark,
+    hillBack: AppWeatherPalette.hillBackOvercastDark,
     hillFar: AppWeatherPalette.hillFarOvercastDark,
     hillNear: AppWeatherPalette.hillNearOvercastDark,
     sunOpacity: 0.0,
@@ -147,6 +156,7 @@ const _kSceneDark = <WeatherState, _SceneValues>{
   WeatherState.storm: _SceneValues(
     skyTop: AppWeatherPalette.skyTopStormDark,
     skyBot: AppWeatherPalette.skyBotStormDark,
+    hillBack: AppWeatherPalette.hillBackStormDark,
     hillFar: AppWeatherPalette.hillFarStormDark,
     hillNear: AppWeatherPalette.hillNearStormDark,
     sunOpacity: 0.0,
@@ -160,6 +170,7 @@ const _kSceneDark = <WeatherState, _SceneValues>{
   WeatherState.overwhelmed: _SceneValues(
     skyTop: AppWeatherPalette.skyTopOverwhelmedDark,
     skyBot: AppWeatherPalette.skyBotOverwhelmedDark,
+    hillBack: AppWeatherPalette.hillBackOverwhelmedDark,
     hillFar: AppWeatherPalette.hillFarOverwhelmedDark,
     hillNear: AppWeatherPalette.hillNearOverwhelmedDark,
     sunOpacity: 0.0,
