@@ -54,6 +54,7 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     LoadBudgetLimits event,
     Emitter<BudgetLimitsState> emit,
   ) async {
+    if (state is BudgetLimitsLoaded) return; // singleton — skip re-fetch jika sudah loaded
     emit(const BudgetLimitsLoading());
 
     final settingsResult = await _getSettings(const NoParams());

@@ -313,7 +313,7 @@ void _initBudget() {
         getBudgetSettings: sl(),
         saveBudgetSettings: sl(),
       ));
-  sl.registerFactory(() => BudgetLimitsBloc(
+  sl.registerLazySingleton(() => BudgetLimitsBloc(
         getBudgetSettings: sl(),
         getBudgetLimits: sl(),
         saveBudgetLimit: sl(),

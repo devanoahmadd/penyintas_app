@@ -72,6 +72,7 @@ GoRouter createAppRouter() => GoRouter(
             // .value — jangan close singleton saat route di-pop/replace
             BlocProvider.value(value: sl<DashboardBloc>()),
             BlocProvider.value(value: sl<SurvivalBloc>()),
+            BlocProvider.value(value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits())),
           ],
           child: const DashboardPage(),
         ),
@@ -134,8 +135,8 @@ GoRouter createAppRouter() => GoRouter(
             BlocProvider(
               create: (_) => sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
             ),
-            BlocProvider(
-              create: (_) => sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits()),
+            BlocProvider.value(
+              value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits()),
             ),
           ],
           child: const BudgetOverviewPage(),
