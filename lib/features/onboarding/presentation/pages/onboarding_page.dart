@@ -392,14 +392,13 @@ class _OnboardingPageState extends State<OnboardingPage>
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return BlocListener<OnboardingDraftCubit, OnboardingDraftState>(
-      listenWhen: (_, s) => s is OnboardingDraftLoaded,
+      listenWhen: (_, s) =>
+          s is OnboardingDraftLoaded && s.partial != null,
       listener: (listenerContext, state) async {
-        if (state is! OnboardingDraftLoaded) return;
-        final partial = state.partial;
-        if (partial == null) return;
+        final partial = (state as OnboardingDraftLoaded).partial!;
         if (!mounted) return;
-        final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
         if (partial.isExpired()) {
+          final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
           final isDark =
               Theme.of(listenerContext).brightness == Brightness.dark;
           final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
@@ -442,7 +441,6 @@ class _OnboardingPageState extends State<OnboardingPage>
             return;
           }
         }
-        if (!mounted) return;
         setState(() {
           _step = partial.step;
           _income = partial.income;
