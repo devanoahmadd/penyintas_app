@@ -14,4 +14,12 @@ class PartialOnboardingState {
   final int pct;                     // 0–50, integer percent
   final int payday;
   final DateTime savedAt;
+
+  /// #232: ambang basi partial state (hari). Sumber kebenaran tunggal —
+  /// dulu hardcoded di onboarding_page.
+  static const staleDays = 7;
+
+  /// True bila partial state sudah ≥ [staleDays] hari (perlu konfirmasi resume).
+  bool isExpired({DateTime? now}) =>
+      (now ?? DateTime.now()).difference(savedAt).inDays >= staleDays;
 }

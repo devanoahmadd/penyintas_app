@@ -127,17 +127,24 @@ String _rpShort(int n) {
 
 String _rpSemanticLabel(int n) => formatRupiah(n).replaceAll('.', ' ');
 
+/// #245: angka ribuan TANPA prefix "Rp" — khusus income step yang merender
+/// "Rp" sebagai widget terpisah (styling muted). Untuk nominal dengan prefix,
+/// gunakan formatRupiah().
 String _fmtId(int n) => NumberFormat('#,##0', 'id_ID').format(n);
 
 ({String label, String note}) _pctFb(int pct, AppLocalizations l) {
-  if (pct == 0)
+  if (pct == 0) {
     return (label: l.onboardingEmergencySkip, note: l.onboardingPctNoteSkip);
-  if (pct <= 7)
+  }
+  if (pct <= 7) {
     return (label: l.onboardingPctLabelLow, note: l.onboardingPctNoteLow);
-  if (pct <= 12)
+  }
+  if (pct <= 12) {
     return (label: l.onboardingPctLabelMid, note: l.onboardingPctNoteMid);
-  if (pct <= 19)
+  }
+  if (pct <= 19) {
     return (label: l.onboardingPctLabelHigh, note: l.onboardingPctNoteHigh);
+  }
   return (label: l.onboardingPctLabelMax, note: l.onboardingPctNoteMax);
 }
 
@@ -304,7 +311,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (!mounted) return;
 
     final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
-    if (ageInDays >= 7) {
+    if (partial.isExpired()) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
       final textColor = isDark ? AppColors.textDark : AppColors.textLight;
@@ -566,7 +573,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, 0),
       child: SizedBox(
         height: 44,
         child: Row(
@@ -609,11 +616,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                     ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: OnboardingRuasProgress(step: _step, isDark: isDark),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             SizedBox(
               width: 28,
               child: Text(
@@ -671,7 +678,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         Expanded(
           child: _stagger(
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -686,7 +693,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   // title
                   Text(
                     l.onboardingTitleIncome,
@@ -700,7 +707,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.md2),
                   // Rp + amount
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -731,10 +738,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   // divider
                   Container(width: 176, height: 2, color: border),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.md2),
                   // income preset chips
                   Wrap(
                     alignment: WrapAlignment.center,
@@ -868,7 +875,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             // child 0: eyebrow + title
             _stagger(
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md2, AppSpacing.xl, 0),
                 child: Column(
                   children: [
                     Text(
@@ -908,7 +915,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md2, AppSpacing.xl, 0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: List.generate(_kExpRows.length, (i) {
@@ -933,7 +940,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 200),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 0),
                           child: WeatherSceneWidget(
                             state: _weatherState,
                             isDark: isDark,
@@ -950,7 +957,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             // child 2: total card + overflow warning (#202)
             _stagger(
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -961,7 +968,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     ),
                     if (calc.fixed > 0 && calc.fixed >= _income && _income > 0)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -999,7 +1006,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               duration: const Duration(milliseconds: 200),
               child: _activeRow == null
                   ? Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.lg2),
                       child: _CtaBtn(
                         label: l.btnNext,
                         height: 58,
@@ -1077,7 +1084,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1085,7 +1092,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 _stagger(
                   Column(
                     children: [
-                      const SizedBox(height: 14),
+                      const SizedBox(height: AppSpacing.md2),
                       Text(
                         l.onboardingEyebrowStep3,
                         textAlign: TextAlign.center,
@@ -1122,7 +1129,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     child: Column(
                       children: [
                         GrowShoot(grow: grow, size: 54, isDark: isDark),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.md),
                         Text(
                           l.onboardingDailyBudgetLabel,
                           style: TextStyle(
@@ -1146,7 +1153,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           ),
                           format: formatRupiah,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           '/hari · ${_pct == 0 ? l.onboardingDailySubNoEmergency : l.onboardingDailySubSaving(formatRupiah(calc.cicilan))}',
                           textAlign: TextAlign.center,
@@ -1162,7 +1169,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                             calc.fixed >= _income &&
                             _income > 0)
                           Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: AppSpacing.sm),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1200,7 +1207,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // 2: feedback + pct row
                 _stagger(
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+                    padding: const EdgeInsets.fromLTRB(2, AppSpacing.lg2, 2, AppSpacing.sm),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1246,7 +1253,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // 4: note
                 _stagger(
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 34),
                       child: Text(
@@ -1266,7 +1273,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // 5: pct chips
                 _stagger(
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Row(
                       children: [
                         ..._kPctPresets.map((p) {
@@ -1304,14 +1311,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                   5,
                   n,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
               ],
             ),
           ),
         ),
         // CTA
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.lg2),
           child: _CtaBtn(
             label: l.onboardingCtaStart,
             height: 58,
@@ -1340,7 +1347,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1404,7 +1411,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // stats card — delay 170
                 _reveal(
                   Padding(
-                    padding: const EdgeInsets.only(top: 18),
+                    padding: const EdgeInsets.only(top: AppSpacing.lg2),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1426,7 +1433,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   isDark: isDark,
                                 ),
                               ),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: AppSpacing.md2),
                               Expanded(
                                 child: _StatWidget(
                                   label: l.onboardingStatEmergency,
@@ -1436,7 +1443,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: AppSpacing.md2),
                           Row(
                             children: [
                               Expanded(
@@ -1446,7 +1453,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                   isDark: isDark,
                                 ),
                               ),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: AppSpacing.md2),
                               Expanded(
                                 child: _StatWidget(
                                   label: l.onboardingStatFixed,
@@ -1469,7 +1476,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         // #210: back/edit link — hidden while submitting
         if (!isSubmitting)
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, 0),
             child: Center(
               child: GestureDetector(
                 onTap: _back,
@@ -1490,7 +1497,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.lg2),
           child: _CtaBtn(
             label: l.onboardingCtaEnter,
             height: 58,
@@ -1577,7 +1584,7 @@ class _DockedPanel extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.md),
       child: Column(children: [keypad, const SizedBox(height: AppSpacing.sm2), cta]),
     );
   }
@@ -1637,7 +1644,7 @@ class _CtaBtn extends StatelessWidget {
                       height: 1,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   const Icon(
                     Icons.arrow_forward_rounded,
                     size: 18,
@@ -1836,7 +1843,7 @@ class _ExpRowWidget extends StatelessWidget {
                 ),
                 child: Icon(row.icon, size: 18, color: AppColors.primary),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               // #205: show hint caption when value is empty
               Expanded(
                 child: Column(
@@ -2028,7 +2035,7 @@ class _SheetKeypad extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           // active row display + Selesai
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2103,7 +2110,7 @@ class _SheetKeypad extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           // keypad
           OnboardingKeypad(isDark: isDark, onKey: onKey),
         ],
@@ -2147,7 +2154,7 @@ class _PctChipWidget extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               height: AppSpacing.xxl,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               decoration: BoxDecoration(
                 color: active ? AppColors.primary : surfaceAlt,
                 border: Border.all(
@@ -2212,7 +2219,7 @@ class _ExtremChip extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               height: AppSpacing.xxl,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               decoration: BoxDecoration(
                 color: active ? AppColors.primaryBright : surfaceAlt,
                 border: Border.all(
@@ -2232,7 +2239,7 @@ class _ExtremChip extends StatelessWidget {
                       size: 13,
                       color: active ? Colors.white : AppColors.primary,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       // #201: use injected l10n label
                       label,
@@ -2359,7 +2366,7 @@ class _OSliderState extends State<_OSlider> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0B1F14).withAlpha(71),
+                            color: AppColors.bgDark.withAlpha(isDark ? 110 : 71),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -2611,7 +2618,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ), // B2
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md2),
                   ),
                   child: Text(
                     AppLocalizations.of(context).btnCancel,
@@ -2632,7 +2639,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ), // B2
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md2),
                   ),
                   child: Text(
                     _selected != null
