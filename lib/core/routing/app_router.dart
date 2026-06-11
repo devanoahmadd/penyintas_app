@@ -10,6 +10,7 @@ import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:penyintas_app/features/dashboard/presentation/pages/dashboard_page.dart';
@@ -54,8 +55,11 @@ GoRouter createAppRouter() => GoRouter(
     ),
     GoRoute(
       path: '/onboarding',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<OnboardingBloc>(),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => sl<OnboardingBloc>()),
+          BlocProvider(create: (_) => sl<OnboardingDraftCubit>()),
+        ],
         child: const OnboardingPage(),
       ),
     ),
