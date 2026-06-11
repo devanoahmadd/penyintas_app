@@ -11,6 +11,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 
 // ── Data model ───────────────────────────────────────────────────────────────
@@ -75,8 +76,13 @@ String _deltaLabel(AppLocalizations l10n, BudgetStatus status) => switch (status
 // ── Public widget ─────────────────────────────────────────────────────────────
 
 class FinancialSliderWidget extends StatefulWidget {
-  const FinancialSliderWidget({super.key, required this.entity});
+  const FinancialSliderWidget({
+    super.key,
+    required this.entity,
+    this.budgetOverview,
+  });
   final DashboardEntity entity;
+  final BudgetOverviewEntity? budgetOverview; // null = loading placeholder
 
   @override
   State<FinancialSliderWidget> createState() => _FinancialSliderWidgetState();
@@ -107,7 +113,7 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
     _autoPlayTimer?.cancel();
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
-      final next = (_currentPage + 1) % 3; // 3 slides: DTL, Spending, Emergency
+      final next = (_currentPage + 1) % 4; // 4 slides: DTL, Spending, Budget, Emergency
       _pageController.animateToPage(
         next,
         duration: const Duration(milliseconds: 440),
@@ -150,6 +156,17 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         : 0.0;
     final emergPctInt = (emergPct * 100).round();
 
+    // Budget
+    final budget = widget.budgetOverview;
+    final budgetPct = (budget != null && budget.totalLimitSet > 0)
+        ? (budget.totalSpentInLimited / budget.totalLimitSet).clamp(0.0, 1.0)
+        : 0.0;
+    final budgetStatus = _pctToStatus(budgetPct);
+    final budgetRemaining = budget != null
+        ? (budget.totalLimitSet - budget.totalSpentInLimited)
+            .clamp(0, budget.totalLimitSet)
+        : 0;
+
     return [
       _SlideData(
         label: l10n.dashboardDtlLabel,
@@ -173,6 +190,25 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         // /transactions is a bottom-nav tab → go() (replaces stack).
         // /dtl and /emergency are detail screens → push() (preserves back stack).
         onTap: () => context.go('/transactions'),
+      ),
+      _SlideData(
+        label: 'ANGGARAN KATEGORI',
+        valueText: (budget == null || budget.totalLimitSet == 0)
+            ? '—'
+            : formatRupiah(budgetRemaining),
+        subtitle: budget == null
+            ? 'Memuat...'
+            : budget.totalLimitSet == 0
+                ? 'Belum ada batas kategori'
+                : '${(budgetPct * 100).round()}% terpakai siklus ini',
+        progress: budgetPct,
+        backgroundColor: (budget == null || budget.totalLimitSet == 0)
+            ? AppColors.primaryDeep
+            : _statusColor(budgetStatus),
+        status: (budget == null || budget.totalLimitSet == 0)
+            ? BudgetStatus.safe
+            : budgetStatus,
+        onTap: () => context.go('/budget'),
       ),
       _SlideData(
         label: l10n.dashboardEmergencyLabel,
@@ -315,7 +351,7 @@ class _FinancialSlideCard extends StatelessWidget {
   const _FinancialSlideCard({
     required this.data,
     required this.isActive,
-    required this.index, // 0=DTL, 1=Spending, 2=Emergency — drives blob/logo position
+    required this.index, // 0=DTL, 1=Spending, 2=Budget, 3=Emergency — drives blob/logo position
   });
 
   final _SlideData data;
@@ -462,7 +498,8 @@ class _FinancialSlideCard extends StatelessWidget {
     final (top, right, bottom, left, size) = switch (index) {
       0 => (-55.0, -35.0, null, null, 160.0),  // DTL: top-right
       1 => (null, -32.0, -50.0, null, 148.0),  // Spending: bottom-right
-      _ => (-52.0, null, null, -32.0, 150.0),  // Emergency: top-left
+      2 => (-52.0, null, null, -32.0, 150.0),  // Emergency: top-left
+      _ => (null, null, -50.0, -35.0, 142.0),  // Budget: bottom-left
     };
     return Positioned(
       top: top,
@@ -490,7 +527,8 @@ class _FinancialSlideCard extends StatelessWidget {
     final (top, right, bottom, left, size, opacity) = switch (index) {
       0 => (-10.0, -18.0, null, null, 130.0, 0.08),  // DTL: top-right crop, 8%
       1 => (null, null, -20.0, -16.0, 132.0, 0.09),  // Spending: bottom-left crop, 9%
-      _ => (null, -30.0, -28.0, null, 175.0, 0.07),  // Emergency: bottom-right XL, 7%
+      2 => (null, -30.0, -28.0, null, 175.0, 0.07),  // Emergency: bottom-right XL, 7%
+      _ => (-12.0, null, null, -20.0, 128.0, 0.08),  // Budget: top-left crop, 8%
     };
     return Positioned(
       top: top,

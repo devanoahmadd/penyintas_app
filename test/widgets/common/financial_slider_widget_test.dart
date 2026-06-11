@@ -56,6 +56,7 @@ GoRouter _router(DashboardEntity entity) => GoRouter(
         GoRoute(path: '/dtl', builder: (_, _) => const SizedBox()),
         GoRoute(path: '/emergency', builder: (_, _) => const SizedBox()),
         GoRoute(path: '/transactions', builder: (_, _) => const SizedBox()),
+        GoRoute(path: '/budget', builder: (_, _) => const SizedBox()),
       ],
     );
 
@@ -108,7 +109,7 @@ void main() {
       expect(find.text('HARI TERSISA'), findsOneWidget);
     });
 
-    testWidgets('contains a PageView with 3 slides', (tester) async {
+    testWidgets('contains a PageView with 4 slides', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -123,7 +124,12 @@ void main() {
       // initially (PageView with viewportFraction 0.82 builds current + next).
       expect(find.text('HARI TERSISA'), findsOneWidget);
       expect(find.text('PENGELUARAN BULAN INI'), findsOneWidget);
-      // Swipe once to expose slide 2 (ALOKASI DARURAT) into the render tree
+      // Swipe once to expose slide 2 (ANGGARAN KATEGORI — Budget) into the render tree
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 800);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('ANGGARAN KATEGORI'), findsOneWidget);
+      // Swipe again to expose slide 3 (ALOKASI DARURAT — Emergency)
       await tester.fling(find.byType(PageView), const Offset(-400, 0), 800);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
