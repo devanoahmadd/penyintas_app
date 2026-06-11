@@ -127,17 +127,24 @@ String _rpShort(int n) {
 
 String _rpSemanticLabel(int n) => formatRupiah(n).replaceAll('.', ' ');
 
+/// #245: angka ribuan TANPA prefix "Rp" — khusus income step yang merender
+/// "Rp" sebagai widget terpisah (styling muted). Untuk nominal dengan prefix,
+/// gunakan formatRupiah().
 String _fmtId(int n) => NumberFormat('#,##0', 'id_ID').format(n);
 
 ({String label, String note}) _pctFb(int pct, AppLocalizations l) {
-  if (pct == 0)
+  if (pct == 0) {
     return (label: l.onboardingEmergencySkip, note: l.onboardingPctNoteSkip);
-  if (pct <= 7)
+  }
+  if (pct <= 7) {
     return (label: l.onboardingPctLabelLow, note: l.onboardingPctNoteLow);
-  if (pct <= 12)
+  }
+  if (pct <= 12) {
     return (label: l.onboardingPctLabelMid, note: l.onboardingPctNoteMid);
-  if (pct <= 19)
+  }
+  if (pct <= 19) {
     return (label: l.onboardingPctLabelHigh, note: l.onboardingPctNoteHigh);
+  }
   return (label: l.onboardingPctLabelMax, note: l.onboardingPctNoteMax);
 }
 
