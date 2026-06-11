@@ -6,6 +6,7 @@ import 'package:penyintas_app/features/budget/data/models/budget_limit_model.dar
 import 'package:penyintas_app/features/budget/data/models/budget_settings_model.dart';
 
 abstract class BudgetRemoteDatasource {
+  Future<BudgetSettingsModel?> getBudgetSettings();
   Future<void> saveBudgetSettings(BudgetSettingsModel settings);
   Future<void> saveBudgetLimit(BudgetLimitModel limit);
   Future<void> deleteBudgetLimit(String categoryName);
@@ -31,6 +32,25 @@ class BudgetRemoteDatasourceImpl implements BudgetRemoteDatasource {
     try {
       FirebaseCrashlytics.instance.recordError(e, stack);
     } catch (_) {}
+  }
+
+  @override
+  Future<BudgetSettingsModel?> getBudgetSettings() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('budget_settings')
+          .doc('current')
+          .get();
+      if (!doc.exists) return null;
+      return BudgetSettingsModel.fromFirestore(doc);
+    } catch (e, stack) {
+      _logError(e, stack);
+      throw ServerException(e.toString());
+    }
   }
 
   @override
