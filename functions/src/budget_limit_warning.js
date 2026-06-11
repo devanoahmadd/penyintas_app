@@ -48,10 +48,11 @@ exports.budgetLimitWarning = onDocumentCreated(
     const paymentDate = settingsDoc.exists ? (settingsDoc.data()?.paymentDate ?? 25) : 25;
 
     // Hitung cycleKey = tanggal awal siklus berjalan (YYYY-MM-DD)
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
+    // #WIB: Cloud Functions run UTC — offset +7h to get Jakarta local date
+    const wibNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const year = wibNow.getUTCFullYear();
+    const month = wibNow.getUTCMonth() + 1;
+    const day = wibNow.getUTCDate();
     let cycleYear = year;
     let cycleMonth = month;
     if (day < paymentDate) {
@@ -59,7 +60,9 @@ exports.budgetLimitWarning = onDocumentCreated(
       else { cycleMonth--; }
     }
     const cycleKey = `${cycleYear}-${String(cycleMonth).padStart(2, '0')}-${String(paymentDate).padStart(2, '0')}`;
-    const cycleStart = new Date(cycleYear, cycleMonth - 1, paymentDate);
+    // Midnight WIB on paymentDate = UTC midnight - 7h
+    const cycleStartMs = Date.UTC(cycleYear, cycleMonth - 1, paymentDate) - 7 * 60 * 60 * 1000;
+    const cycleStart = new Date(cycleStartMs);
 
     // Sum semua expense kategori ini sejak cycleStart
     const txSnapshot = await db
@@ -116,7 +119,8 @@ exports.budgetLimitWarning = onDocumentCreated(
         apns: { payload: { aps: { badge: 1 } } },
       });
     } catch (_) {
-      // Token stale/invalid — hapus agar tidak mengirim ke device yang salah
+      // Token stale/invalid — revert dedup doc + clear token
+      await statusRef.set({ cycleKey, threshold: prevThreshold });
       await db.collection('users').doc(uid).update({ fcmToken: null });
     }
   }
