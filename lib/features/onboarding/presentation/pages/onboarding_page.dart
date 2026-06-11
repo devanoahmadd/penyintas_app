@@ -311,7 +311,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (!mounted) return;
 
     final ageInDays = DateTime.now().difference(partial.savedAt).inDays;
-    if (ageInDays >= 7) {
+    if (partial.isExpired()) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
       final textColor = isDark ? AppColors.textDark : AppColors.textLight;
