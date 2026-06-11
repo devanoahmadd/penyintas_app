@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:penyintas_app/core/theme/app_weather_palette.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/weather_scene_widget.dart';
 
 void main() {
@@ -153,6 +154,17 @@ void main() {
         expect(tester.takeException(), isNull,
             reason: 'State $state: tidak boleh ada exception');
       }
+    });
+  });
+
+  group('AppWeatherPalette', () {
+    test('semua token palette tersedia dan non-null', () {
+      expect(AppWeatherPalette.skyTopClear, isNotNull);
+      expect(AppWeatherPalette.hillBackClearDark, isNotNull);
+      expect(AppWeatherPalette.moonColor, isNotNull);
+      expect(AppWeatherPalette.cloudNightBase, isNotNull);
+      expect(AppWeatherPalette.rainNightColor, isNotNull);
+      expect(AppWeatherPalette.fogNightStart, isNotNull);
     });
   });
 }
