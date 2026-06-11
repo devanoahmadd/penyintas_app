@@ -3,7 +3,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -49,10 +48,12 @@ import 'package:penyintas_app/features/auth/domain/usecases/delete_account_useca
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
-import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_remote_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:penyintas_app/features/onboarding/domain/usecases/calculate_daily_budget_usecase.dart';
+import 'package:penyintas_app/features/onboarding/domain/usecases/load_partial_onboarding_usecase.dart';
+import 'package:penyintas_app/features/onboarding/domain/usecases/save_partial_onboarding_usecase.dart';
+import 'package:penyintas_app/features/onboarding/domain/usecases/clear_partial_onboarding_usecase.dart';
 import 'package:penyintas_app/features/budget/data/datasources/budget_local_datasource.dart';
 import 'package:penyintas_app/features/budget/data/datasources/budget_remote_datasource.dart';
 import 'package:penyintas_app/features/budget/data/repositories/budget_repository_impl.dart';
@@ -214,27 +215,21 @@ void _initOnboarding() {
 
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
 
+  // #247: repository onboarding kini hanya partial-draft.
   sl.registerLazySingleton<OnboardingRepository>(
-    () => OnboardingRepositoryImpl(
-      localDataSource: sl(),
-      remoteDataSource: sl(),
-      networkInfo: sl(),
-      auth: sl(),
-    ),
+    () => OnboardingRepositoryImpl(localDataSource: sl()),
   );
+
+  // #242: usecase draft.
+  sl.registerLazySingleton(() => LoadPartialOnboardingUseCase(sl()));
+  sl.registerLazySingleton(() => SavePartialOnboardingUseCase(sl()));
+  sl.registerLazySingleton(() => ClearPartialOnboardingUseCase(sl()));
 
   sl.registerLazySingleton<OnboardingLocalDataSource>(
     () => OnboardingLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<OnboardingGuard>(
     () => OnboardingGuard(sl<OnboardingLocalDataSource>()),
-  );
-  sl.registerLazySingleton<OnboardingRemoteDataSource>(
-    () => OnboardingRemoteDataSourceImpl(
-      auth: sl(),
-      firestore: sl(),
-      crashlytics: FirebaseCrashlytics.instance,
-    ),
   );
 }
 
