@@ -9,7 +9,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
-import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
@@ -49,8 +49,8 @@ class _SplashPageState extends State<SplashPage>
     try {
       await Future.wait([
         sl<SyncUserSettingsUseCase>()(const NoParams()),
-        sl<OnboardingRepository>()
-            .getBudgetSettings()
+        sl<BudgetRepository>()
+            .syncBudgetFromRemote()
             .timeout(const Duration(seconds: 3)),
       ]);
     } catch (e, s) {
