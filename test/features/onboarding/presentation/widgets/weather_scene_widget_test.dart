@@ -319,4 +319,61 @@ void main() {
       );
     });
   });
+
+  group('WeatherSceneWidget night palette — cloud/rain/fog', () {
+    Widget pumpDark(WeatherState state) => MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 200,
+              child: WeatherSceneWidget(state: state, isDark: true),
+            ),
+          ),
+        );
+
+    testWidgets('dark cloudy: awan tidak berwarna putih siang (#F0F8FC)',
+        (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.cloudy));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                const Color(0xFFF0F8FC)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('dark storm: hujan tidak berwarna biru muda siang (#A0C8E0)',
+        (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.storm));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                const Color(0xFFA0C8E0).withAlpha(180)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('dark overwhelmed: kabut tidak pakai warna hijau cerah siang',
+        (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.overwhelmed));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) {
+          if (widget is! Container) return false;
+          final deco = widget.decoration;
+          if (deco is! BoxDecoration) return false;
+          final gradient = deco.gradient;
+          if (gradient is! LinearGradient) return false;
+          return gradient.colors.contains(const Color(0xFFE8F2E8));
+        }),
+        findsNothing,
+      );
+    });
+  });
 }

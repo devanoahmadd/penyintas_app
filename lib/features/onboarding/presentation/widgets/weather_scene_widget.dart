@@ -323,6 +323,20 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
         // Ambient oscillation value (-1 → +1 sinusoidal)
         final ambient = math.sin(_ambientCtrl.value * 2 * math.pi);
 
+        // Warna awan: siang = putih, malam = slate-blue
+        final cloudBase1 = widget.isDark
+            ? AppWeatherPalette.cloudNightBase
+            : const Color(0xFFF0F8FC);
+        final cloudBase2 = widget.isDark
+            ? AppWeatherPalette.cloudNightBase2
+            : const Color(0xFFE4F0F4);
+        final cloudStorm1 = widget.isDark
+            ? AppWeatherPalette.cloudNightStorm
+            : const Color(0xFFA0ACB4);
+        final cloudStorm2 = widget.isDark
+            ? AppWeatherPalette.cloudNightStorm2
+            : const Color(0xFF8C9AA0);
+
         return LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxHeight < 60) return const SizedBox.shrink();
@@ -494,8 +508,8 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                         opacity: cloudOp.clamp(0.0, 1.0),
                         child: _CloudShape(
                           color: Color.lerp(
-                            const Color(0xFFF0F8FC), // clear/cloudy: putih
-                            const Color(0xFFA0ACB4), // storm: abu gelap
+                            cloudBase1,
+                            cloudStorm1,
                             (_lerp(
                                       sceneMap[_fromState]!.rainOpacity,
                                       sceneMap[_toState]!.rainOpacity,
@@ -522,8 +536,8 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                           opacity: (cloudOp * 0.85).clamp(0.0, 1.0),
                           child: _CloudShape(
                             color: Color.lerp(
-                              const Color(0xFFE4F0F4),
-                              const Color(0xFF8C9AA0),
+                              cloudBase2,
+                              cloudStorm2,
                               (_lerp(
                                         sceneMap[_fromState]!.rainOpacity,
                                         sceneMap[_toState]!.rainOpacity,
@@ -566,9 +580,10 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                                   width: 1.5,
                                   height: 12,
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFA0C8E0,
-                                    ).withAlpha(180),
+                                    color: (widget.isDark
+                                            ? AppWeatherPalette.rainNightColor
+                                            : const Color(0xFFA0C8E0))
+                                        .withAlpha(widget.isDark ? 200 : 180),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                 ),
@@ -588,11 +603,19 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                           1.0,
                         ),
                         child: Container(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [Color(0xFFE8F2E8), Color(0xFFD4E8D4)],
+                              colors: widget.isDark
+                                  ? [
+                                      AppWeatherPalette.fogNightStart,
+                                      AppWeatherPalette.fogNightEnd,
+                                    ]
+                                  : [
+                                      const Color(0xFFE8F2E8),
+                                      const Color(0xFFD4E8D4),
+                                    ],
                             ),
                           ),
                         ),
