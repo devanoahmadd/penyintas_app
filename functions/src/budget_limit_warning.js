@@ -2,8 +2,6 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 
-const db = getFirestore();
-
 /**
  * Trigger per transaksi baru. Cek apakah kategori transaksi punya limit
  * dan apakah spending sudah mendekati/melewati limit tersebut.
@@ -18,6 +16,7 @@ exports.budgetLimitWarning = onDocumentCreated(
     region: 'asia-southeast2',
   },
   async (event) => {
+    const db = getFirestore();
     const uid = event.params.uid;
     const txData = event.data?.data();
     if (!txData) return;
