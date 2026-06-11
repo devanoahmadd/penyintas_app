@@ -12,5 +12,6 @@ abstract class BudgetRepository {
 
   /// #247: restore budget dari cloud bila lokal kosong; cache ke lokal.
   /// Dipakai splash saat reinstall. Lokal-hit → no-op network.
+  /// Note: implicitly marks onboardingCompleted = true via saveBudgetSettings.
   Future<Either<Failure, BudgetSettingsEntity?>> syncBudgetFromRemote();
 }

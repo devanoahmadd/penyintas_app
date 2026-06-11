@@ -69,7 +69,7 @@ void main() {
 
       final result = await repository.syncBudgetFromRemote();
 
-      expect(result.isRight(), true);
+      expect(result, Right<dynamic, BudgetSettingsEntity?>(tModel));
       verify(() => local.saveBudgetSettings(tModel)).called(1);
     });
 
