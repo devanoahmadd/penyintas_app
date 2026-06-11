@@ -583,7 +583,7 @@ class _WeatherBamboo extends StatelessWidget {
   const _WeatherBamboo({
     required this.stemHeight,
     required this.color,
-    required this.swayAngle, // radians, pivot di bawah
+    required this.swayAngle,
   });
 
   final double stemHeight;
@@ -592,14 +592,14 @@ class _WeatherBamboo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stemW = (stemHeight * 0.09).clamp(4.0, 10.0);
-    final nodeH = stemW * 0.55;
+    final stemW = (stemHeight * 0.06).clamp(3.0, 7.0);
+    final nodeH = stemW * 0.35;
 
     return Transform.rotate(
       angle: swayAngle,
       alignment: Alignment.bottomCenter,
       child: SizedBox(
-        width: stemW * 4,
+        width: stemW * 5,
         height: stemHeight,
         child: Stack(
           clipBehavior: Clip.none,
@@ -608,7 +608,7 @@ class _WeatherBamboo extends StatelessWidget {
             // Stem
             Positioned(
               bottom: 0,
-              left: stemW * 1.5,
+              left: stemW * 2,
               child: Container(
                 width: stemW,
                 height: stemHeight,
@@ -620,40 +620,53 @@ class _WeatherBamboo extends StatelessWidget {
             ),
             // Node bawah
             Positioned(
-              bottom: stemHeight * 0.3,
-              left: stemW * 0.9,
+              bottom: stemHeight * 0.25,
+              left: stemW * 1.2,
               child: Container(
-                width: stemW * 2.2,
+                width: stemW * 1.6,
                 height: nodeH,
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            // Node tengah
+            Positioned(
+              bottom: stemHeight * 0.50,
+              left: stemW * 1.2,
+              child: Container(
+                width: stemW * 1.6,
+                height: nodeH,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             // Node atas
             Positioned(
-              bottom: stemHeight * 0.58,
-              left: stemW * 0.9,
+              bottom: stemHeight * 0.72,
+              left: stemW * 1.2,
               child: Container(
-                width: stemW * 2.2,
+                width: stemW * 1.6,
                 height: nodeH,
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            // Daun kanan
+            // Daun kanan atas
             Positioned(
-              bottom: stemHeight * 0.68,
-              left: stemW * 2.3,
+              bottom: stemHeight * 0.74,
+              left: stemW * 3,
               child: Transform.rotate(
-                angle: -0.42,
+                angle: -0.52,
                 alignment: Alignment.bottomLeft,
                 child: Container(
-                  width: stemHeight * 0.24,
-                  height: stemW * 0.85,
+                  width: stemHeight * 0.28,
+                  height: stemW * 0.75,
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: const BorderRadius.only(
@@ -664,21 +677,41 @@ class _WeatherBamboo extends StatelessWidget {
                 ),
               ),
             ),
-            // Daun kiri
+            // Daun kiri tengah
             Positioned(
-              bottom: stemHeight * 0.52,
-              left: stemW * -0.1,
+              bottom: stemHeight * 0.54,
+              left: stemW * -0.5,
               child: Transform.rotate(
-                angle: 0.42,
+                angle: 0.48,
                 alignment: Alignment.bottomRight,
                 child: Container(
-                  width: stemHeight * 0.2,
-                  height: stemW * 0.85,
+                  width: stemHeight * 0.24,
+                  height: stemW * 0.75,
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(14),
                       bottomRight: Radius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Daun kanan bawah (kecil)
+            Positioned(
+              bottom: stemHeight * 0.38,
+              left: stemW * 3,
+              child: Transform.rotate(
+                angle: -0.38,
+                alignment: Alignment.bottomLeft,
+                child: Container(
+                  width: stemHeight * 0.18,
+                  height: stemW * 0.65,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
                   ),
                 ),
