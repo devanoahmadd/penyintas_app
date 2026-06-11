@@ -164,6 +164,11 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
 
   @override
   Future<void> clearPartialOnboarding() async {
+    // #236 INVARIANT: clear WAJIB pakai update().write() dengan companion
+    // 2-kolom ini. JANGAN ganti ke insertOnConflictUpdate(companion penuh) —
+    // kolom budget (monthlyIncome/expenses/emergencyFundPct/paymentDate) yang
+    // tak disebut akan ter-reset ke default → data-loss. Hanya dua kolom partial
+    // yang boleh disentuh. Dikunci oleh test "clear HANYA null-kan kolom partial".
     await (_db.update(_db.appSettings)
           ..where((t) => t.id.equals(1)))
         .write(const AppSettingsCompanion(

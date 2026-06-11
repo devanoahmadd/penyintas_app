@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -13,7 +14,10 @@ class MockUser extends Mock implements User {}
 
 class MockFirebaseCrashlytics extends Mock implements FirebaseCrashlytics {}
 
+class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
+
 void main() {
+  setUpAll(() => registerFallbackValue(StackTrace.empty));
   late FakeFirebaseFirestore fakeFirestore;
   late MockFirebaseAuth mockAuth;
   late MockUser mockUser;
@@ -139,6 +143,43 @@ void main() {
       expect(result.internetExpense, 100000);
       expect(result.phoneExpense, 50000);
       expect(result.otherFixedExpense, 0);
+    });
+  });
+
+  group('error path Firestore → recordError + ServerException (#231)', () {
+    late MockFirebaseFirestore throwingFirestore;
+    late OnboardingRemoteDataSourceImpl dsThrow;
+
+    setUp(() {
+      throwingFirestore = MockFirebaseFirestore();
+      when(() => throwingFirestore.collection(any())).thenThrow(
+        FirebaseException(plugin: 'cloud_firestore', message: 'simulated'),
+      );
+      when(() => mockCrashlytics.recordError(any(), any()))
+          .thenAnswer((_) async {});
+      dsThrow = OnboardingRemoteDataSourceImpl(
+        firestore: throwingFirestore,
+        auth: mockAuth, // currentUser = mockUser (uid terisi) dari setUp utama
+        crashlytics: mockCrashlytics,
+      );
+    });
+
+    test('saveBudgetSettings: error → recordError dipanggil + throw ServerException',
+        () async {
+      await expectLater(
+        () => dsThrow.saveBudgetSettings(tSettings),
+        throwsA(isA<ServerException>()),
+      );
+      verify(() => mockCrashlytics.recordError(any(), any())).called(1);
+    });
+
+    test('getBudgetSettings: error → recordError dipanggil + throw ServerException',
+        () async {
+      await expectLater(
+        () => dsThrow.getBudgetSettings(),
+        throwsA(isA<ServerException>()),
+      );
+      verify(() => mockCrashlytics.recordError(any(), any())).called(1);
     });
   });
 }
