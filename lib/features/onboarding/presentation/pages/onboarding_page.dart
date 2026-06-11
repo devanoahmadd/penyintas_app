@@ -2366,7 +2366,7 @@ class _OSliderState extends State<_OSlider> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0B1F14).withAlpha(71),
+                            color: AppColors.bgDark.withAlpha(isDark ? 110 : 71),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
