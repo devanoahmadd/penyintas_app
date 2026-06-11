@@ -219,6 +219,10 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
       _toState = widget.state;
       _transitionCtrl.forward(from: 0);
       _updateSwaySpeed(widget.state);
+    } else if (old.isDark != widget.isDark) {
+      // #246: tema berubah tanpa state berubah — sinkronkan sway.
+      // (build sudah re-read isDark untuk palet langit/bambu setiap rebuild.)
+      _updateSwaySpeed(widget.state);
     }
   }
 
@@ -249,6 +253,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
           Listenable.merge([_transitionCtrl, _swayCtrl, _ambientCtrl]),
       builder: (context, _) {
         final sceneMap = widget.isDark ? _kSceneDark : _kScene;
+        final bambooColor = widget.isDark ? AppColors.shoot : AppColors.primary;
         final from = sceneMap[_fromState]!;
         final to = sceneMap[_toState]!;
         final t = Curves.easeInOut.transform(_transitionCtrl.value);
@@ -340,7 +345,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                             opacity: bamOp.clamp(0.0, 1.0),
                             child: _WeatherBamboo(
                               stemHeight: (h * 0.6).clamp(30, 80),
-                              color: AppColors.primary,
+                              color: bambooColor,
                               swayAngle: math.sin(
                                     _swayCtrl.value * 2 * math.pi,
                                   ) *
@@ -352,7 +357,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                             opacity: bamOp.clamp(0.0, 1.0),
                             child: _WeatherBamboo(
                               stemHeight: (h * 0.48).clamp(24, 64),
-                              color: AppColors.primary,
+                              color: bambooColor,
                               swayAngle: math.sin(
                                     _swayCtrl.value * 2 * math.pi + 2.094,
                                   ) *
@@ -364,7 +369,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                             opacity: (bamOp * 0.75).clamp(0.0, 1.0),
                             child: _WeatherBamboo(
                               stemHeight: (h * 0.36).clamp(18, 48),
-                              color: AppColors.primary,
+                              color: bambooColor,
                               swayAngle: math.sin(
                                     _swayCtrl.value * 2 * math.pi + 4.189,
                                   ) *
