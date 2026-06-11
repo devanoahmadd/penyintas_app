@@ -91,6 +91,7 @@ class FinancialSliderWidget extends StatefulWidget {
 class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
   late final PageController _pageController;
   int _currentPage = 0;
+  final int _slideCount = 4; // DTL, Spending, Budget, Emergency
   Timer? _autoPlayTimer;
   Timer? _resumeTimer;
 
@@ -113,7 +114,7 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
     _autoPlayTimer?.cancel();
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
-      final next = (_currentPage + 1) % 4; // 4 slides: DTL, Spending, Budget, Emergency
+      final next = (_currentPage + 1) % _slideCount;
       _pageController.animateToPage(
         next,
         duration: const Duration(milliseconds: 440),
@@ -192,7 +193,7 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         onTap: () => context.go('/transactions'),
       ),
       _SlideData(
-        label: 'ANGGARAN KATEGORI',
+        label: l10n.dashboardBudgetLabel,
         valueText: (budget == null || budget.totalLimitSet == 0)
             ? '—'
             : formatRupiah(budgetRemaining),

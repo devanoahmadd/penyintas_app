@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_overview_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 
@@ -44,13 +45,20 @@ class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
   bool shouldReload(covariant _SyncL10nDelegate old) => true;
 }
 
-GoRouter _router(DashboardEntity entity) => GoRouter(
+GoRouter _router(
+  DashboardEntity entity, {
+  BudgetOverviewEntity? budgetOverview,
+}) =>
+    GoRouter(
       initialLocation: '/',
       routes: [
         GoRoute(
           path: '/',
           builder: (_, _) => Scaffold(
-            body: FinancialSliderWidget(entity: entity),
+            body: FinancialSliderWidget(
+              entity: entity,
+              budgetOverview: budgetOverview,
+            ),
           ),
         ),
         GoRoute(path: '/dtl', builder: (_, _) => const SizedBox()),
@@ -60,6 +68,23 @@ GoRouter _router(DashboardEntity entity) => GoRouter(
       ],
     );
 
+BudgetOverviewEntity _budgetOverview({
+  int totalLimitSet = 500000,
+  int totalSpentInLimited = 200000,
+}) =>
+    BudgetOverviewEntity(
+      monthlyIncome: 3000000,
+      totalFixedExpenses: 1000000,
+      emergencyFundMonthly: 200000,
+      totalSpendable: 1800000,
+      categoryItems: const [],
+      totalLimitSet: totalLimitSet,
+      totalSpentInLimited: totalSpentInLimited,
+      overallStatus: BudgetStatus.safe,
+      remainingDays: 15,
+      daysElapsed: 5,
+    );
+
 void main() {
   late AppLocalizations l10n;
 
@@ -67,7 +92,11 @@ void main() {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
   });
 
-  Widget harness(DashboardEntity entity, {ThemeData? theme}) =>
+  Widget buildWidget(
+    DashboardEntity entity, {
+    BudgetOverviewEntity? budgetOverview,
+    ThemeData? theme,
+  }) =>
       MaterialApp.router(
         locale: const Locale('id'),
         supportedLocales: const [Locale('id'), Locale('en')],
@@ -78,8 +107,11 @@ void main() {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        routerConfig: _router(entity),
+        routerConfig: _router(entity, budgetOverview: budgetOverview),
       );
+
+  Widget harness(DashboardEntity entity, {ThemeData? theme}) =>
+      buildWidget(entity, theme: theme);
 
   group('FinancialSliderWidget', () {
     testWidgets('renders without exception', (tester) async {
@@ -206,6 +238,43 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('HARI TERSISA'), findsOneWidget);
+    });
+
+    testWidgets('FinancialSliderWidget shows budget data state', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        buildWidget(
+          _mockEntity,
+          budgetOverview: _budgetOverview(
+            totalLimitSet: 500000,
+            totalSpentInLimited: 200000,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Navigate to budget slide (index 2) by swiping twice
+      await tester.fling(
+        find.byType(PageView),
+        const Offset(-400, 0),
+        800,
+      );
+      await tester.pumpAndSettle();
+      await tester.fling(
+        find.byType(PageView),
+        const Offset(-400, 0),
+        800,
+      );
+      await tester.pumpAndSettle();
+
+      // Budget slide should show remaining amount (500000 - 200000 = 300000)
+      expect(find.textContaining('300'), findsWidgets);
+      // And percentage used: 40% (200000/500000)
+      expect(find.textContaining('40%'), findsOneWidget);
     });
   });
 }

@@ -76,6 +76,7 @@ class AppLocalizations {
   String get dashboardSaldoLabel => _t('dashboard_saldo_label');
   String get dashboardSpendingLabel => _t('dashboard_spending_label');
   String get dashboardEmergencyLabel => _t('dashboard_emergency_label');
+  String get dashboardBudgetLabel => _t('dashboard_budget_label');
   String get dashboardRecentTx => _t('dashboard_recent_tx');
   String get dashboardSeeAll => _t('dashboard_see_all');
   String get dashboardFromBudget => _t('dashboard_from_budget');
