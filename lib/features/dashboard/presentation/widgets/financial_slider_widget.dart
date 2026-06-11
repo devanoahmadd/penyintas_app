@@ -498,8 +498,8 @@ class _FinancialSlideCard extends StatelessWidget {
     final (top, right, bottom, left, size) = switch (index) {
       0 => (-55.0, -35.0, null, null, 160.0),  // DTL: top-right
       1 => (null, -32.0, -50.0, null, 148.0),  // Spending: bottom-right
-      2 => (-52.0, null, null, -32.0, 150.0),  // Emergency: top-left
-      _ => (null, null, -50.0, -35.0, 142.0),  // Budget: bottom-left
+      2 => (null, null, -50.0, -35.0, 142.0),  // Budget: bottom-left
+      _ => (-52.0, null, null, -32.0, 150.0),  // Emergency: top-left
     };
     return Positioned(
       top: top,
@@ -527,8 +527,8 @@ class _FinancialSlideCard extends StatelessWidget {
     final (top, right, bottom, left, size, opacity) = switch (index) {
       0 => (-10.0, -18.0, null, null, 130.0, 0.08),  // DTL: top-right crop, 8%
       1 => (null, null, -20.0, -16.0, 132.0, 0.09),  // Spending: bottom-left crop, 9%
-      2 => (null, -30.0, -28.0, null, 175.0, 0.07),  // Emergency: bottom-right XL, 7%
-      _ => (-12.0, null, null, -20.0, 128.0, 0.08),  // Budget: top-left crop, 8%
+      2 => (-12.0, null, null, -20.0, 128.0, 0.08),  // Budget: top-left crop, 8%
+      _ => (null, -30.0, -28.0, null, 175.0, 0.07),  // Emergency: bottom-right XL, 7%
     };
     return Positioned(
       top: top,
