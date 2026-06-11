@@ -187,4 +187,75 @@ void main() {
       });
     }
   });
+
+  group('WeatherSceneWidget sun/moon', () {
+    Widget pumpScene({required WeatherState state, required bool isDark}) =>
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 200,
+              child: WeatherSceneWidget(state: state, isDark: isDark),
+            ),
+          ),
+        );
+
+    testWidgets('light mode clear: matahari kuning ada', (tester) async {
+      await tester.pumpWidget(
+          pumpScene(state: WeatherState.clear, isDark: false));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                const Color(0xFFFFD54F)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('dark mode clear: matahari kuning TIDAK ada', (tester) async {
+      await tester.pumpWidget(
+          pumpScene(state: WeatherState.clear, isDark: true));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                const Color(0xFFFFD54F)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('dark mode clear: moon color ada', (tester) async {
+      await tester.pumpWidget(
+          pumpScene(state: WeatherState.clear, isDark: true));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                AppWeatherPalette.moonColor),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('dark mode overcast: tidak ada sun maupun moon', (tester) async {
+      await tester.pumpWidget(
+          pumpScene(state: WeatherState.overcast, isDark: true));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            ((widget.decoration as BoxDecoration).color ==
+                    const Color(0xFFFFD54F) ||
+                (widget.decoration as BoxDecoration).color ==
+                    AppWeatherPalette.moonColor)),
+        findsNothing,
+      );
+    });
+  });
 }

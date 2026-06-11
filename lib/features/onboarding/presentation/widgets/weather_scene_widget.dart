@@ -437,21 +437,16 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                       ),
                     ),
 
-                  // Layer 5: Matahari (kanan atas, hanya clear + cloudy)
+                  // Layer 5: Matahari (light) atau Bulan (dark)
                   if (fullDetail && sunOp > 0.01)
                     Positioned(
                       top: h * 0.1,
                       right: w * 0.1,
                       child: Opacity(
                         opacity: sunOp.clamp(0.0, 1.0),
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFFFFD54F),
-                          ),
-                        ),
+                        child: widget.isDark
+                            ? _MoonWidget(rawAmbient: _ambientCtrl.value)
+                            : const _SunWidget(),
                       ),
                     ),
 
@@ -718,6 +713,58 @@ class _WeatherBamboo extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SunWidget extends StatelessWidget {
+  const _SunWidget();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 26,
+        height: 26,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFFFFD54F),
+        ),
+      );
+}
+
+class _MoonWidget extends StatelessWidget {
+  const _MoonWidget({required this.rawAmbient});
+
+  // rawAmbient: nilai mentah 0.0–1.0 dari _ambientCtrl.value
+  final double rawAmbient;
+
+  @override
+  Widget build(BuildContext context) {
+    final glowAlpha =
+        (38 + (math.sin(rawAmbient * 2 * math.pi) * 0.5 + 0.5) * 20).round();
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppWeatherPalette.moonGlow.withAlpha(glowAlpha),
+      ),
+      child: Center(
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppWeatherPalette.moonColor,
+            boxShadow: [
+              BoxShadow(
+                color: AppWeatherPalette.moonGlow.withAlpha(76),
+                blurRadius: 7,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
         ),
       ),
     );
