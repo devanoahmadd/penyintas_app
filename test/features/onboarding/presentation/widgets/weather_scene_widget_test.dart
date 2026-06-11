@@ -188,6 +188,67 @@ void main() {
     }
   });
 
+  group('WeatherSceneWidget stars', () {
+    Widget pumpDark(WeatherState state) => MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 200,
+              child: WeatherSceneWidget(state: state, isDark: true),
+            ),
+          ),
+        );
+
+    // Stars = Container white circle (BoxShape.circle + Colors.white)
+    // Safe: cloud blobs use BorderRadius.circular(999) NOT BoxShape.circle
+    // Sun = Color(0xFFFFD54F), Moon inner = AppWeatherPalette.moonColor — no collision
+    Finder starFinder() => find.byWidgetPredicate((widget) =>
+        widget is Container &&
+        widget.decoration is BoxDecoration &&
+        (widget.decoration as BoxDecoration).shape == BoxShape.circle &&
+        (widget.decoration as BoxDecoration).color == Colors.white);
+
+    testWidgets('dark clear: bintang ter-render', (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.clear));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(starFinder(), findsWidgets);
+    });
+
+    testWidgets('dark cloudy: bintang ter-render (lebih sedikit dari clear)',
+        (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.cloudy));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(starFinder(), findsWidgets);
+    });
+
+    testWidgets('dark overcast: tidak ada bintang', (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.overcast));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(starFinder(), findsNothing);
+    });
+
+    testWidgets('dark storm: tidak ada bintang', (tester) async {
+      await tester.pumpWidget(pumpDark(WeatherState.storm));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(starFinder(), findsNothing);
+    });
+
+    testWidgets('light mode clear: tidak ada bintang', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 200,
+            child: WeatherSceneWidget(
+                state: WeatherState.clear, isDark: false),
+          ),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(starFinder(), findsNothing);
+    });
+  });
+
   group('WeatherSceneWidget sun/moon', () {
     Widget pumpScene({required WeatherState state, required bool isDark}) =>
         MaterialApp(

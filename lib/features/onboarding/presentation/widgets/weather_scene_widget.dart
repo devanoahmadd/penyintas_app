@@ -247,6 +247,36 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
     }
   }
 
+  List<Widget> _buildStars(
+      double w, double h, double moonOp, double rawAmbient) {
+    const positions = [
+      (0.20, 0.13), (0.38, 0.08), (0.56, 0.20),
+      (0.26, 0.08), (0.10, 0.22), (0.72, 0.14),
+    ];
+    final count = moonOp > 0.5 ? 6 : 3; // clear=6, cloudy=3
+    return List.generate(count, (i) {
+      final (xFrac, yFrac) = positions[i];
+      final twinkle = 0.40 +
+          0.55 *
+              (math.sin(rawAmbient * 2 * math.pi + i * 1.047) * 0.5 + 0.5);
+      return Positioned(
+        left: w * xFrac,
+        top: h * yFrac,
+        child: Opacity(
+          opacity: twinkle,
+          child: Container(
+            width: i.isEven ? 2.0 : 1.5,
+            height: i.isEven ? 2.0 : 1.5,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   void _updateSwaySpeed(WeatherState state) {
     final vals = (widget.isDark ? _kSceneDark : _kScene)[state]!;
     if (vals.swayAmp == 0.0) {
@@ -449,6 +479,10 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                             : const _SunWidget(),
                       ),
                     ),
+
+                  // Layer 5.5: Bintang (hanya dark mode + moonOp > 0.15)
+                  if (widget.isDark && sunOp > 0.15 && fullDetail)
+                    ..._buildStars(w, h, sunOp, _ambientCtrl.value),
 
                   // Layer 6: Awan (cloudy, overcast, storm)
                   if (fullDetail && cloudOp > 0.01) ...[
