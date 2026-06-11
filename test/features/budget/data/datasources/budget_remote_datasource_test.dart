@@ -61,6 +61,7 @@ void main() {
       expect(result.paymentDate, 25);
       expect(result.otherFixedExpense, 800000);
       expect(result.emergencyFundPct, 0.10);
+      expect(result.createdAt, DateTime(2026, 5, 8));
     });
   });
 }
