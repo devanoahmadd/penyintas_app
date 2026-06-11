@@ -123,4 +123,25 @@ class BudgetRepositoryImpl implements BudgetRepository {
       return Left(UnknownFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, BudgetSettingsEntity?>> syncBudgetFromRemote() async {
+    try {
+      final localData = await _local.getBudgetSettings();
+      if (localData != null) return Right(localData);
+
+      if (await _network.isConnected) {
+        final remoteData = await _remote.getBudgetSettings();
+        if (remoteData != null) await _local.saveBudgetSettings(remoteData);
+        return Right(remoteData);
+      }
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure(e.toString()));
+    }
+  }
 }

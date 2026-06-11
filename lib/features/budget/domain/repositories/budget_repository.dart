@@ -9,4 +9,8 @@ abstract class BudgetRepository {
   Future<Either<Failure, List<BudgetLimitEntity>>> getBudgetLimits();
   Future<Either<Failure, int>> saveBudgetLimit(BudgetLimitEntity limit);
   Future<Either<Failure, void>> deleteBudgetLimit(int id, String categoryName);
+
+  /// #247: restore budget dari cloud bila lokal kosong; cache ke lokal.
+  /// Dipakai splash saat reinstall. Lokal-hit → no-op network.
+  Future<Either<Failure, BudgetSettingsEntity?>> syncBudgetFromRemote();
 }
