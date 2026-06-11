@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
+import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
+import 'package:penyintas_app/features/onboarding/domain/entities/partial_onboarding_state.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 
@@ -19,6 +22,9 @@ class MockOnboardingBloc
 class MockNotificationBloc
     extends MockBloc<NotificationEvent, NotificationState>
     implements NotificationBloc {}
+
+class MockOnboardingLocalDataSource extends Mock
+    implements OnboardingLocalDataSource {}
 
 /// Synchronous delegate — avoids async asset loading in tests.
 class _TestLocalizationsDelegate
@@ -99,6 +105,15 @@ class _TestLocalizationsDelegate
           'onboarding_done_sub': 'Lentur, tak patah. Mulai catat pengeluaran hari ini.',
           'onboarding_payday_label': 'Biasanya masuk tanggal',
           'onboarding_skip_later': 'Lanjut nanti',
+          'onboarding_resume_dialog_title': 'Lanjutkan setup?',
+          'onboarding_resume_dialog_body':
+              'Kamu punya data dari {days} hari lalu. Lanjut dari sana atau mulai ulang?',
+          'onboarding_resume_continue': 'Lanjut dari sana',
+          'onboarding_resume_restart': 'Mulai ulang',
+          'onboarding_resume_banner': 'Melanjutkan dari sesi sebelumnya',
+          'onboarding_reset_dialog_title': 'Mulai ulang setup?',
+          'onboarding_reset_dialog_cancel': 'Batal',
+          'onboarding_reset_dialog_confirm': 'Ya, mulai ulang',
           'onboarding_chip_other_date': 'Lain',
           'onboarding_cta_start': 'Mulai Bertahan',
           'onboarding_cta_enter': 'Masuk ke Beranda',
@@ -695,6 +710,110 @@ void main() {
       // Should be back at step 0
       expect(find.text('RUAS 1 · PEMASUKAN', skipOffstage: false), findsOneWidget);
       expect(find.text('Lanjut nanti', skipOffstage: false), findsOneWidget);
+    });
+  });
+
+  // ── Resume (#244) ─────────────────────────────────────────────────────
+  group('Resume (#244)', () {
+    late MockOnboardingLocalDataSource mockDs;
+
+    PartialOnboardingState partial(DateTime savedAt, {int step = 0}) =>
+        PartialOnboardingState(
+          step: step,
+          income: 1500000,
+          expenses: const {
+            'kos': 0,
+            'listrik': 0,
+            'internet': 0,
+            'pulsa': 0,
+            'lain': 0,
+          },
+          pct: 10,
+          payday: 25,
+          savedAt: savedAt,
+        );
+
+    setUp(() {
+      mockDs = MockOnboardingLocalDataSource();
+      when(() => mockDs.clearPartialOnboarding()).thenAnswer((_) async {});
+      final sl = GetIt.instance;
+      if (sl.isRegistered<OnboardingLocalDataSource>()) {
+        sl.unregister<OnboardingLocalDataSource>();
+      }
+      sl.registerFactory<OnboardingLocalDataSource>(() => mockDs);
+    });
+
+    tearDown(() => GetIt.instance.reset());
+
+    void sizeView(WidgetTester tester) {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
+    testWidgets('partial < 7 hari → banner muncul', (tester) async {
+      sizeView(tester);
+      when(() => mockDs.loadPartialOnboarding())
+          .thenAnswer((_) async => partial(DateTime.now()));
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        find.text('Melanjutkan dari sesi sebelumnya', skipOffstage: false),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tap "Mulai ulang" → konfirmasi → clear + banner hilang',
+        (tester) async {
+      sizeView(tester);
+      when(() => mockDs.loadPartialOnboarding())
+          .thenAnswer((_) async => partial(DateTime.now()));
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // Banner restart button.
+      await tester.tap(find.text('Mulai ulang', skipOffstage: false));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // Dialog konfirmasi reset muncul.
+      expect(find.text('Mulai ulang setup?', skipOffstage: false),
+          findsOneWidget);
+
+      await tester.tap(find.text('Ya, mulai ulang', skipOffstage: false));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      verify(() => mockDs.clearPartialOnboarding()).called(1);
+      expect(find.text('Melanjutkan dari sesi sebelumnya', skipOffstage: false),
+          findsNothing);
+    });
+
+    testWidgets('partial ≥ 7 hari → dialog stale muncul', (tester) async {
+      sizeView(tester);
+      when(() => mockDs.loadPartialOnboarding()).thenAnswer(
+          (_) async => partial(DateTime.now().subtract(const Duration(days: 8))));
+
+      await tester.pumpWidget(_buildHarness(
+        onboardingBloc: mockBloc,
+        notificationBloc: mockNotifBloc,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.text('Lanjutkan setup?', skipOffstage: false), findsOneWidget);
     });
   });
 

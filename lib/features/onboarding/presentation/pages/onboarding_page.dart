@@ -219,6 +219,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       false; // #212: reset keypad on next tap after preset
   int? _savedDailyBudget; // #206: from use-case result, single source of truth
   bool _resumeMode = false;
+  bool _deferring = false; // #237: cegah double-tap "Lanjut nanti"
 
   // ── Animation ────────────────────────────────────────────────────
   late final AnimationController _staggerCtrl;
@@ -308,6 +309,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
       final textColor = isDark ? AppColors.textDark : AppColors.textLight;
       final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+      final l = AppLocalizations.of(context);
       final resume = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -315,21 +317,21 @@ class _OnboardingPageState extends State<OnboardingPage>
           backgroundColor: cardBg,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: Text('Lanjutkan setup?',
+          title: Text(l.onboardingResumeDialogTitle,
               style: AppTextStyles.h3.copyWith(color: textColor)),
           content: Text(
-            'Kamu punya data dari $ageInDays hari lalu. Lanjut dari sana atau mulai ulang?',
+            l.onboardingResumeDialogBody(ageInDays),
             style: AppTextStyles.bodySmall.copyWith(color: textSoft),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text('Mulai ulang',
+              child: Text(l.onboardingResumeRestart,
                   style: AppTextStyles.label.copyWith(color: textSoft)),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text('Lanjut dari sana',
+              child: Text(l.onboardingResumeContinue,
                   style: AppTextStyles.label.copyWith(color: AppColors.primary)),
             ),
           ],
@@ -349,6 +351,8 @@ class _OnboardingPageState extends State<OnboardingPage>
       _exp.addAll(partial.expenses);
       _pct = partial.pct;
       _payday = partial.payday;
+      // #240a: cuaca harus cermin kondisi keuangan yang di-restore, bukan 'clear'.
+      _weatherState = weatherStateFrom(_calc.fixedPct);
       _resumeMode = true;
     });
   }
@@ -357,23 +361,24 @@ class _OnboardingPageState extends State<OnboardingPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: cardBg,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Mulai ulang setup?',
+        title: Text(l.onboardingResetDialogTitle,
             style: AppTextStyles.h3.copyWith(color: textColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Batal',
+            child: Text(l.onboardingResetDialogCancel,
                 style: AppTextStyles.label.copyWith(color: AppColors.primary)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Ya, mulai ulang',
+            child: Text(l.onboardingResetDialogConfirm,
                 style: AppTextStyles.label.copyWith(color: AppColors.warn)),
           ),
         ],
@@ -397,6 +402,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _deferAndExit() async {
+    if (_deferring) return; // #237
+    _deferring = true;
     try {
       await _sl<OnboardingLocalDataSource>().savePartialOnboarding(
         step: _step,
@@ -407,6 +414,8 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
     } catch (_) {
       // Jika save gagal, tetap exit — jangan block user
+    } finally {
+      if (mounted) setState(() => _deferring = false);
     }
     SystemNavigator.pop();
   }
@@ -506,36 +515,40 @@ class _OnboardingPageState extends State<OnboardingPage>
                 children: [
                   if (_step < 3) _buildHeader(isDark, l),
                   if (_resumeMode)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(26),
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Melanjutkan dari sesi sebelumnya',
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: AppColors.primary),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _resetToFresh,
-                            child: Text(
-                              'Mulai ulang',
-                              style: AppTextStyles.label.copyWith(
-                                color: AppColors.primary,
-                                fontSize: 12,
+                    Semantics(
+                      liveRegion: true,
+                      container: true,
+                      child: Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withAlpha(26),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l.onboardingResumeBanner,
+                                style: AppTextStyles.bodySmall
+                                    .copyWith(color: AppColors.primary),
                               ),
                             ),
-                          ),
-                        ],
+                            TextButton(
+                              onPressed: _resetToFresh,
+                              child: Text(
+                                l.onboardingResumeRestart,
+                                style: AppTextStyles.label.copyWith(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   Expanded(child: _buildContent(isDark, l, calc, isSubmitting)),
@@ -560,12 +573,14 @@ class _OnboardingPageState extends State<OnboardingPage>
           children: [
             SizedBox(
               width: 44,
+              height: 44,
               child: _step == 0
                   ? Semantics(
                       button: true,
                       label: l.onboardingSkipLater,
                       excludeSemantics: true,
                       child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
                         onTap: _deferAndExit,
                         child: Align(
                           alignment: Alignment.centerLeft,
