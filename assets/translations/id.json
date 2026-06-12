@@ -46,6 +46,7 @@
   "dashboard_saldo_label": "SALDO TERKINI",
   "dashboard_spending_label": "PENGELUARAN BULAN INI",
   "dashboard_emergency_label": "ALOKASI DARURAT",
+  "dashboard_budget_label": "ANGGARAN KATEGORI",
   "dashboard_recent_tx": "Transaksi hari ini",
   "dashboard_see_all": "Lihat semua →",
   "dashboard_from_budget": "dari anggaran",

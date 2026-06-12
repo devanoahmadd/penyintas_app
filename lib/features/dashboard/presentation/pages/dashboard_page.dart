@@ -23,6 +23,7 @@ import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
+import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -167,7 +168,17 @@ class _DashboardBody extends StatelessWidget {
             ),
             // Financial slider — no horizontal padding so peek bleeds to edges
             SliverToBoxAdapter(
-              child: FinancialSliderWidget(entity: entity),
+              child: BlocBuilder<BudgetLimitsBloc, BudgetLimitsState>(
+                builder: (context, budgetState) {
+                  final overview = budgetState is BudgetLimitsLoaded
+                      ? budgetState.overview
+                      : null;
+                  return FinancialSliderWidget(
+                    entity: entity,
+                    budgetOverview: overview,
+                  );
+                },
+              ),
             ),
             // Remaining content with horizontal padding
             SliverPadding(
