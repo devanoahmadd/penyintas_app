@@ -14,6 +14,32 @@ service cloud.firestore {
         allow read, write: if request.auth != null
           && request.auth.uid == userId;
       }
+
+      match /settings/{docId} {
+        allow read, write: if request.auth != null
+          && request.auth.uid == userId;
+      }
+
+      // Ditulis oleh Cloud Functions (admin SDK) — Flutter client hanya perlu read
+      match /meta/{docId} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        allow write: if false; // hanya server (admin SDK bypass rules)
+      }
+
+      // Cache insight Vertex AI — ditulis server, dibaca client
+      match /insights/{cacheKey} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        allow write: if false;
+      }
+
+      // Cache survival tips Vertex AI — ditulis server, dibaca client
+      match /survival_tips/{cacheKey} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
   }
 }

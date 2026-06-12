@@ -111,6 +111,22 @@ void main() {
       verifyNever(() => remote.saveUserSettings(any()));
     });
 
+    test('remote ada dengan false → ratchet: tidak overwrite lokal (false diabaikan)', () async {
+      // Seed local dengan onboardingCompleted=true (misal: dari budget sync)
+      await seedLocal(completed: true, income: 5000000);
+      when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
+          const UserSettingsModel(onboardingCompleted: false));
+
+      await repo.syncFromRemote();
+
+      // _writeIdentity tidak boleh menulis false ke lokal — ratchet one-way
+      final row = await (db.select(db.appSettings)
+            ..where((t) => t.id.equals(1)))
+          .getSingleOrNull();
+      expect(row!.onboardingCompleted, true); // tetap true
+      expect(row.monthlyIncome, 5000000); // tidak ter-reset
+    });
+
     test('remote timeout → Right(unit) (non-blocking)', () async {
       when(() => remote.fetchUserSettings()).thenAnswer((_) async {
         await Future<void>.delayed(const Duration(seconds: 2));

@@ -82,11 +82,13 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
   }
 
   Future<void> _writeIdentity(UserSettingsModel s) async {
-    // Companion minimal: hanya sentuh flag onboarding, jangan reset kolom
-    // finansial (monthlyIncome/rentExpense/dst.) yang dihydrate jalur lain.
+    // One-way ratchet: hanya tulis true, jangan overwrite true→false.
+    // Race condition: budget sync bisa menulis onboardingCompleted=true bersamaan;
+    // jika _writeIdentity menulis false belakangan, state jadi corrupted.
+    if (!s.onboardingCompleted) return;
     await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
           id: const Value(1),
-          onboardingCompleted: Value(s.onboardingCompleted),
+          onboardingCompleted: const Value(true),
         ));
   }
 }

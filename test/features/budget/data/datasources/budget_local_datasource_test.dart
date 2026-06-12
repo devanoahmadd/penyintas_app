@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
@@ -69,6 +70,38 @@ void main() {
       final result = await datasource.getBudgetSettings();
       expect(result!.createdAt, DateTime(2026, 1, 1)); // dari save pertama
       expect(result.monthlyIncome, 2000000); // budget terupdate
+    });
+  });
+
+  group('getBudgetSettings partial-onboarding guard', () {
+    test('partial state (onboardingCompleted=false, income>0) → null', () async {
+      // Simulasi user yang masuk step-2 onboarding (income diisi via
+      // savePartialOnboarding) tapi belum submit → onboardingCompleted masih false.
+      // syncBudgetFromRemote TIDAK boleh short-circuit di state ini.
+      await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
+            id: const Value(1),
+            onboardingCompleted: const Value(false),
+            monthlyIncome: const Value(3000000),
+          ));
+
+      final result = await datasource.getBudgetSettings();
+
+      expect(result, isNull);
+    });
+
+    test('state valid (onboardingCompleted=true, income>0) → data', () async {
+      final settings = BudgetSettingsEntity(
+        monthlyIncome: 5000000,
+        paymentDate: 25,
+        emergencyFundPct: 0.10,
+        createdAt: DateTime(2026, 1, 1),
+      );
+      await datasource.saveBudgetSettings(settings); // sets onboardingCompleted=true
+
+      final result = await datasource.getBudgetSettings();
+
+      expect(result, isNotNull);
+      expect(result!.monthlyIncome, 5000000);
     });
   });
 }
