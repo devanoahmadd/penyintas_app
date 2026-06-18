@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -118,11 +119,27 @@ import 'package:penyintas_app/features/preferences/data/datasources/preferences_
 import 'package:penyintas_app/features/preferences/data/datasources/preferences_remote_datasource.dart';
 import 'package:penyintas_app/features/preferences/data/repositories/preferences_repository_impl.dart';
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
+import 'package:penyintas_app/core/utils/timezone_resolver.dart';
 
 final sl = GetIt.instance;
 
 Future<void> init({required AppDatabase db}) async {
   _registerExternal(db);
+
+  // ── TimezoneResolver (async singleton, RESILIENT) ─────────────────────────
+  // Aset non-kritis: jika gagal load, fallback ke resolver kosong agar boot
+  // tidak brick. Default Asia/Jakarta tetap jalan via caller.
+  TimezoneResolver tzResolver;
+  try {
+    tzResolver = await TimezoneResolver.load();
+  } catch (e, s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
+    } catch (_) {}
+    tzResolver = TimezoneResolver(const []); // resolver kosong → default Asia/Jakarta tetap jalan
+  }
+  sl.registerSingleton<TimezoneResolver>(tzResolver);
+
   _registerCore();
   _registerSettings();
   _initAuth();
