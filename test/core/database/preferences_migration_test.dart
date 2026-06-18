@@ -41,6 +41,27 @@ void main() {
     await db.close();
   });
 
+  test('migrasi 9→10: app_settings TANPA row → defensive-seed singleton tetap ada', () async {
+    // DB v9 dengan tabel app_settings dibuat tapi KOSONG (mis. data ter-truncate).
+    // INSERT...SELECT tak menghasilkan baris → cabang defensive INSERT OR IGNORE
+    // (id) VALUES (1) wajib tetap menjamin row singleton ada dengan default 'id'.
+    final raw = sqlite3.openInMemory();
+    raw.execute('PRAGMA user_version = 9');
+    raw.execute(
+      "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
+    );
+    // sengaja TIDAK INSERT row app_settings
+
+    final db = AppDatabase(NativeDatabase.opened(raw));
+    final row = await (db.select(db.preferences)..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    expect(row, isNotNull, reason: 'defensive seed wajib jamin singleton id=1');
+    expect(row!.language, 'id'); // default, bukan dari app_settings (kosong)
+    expect(row.baseCurrency, 'IDR');
+    expect(row.profileCompleted, false);
+    await db.close();
+  });
+
   test('fresh install (onCreate): row preferences ter-SEED otomatis (C2)', () async {
     final db = AppDatabase(NativeDatabase.memory());
     final row = await (db.select(db.preferences)..where((t) => t.id.equals(1)))

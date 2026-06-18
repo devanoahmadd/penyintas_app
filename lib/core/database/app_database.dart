@@ -163,6 +163,8 @@ class Preferences extends Table {
   BoolColumn get profileCompleted =>
       boolean().withDefault(const Constant(false))();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
+  // Sengaja belum ditulis siapa pun di Phase A1 ("kolom mati"). Diaktifkan di
+  // Task A4/A6/D1 sebagai dirty-flag anti-clobber multi-device (temuan T-1).
   IntColumn get lastSyncedAtMs => integer().nullable()();
 
   @override
