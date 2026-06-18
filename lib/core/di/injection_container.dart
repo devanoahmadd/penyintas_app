@@ -69,6 +69,7 @@ import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bl
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_remote_datasource.dart';
@@ -249,6 +250,12 @@ void _initOnboarding() {
         loadDraft: sl(),
         saveDraft: sl(),
         clearDraft: sl(),
+      ));
+
+  sl.registerFactory(() => ProfileSetupCubit(
+        repo: sl(),
+        tz: sl(),
+        initialName: sl<FirebaseAuth>().currentUser?.displayName,
       ));
 
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
