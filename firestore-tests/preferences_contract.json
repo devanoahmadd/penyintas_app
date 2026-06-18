@@ -1,0 +1,8 @@
+{
+  "required": [
+    "timezone", "baseCurrency", "homeCurrency", "language",
+    "currentCountry", "homeCountry", "isPerantau",
+    "profileCompleted", "schemaVersion", "updatedAt"
+  ],
+  "optional": ["displayName", "status", "currentCity", "homeCity"]
+}
