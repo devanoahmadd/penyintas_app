@@ -145,7 +145,7 @@ void _registerExternal(AppDatabase db) {
   sl.registerLazySingleton(() => FirebaseMessaging.instance);
   sl.registerLazySingleton(() => FirebaseAnalytics.instance);
   sl.registerLazySingleton(() => FirebaseRemoteConfig.instance);
-  sl.registerLazySingleton(() => FirebaseFunctions.instance);
+  sl.registerLazySingleton(() => FirebaseFunctions.instanceFor(region: 'asia-southeast2'));
   sl.registerLazySingleton(() => FirebasePerformance.instance);
 
   // ── Connectivity ─────────────────────────────────────────────────────────
