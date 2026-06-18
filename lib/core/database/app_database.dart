@@ -145,18 +145,49 @@ class BudgetLimits extends Table {
   DateTimeColumn get updatedAt => dateTime()();
 }
 
+/// Singleton (id selalu = 1). Preferences: timezone, currency, language, profil.
+/// Currency Spec 1 = IDR-seragam (base/home tak diubah user); UX currency → Spec 2.
+class Preferences extends Table {
+  IntColumn get id => integer()();
+  TextColumn get timezone => text().withDefault(const Constant('Asia/Jakarta'))();
+  TextColumn get baseCurrency => text().withDefault(const Constant('IDR'))();
+  TextColumn get homeCurrency => text().withDefault(const Constant('IDR'))();
+  TextColumn get language => text().withDefault(const Constant('id'))();
+  TextColumn get displayName => text().nullable()();
+  TextColumn get status => text().nullable()();
+  TextColumn get currentCountry => text().withDefault(const Constant('ID'))();
+  TextColumn get currentCity => text().nullable()();
+  TextColumn get homeCountry => text().withDefault(const Constant('ID'))();
+  TextColumn get homeCity => text().nullable()();
+  BoolColumn get isPerantau => boolean().withDefault(const Constant(false))();
+  BoolColumn get profileCompleted =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
+  IntColumn get lastSyncedAtMs => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits, Categories])
+@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits, Categories, Preferences])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      // Seed singleton preferences (id=1) agar row SELALU ada di fresh install
+      // maupun jalur upgrade (INSERT OR IGNORE di if (from < 10)).
+      await m.database.customStatement(
+        'INSERT OR IGNORE INTO preferences (id) VALUES (1)',
+      );
+    },
     beforeOpen: (details) async {
       // #138: enforce foreign key constraints — OFF by default in SQLite
       await customStatement('PRAGMA foreign_keys = ON');
@@ -290,6 +321,41 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE app_settings ADD COLUMN partial_onboarding_at INTEGER',
         );
       }
+      if (from < 10) {
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS preferences (
+            id                INTEGER NOT NULL PRIMARY KEY,
+            timezone          TEXT NOT NULL DEFAULT 'Asia/Jakarta',
+            base_currency     TEXT NOT NULL DEFAULT 'IDR',
+            home_currency     TEXT NOT NULL DEFAULT 'IDR',
+            language          TEXT NOT NULL DEFAULT 'id',
+            display_name      TEXT,
+            status            TEXT,
+            current_country   TEXT NOT NULL DEFAULT 'ID',
+            current_city      TEXT,
+            home_country      TEXT NOT NULL DEFAULT 'ID',
+            home_city         TEXT,
+            is_perantau       INTEGER NOT NULL DEFAULT 0,
+            profile_completed INTEGER NOT NULL DEFAULT 0,
+            schema_version    INTEGER NOT NULL DEFAULT 1,
+            last_synced_at_ms INTEGER
+          )
+        ''');
+        // SEED: salin locale dari app_settings, clamp ke nilai dikenal (C5).
+        // Ini SEED sekali — bukan cutover canonical. app_settings.locale tetap
+        // sumber kebenaran sampai Phase C (atomik: repoint app.dart + rewire
+        // settings_bloc). Jangan rilis Phase A tanpa Phase C ke build user nyata.
+        await m.database.customStatement('''
+          INSERT OR IGNORE INTO preferences (id, language)
+          SELECT 1,
+                 CASE WHEN locale IN ('id','en') THEN locale ELSE 'id' END
+          FROM app_settings WHERE id = 1
+        ''');
+        // Defensif: pastikan row singleton ada walau app_settings kosong
+        await m.database.customStatement(
+          'INSERT OR IGNORE INTO preferences (id) VALUES (1)',
+        );
+      }
     },
   );
 
@@ -301,6 +367,16 @@ class AppDatabase extends _$AppDatabase {
       await delete(transactions).go();
       await delete(budgetLimits).go();
       await delete(syncQueue).go();
+      // Pertahankan language (device-scoped UX); reset profil/lokasi ke default.
+      final keepLang = (await (select(preferences)
+                  ..where((t) => t.id.equals(1)))
+              .getSingleOrNull())
+          ?.language ??
+          'id';
+      await delete(preferences).go();
+      await into(preferences).insert(
+        PreferencesCompanion(id: const Value(1), language: Value(keepLang)),
+      );
       await delete(appSettings).go();
       // Hapus hanya custom kategori; built-in akan di-seed ulang saat onboarding
       await (delete(categories)..where((c) => c.isBuiltIn.not())).go();

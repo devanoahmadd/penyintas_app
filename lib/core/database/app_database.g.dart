@@ -3709,6 +3709,881 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   }
 }
 
+class $PreferencesTable extends Preferences
+    with TableInfo<$PreferencesTable, Preference> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PreferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timezoneMeta = const VerificationMeta(
+    'timezone',
+  );
+  @override
+  late final GeneratedColumn<String> timezone = GeneratedColumn<String>(
+    'timezone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Asia/Jakarta'),
+  );
+  static const VerificationMeta _baseCurrencyMeta = const VerificationMeta(
+    'baseCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> baseCurrency = GeneratedColumn<String>(
+    'base_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('IDR'),
+  );
+  static const VerificationMeta _homeCurrencyMeta = const VerificationMeta(
+    'homeCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> homeCurrency = GeneratedColumn<String>(
+    'home_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('IDR'),
+  );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('id'),
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currentCountryMeta = const VerificationMeta(
+    'currentCountry',
+  );
+  @override
+  late final GeneratedColumn<String> currentCountry = GeneratedColumn<String>(
+    'current_country',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ID'),
+  );
+  static const VerificationMeta _currentCityMeta = const VerificationMeta(
+    'currentCity',
+  );
+  @override
+  late final GeneratedColumn<String> currentCity = GeneratedColumn<String>(
+    'current_city',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _homeCountryMeta = const VerificationMeta(
+    'homeCountry',
+  );
+  @override
+  late final GeneratedColumn<String> homeCountry = GeneratedColumn<String>(
+    'home_country',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ID'),
+  );
+  static const VerificationMeta _homeCityMeta = const VerificationMeta(
+    'homeCity',
+  );
+  @override
+  late final GeneratedColumn<String> homeCity = GeneratedColumn<String>(
+    'home_city',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isPerantauMeta = const VerificationMeta(
+    'isPerantau',
+  );
+  @override
+  late final GeneratedColumn<bool> isPerantau = GeneratedColumn<bool>(
+    'is_perantau',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_perantau" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _profileCompletedMeta = const VerificationMeta(
+    'profileCompleted',
+  );
+  @override
+  late final GeneratedColumn<bool> profileCompleted = GeneratedColumn<bool>(
+    'profile_completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("profile_completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _schemaVersionMeta = const VerificationMeta(
+    'schemaVersion',
+  );
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+    'schema_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _lastSyncedAtMsMeta = const VerificationMeta(
+    'lastSyncedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> lastSyncedAtMs = GeneratedColumn<int>(
+    'last_synced_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    timezone,
+    baseCurrency,
+    homeCurrency,
+    language,
+    displayName,
+    status,
+    currentCountry,
+    currentCity,
+    homeCountry,
+    homeCity,
+    isPerantau,
+    profileCompleted,
+    schemaVersion,
+    lastSyncedAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Preference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('timezone')) {
+      context.handle(
+        _timezoneMeta,
+        timezone.isAcceptableOrUnknown(data['timezone']!, _timezoneMeta),
+      );
+    }
+    if (data.containsKey('base_currency')) {
+      context.handle(
+        _baseCurrencyMeta,
+        baseCurrency.isAcceptableOrUnknown(
+          data['base_currency']!,
+          _baseCurrencyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('home_currency')) {
+      context.handle(
+        _homeCurrencyMeta,
+        homeCurrency.isAcceptableOrUnknown(
+          data['home_currency']!,
+          _homeCurrencyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('current_country')) {
+      context.handle(
+        _currentCountryMeta,
+        currentCountry.isAcceptableOrUnknown(
+          data['current_country']!,
+          _currentCountryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_city')) {
+      context.handle(
+        _currentCityMeta,
+        currentCity.isAcceptableOrUnknown(
+          data['current_city']!,
+          _currentCityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('home_country')) {
+      context.handle(
+        _homeCountryMeta,
+        homeCountry.isAcceptableOrUnknown(
+          data['home_country']!,
+          _homeCountryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('home_city')) {
+      context.handle(
+        _homeCityMeta,
+        homeCity.isAcceptableOrUnknown(data['home_city']!, _homeCityMeta),
+      );
+    }
+    if (data.containsKey('is_perantau')) {
+      context.handle(
+        _isPerantauMeta,
+        isPerantau.isAcceptableOrUnknown(data['is_perantau']!, _isPerantauMeta),
+      );
+    }
+    if (data.containsKey('profile_completed')) {
+      context.handle(
+        _profileCompletedMeta,
+        profileCompleted.isAcceptableOrUnknown(
+          data['profile_completed']!,
+          _profileCompletedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+        _schemaVersionMeta,
+        schemaVersion.isAcceptableOrUnknown(
+          data['schema_version']!,
+          _schemaVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_synced_at_ms')) {
+      context.handle(
+        _lastSyncedAtMsMeta,
+        lastSyncedAtMs.isAcceptableOrUnknown(
+          data['last_synced_at_ms']!,
+          _lastSyncedAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Preference map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Preference(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      timezone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}timezone'],
+      )!,
+      baseCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}base_currency'],
+      )!,
+      homeCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_currency'],
+      )!,
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      ),
+      currentCountry: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_country'],
+      )!,
+      currentCity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_city'],
+      ),
+      homeCountry: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_country'],
+      )!,
+      homeCity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_city'],
+      ),
+      isPerantau: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_perantau'],
+      )!,
+      profileCompleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}profile_completed'],
+      )!,
+      schemaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}schema_version'],
+      )!,
+      lastSyncedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_synced_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $PreferencesTable createAlias(String alias) {
+    return $PreferencesTable(attachedDatabase, alias);
+  }
+}
+
+class Preference extends DataClass implements Insertable<Preference> {
+  final int id;
+  final String timezone;
+  final String baseCurrency;
+  final String homeCurrency;
+  final String language;
+  final String? displayName;
+  final String? status;
+  final String currentCountry;
+  final String? currentCity;
+  final String homeCountry;
+  final String? homeCity;
+  final bool isPerantau;
+  final bool profileCompleted;
+  final int schemaVersion;
+  final int? lastSyncedAtMs;
+  const Preference({
+    required this.id,
+    required this.timezone,
+    required this.baseCurrency,
+    required this.homeCurrency,
+    required this.language,
+    this.displayName,
+    this.status,
+    required this.currentCountry,
+    this.currentCity,
+    required this.homeCountry,
+    this.homeCity,
+    required this.isPerantau,
+    required this.profileCompleted,
+    required this.schemaVersion,
+    this.lastSyncedAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['timezone'] = Variable<String>(timezone);
+    map['base_currency'] = Variable<String>(baseCurrency);
+    map['home_currency'] = Variable<String>(homeCurrency);
+    map['language'] = Variable<String>(language);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || status != null) {
+      map['status'] = Variable<String>(status);
+    }
+    map['current_country'] = Variable<String>(currentCountry);
+    if (!nullToAbsent || currentCity != null) {
+      map['current_city'] = Variable<String>(currentCity);
+    }
+    map['home_country'] = Variable<String>(homeCountry);
+    if (!nullToAbsent || homeCity != null) {
+      map['home_city'] = Variable<String>(homeCity);
+    }
+    map['is_perantau'] = Variable<bool>(isPerantau);
+    map['profile_completed'] = Variable<bool>(profileCompleted);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    if (!nullToAbsent || lastSyncedAtMs != null) {
+      map['last_synced_at_ms'] = Variable<int>(lastSyncedAtMs);
+    }
+    return map;
+  }
+
+  PreferencesCompanion toCompanion(bool nullToAbsent) {
+    return PreferencesCompanion(
+      id: Value(id),
+      timezone: Value(timezone),
+      baseCurrency: Value(baseCurrency),
+      homeCurrency: Value(homeCurrency),
+      language: Value(language),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      status: status == null && nullToAbsent
+          ? const Value.absent()
+          : Value(status),
+      currentCountry: Value(currentCountry),
+      currentCity: currentCity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currentCity),
+      homeCountry: Value(homeCountry),
+      homeCity: homeCity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeCity),
+      isPerantau: Value(isPerantau),
+      profileCompleted: Value(profileCompleted),
+      schemaVersion: Value(schemaVersion),
+      lastSyncedAtMs: lastSyncedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAtMs),
+    );
+  }
+
+  factory Preference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Preference(
+      id: serializer.fromJson<int>(json['id']),
+      timezone: serializer.fromJson<String>(json['timezone']),
+      baseCurrency: serializer.fromJson<String>(json['baseCurrency']),
+      homeCurrency: serializer.fromJson<String>(json['homeCurrency']),
+      language: serializer.fromJson<String>(json['language']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      status: serializer.fromJson<String?>(json['status']),
+      currentCountry: serializer.fromJson<String>(json['currentCountry']),
+      currentCity: serializer.fromJson<String?>(json['currentCity']),
+      homeCountry: serializer.fromJson<String>(json['homeCountry']),
+      homeCity: serializer.fromJson<String?>(json['homeCity']),
+      isPerantau: serializer.fromJson<bool>(json['isPerantau']),
+      profileCompleted: serializer.fromJson<bool>(json['profileCompleted']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+      lastSyncedAtMs: serializer.fromJson<int?>(json['lastSyncedAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'timezone': serializer.toJson<String>(timezone),
+      'baseCurrency': serializer.toJson<String>(baseCurrency),
+      'homeCurrency': serializer.toJson<String>(homeCurrency),
+      'language': serializer.toJson<String>(language),
+      'displayName': serializer.toJson<String?>(displayName),
+      'status': serializer.toJson<String?>(status),
+      'currentCountry': serializer.toJson<String>(currentCountry),
+      'currentCity': serializer.toJson<String?>(currentCity),
+      'homeCountry': serializer.toJson<String>(homeCountry),
+      'homeCity': serializer.toJson<String?>(homeCity),
+      'isPerantau': serializer.toJson<bool>(isPerantau),
+      'profileCompleted': serializer.toJson<bool>(profileCompleted),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+      'lastSyncedAtMs': serializer.toJson<int?>(lastSyncedAtMs),
+    };
+  }
+
+  Preference copyWith({
+    int? id,
+    String? timezone,
+    String? baseCurrency,
+    String? homeCurrency,
+    String? language,
+    Value<String?> displayName = const Value.absent(),
+    Value<String?> status = const Value.absent(),
+    String? currentCountry,
+    Value<String?> currentCity = const Value.absent(),
+    String? homeCountry,
+    Value<String?> homeCity = const Value.absent(),
+    bool? isPerantau,
+    bool? profileCompleted,
+    int? schemaVersion,
+    Value<int?> lastSyncedAtMs = const Value.absent(),
+  }) => Preference(
+    id: id ?? this.id,
+    timezone: timezone ?? this.timezone,
+    baseCurrency: baseCurrency ?? this.baseCurrency,
+    homeCurrency: homeCurrency ?? this.homeCurrency,
+    language: language ?? this.language,
+    displayName: displayName.present ? displayName.value : this.displayName,
+    status: status.present ? status.value : this.status,
+    currentCountry: currentCountry ?? this.currentCountry,
+    currentCity: currentCity.present ? currentCity.value : this.currentCity,
+    homeCountry: homeCountry ?? this.homeCountry,
+    homeCity: homeCity.present ? homeCity.value : this.homeCity,
+    isPerantau: isPerantau ?? this.isPerantau,
+    profileCompleted: profileCompleted ?? this.profileCompleted,
+    schemaVersion: schemaVersion ?? this.schemaVersion,
+    lastSyncedAtMs: lastSyncedAtMs.present
+        ? lastSyncedAtMs.value
+        : this.lastSyncedAtMs,
+  );
+  Preference copyWithCompanion(PreferencesCompanion data) {
+    return Preference(
+      id: data.id.present ? data.id.value : this.id,
+      timezone: data.timezone.present ? data.timezone.value : this.timezone,
+      baseCurrency: data.baseCurrency.present
+          ? data.baseCurrency.value
+          : this.baseCurrency,
+      homeCurrency: data.homeCurrency.present
+          ? data.homeCurrency.value
+          : this.homeCurrency,
+      language: data.language.present ? data.language.value : this.language,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      status: data.status.present ? data.status.value : this.status,
+      currentCountry: data.currentCountry.present
+          ? data.currentCountry.value
+          : this.currentCountry,
+      currentCity: data.currentCity.present
+          ? data.currentCity.value
+          : this.currentCity,
+      homeCountry: data.homeCountry.present
+          ? data.homeCountry.value
+          : this.homeCountry,
+      homeCity: data.homeCity.present ? data.homeCity.value : this.homeCity,
+      isPerantau: data.isPerantau.present
+          ? data.isPerantau.value
+          : this.isPerantau,
+      profileCompleted: data.profileCompleted.present
+          ? data.profileCompleted.value
+          : this.profileCompleted,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+      lastSyncedAtMs: data.lastSyncedAtMs.present
+          ? data.lastSyncedAtMs.value
+          : this.lastSyncedAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Preference(')
+          ..write('id: $id, ')
+          ..write('timezone: $timezone, ')
+          ..write('baseCurrency: $baseCurrency, ')
+          ..write('homeCurrency: $homeCurrency, ')
+          ..write('language: $language, ')
+          ..write('displayName: $displayName, ')
+          ..write('status: $status, ')
+          ..write('currentCountry: $currentCountry, ')
+          ..write('currentCity: $currentCity, ')
+          ..write('homeCountry: $homeCountry, ')
+          ..write('homeCity: $homeCity, ')
+          ..write('isPerantau: $isPerantau, ')
+          ..write('profileCompleted: $profileCompleted, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('lastSyncedAtMs: $lastSyncedAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    timezone,
+    baseCurrency,
+    homeCurrency,
+    language,
+    displayName,
+    status,
+    currentCountry,
+    currentCity,
+    homeCountry,
+    homeCity,
+    isPerantau,
+    profileCompleted,
+    schemaVersion,
+    lastSyncedAtMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Preference &&
+          other.id == this.id &&
+          other.timezone == this.timezone &&
+          other.baseCurrency == this.baseCurrency &&
+          other.homeCurrency == this.homeCurrency &&
+          other.language == this.language &&
+          other.displayName == this.displayName &&
+          other.status == this.status &&
+          other.currentCountry == this.currentCountry &&
+          other.currentCity == this.currentCity &&
+          other.homeCountry == this.homeCountry &&
+          other.homeCity == this.homeCity &&
+          other.isPerantau == this.isPerantau &&
+          other.profileCompleted == this.profileCompleted &&
+          other.schemaVersion == this.schemaVersion &&
+          other.lastSyncedAtMs == this.lastSyncedAtMs);
+}
+
+class PreferencesCompanion extends UpdateCompanion<Preference> {
+  final Value<int> id;
+  final Value<String> timezone;
+  final Value<String> baseCurrency;
+  final Value<String> homeCurrency;
+  final Value<String> language;
+  final Value<String?> displayName;
+  final Value<String?> status;
+  final Value<String> currentCountry;
+  final Value<String?> currentCity;
+  final Value<String> homeCountry;
+  final Value<String?> homeCity;
+  final Value<bool> isPerantau;
+  final Value<bool> profileCompleted;
+  final Value<int> schemaVersion;
+  final Value<int?> lastSyncedAtMs;
+  const PreferencesCompanion({
+    this.id = const Value.absent(),
+    this.timezone = const Value.absent(),
+    this.baseCurrency = const Value.absent(),
+    this.homeCurrency = const Value.absent(),
+    this.language = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.currentCountry = const Value.absent(),
+    this.currentCity = const Value.absent(),
+    this.homeCountry = const Value.absent(),
+    this.homeCity = const Value.absent(),
+    this.isPerantau = const Value.absent(),
+    this.profileCompleted = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.lastSyncedAtMs = const Value.absent(),
+  });
+  PreferencesCompanion.insert({
+    this.id = const Value.absent(),
+    this.timezone = const Value.absent(),
+    this.baseCurrency = const Value.absent(),
+    this.homeCurrency = const Value.absent(),
+    this.language = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.currentCountry = const Value.absent(),
+    this.currentCity = const Value.absent(),
+    this.homeCountry = const Value.absent(),
+    this.homeCity = const Value.absent(),
+    this.isPerantau = const Value.absent(),
+    this.profileCompleted = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.lastSyncedAtMs = const Value.absent(),
+  });
+  static Insertable<Preference> custom({
+    Expression<int>? id,
+    Expression<String>? timezone,
+    Expression<String>? baseCurrency,
+    Expression<String>? homeCurrency,
+    Expression<String>? language,
+    Expression<String>? displayName,
+    Expression<String>? status,
+    Expression<String>? currentCountry,
+    Expression<String>? currentCity,
+    Expression<String>? homeCountry,
+    Expression<String>? homeCity,
+    Expression<bool>? isPerantau,
+    Expression<bool>? profileCompleted,
+    Expression<int>? schemaVersion,
+    Expression<int>? lastSyncedAtMs,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (timezone != null) 'timezone': timezone,
+      if (baseCurrency != null) 'base_currency': baseCurrency,
+      if (homeCurrency != null) 'home_currency': homeCurrency,
+      if (language != null) 'language': language,
+      if (displayName != null) 'display_name': displayName,
+      if (status != null) 'status': status,
+      if (currentCountry != null) 'current_country': currentCountry,
+      if (currentCity != null) 'current_city': currentCity,
+      if (homeCountry != null) 'home_country': homeCountry,
+      if (homeCity != null) 'home_city': homeCity,
+      if (isPerantau != null) 'is_perantau': isPerantau,
+      if (profileCompleted != null) 'profile_completed': profileCompleted,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (lastSyncedAtMs != null) 'last_synced_at_ms': lastSyncedAtMs,
+    });
+  }
+
+  PreferencesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? timezone,
+    Value<String>? baseCurrency,
+    Value<String>? homeCurrency,
+    Value<String>? language,
+    Value<String?>? displayName,
+    Value<String?>? status,
+    Value<String>? currentCountry,
+    Value<String?>? currentCity,
+    Value<String>? homeCountry,
+    Value<String?>? homeCity,
+    Value<bool>? isPerantau,
+    Value<bool>? profileCompleted,
+    Value<int>? schemaVersion,
+    Value<int?>? lastSyncedAtMs,
+  }) {
+    return PreferencesCompanion(
+      id: id ?? this.id,
+      timezone: timezone ?? this.timezone,
+      baseCurrency: baseCurrency ?? this.baseCurrency,
+      homeCurrency: homeCurrency ?? this.homeCurrency,
+      language: language ?? this.language,
+      displayName: displayName ?? this.displayName,
+      status: status ?? this.status,
+      currentCountry: currentCountry ?? this.currentCountry,
+      currentCity: currentCity ?? this.currentCity,
+      homeCountry: homeCountry ?? this.homeCountry,
+      homeCity: homeCity ?? this.homeCity,
+      isPerantau: isPerantau ?? this.isPerantau,
+      profileCompleted: profileCompleted ?? this.profileCompleted,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      lastSyncedAtMs: lastSyncedAtMs ?? this.lastSyncedAtMs,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (timezone.present) {
+      map['timezone'] = Variable<String>(timezone.value);
+    }
+    if (baseCurrency.present) {
+      map['base_currency'] = Variable<String>(baseCurrency.value);
+    }
+    if (homeCurrency.present) {
+      map['home_currency'] = Variable<String>(homeCurrency.value);
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (currentCountry.present) {
+      map['current_country'] = Variable<String>(currentCountry.value);
+    }
+    if (currentCity.present) {
+      map['current_city'] = Variable<String>(currentCity.value);
+    }
+    if (homeCountry.present) {
+      map['home_country'] = Variable<String>(homeCountry.value);
+    }
+    if (homeCity.present) {
+      map['home_city'] = Variable<String>(homeCity.value);
+    }
+    if (isPerantau.present) {
+      map['is_perantau'] = Variable<bool>(isPerantau.value);
+    }
+    if (profileCompleted.present) {
+      map['profile_completed'] = Variable<bool>(profileCompleted.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (lastSyncedAtMs.present) {
+      map['last_synced_at_ms'] = Variable<int>(lastSyncedAtMs.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PreferencesCompanion(')
+          ..write('id: $id, ')
+          ..write('timezone: $timezone, ')
+          ..write('baseCurrency: $baseCurrency, ')
+          ..write('homeCurrency: $homeCurrency, ')
+          ..write('language: $language, ')
+          ..write('displayName: $displayName, ')
+          ..write('status: $status, ')
+          ..write('currentCountry: $currentCountry, ')
+          ..write('currentCity: $currentCity, ')
+          ..write('homeCountry: $homeCountry, ')
+          ..write('homeCity: $homeCity, ')
+          ..write('isPerantau: $isPerantau, ')
+          ..write('profileCompleted: $profileCompleted, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('lastSyncedAtMs: $lastSyncedAtMs')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3718,6 +4593,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GoalsTable goals = $GoalsTable(this);
   late final $BudgetLimitsTable budgetLimits = $BudgetLimitsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $PreferencesTable preferences = $PreferencesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3729,6 +4605,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     goals,
     budgetLimits,
     categories,
+    preferences,
   ];
 }
 
@@ -5509,6 +6386,410 @@ typedef $$CategoriesTableProcessedTableManager =
       Category,
       PrefetchHooks Function()
     >;
+typedef $$PreferencesTableCreateCompanionBuilder =
+    PreferencesCompanion Function({
+      Value<int> id,
+      Value<String> timezone,
+      Value<String> baseCurrency,
+      Value<String> homeCurrency,
+      Value<String> language,
+      Value<String?> displayName,
+      Value<String?> status,
+      Value<String> currentCountry,
+      Value<String?> currentCity,
+      Value<String> homeCountry,
+      Value<String?> homeCity,
+      Value<bool> isPerantau,
+      Value<bool> profileCompleted,
+      Value<int> schemaVersion,
+      Value<int?> lastSyncedAtMs,
+    });
+typedef $$PreferencesTableUpdateCompanionBuilder =
+    PreferencesCompanion Function({
+      Value<int> id,
+      Value<String> timezone,
+      Value<String> baseCurrency,
+      Value<String> homeCurrency,
+      Value<String> language,
+      Value<String?> displayName,
+      Value<String?> status,
+      Value<String> currentCountry,
+      Value<String?> currentCity,
+      Value<String> homeCountry,
+      Value<String?> homeCity,
+      Value<bool> isPerantau,
+      Value<bool> profileCompleted,
+      Value<int> schemaVersion,
+      Value<int?> lastSyncedAtMs,
+    });
+
+class $$PreferencesTableFilterComposer
+    extends Composer<_$AppDatabase, $PreferencesTable> {
+  $$PreferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get homeCurrency => $composableBuilder(
+    column: $table.homeCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currentCountry => $composableBuilder(
+    column: $table.currentCountry,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currentCity => $composableBuilder(
+    column: $table.currentCity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get homeCountry => $composableBuilder(
+    column: $table.homeCountry,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get homeCity => $composableBuilder(
+    column: $table.homeCity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPerantau => $composableBuilder(
+    column: $table.isPerantau,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get profileCompleted => $composableBuilder(
+    column: $table.profileCompleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSyncedAtMs => $composableBuilder(
+    column: $table.lastSyncedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PreferencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PreferencesTable> {
+  $$PreferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get homeCurrency => $composableBuilder(
+    column: $table.homeCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currentCountry => $composableBuilder(
+    column: $table.currentCountry,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currentCity => $composableBuilder(
+    column: $table.currentCity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get homeCountry => $composableBuilder(
+    column: $table.homeCountry,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get homeCity => $composableBuilder(
+    column: $table.homeCity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPerantau => $composableBuilder(
+    column: $table.isPerantau,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get profileCompleted => $composableBuilder(
+    column: $table.profileCompleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSyncedAtMs => $composableBuilder(
+    column: $table.lastSyncedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PreferencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PreferencesTable> {
+  $$PreferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get timezone =>
+      $composableBuilder(column: $table.timezone, builder: (column) => column);
+
+  GeneratedColumn<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get homeCurrency => $composableBuilder(
+    column: $table.homeCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get currentCountry => $composableBuilder(
+    column: $table.currentCountry,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currentCity => $composableBuilder(
+    column: $table.currentCity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get homeCountry => $composableBuilder(
+    column: $table.homeCountry,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get homeCity =>
+      $composableBuilder(column: $table.homeCity, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPerantau => $composableBuilder(
+    column: $table.isPerantau,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get profileCompleted => $composableBuilder(
+    column: $table.profileCompleted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+    column: $table.schemaVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSyncedAtMs => $composableBuilder(
+    column: $table.lastSyncedAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$PreferencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PreferencesTable,
+          Preference,
+          $$PreferencesTableFilterComposer,
+          $$PreferencesTableOrderingComposer,
+          $$PreferencesTableAnnotationComposer,
+          $$PreferencesTableCreateCompanionBuilder,
+          $$PreferencesTableUpdateCompanionBuilder,
+          (
+            Preference,
+            BaseReferences<_$AppDatabase, $PreferencesTable, Preference>,
+          ),
+          Preference,
+          PrefetchHooks Function()
+        > {
+  $$PreferencesTableTableManager(_$AppDatabase db, $PreferencesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PreferencesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PreferencesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PreferencesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> timezone = const Value.absent(),
+                Value<String> baseCurrency = const Value.absent(),
+                Value<String> homeCurrency = const Value.absent(),
+                Value<String> language = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<String> currentCountry = const Value.absent(),
+                Value<String?> currentCity = const Value.absent(),
+                Value<String> homeCountry = const Value.absent(),
+                Value<String?> homeCity = const Value.absent(),
+                Value<bool> isPerantau = const Value.absent(),
+                Value<bool> profileCompleted = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+                Value<int?> lastSyncedAtMs = const Value.absent(),
+              }) => PreferencesCompanion(
+                id: id,
+                timezone: timezone,
+                baseCurrency: baseCurrency,
+                homeCurrency: homeCurrency,
+                language: language,
+                displayName: displayName,
+                status: status,
+                currentCountry: currentCountry,
+                currentCity: currentCity,
+                homeCountry: homeCountry,
+                homeCity: homeCity,
+                isPerantau: isPerantau,
+                profileCompleted: profileCompleted,
+                schemaVersion: schemaVersion,
+                lastSyncedAtMs: lastSyncedAtMs,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> timezone = const Value.absent(),
+                Value<String> baseCurrency = const Value.absent(),
+                Value<String> homeCurrency = const Value.absent(),
+                Value<String> language = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<String?> status = const Value.absent(),
+                Value<String> currentCountry = const Value.absent(),
+                Value<String?> currentCity = const Value.absent(),
+                Value<String> homeCountry = const Value.absent(),
+                Value<String?> homeCity = const Value.absent(),
+                Value<bool> isPerantau = const Value.absent(),
+                Value<bool> profileCompleted = const Value.absent(),
+                Value<int> schemaVersion = const Value.absent(),
+                Value<int?> lastSyncedAtMs = const Value.absent(),
+              }) => PreferencesCompanion.insert(
+                id: id,
+                timezone: timezone,
+                baseCurrency: baseCurrency,
+                homeCurrency: homeCurrency,
+                language: language,
+                displayName: displayName,
+                status: status,
+                currentCountry: currentCountry,
+                currentCity: currentCity,
+                homeCountry: homeCountry,
+                homeCity: homeCity,
+                isPerantau: isPerantau,
+                profileCompleted: profileCompleted,
+                schemaVersion: schemaVersion,
+                lastSyncedAtMs: lastSyncedAtMs,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PreferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PreferencesTable,
+      Preference,
+      $$PreferencesTableFilterComposer,
+      $$PreferencesTableOrderingComposer,
+      $$PreferencesTableAnnotationComposer,
+      $$PreferencesTableCreateCompanionBuilder,
+      $$PreferencesTableUpdateCompanionBuilder,
+      (
+        Preference,
+        BaseReferences<_$AppDatabase, $PreferencesTable, Preference>,
+      ),
+      Preference,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5525,4 +6806,6 @@ class $AppDatabaseManager {
       $$BudgetLimitsTableTableManager(_db, _db.budgetLimits);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
+  $$PreferencesTableTableManager get preferences =>
+      $$PreferencesTableTableManager(_db, _db.preferences);
 }
