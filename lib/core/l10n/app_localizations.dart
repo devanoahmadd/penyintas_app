@@ -374,6 +374,29 @@ class AppLocalizations {
   String get onboardingStatIncome => _t('onboarding_stat_income');
   String get onboardingStatFixed => _t('onboarding_stat_fixed');
 
+  // Profile Leg — B4 mini-wizard
+  String get profileStepATitle => _t('profile_step_a_title');
+  String get profileStepBTitle => _t('profile_step_b_title');
+  String get profileLangLabel => _t('profile_lang_label');
+  String get profileNameLabel => _t('profile_name_label');
+  String get profileNameHint => _t('profile_name_hint');
+  String get profileStatusLabel => _t('profile_status_label');
+  String get profileStatusMahasiswa => _t('profile_status_mahasiswa');
+  String get profileStatusPekerja => _t('profile_status_pekerja');
+  String get profileCountryLabel => _t('profile_country_label');
+  String get profileCityLabel => _t('profile_city_label');
+  String get profileTimezoneLabel => _t('profile_timezone_label');
+  String get profileTimezoneChange => _t('profile_timezone_change');
+  String get profilePerantauLabel => _t('profile_perantau_label');
+  String get profileHomeCountryLabel => _t('profile_home_country_label');
+  String get profileHomeCityLabel => _t('profile_home_city_label');
+  String get profileExitDialogTitle => _t('profile_exit_dialog_title');
+  String get profileExitDialogBody => _t('profile_exit_dialog_body');
+  String get profileExitDialogConfirm => _t('profile_exit_dialog_confirm');
+  String get profileExitDialogContinue => _t('profile_exit_dialog_continue');
+  String get profileErrorRetry => _t('profile_error_retry');
+  String get profileErrorSignout => _t('profile_error_signout');
+
   // Manage categories
   String get manageCategoriesTitle => _t('manage_categories_title');
   String get manageCategoriesSectionBuiltIn => _t('manage_categories_section_built_in');

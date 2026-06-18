@@ -121,7 +121,6 @@
   "tx_note_hint": "Lunch at warung...",
   "tx_done_btn": "Done",
   "retry": "Try again",
-
   "onboarding_eyebrow_income": "INCOME",
   "onboarding_eyebrow_fixed": "FIXED EXPENSES",
   "onboarding_error_invalid_amount": "Enter a valid monthly amount.",
@@ -143,7 +142,6 @@
   "onboarding_emergency_per_month": "Emergency fund per month ({pct}% of remaining)",
   "onboarding_slider_min": "5%",
   "onboarding_slider_max": "25%",
-
   "survival_tips_page_title": "Survival Tips",
   "survival_tips_eyebrow": "TIPS FOR YOU",
   "survival_budget_label": "REMAINING BUDGET",
@@ -152,7 +150,6 @@
   "survival_banner_balance": "Remaining {amount} for {days} days.",
   "survival_tips_link": "See survival tips →",
   "survival_tips_empty": "No tips available right now.",
-
   "goals_title": "Your Saving Goals",
   "goals_empty": "No goals yet. Start with one small dream.",
   "goals_add": "Add Goal",
@@ -177,7 +174,6 @@
   "goal_detail_delete_btn": "Delete",
   "goal_detail_tip": "To save toward this goal: when adding a transaction, select this goal under \"Link to goal\".",
   "goal_date_picker_hint": "Select target date",
-
   "dashboard_delta_on_track": "On track",
   "dashboard_delta_nearing": "Nearing limit",
   "dashboard_delta_exceeded": "Over budget",
@@ -250,7 +246,6 @@
   "auth_back": "Back",
   "auth_password_min8": "At least 8 characters",
   "auth_or": "or",
-
   "onboarding_eyebrow_step1": "STEP 1 · INCOME",
   "onboarding_eyebrow_step2": "STEP 2 · FIXED EXPENSES",
   "onboarding_eyebrow_step3": "STEP 3 · EMERGENCY FUND",
@@ -302,5 +297,26 @@
   "onboarding_stat_daily": "DAILY BUDGET",
   "onboarding_stat_emergency": "EMERGENCY FUND",
   "onboarding_stat_income": "INCOME",
-  "onboarding_stat_fixed": "FIXED EXPENSES"
+  "onboarding_stat_fixed": "FIXED EXPENSES",
+  "profile_step_a_title": "Nice to meet you",
+  "profile_step_b_title": "Where are you?",
+  "profile_lang_label": "Language",
+  "profile_name_label": "Display name",
+  "profile_name_hint": "Name shown in the app",
+  "profile_status_label": "Your status",
+  "profile_status_mahasiswa": "Student",
+  "profile_status_pekerja": "Worker",
+  "profile_country_label": "Current country",
+  "profile_city_label": "Current city",
+  "profile_timezone_label": "Time zone",
+  "profile_timezone_change": "Change",
+  "profile_perantau_label": "I am away from home",
+  "profile_home_country_label": "Home country",
+  "profile_home_city_label": "Home city",
+  "profile_exit_dialog_title": "Cancel registration?",
+  "profile_exit_dialog_body": "Your progress has not been saved.",
+  "profile_exit_dialog_confirm": "Cancel",
+  "profile_exit_dialog_continue": "Continue",
+  "profile_error_retry": "Try again",
+  "profile_error_signout": "Sign out"
 }

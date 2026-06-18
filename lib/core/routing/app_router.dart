@@ -34,6 +34,8 @@ import 'package:penyintas_app/features/budget/presentation/pages/budget_edit_set
 import 'package:penyintas_app/features/budget/presentation/pages/budget_overview_page.dart';
 import 'package:penyintas_app/features/budget/presentation/pages/manage_categories_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
+import 'package:penyintas_app/features/onboarding/presentation/pages/profile_leg_page.dart';
 
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
@@ -66,9 +68,10 @@ GoRouter createAppRouter() => GoRouter(
     ),
     GoRoute(
       path: '/profile-setup',
-      builder: (context, state) => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ), // TODO(B4): ganti dgn ProfileLegPage + ProfileSetupCubit
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<ProfileSetupCubit>(),
+        child: const ProfileLegPage(),
+      ),
     ),
     GoRoute(
       path: '/dashboard',
