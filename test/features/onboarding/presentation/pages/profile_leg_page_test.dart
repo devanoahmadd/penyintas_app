@@ -134,33 +134,12 @@ ProfileSetupCubit _makeCubit(PreferencesRepository repo) => ProfileSetupCubit(
     );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// setUp / tearDown sl untuk test yang membutuhkan resetOnboardingCache()
-// ─────────────────────────────────────────────────────────────────────────────
-void _registerMockGuardInSl(
-    _MockOnboardingDs ds, _MockPrefsRepo repo, GetIt sl) {
-  // Daftarkan OnboardingGuard ke sl jika belum ada
-  if (!sl.isRegistered<OnboardingGuard>()) {
-    sl.registerSingleton<OnboardingGuard>(
-      OnboardingGuard(onboardingDs: ds, prefsRepo: repo),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakePrefs());
-  });
-
-  // Bersihkan sl setelah semua test agar tidak kontaminasi test lain
-  tearDownAll(() async {
-    final sl = GetIt.instance;
-    if (sl.isRegistered<OnboardingGuard>()) {
-      await sl.unregister<OnboardingGuard>();
-    }
   });
 
   // ── Widget test 1: Sub-langkah A tampil; CTA Lanjut → sub-langkah B ──────
@@ -216,36 +195,51 @@ void main() {
 
   // ── Widget test 3: CTA Selesai memanggil save() ───────────────────────────
 
-  testWidgets('CTA Selesai memanggil save()', (t) async {
+  group('CTA Selesai memanggil save()', () {
     final sl = GetIt.instance;
-    final repo = _MockPrefsRepo();
-    final ds = _MockOnboardingDs();
+    late _MockPrefsRepo repo;
+    late _MockOnboardingDs ds;
 
-    when(() => repo.read())
-        .thenAnswer((_) async => PreferencesEntity.defaults);
-    when(() => repo.save(any()))
-        .thenAnswer((_) async => const Right(unit));
-    when(() => ds.isOnboardingCompleted()).thenAnswer((_) async => false);
+    setUp(() {
+      repo = _MockPrefsRepo();
+      ds = _MockOnboardingDs();
+      when(() => repo.read())
+          .thenAnswer((_) async => PreferencesEntity.defaults);
+      when(() => repo.save(any()))
+          .thenAnswer((_) async => const Right(unit));
+      when(() => ds.isOnboardingCompleted()).thenAnswer((_) async => false);
+      // Registrasi OnboardingGuard bersih per test
+      if (!sl.isRegistered<OnboardingGuard>()) {
+        sl.registerSingleton<OnboardingGuard>(
+          OnboardingGuard(onboardingDs: ds, prefsRepo: repo),
+        );
+      }
+    });
 
-    // Daftarkan OnboardingGuard ke sl agar resetOnboardingCache() tidak crash
-    _registerMockGuardInSl(ds, repo, sl);
+    tearDown(() async {
+      if (sl.isRegistered<OnboardingGuard>()) {
+        await sl.unregister<OnboardingGuard>();
+      }
+    });
 
-    final cubit = _makeCubit(repo);
-    // Mulai dari sub-B
-    cubit.goToLocation();
+    testWidgets('tap CTA Selesai → repo.save() terpanggil sekali', (t) async {
+      final cubit = _makeCubit(repo);
+      // Mulai dari sub-B
+      cubit.goToLocation();
 
-    await t.pumpWidget(_harness(cubit));
-    await t.pump();
+      await t.pumpWidget(_harness(cubit));
+      await t.pump();
 
-    // CTA Selesai harus ada
-    expect(find.byKey(const Key('profile_finish_cta')), findsOneWidget);
+      // CTA Selesai harus ada
+      expect(find.byKey(const Key('profile_finish_cta')), findsOneWidget);
 
-    // Tap CTA Selesai
-    await t.tap(find.byKey(const Key('profile_finish_cta')));
-    await t.pumpAndSettle();
+      // Tap CTA Selesai
+      await t.tap(find.byKey(const Key('profile_finish_cta')));
+      await t.pumpAndSettle();
 
-    // repo.save() harus dipanggil tepat 1 kali
-    verify(() => repo.save(any())).called(1);
+      // repo.save() harus dipanggil tepat 1 kali
+      verify(() => repo.save(any())).called(1);
+    });
   });
 
   // ── Test anti-loop B-1: router-level ──────────────────────────────────────
@@ -254,13 +248,23 @@ void main() {
   // context.go('/onboarding') → guard recompute (profil sudah done, budget belum)
   // → tidak memantul balik ke /profile-setup.
 
-  testWidgets(
-      'anti-loop B-1: setelah save → navigasi ke /onboarding, tidak balik ke /profile-setup',
-      (t) async {
+  group('anti-loop B-1: setelah save → navigasi ke /onboarding', () {
     final sl = GetIt.instance;
-    final repo = _MockPrefsRepo();
-    final ds = _MockOnboardingDs();
+    late _MockPrefsRepo repo;
+    late _MockOnboardingDs ds;
 
+    setUp(() {
+      repo = _MockPrefsRepo();
+      ds = _MockOnboardingDs();
+    });
+
+    tearDown(() async {
+      if (sl.isRegistered<OnboardingGuard>()) {
+        await sl.unregister<OnboardingGuard>();
+      }
+    });
+
+    testWidgets('tidak balik ke /profile-setup', (t) async {
     // Awal: profil belum selesai → guard = needsProfile
     // Setelah save(), profil selesai → guard = needsBudget
     var profileDone = false;
@@ -278,10 +282,6 @@ void main() {
     when(() => ds.isOnboardingCompleted()).thenAnswer((_) async => false);
 
     // Daftarkan OnboardingGuard ke sl agar resetOnboardingCache() bekerja
-    // Unregister dulu jika sudah ada dari test sebelumnya
-    if (sl.isRegistered<OnboardingGuard>()) {
-      await sl.unregister<OnboardingGuard>();
-    }
     final guard = OnboardingGuard(onboardingDs: ds, prefsRepo: repo);
     sl.registerSingleton<OnboardingGuard>(guard);
 
@@ -338,5 +338,6 @@ void main() {
     expect(find.text('onboarding-placeholder'), findsOneWidget);
     // TIDAK memantul balik ke /profile-setup
     expect(find.byKey(const Key('profile_finish_cta')), findsNothing);
+    });
   });
 }

@@ -48,7 +48,7 @@ class ProfileLegPage extends StatelessWidget {
       },
       child: PopScope(
         canPop: false,
-        onPopInvokedWithResult: (didPop, _) async {
+        onPopInvokedWithResult: (didPop, _) {
           if (didPop) return;
           final cubit = context.read<ProfileSetupCubit>();
           final state = cubit.state;
@@ -137,7 +137,6 @@ class _SubStepA extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final state = context.watch<ProfileSetupCubit>().state;
-    final cubit = context.read<ProfileSetupCubit>();
 
     final textMain = isDark ? AppColors.textDark : AppColors.textLight;
     final textMuted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -174,7 +173,7 @@ class _SubStepA extends StatelessWidget {
             key: const Key('profile_lang_toggle'),
             value: state.language,
             isDark: isDark,
-            onChanged: cubit.setLanguage,
+            onChanged: (v) => context.read<ProfileSetupCubit>().setLanguage(v),
           ),
           const SizedBox(height: AppSpacing.xl),
 
@@ -190,7 +189,7 @@ class _SubStepA extends StatelessWidget {
             border: border,
             textMain: textMain,
             hint: loc.profileNameHint,
-            onChanged: cubit.setName,
+            onChanged: (v) => context.read<ProfileSetupCubit>().setName(v),
           ),
           const SizedBox(height: AppSpacing.xl),
 
@@ -205,7 +204,7 @@ class _SubStepA extends StatelessWidget {
             isDark: isDark,
             mahasiswaLabel: loc.profileStatusMahasiswa,
             pekerjaLabel: loc.profileStatusPekerja,
-            onChanged: cubit.setStatus,
+            onChanged: (v) => context.read<ProfileSetupCubit>().setStatus(v),
           ),
           const SizedBox(height: AppSpacing.xxxl),
 
@@ -215,7 +214,7 @@ class _SubStepA extends StatelessWidget {
             height: 52,
             child: ElevatedButton(
               key: const Key('profile_next_cta'),
-              onPressed: () => cubit.goToLocation(),
+              onPressed: () => context.read<ProfileSetupCubit>().goToLocation(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -249,7 +248,6 @@ class _SubStepB extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final state = context.watch<ProfileSetupCubit>().state;
-    final cubit = context.read<ProfileSetupCubit>();
 
     final textMain = isDark ? AppColors.textDark : AppColors.textLight;
     final textMuted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -290,7 +288,7 @@ class _SubStepB extends StatelessWidget {
             onTap: () async {
               final result = await showCountryPicker(context);
               if (result != null && context.mounted) {
-                cubit.setCurrentCountry(result);
+                context.read<ProfileSetupCubit>().setCurrentCountry(result);
               }
             },
           ),
@@ -318,9 +316,9 @@ class _SubStepB extends StatelessWidget {
               );
               if (result != null && context.mounted) {
                 if (result is TimezonePick) {
-                  cubit.setTimezone(result.iana);
+                  context.read<ProfileSetupCubit>().setTimezone(result.iana);
                 } else if (result is String) {
-                  cubit.setCurrentCity(result);
+                  context.read<ProfileSetupCubit>().setCurrentCity(result);
                 }
               }
             },
@@ -346,7 +344,8 @@ class _SubStepB extends StatelessWidget {
             label: loc.profilePerantauLabel,
             textMain: textMain,
             isDark: isDark,
-            onChanged: cubit.togglePerantau,
+            onChanged: (v) =>
+                context.read<ProfileSetupCubit>().togglePerantau(v),
           ),
 
           // ── Reveal: negara & kota asal (animasi) ─────────────────
@@ -373,7 +372,9 @@ class _SubStepB extends StatelessWidget {
                           onTap: () async {
                             final result = await showCountryPicker(context);
                             if (result != null && context.mounted) {
-                              cubit.setHomeCountry(result);
+                              context
+                                  .read<ProfileSetupCubit>()
+                                  .setHomeCountry(result);
                             }
                           },
                         ),
@@ -399,7 +400,9 @@ class _SubStepB extends StatelessWidget {
                             );
                             if (result != null && context.mounted) {
                               if (result is String) {
-                                cubit.setHomeCity(result);
+                                context
+                                    .read<ProfileSetupCubit>()
+                                    .setHomeCity(result);
                               }
                               // TimezonePick dari kota asal diabaikan — hanya kota
                             }
@@ -422,7 +425,9 @@ class _SubStepB extends StatelessWidget {
                 height: 52,
                 child: ElevatedButton(
                   key: const Key('profile_finish_cta'),
-                  onPressed: saveState.saving ? null : () => cubit.save(),
+                  onPressed: saveState.saving
+                      ? null
+                      : () => context.read<ProfileSetupCubit>().save(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -905,7 +910,6 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final cubit = context.read<ProfileSetupCubit>();
     final textMain = isDark ? AppColors.textDark : AppColors.textLight;
     final textMuted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
@@ -927,7 +931,7 @@ class _ErrorState extends StatelessWidget {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: cubit.save,
+                onPressed: () => context.read<ProfileSetupCubit>().save(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
