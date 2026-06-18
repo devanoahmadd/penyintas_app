@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
+import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
@@ -62,6 +63,12 @@ GoRouter createAppRouter() => GoRouter(
         ],
         child: const OnboardingPage(),
       ),
+    ),
+    GoRoute(
+      path: '/profile-setup',
+      builder: (context, state) => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ), // TODO(B4): ganti dgn ProfileLegPage + ProfileSetupCubit
     ),
     GoRoute(
       path: '/dashboard',
@@ -203,16 +210,20 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
       return publicRoutes.contains(location) ? null : '/login';
     }
 
-    final done = await sl<OnboardingGuard>().isOnboardingDone();
-    if (!done) {
-      return location == '/onboarding' ? null : '/onboarding';
+    final status = await sl<OnboardingGuard>().status();
+    switch (status) {
+      case OnboardingStatus.needsProfile:
+        return location == '/profile-setup' ? null : '/profile-setup';
+      case OnboardingStatus.needsBudget:
+        return location == '/onboarding' ? null : '/onboarding';
+      case OnboardingStatus.done:
+        if (publicRoutes.contains(location) ||
+            location == '/onboarding' ||
+            location == '/profile-setup') {
+          return '/dashboard';
+        }
+        return null;
     }
-
-    if (publicRoutes.contains(location) || location == '/onboarding') {
-      return '/dashboard';
-    }
-
-    return null;
   } catch (e, stack) {
     FirebaseCrashlytics.instance.recordError(e, stack);
     return '/login';

@@ -250,7 +250,10 @@ void _initOnboarding() {
     () => OnboardingLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<OnboardingGuard>(
-    () => OnboardingGuard(sl<OnboardingLocalDataSource>()),
+    () => OnboardingGuard(
+      onboardingDs: sl(),
+      prefsRepo: sl(),
+    ),
   );
 }
 
