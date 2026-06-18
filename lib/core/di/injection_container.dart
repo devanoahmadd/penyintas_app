@@ -114,6 +114,10 @@ import 'package:penyintas_app/features/transaction/domain/repositories/category_
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:penyintas_app/features/preferences/data/datasources/preferences_local_datasource.dart';
+import 'package:penyintas_app/features/preferences/data/datasources/preferences_remote_datasource.dart';
+import 'package:penyintas_app/features/preferences/data/repositories/preferences_repository_impl.dart';
+import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
 
 final sl = GetIt.instance;
 
@@ -195,6 +199,16 @@ void _initAuth() {
   );
   sl.registerLazySingleton<UserSettingsRemoteDatasource>(
     () => UserSettingsRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+
+  sl.registerLazySingleton<PreferencesRemoteDatasource>(
+    () => PreferencesRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+  sl.registerLazySingleton<PreferencesLocalDatasource>(
+    () => PreferencesLocalDatasourceImpl(sl<AppDatabase>()),
+  );
+  sl.registerLazySingleton<PreferencesRepository>(
+    () => PreferencesRepositoryImpl(local: sl(), remote: sl()),
   );
 
   sl.registerLazySingleton<AuthRepository>(
