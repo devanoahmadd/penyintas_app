@@ -82,6 +82,10 @@ test('displayName overlong ditolak (M2: bound 80)', async () => {
 });
 test('delete ditolak (M3: singleton, tak ada delete client)', async () => {
   const ctx = env.authenticatedContext('u1');
-  await setDoc(ref(ctx), valid()); // seed dulu
-  await assertFails(deleteDoc(ref(ctx)));
+  // `ref(ctx)` memanggil `ctx.firestore()`; panggil SEKALI lalu pakai ulang.
+  // setDoc pertama "memulai" instance Firestore — panggilan `.firestore()` kedua
+  // (via ref(ctx) lagi) akan melempar failed-precondition "already started".
+  const r = ref(ctx);
+  await setDoc(r, valid()); // seed dulu
+  await assertFails(deleteDoc(r));
 });
