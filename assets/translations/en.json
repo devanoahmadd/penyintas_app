@@ -318,5 +318,12 @@
   "profile_exit_dialog_confirm": "Cancel",
   "profile_exit_dialog_continue": "Continue",
   "profile_error_retry": "Try again",
-  "profile_error_signout": "Sign out"
+  "profile_error_signout": "Sign out",
+  "profile_edit_title": "Edit Profile",
+  "profile_load_error": "Failed to load profile. Check your connection and try again.",
+  "profile_saved": "Profile saved successfully.",
+  "profile_select_city_first": "Select a city to confirm your timezone.",
+  "profile_discard_title": "Discard changes?",
+  "profile_discard_keep": "Keep editing",
+  "profile_discard_leave": "Discard"
 }

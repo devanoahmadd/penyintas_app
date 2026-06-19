@@ -27,6 +27,7 @@ import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_detail_page.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_list_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/saya_page.dart';
+import 'package:penyintas_app/features/profile/presentation/pages/profile_edit_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
@@ -190,6 +191,10 @@ GoRouter createAppRouter() => GoRouter(
       path: '/profile',
       pageBuilder: (context, state) =>
           NoTransitionPage(key: state.pageKey, child: const SayaPage()),
+    ),
+    GoRoute(
+      path: '/profile/edit',
+      builder: (context, state) => const ProfileEditPage(),
     ),
   ],
 );

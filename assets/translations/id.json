@@ -318,5 +318,12 @@
   "profile_exit_dialog_confirm": "Batalkan",
   "profile_exit_dialog_continue": "Lanjutkan",
   "profile_error_retry": "Coba lagi",
-  "profile_error_signout": "Keluar akun"
+  "profile_error_signout": "Keluar akun",
+  "profile_edit_title": "Edit Profil",
+  "profile_load_error": "Gagal memuat profil. Periksa koneksi dan coba lagi.",
+  "profile_saved": "Profil berhasil disimpan.",
+  "profile_select_city_first": "Pilih kota dulu agar zona waktu sesuai.",
+  "profile_discard_title": "Buang perubahan?",
+  "profile_discard_keep": "Lanjut edit",
+  "profile_discard_leave": "Buang"
 }

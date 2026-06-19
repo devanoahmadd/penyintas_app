@@ -397,6 +397,15 @@ class AppLocalizations {
   String get profileErrorRetry => _t('profile_error_retry');
   String get profileErrorSignout => _t('profile_error_signout');
 
+  // Profile Edit — C3
+  String get profileEditTitle => _t('profile_edit_title');
+  String get profileLoadError => _t('profile_load_error');
+  String get profileSaved => _t('profile_saved');
+  String get profileSelectCityFirst => _t('profile_select_city_first');
+  String get profileDiscardTitle => _t('profile_discard_title');
+  String get profileDiscardKeep => _t('profile_discard_keep');
+  String get profileDiscardLeave => _t('profile_discard_leave');
+
   // Manage categories
   String get manageCategoriesTitle => _t('manage_categories_title');
   String get manageCategoriesSectionBuiltIn => _t('manage_categories_section_built_in');
