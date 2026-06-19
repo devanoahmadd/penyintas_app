@@ -71,6 +71,7 @@ import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_b
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
 import 'package:penyintas_app/features/profile/presentation/cubit/profile_edit_cubit.dart';
+import 'package:penyintas_app/features/profile/presentation/cubit/profile_summary_cubit.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_remote_datasource.dart';
@@ -260,6 +261,7 @@ void _initOnboarding() {
       ));
 
   sl.registerFactory(() => ProfileEditCubit(repo: sl(), tz: sl()));
+  sl.registerFactory(() => ProfileSummaryCubit(sl()));
 
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
 

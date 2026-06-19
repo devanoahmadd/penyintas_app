@@ -325,5 +325,7 @@
   "profile_select_city_first": "Pilih kota dulu agar zona waktu sesuai.",
   "profile_discard_title": "Buang perubahan?",
   "profile_discard_keep": "Lanjut edit",
-  "profile_discard_leave": "Buang"
+  "profile_discard_leave": "Buang",
+  "saya_edit_profile": "Edit profil",
+  "saya_perantau_badge": "Perantau"
 }

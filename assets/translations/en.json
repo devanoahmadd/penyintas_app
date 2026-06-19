@@ -325,5 +325,7 @@
   "profile_select_city_first": "Select a city to confirm your timezone.",
   "profile_discard_title": "Discard changes?",
   "profile_discard_keep": "Keep editing",
-  "profile_discard_leave": "Discard"
+  "profile_discard_leave": "Discard",
+  "saya_edit_profile": "Edit profile",
+  "saya_perantau_badge": "Away"
 }

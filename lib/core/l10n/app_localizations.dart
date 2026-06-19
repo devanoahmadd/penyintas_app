@@ -106,6 +106,8 @@ class AppLocalizations {
   String get sayaLogoutConfirmYes => _t('saya_logout_confirm_yes');
   String get sayaSectionDanger => _t('saya_section_danger');
   String get sayaDeleteAccount => _t('saya_delete_account');
+  String get sayaEditProfile => _t('saya_edit_profile');
+  String get sayaPerantauBadge => _t('saya_perantau_badge');
   String get deleteAccountTitle => _t('delete_account_title');
   String get deleteAccountBody => _t('delete_account_body');
   String get deleteAccountAck => _t('delete_account_ack');

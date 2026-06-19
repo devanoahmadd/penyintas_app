@@ -13,6 +13,7 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/features/profile/presentation/cubit/profile_summary_cubit.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/add_transaction_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
@@ -49,28 +50,31 @@ class SayaPage extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: BlocBuilder<SettingsBloc, SettingsState>(
-          builder: (context, settingsState) {
-            return ListView(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
-              children: [
-                _ProfileHeader(isDark: isDark),
-                const SizedBox(height: AppSpacing.lg),
-                _QuickAccess(isDark: isDark),
-                _SettingsSection(isDark: isDark, settingsState: settingsState),
-                _AccountSection(isDark: isDark),
-                _DangerZoneSection(isDark: isDark),
-              ],
-            );
-          },
+    return BlocProvider<ProfileSummaryCubit>(
+      create: (_) => sl<ProfileSummaryCubit>(),
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: SafeArea(
+          child: BlocBuilder<SettingsBloc, SettingsState>(
+            builder: (context, settingsState) {
+              return ListView(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
+                children: [
+                  _ProfileHeader(isDark: isDark),
+                  const SizedBox(height: AppSpacing.lg),
+                  _QuickAccess(isDark: isDark),
+                  _SettingsSection(isDark: isDark, settingsState: settingsState),
+                  _AccountSection(isDark: isDark),
+                  _DangerZoneSection(isDark: isDark),
+                ],
+              );
+            },
+          ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 4,
-        onFabTap: () => _openAddSheet(context),
+        bottomNavigationBar: AppBottomNavBar(
+          currentIndex: 4,
+          onFabTap: () => _openAddSheet(context),
+        ),
       ),
     );
   }
@@ -82,68 +86,183 @@ class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.isDark});
   final bool isDark;
 
+  Future<void> _onTap(BuildContext context) async {
+    final changed = await context.push<bool>('/profile/edit');
+    if (changed == true && context.mounted) {
+      context.read<ProfileSummaryCubit>().refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName ?? 'Penyintas';
-    final email = user?.email ?? '';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
-
+    final l10n = context.l10n;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                width: 1.5,
+    return BlocBuilder<ProfileSummaryCubit, ProfileSummaryState>(
+      builder: (context, summary) {
+        // Nama: dari cubit prefs jika tersedia, fallback FirebaseAuth, fallback 'Penyintas'
+        final user = FirebaseAuth.instance.currentUser;
+        final name = summary.prefs?.displayName ??
+            user?.displayName ??
+            'Penyintas';
+        final email = user?.email ?? '';
+        final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
+
+        // Lokasi dan badge hanya ditampilkan saat data siap (nol layout-jump)
+        final prefs = summary.loading ? null : summary.prefs;
+        final locationText = prefs?.currentCity ?? prefs?.currentCountry;
+        final showPerantau = prefs?.isPerantau == true;
+
+        return Semantics(
+          button: true,
+          label: l10n.sayaEditProfile,
+          child: InkWell(
+            key: const Key('saya_edit_profile'),
+            onTap: () => _onTap(context),
+            splashColor: AppColors.primary.withValues(alpha: 0.08),
+            highlightColor: AppColors.primary.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md,
               ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: AppTextStyles.h2.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTextStyles.h3.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Avatar monogram
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initial,
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    // Nama, email, lokasi, badge
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            name,
+                            style: AppTextStyles.h3.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (email.isNotEmpty)
+                            Text(
+                              email,
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: mutedColor),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          // Baris lokasi + badge — hanya saat data siap
+                          if (locationText != null || showPerantau)
+                            const SizedBox(height: AppSpacing.xs),
+                          if (locationText != null || showPerantau)
+                            Row(
+                              children: [
+                                if (locationText != null) ...[
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 14,
+                                    color: mutedColor,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(
+                                      locationText,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: mutedColor,
+                                        letterSpacing: 0,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                                if (showPerantau) ...[
+                                  if (locationText != null)
+                                    const SizedBox(width: AppSpacing.xs),
+                                  // Badge Perantau
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.sm,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: surfaceColor,
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.pill,
+                                      ),
+                                      border: Border.all(
+                                        color: borderColor,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.sayaPerantauBadge,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: mutedColor,
+                                        letterSpacing: 0,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    // Trailing: label + chevron
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.sayaEditProfile,
+                          style: AppTextStyles.caption.copyWith(
+                            color: mutedColor,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: mutedColor,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                if (email.isNotEmpty)
-                  Text(
-                    email,
-                    style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
