@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
-import 'package:penyintas_app/core/usecases/usecase.dart';
-import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_usecase.dart';
-import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
@@ -43,26 +40,23 @@ class _SplashPageState extends State<SplashPage>
   Future<void> _syncThenNavigate() async {
     if (_syncStarted) return;
     _syncStarted = true;
-    // Restaurasi flag onboarding (settings/app) dan data finansial
-    // (budget_settings/current) secara paralel — keduanya independen.
-    // Timeout tiap step 3s agar splash gate tak menggantung di jaringan lemot.
+    // A2 + Temuan 1: gerbang bootstrap (identity + budget + preferences) HARUS selesai
+    // SEBELUM redirect. `ensure()` di-memo → idempoten dgn pemanggil `_redirect`, dan
+    // me-reset cache guard di akhir (onComplete). Non-fatal: kegagalan ditelan di dalam.
     try {
-      await Future.wait([
-        sl<SyncUserSettingsUseCase>()(const NoParams()),
-        sl<BudgetRepository>()
-            .syncBudgetFromRemote()
-            .timeout(const Duration(seconds: 3)),
-      ]);
+      await sl<BootstrapCoordinator>().ensure();
     } catch (e, s) {
-      // Sync gagal/timeout — lanjut; data akan terisi saat online berikutnya.
-      debugPrint('[Splash] sync skipped: $e');
-      try {
-        FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
-      } catch (_) {}
+      debugPrint('[Splash] bootstrap skipped: $e');
+      _recordNonFatal(e, s);
     }
-    resetOnboardingCache();
     if (!mounted) return;
     _navigateWhenReady(() => context.go('/dashboard'));
+  }
+
+  void _recordNonFatal(Object e, StackTrace s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
+    } catch (_) {}
   }
 
   @override

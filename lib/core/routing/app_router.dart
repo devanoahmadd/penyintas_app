@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
@@ -201,7 +202,12 @@ GoRouter createAppRouter() => GoRouter(
 
 /// Invalidasi cache onboarding agar `_redirect` query DB ulang.
 /// Dipanggil SplashPage setelah sync menulis nilai baru ke Drift (#192).
+/// Masih dipakai onboarding_page.dart & profile_leg_page.dart.
 void resetOnboardingCache() => sl<OnboardingGuard>().resetCache();
+
+/// Rute publik (tanpa auth). Top-level (T-3) agar dipakai bersama `_redirect`
+/// dan `redirectForAuthedUser`.
+const publicRoutes = ['/splash', '/login', '/register'];
 
 Future<String?> _redirect(BuildContext context, GoRouterState state) async {
   try {
@@ -211,29 +217,37 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
     // SplashPage mengontrol timingnya sendiri — jangan interrupt
     if (location == '/splash') return null;
 
-    const publicRoutes = ['/splash', '/login', '/register'];
-
     if (user == null) {
       sl<OnboardingGuard>().resetCache(); // reset saat logout
+      sl<BootstrapCoordinator>().reset(); // Temuan 1: bootstrap fresh utk user berikutnya
       return publicRoutes.contains(location) ? null : '/login';
     }
 
-    final status = await sl<OnboardingGuard>().status();
-    switch (status) {
-      case OnboardingStatus.needsProfile:
-        return location == '/profile-setup' ? null : '/profile-setup';
-      case OnboardingStatus.needsBudget:
-        return location == '/onboarding' ? null : '/onboarding';
-      case OnboardingStatus.done:
-        if (publicRoutes.contains(location) ||
-            location == '/onboarding' ||
-            location == '/profile-setup') {
-          return '/dashboard';
-        }
-        return null;
-    }
+    return redirectForAuthedUser(location); // Temuan 1/T-3: gate + guard (dapat diuji)
   } catch (e, stack) {
     FirebaseCrashlytics.instance.recordError(e, stack);
     return '/login';
+  }
+}
+
+/// Cabang redirect user terautentikasi. Diekstrak agar **dapat diuji tanpa**
+/// `FirebaseAuth.instance` (T-3). WAJIB `await ensure()` SEBELUM `guard.status()`:
+/// memo per-sesi (jalan sekali), `ensure()` me-reset cache guard di akhir →
+/// guard membaca state ter-bootstrap (tutup jalur fresh-login/reinstall, Temuan 1).
+Future<String?> redirectForAuthedUser(String location) async {
+  await sl<BootstrapCoordinator>().ensure();
+  final status = await sl<OnboardingGuard>().status();
+  switch (status) {
+    case OnboardingStatus.needsProfile:
+      return location == '/profile-setup' ? null : '/profile-setup';
+    case OnboardingStatus.needsBudget:
+      return location == '/onboarding' ? null : '/onboarding';
+    case OnboardingStatus.done:
+      if (publicRoutes.contains(location) ||
+          location == '/onboarding' ||
+          location == '/profile-setup') {
+        return '/dashboard';
+      }
+      return null;
   }
 }

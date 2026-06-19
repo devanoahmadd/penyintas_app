@@ -29,6 +29,7 @@ import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -284,6 +285,16 @@ void _initOnboarding() {
       prefsRepo: sl(),
     ),
   );
+  // D2/Temuan 1: gerbang bootstrap ber-memo per-sesi, dipakai bersama splash
+  // (cold-start) DAN _redirect (fresh-login/deep-link). onComplete me-reset cache
+  // guard SEKALI agar pembaca berikutnya melihat state ter-bootstrap.
+  sl.registerLazySingleton(() => BootstrapCoordinator(
+        syncUserSettings: sl(),
+        budgetRepository: sl(),
+        onboardingDs: sl(),
+        prefsRepo: sl(),
+        onComplete: () => sl<OnboardingGuard>().resetCache(),
+      ));
 }
 
 void _initTransaction() {
