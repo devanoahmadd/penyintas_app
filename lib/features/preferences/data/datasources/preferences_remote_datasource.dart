@@ -30,17 +30,11 @@ class PreferencesRemoteDatasourceImpl implements PreferencesRemoteDatasource {
       .collection('users').doc(_uid)
       .collection('preferences').doc('current');
 
-  // Resolusi: `_log` didefinisikan sebagai static method agar bisa dipanggil dari
-  // static `_logError`. Pola ini konsisten dengan auth_remote_datasource.dart baris 58
-  // yang memakai `FirebaseCrashlytics.instance.recordError(e, s)`.
-  static void _log(Object e, StackTrace s) =>
-      FirebaseCrashlytics.instance.recordError(e, s);
-
-  // Pembungkus `try { _log(e, s); } catch (_) {}` — menyerap kegagalan Crashlytics
-  // saat test (tak ada Firebase app di unit test environment).
+  // Menyerap kegagalan Crashlytics saat test (tak ada Firebase app di unit test
+  // environment). Pola konsisten dengan auth_remote_datasource.dart.
   static void _logError(Object e, StackTrace s) {
     try {
-      _log(e, s);
+      FirebaseCrashlytics.instance.recordError(e, s);
     } catch (_) {}
   }
 
