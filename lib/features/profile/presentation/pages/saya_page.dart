@@ -223,10 +223,9 @@ class _ProfileHeader extends StatelessWidget {
                                       ),
                                     ),
                                     child: Text(
-                                      l10n.sayaPerantauBadge,
+                                      l10n.sayaPerantauBadge.toUpperCase(),
                                       style: AppTextStyles.caption.copyWith(
                                         color: mutedColor,
-                                        letterSpacing: 0,
                                         fontSize: 11,
                                       ),
                                     ),

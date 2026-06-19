@@ -7,6 +7,15 @@ import 'package:penyintas_app/features/profile/presentation/cubit/profile_summar
 class _MockRepo extends Mock implements PreferencesRepository {}
 
 void main() {
+  test('error saat refresh — emit loading:false tanpa prefs', () async {
+    final repo = _MockRepo();
+    when(() => repo.read()).thenThrow(Exception('network error'));
+    final c = ProfileSummaryCubit(repo);
+    await Future<void>.delayed(Duration.zero);
+    expect(c.state.loading, false);
+    expect(c.state.prefs, isNull);
+  });
+
   test('memuat preferences saat dibuat & refresh()', () async {
     final repo = _MockRepo();
     when(() => repo.read()).thenAnswer(
