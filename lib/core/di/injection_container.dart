@@ -185,7 +185,7 @@ void _registerCore() {
 }
 
 void _registerSettings() {
-  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>()));
+  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>(), sl<PreferencesRepository>()));
 }
 
 void _initAuth() {
