@@ -27,6 +27,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/timezone_resolver.dart';
+import 'package:penyintas_app/features/preferences/domain/entities/preferences_entity.dart';
 import 'package:penyintas_app/features/profile/presentation/cubit/profile_edit_cubit.dart';
 import 'package:penyintas_app/features/profile/presentation/widgets/city_picker.dart';
 import 'package:penyintas_app/features/profile/presentation/widgets/country_picker.dart';
@@ -349,7 +350,8 @@ class _FormBody extends StatelessWidget {
 
           // ── Seksi: Zona waktu ───────────────────────────────────────
           _TimezoneRow(
-            timezone: draft.timezone,
+            tzLabel: sl<TimezoneResolver>().labelForIana(draft.timezone) ??
+                draft.timezone,
             isDark: isDark,
             surface: surface,
             border: border,
@@ -601,7 +603,7 @@ class _LocationRow extends StatelessWidget {
     required this.loc,
   });
 
-  final dynamic draft; // PreferencesEntity
+  final PreferencesEntity draft;
   final bool isDark;
   final Color surface;
   final Color border;
@@ -645,7 +647,7 @@ class _LocationRow extends StatelessWidget {
               final resolver = sl<TimezoneResolver>();
               final result = await showCityPicker(
                 context,
-                country: draft.currentCountry as String,
+                country: draft.currentCountry,
                 resolver: resolver,
               );
               if (result != null && context.mounted) {
@@ -669,7 +671,7 @@ class _LocationRow extends StatelessWidget {
 
 class _TimezoneRow extends StatelessWidget {
   const _TimezoneRow({
-    required this.timezone,
+    required this.tzLabel,
     required this.isDark,
     required this.surface,
     required this.border,
@@ -678,7 +680,7 @@ class _TimezoneRow extends StatelessWidget {
     required this.loc,
   });
 
-  final String timezone;
+  final String tzLabel;
   final bool isDark;
   final Color surface;
   final Color border;
@@ -688,8 +690,6 @@ class _TimezoneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // labelForIana lazy — tidak simpan di build() state
-    final tzLabel = sl<TimezoneResolver>().labelForIana(timezone) ?? timezone;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,7 +735,7 @@ class _PerantauSection extends StatelessWidget {
     required this.loc,
   });
 
-  final dynamic draft;
+  final PreferencesEntity draft;
   final bool isDark;
   final Color surface;
   final Color border;
@@ -745,7 +745,7 @@ class _PerantauSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPerantau = draft.isPerantau as bool;
+    final isPerantau = draft.isPerantau;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,7 +791,7 @@ class _PerantauSection extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       _PickerButton(
-                        label: draft.homeCountry as String,
+                        label: draft.homeCountry,
                         sublabel: loc.profileHomeCountryLabel,
                         surface: surface,
                         border: border,
@@ -813,7 +813,7 @@ class _PerantauSection extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       _PickerButton(
-                        label: (draft.homeCity as String?) ?? '—',
+                        label: draft.homeCity ?? '—',
                         sublabel: loc.profileHomeCityLabel,
                         surface: surface,
                         border: border,
@@ -824,7 +824,7 @@ class _PerantauSection extends StatelessWidget {
                           final resolver = sl<TimezoneResolver>();
                           final result = await showCityPicker(
                             context,
-                            country: draft.homeCountry as String,
+                            country: draft.homeCountry,
                             resolver: resolver,
                           );
                           if (result != null && context.mounted) {
@@ -878,21 +878,39 @@ class _PickerButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppSpacing.md),
         child: Ink(
-          height: 52, // hit target ≥ 48dp dengan padding visual
           decoration: BoxDecoration(
             color: surface,
             borderRadius: BorderRadius.circular(AppSpacing.md),
             border: Border.all(color: border),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52), // hit target ≥ 48dp
+            child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    label,
-                    style: AppTextStyles.body.copyWith(color: textMain),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sublabel,
+                        style: AppTextStyles.caption.copyWith(
+                          color: textMuted,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        label,
+                        style: AppTextStyles.body.copyWith(color: textMain),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -903,6 +921,7 @@ class _PickerButton extends StatelessWidget {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),
