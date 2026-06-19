@@ -330,5 +330,6 @@
   "saya_perantau_badge": "Away",
   "tz_recon_message": "Looks like you're in {city} now. Count your days using that zone?",
   "tz_recon_confirm": "Use this zone",
-  "tz_recon_dismiss": "Later"
+  "tz_recon_dismiss": "Later",
+  "tz_recon_stored": "Stored: {label}"
 }

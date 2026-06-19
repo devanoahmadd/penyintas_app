@@ -1181,10 +1181,8 @@ class _BannerContent extends StatelessWidget {
             // Zona tersimpan saat ini (konteks tambahan, muted)
             const SizedBox(height: AppSpacing.xs),
             Text(
-              // "Tersimpan: Jakarta" — informatif, tidak menghakimi
-              isDark
-                  ? 'Tersimpan: ${prompt.storedLabel}'
-                  : 'Tersimpan: ${prompt.storedLabel}',
+              // Zona tersimpan saat ini — informatif, tidak menghakimi
+              l10n.tzReconStored(prompt.storedLabel),
               style: AppTextStyles.caption.copyWith(color: mutedColor),
             ),
             const SizedBox(height: AppSpacing.md),

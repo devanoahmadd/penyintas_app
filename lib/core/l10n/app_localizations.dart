@@ -435,6 +435,8 @@ class AppLocalizations {
       _t('tz_recon_message').replaceAll('{city}', city);
   String get tzReconConfirm => _t('tz_recon_confirm');
   String get tzReconDismiss => _t('tz_recon_dismiss');
+  String tzReconStored(String label) =>
+      _t('tz_recon_stored').replaceAll('{label}', label);
 }
 
 class _AppLocalizationsDelegate
