@@ -25,6 +25,7 @@ import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
+import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -44,6 +45,14 @@ class _DashboardPageState extends State<DashboardPage> {
     if (bloc.state is DashboardInitial || bloc.state is DashboardError) {
       bloc.add(const LoadDashboard());
     }
+    // F5/D3: rekonsiliasi zona waktu non-blocking. Dipanggil post-frame agar
+    // app sudah usable saat I/O berjalan. Cubit adalah lazySingleton → check()
+    // idempoten (re-entrancy guard internal; snooze dihormati lintas-remount).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<TimezoneReconciliationCubit>().check();
+      }
+    });
   }
 
   Future<void> _openAddSheet() async {
@@ -165,6 +174,10 @@ class _DashboardBody extends StatelessWidget {
             // Header
             const SliverToBoxAdapter(
               child: _DashboardHeader(hasNotification: false),
+            ),
+            // F5/D3: banner rekonsiliasi zona waktu (non-blocking, selalu konfirmasi)
+            const SliverToBoxAdapter(
+              child: _TimezoneReconciliationBanner(),
             ),
             // Financial slider — no horizontal padding so peek bleeds to edges
             SliverToBoxAdapter(
@@ -1086,6 +1099,186 @@ class _TxCard extends StatelessWidget {
             borderColor: borderColor,
           ),
       ],
+    );
+  }
+}
+
+// ── Timezone Reconciliation Banner (F5/D3) ────────────────────────────────
+//
+// Banner non-modal compact — muncul di bawah header saat zona device beda dari
+// yang tersimpan. Tak pernah silent, selalu tunggu konfirmasi user.
+// Desain token: surface*/border*/text*/caution — sesuai panduan CLAUDE.md.
+//
+// Keputusan Temuan-4 (Opsi a): banner tetap tampil, copy netral (tidak janji
+// rekalkulasi instan). Efek angka Days-to-Live menyusul di rewrite budget-warning.
+
+class _TimezoneReconciliationBanner extends StatelessWidget {
+  const _TimezoneReconciliationBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TimezoneReconciliationCubit, TimezoneReconciliationState>(
+      builder: (context, state) {
+        final prompt = state.prompt;
+
+        // AnimatedSize: collapse smooth saat dismiss (250ms easeOut)
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: prompt == null
+              ? const SizedBox.shrink()
+              : _BannerContent(prompt: prompt),
+        );
+      },
+    );
+  }
+}
+
+class _BannerContent extends StatelessWidget {
+  const _BannerContent({required this.prompt});
+  final TimezonePrompt prompt;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+
+    // Token surface — konsisten dengan BottomSheet & Chip (CLAUDE.md)
+    final surfaceBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
+      ),
+      decoration: BoxDecoration(
+        color: surfaceBg,
+        borderRadius: BorderRadius.circular(12), // AppRadius.md
+        border: Border(
+          left: BorderSide(color: AppColors.caution, width: 3),
+          top: BorderSide(color: borderColor, width: 1),
+          right: BorderSide(color: borderColor, width: 1),
+          bottom: BorderSide(color: borderColor, width: 1),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Copy pesan — hangat, netral, tidak menakuti
+            Text(
+              l10n.tzReconMessage(prompt.deviceLabel),
+              style: AppTextStyles.bodySmall.copyWith(color: textColor),
+            ),
+            // Zona tersimpan saat ini (konteks tambahan, muted)
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              // "Tersimpan: Jakarta" — informatif, tidak menghakimi
+              isDark
+                  ? 'Tersimpan: ${prompt.storedLabel}'
+                  : 'Tersimpan: ${prompt.storedLabel}',
+              style: AppTextStyles.caption.copyWith(color: mutedColor),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Tombol aksi — row dengan spacing minimal agar compact
+            Row(
+              children: [
+                // Aksi utama: "Pakai zona ini"
+                // hit-target ≥48dp via InkWell + padding
+                Expanded(
+                  child: _BannerButton(
+                    key: const Key('tz_recon_confirm'),
+                    label: l10n.tzReconConfirm,
+                    isPrimary: true,
+                    isDark: isDark,
+                    onTap: () =>
+                        context.read<TimezoneReconciliationCubit>().confirm(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                // Aksi sekunder: "Nanti"
+                _BannerButton(
+                  key: const Key('tz_recon_dismiss'),
+                  label: l10n.tzReconDismiss,
+                  isPrimary: false,
+                  isDark: isDark,
+                  onTap: () =>
+                      context.read<TimezoneReconciliationCubit>().dismiss(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerButton extends StatelessWidget {
+  const _BannerButton({
+    super.key,
+    required this.label,
+    required this.isPrimary,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isPrimary;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Token warna: primary tombol utama, muted tombol sekunder
+    final bg = isPrimary ? AppColors.primary : Colors.transparent;
+    final fgColor = isPrimary
+        ? Colors.white
+        : (isDark ? AppColors.mutedDark : AppColors.mutedLight);
+    final borderCol = isPrimary
+        ? Colors.transparent
+        : (isDark ? AppColors.borderDark : AppColors.borderLight);
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(8), // AppRadius.sm
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        splashColor: Colors.white.withAlpha(30),
+        highlightColor: Colors.white.withAlpha(15),
+        child: Container(
+          // hit-target min 48dp (Android)
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm2,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderCol, width: 1),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTextStyles.label.copyWith(
+              color: fgColor,
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+      ),
     );
   }
 }

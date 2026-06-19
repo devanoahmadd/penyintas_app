@@ -429,6 +429,12 @@ class AppLocalizations {
   String get categorySuccessUpdated => _t('category_success_updated');
   String get categorySuccessDeleted => _t('category_success_deleted');
   String get categoryErrorDuplicate => _t('category_error_duplicate');
+
+  // Rekonsiliasi timezone — F5 (D3)
+  String tzReconMessage(String city) =>
+      _t('tz_recon_message').replaceAll('{city}', city);
+  String get tzReconConfirm => _t('tz_recon_confirm');
+  String get tzReconDismiss => _t('tz_recon_dismiss');
 }
 
 class _AppLocalizationsDelegate

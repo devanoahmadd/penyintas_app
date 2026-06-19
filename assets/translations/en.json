@@ -327,5 +327,8 @@
   "profile_discard_keep": "Keep editing",
   "profile_discard_leave": "Discard",
   "saya_edit_profile": "Edit profile",
-  "saya_perantau_badge": "Away"
+  "saya_perantau_badge": "Away",
+  "tz_recon_message": "Looks like you're in {city} now. Count your days using that zone?",
+  "tz_recon_confirm": "Use this zone",
+  "tz_recon_dismiss": "Later"
 }

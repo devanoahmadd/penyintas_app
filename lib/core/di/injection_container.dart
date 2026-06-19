@@ -119,10 +119,12 @@ import 'package:penyintas_app/features/transaction/domain/repositories/category_
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:penyintas_app/features/preferences/data/datasources/preferences_local_datasource.dart';
 import 'package:penyintas_app/features/preferences/data/datasources/preferences_remote_datasource.dart';
 import 'package:penyintas_app/features/preferences/data/repositories/preferences_repository_impl.dart';
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
+import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
 import 'package:penyintas_app/core/utils/timezone_resolver.dart';
 
 final sl = GetIt.instance;
@@ -147,6 +149,7 @@ Future<void> init({required AppDatabase db}) async {
   _registerCore();
   _registerSettings();
   _initAuth();
+  _initPreferences();
   _initOnboarding();
   _initTransaction();
   _initCategory(); // harus sebelum _initBudget (BudgetLimitsBloc depends on GetLimitableCategoriesUseCase)
@@ -501,6 +504,19 @@ void _initGoal() {
   sl.registerLazySingleton<GoalLocalDatasource>(
     () => GoalLocalDatasourceImpl(sl()),
   );
+}
+
+void _initPreferences() {
+  // F-D6: lazySingleton — satu instance selama sesi agar _snoozedTz tidak hilang
+  // dan check() tidak mengulang dari nol tiap remount dashboard (NoTransitionPage
+  // bisa rebuild). BlocProvider.value di dashboard route TAK menutup cubit ini saat
+  // route di-pop → snooze tetap dihormati lintas-remount.
+  sl.registerLazySingleton(() => TimezoneReconciliationCubit(
+        repo: sl<PreferencesRepository>(),
+        tz: sl<TimezoneResolver>(),
+        getDeviceTimezone: () async =>
+            (await FlutterTimezone.getLocalTimezone()).identifier,
+      ));
 }
 
 void _initSurvival() {

@@ -327,5 +327,8 @@
   "profile_discard_keep": "Lanjut edit",
   "profile_discard_leave": "Buang",
   "saya_edit_profile": "Edit profil",
-  "saya_perantau_badge": "Perantau"
+  "saya_perantau_badge": "Perantau",
+  "tz_recon_message": "Sepertinya kamu sekarang di {city}. Hitung sisa hari pakai zona itu?",
+  "tz_recon_confirm": "Pakai zona ini",
+  "tz_recon_dismiss": "Nanti"
 }

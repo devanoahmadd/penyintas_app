@@ -38,6 +38,7 @@ import 'package:penyintas_app/features/budget/presentation/pages/manage_categori
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/profile_leg_page.dart';
+import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
 
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
@@ -85,6 +86,8 @@ GoRouter createAppRouter() => GoRouter(
             BlocProvider.value(value: sl<DashboardBloc>()),
             BlocProvider.value(value: sl<SurvivalBloc>()),
             BlocProvider.value(value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits())),
+            // F-D6: lazySingleton — .value agar snooze tetap hidup lintas-remount
+            BlocProvider.value(value: sl<TimezoneReconciliationCubit>()),
           ],
           child: const DashboardPage(),
         ),
