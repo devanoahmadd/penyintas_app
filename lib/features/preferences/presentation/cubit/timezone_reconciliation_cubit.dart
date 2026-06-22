@@ -97,7 +97,7 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
 
   void dismiss() {
     _snoozedTz = state.prompt?.deviceTz; // F-D5: snooze zona ini utk sesi berjalan
-    emit(const TimezoneReconciliationState());
+    if (!isClosed) emit(const TimezoneReconciliationState());
   }
 
   static void _log(Object e, StackTrace s) {

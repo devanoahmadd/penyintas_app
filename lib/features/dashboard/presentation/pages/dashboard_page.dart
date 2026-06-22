@@ -1156,7 +1156,7 @@ class _BannerContent extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: surfaceBg,
-        borderRadius: BorderRadius.circular(12), // AppRadius.md
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(
           left: BorderSide(color: AppColors.caution, width: 3),
           top: BorderSide(color: borderColor, width: 1),
@@ -1247,10 +1247,10 @@ class _BannerButton extends StatelessWidget {
 
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(8), // AppRadius.sm
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         splashColor: Colors.white.withAlpha(30),
         highlightColor: Colors.white.withAlpha(15),
         child: Container(
@@ -1261,7 +1261,7 @@ class _BannerButton extends StatelessWidget {
             vertical: AppSpacing.sm2,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(color: borderCol, width: 1),
           ),
           alignment: Alignment.center,

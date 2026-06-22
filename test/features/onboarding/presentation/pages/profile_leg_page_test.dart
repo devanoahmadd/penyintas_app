@@ -193,6 +193,33 @@ void main() {
     expect(find.byKey(const Key('profile_home_country_btn')), findsOneWidget);
   });
 
+  // ── Regression blocker: chip status onboarding kirim nilai KANONIK ─────────
+  //
+  // Bug (pra-fix): chip mengirim 'mahasiswa'/'pekerja' → entity.status non-kanonik
+  // → DITOLAK firestore.rules (status in ['student','worker']) → SELURUH dokumen
+  // preferences gagal di-mirror (permission-denied, SILENT). profile_edit_page sudah
+  // benar; profile_leg_page wajib sama. Guard ini mengunci kontrak di sumber UI.
+
+  testWidgets('chip status emit nilai kanonik student/worker (bukan id)', (t) async {
+    final repo = _MockPrefsRepo();
+    when(() => repo.read())
+        .thenAnswer((_) async => PreferencesEntity.defaults);
+
+    final cubit = _makeCubit(repo); // sub-A (subStep 0 = identitas)
+    await t.pumpWidget(_harness(cubit));
+    await t.pump();
+
+    await t.ensureVisible(find.text('Mahasiswa'));
+    await t.tap(find.text('Mahasiswa'));
+    await t.pump();
+    expect(cubit.state.status, 'student'); // BUKAN 'mahasiswa'
+
+    await t.ensureVisible(find.text('Pekerja'));
+    await t.tap(find.text('Pekerja'));
+    await t.pump();
+    expect(cubit.state.status, 'worker'); // BUKAN 'pekerja'
+  });
+
   // ── Widget test 3: CTA Selesai memanggil save() ───────────────────────────
 
   group('CTA Selesai memanggil save()', () {

@@ -60,6 +60,10 @@ function getEffectiveCycleKey({ timestampMs, timezone, paymentDate }) {
     if (cycleMonth === 1) { cycleYear -= 1; cycleMonth = 12; }
     else { cycleMonth -= 1; }
   }
+  // F-D8 (debt sengaja, parity): bila pd > panjang-bulan (mis. pd=31 jatuh di Feb),
+  // cycleKey jadi tanggal tak-valid ("YYYY-02-31") & cycleStartMs OVERFLOW ke bulan
+  // berikutnya (Date.UTC(y,1,31) → awal Maret). Belum ada consumer aktif; clamp
+  // pd→panjang-bulan akan dilakukan di rewrite budget-warning (Spec 2) yg mengonsumsi ini.
   const cycleKey = `${cycleYear}-${_pad2(cycleMonth)}-${_pad2(pd)}`;
   const cycleStartMs = _localMidnightUtcMs(cycleYear, cycleMonth, pd, tz);
   return { cycleKey, cycleStartMs };

@@ -651,19 +651,22 @@ class _StatusChips extends StatelessWidget {
     return Row(
       children: [
         _StatusChip(
+          // Nilai kanonik 'student'/'worker' — wajib cocok dgn kontrak entity
+          // (preferences_entity.dart: status // 'student' | 'worker') & firestore.rules
+          // (status in ['student','worker']). Label tampilan tetap mahasiswa/pekerja.
           label: mahasiswaLabel,
-          code: 'mahasiswa',
-          selected: value == 'mahasiswa',
+          code: 'student',
+          selected: value == 'student',
           isDark: isDark,
-          onTap: () => onChanged('mahasiswa'),
+          onTap: () => onChanged('student'),
         ),
         const SizedBox(width: AppSpacing.sm),
         _StatusChip(
           label: pekerjaLabel,
-          code: 'pekerja',
-          selected: value == 'pekerja',
+          code: 'worker',
+          selected: value == 'worker',
           isDark: isDark,
-          onTap: () => onChanged('pekerja'),
+          onTap: () => onChanged('worker'),
         ),
       ],
     );
