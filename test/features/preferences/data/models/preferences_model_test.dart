@@ -8,27 +8,40 @@ import 'package:penyintas_app/features/preferences/domain/entities/preferences_e
 
 void main() {
   group('PreferencesModel', () {
-    test('fromFirestore memetakan semua field', () {
+    test('fromFirestore memetakan SEMUA 13 field (CF-2: anti typo-mapping senyap)', () {
+      // Tiap nilai input sengaja ≠ fallback: kalau salah satu key di-typo
+      // (mis. d['homecity'] alih-alih d['homeCity']), model jatuh ke default/null
+      // dan assert ini GAGAL — bukan lolos diam-diam. Batas serialisasi ini
+      // diwarisi budget-warning (timezone) & Spec 2 (currency).
       final m = PreferencesModel.fromFirestore({
-        'timezone': 'Europe/Moscow',
-        'baseCurrency': 'IDR',
-        'homeCurrency': 'IDR',
-        'language': 'en',
-        'displayName': 'Devano',
-        'status': 'student',
-        'currentCountry': 'RU',
-        'currentCity': 'Moscow',
-        'homeCountry': 'ID',
-        'homeCity': 'Surabaya',
-        'isPerantau': true,
-        'profileCompleted': true,
-        'schemaVersion': 1,
+        'timezone': 'Europe/Moscow', // ≠ Asia/Jakarta
+        'baseCurrency': 'USD', // ≠ IDR (3-char lolos clamp)
+        'homeCurrency': 'SGD', // ≠ IDR
+        'language': 'en', // ≠ id
+        'displayName': 'Devano', // fallback null
+        'status': 'student', // fallback null (∈ {student,worker})
+        'currentCountry': 'RU', // ≠ ID (2-char lolos clamp)
+        'currentCity': 'Moscow', // fallback null
+        'homeCountry': 'SG', // ≠ ID
+        'homeCity': 'Surabaya', // fallback null
+        'isPerantau': true, // ≠ false
+        'profileCompleted': true, // ≠ false
+        'schemaVersion': 2, // ≠ fallback 1
         'updatedAt': Timestamp.now(),
       });
       expect(m.timezone, 'Europe/Moscow');
+      expect(m.baseCurrency, 'USD');
+      expect(m.homeCurrency, 'SGD');
       expect(m.language, 'en');
+      expect(m.displayName, 'Devano');
+      expect(m.status, 'student');
+      expect(m.currentCountry, 'RU');
+      expect(m.currentCity, 'Moscow');
+      expect(m.homeCountry, 'SG');
+      expect(m.homeCity, 'Surabaya');
       expect(m.isPerantau, true);
       expect(m.profileCompleted, true);
+      expect(m.schemaVersion, 2);
     });
 
     test('fromFirestore: field hilang → default aman (tak crash)', () {

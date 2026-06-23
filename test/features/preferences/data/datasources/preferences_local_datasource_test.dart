@@ -64,4 +64,16 @@ void main() {
     await ds.markMirrored(DateTime.now().millisecondsSinceEpoch);
     expect(await ds.hasPendingMirror(), false);
   });
+
+  test('CF-3 / T-1: write LAGI setelah markMirrored → dirty kembali (siklus penuh anti-clobber)', () async {
+    // Invarian jantung anti-clobber: SETIAP write() me-null-kan lastSyncedAtMs
+    // (datasource:61) = dirty ulang. Kalau suatu refactor membuat write()
+    // mempertahankan lastSyncedAtMs, launch-bersih tak akan mirror edit baru →
+    // cloud & local diverge senyap. Test ini menjaga siklus penuh, bukan cuma satu sisi.
+    await ds.write(PreferencesEntity.defaults.copyWith(profileCompleted: true));
+    await ds.markMirrored(DateTime.now().millisecondsSinceEpoch);
+    expect(await ds.hasPendingMirror(), false); // clean setelah mirror sukses
+    await ds.write(PreferencesEntity.defaults.copyWith(displayName: 'Edit baru'));
+    expect(await ds.hasPendingMirror(), true); // write berikutnya WAJIB me-dirty ulang
+  });
 }
