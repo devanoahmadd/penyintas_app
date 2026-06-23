@@ -4,6 +4,7 @@ PROMPT.md
 .claude/settings.local.json
 .claude/projects/
 .claude/skills/
+.claude/worktrees/
 .superpowers/
 .agents/
 docs/

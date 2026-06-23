@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
+import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
@@ -26,6 +28,7 @@ import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_detail_page.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_list_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/saya_page.dart';
+import 'package:penyintas_app/features/profile/presentation/pages/profile_edit_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
@@ -33,6 +36,9 @@ import 'package:penyintas_app/features/budget/presentation/pages/budget_edit_set
 import 'package:penyintas_app/features/budget/presentation/pages/budget_overview_page.dart';
 import 'package:penyintas_app/features/budget/presentation/pages/manage_categories_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
+import 'package:penyintas_app/features/onboarding/presentation/pages/profile_leg_page.dart';
+import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
 
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/splash',
@@ -64,6 +70,13 @@ GoRouter createAppRouter() => GoRouter(
       ),
     ),
     GoRoute(
+      path: '/profile-setup',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<ProfileSetupCubit>(),
+        child: const ProfileLegPage(),
+      ),
+    ),
+    GoRoute(
       path: '/dashboard',
       pageBuilder: (context, state) => NoTransitionPage(
         key: state.pageKey,
@@ -73,6 +86,8 @@ GoRouter createAppRouter() => GoRouter(
             BlocProvider.value(value: sl<DashboardBloc>()),
             BlocProvider.value(value: sl<SurvivalBloc>()),
             BlocProvider.value(value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits())),
+            // F-D6: lazySingleton — .value agar snooze tetap hidup lintas-remount
+            BlocProvider.value(value: sl<TimezoneReconciliationCubit>()),
           ],
           child: const DashboardPage(),
         ),
@@ -181,12 +196,21 @@ GoRouter createAppRouter() => GoRouter(
       pageBuilder: (context, state) =>
           NoTransitionPage(key: state.pageKey, child: const SayaPage()),
     ),
+    GoRoute(
+      path: '/profile/edit',
+      builder: (context, state) => const ProfileEditPage(),
+    ),
   ],
 );
 
 /// Invalidasi cache onboarding agar `_redirect` query DB ulang.
 /// Dipanggil SplashPage setelah sync menulis nilai baru ke Drift (#192).
+/// Masih dipakai onboarding_page.dart & profile_leg_page.dart.
 void resetOnboardingCache() => sl<OnboardingGuard>().resetCache();
+
+/// Rute publik (tanpa auth). Top-level (T-3) agar dipakai bersama `_redirect`
+/// dan `redirectForAuthedUser`.
+const publicRoutes = ['/splash', '/login', '/register'];
 
 Future<String?> _redirect(BuildContext context, GoRouterState state) async {
   try {
@@ -196,25 +220,37 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
     // SplashPage mengontrol timingnya sendiri — jangan interrupt
     if (location == '/splash') return null;
 
-    const publicRoutes = ['/splash', '/login', '/register'];
-
     if (user == null) {
       sl<OnboardingGuard>().resetCache(); // reset saat logout
+      sl<BootstrapCoordinator>().reset(); // Temuan 1: bootstrap fresh utk user berikutnya
       return publicRoutes.contains(location) ? null : '/login';
     }
 
-    final done = await sl<OnboardingGuard>().isOnboardingDone();
-    if (!done) {
-      return location == '/onboarding' ? null : '/onboarding';
-    }
-
-    if (publicRoutes.contains(location) || location == '/onboarding') {
-      return '/dashboard';
-    }
-
-    return null;
+    return redirectForAuthedUser(location); // Temuan 1/T-3: gate + guard (dapat diuji)
   } catch (e, stack) {
     FirebaseCrashlytics.instance.recordError(e, stack);
     return '/login';
+  }
+}
+
+/// Cabang redirect user terautentikasi. Diekstrak agar **dapat diuji tanpa**
+/// `FirebaseAuth.instance` (T-3). WAJIB `await ensure()` SEBELUM `guard.status()`:
+/// memo per-sesi (jalan sekali), `ensure()` me-reset cache guard di akhir →
+/// guard membaca state ter-bootstrap (tutup jalur fresh-login/reinstall, Temuan 1).
+Future<String?> redirectForAuthedUser(String location) async {
+  await sl<BootstrapCoordinator>().ensure();
+  final status = await sl<OnboardingGuard>().status();
+  switch (status) {
+    case OnboardingStatus.needsProfile:
+      return location == '/profile-setup' ? null : '/profile-setup';
+    case OnboardingStatus.needsBudget:
+      return location == '/onboarding' ? null : '/onboarding';
+    case OnboardingStatus.done:
+      if (publicRoutes.contains(location) ||
+          location == '/onboarding' ||
+          location == '/profile-setup') {
+        return '/dashboard';
+      }
+      return null;
   }
 }

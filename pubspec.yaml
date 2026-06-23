@@ -87,6 +87,7 @@ flutter:
   assets:
     - assets/images/
     - assets/translations/
+    - assets/data/
 
   # Font files diload via google_fonts package.
   # Tambahkan section fonts: di sini jika ingin bundling offline (Phase 6+)

@@ -69,6 +69,8 @@ class OnboardingLocalDataSourceImpl implements OnboardingLocalDataSource {
         .getSingleOrNull();
     await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
       id: const Value(1),
+      // Vestigial pasca-cutover (C2): dipertahankan agar kolom NOT NULL tak ter-clobber;
+      // TAK ada yang membacanya lagi — language canonical hidup di `preferences`.
       locale: Value(existing?.locale ?? 'id'),
       themeMode: Value(existing?.themeMode ?? 'system'),
       onboardingCompleted: Value(existing?.onboardingCompleted ?? false),

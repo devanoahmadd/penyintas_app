@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -28,6 +29,7 @@ import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -68,6 +70,9 @@ import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bl
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
+import 'package:penyintas_app/features/onboarding/presentation/cubit/profile_setup_cubit.dart';
+import 'package:penyintas_app/features/profile/presentation/cubit/profile_edit_cubit.dart';
+import 'package:penyintas_app/features/profile/presentation/cubit/profile_summary_cubit.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/datasources/transaction_remote_datasource.dart';
@@ -114,14 +119,37 @@ import 'package:penyintas_app/features/transaction/domain/repositories/category_
 import 'package:penyintas_app/features/transaction/data/datasources/category_local_datasource.dart';
 import 'package:penyintas_app/features/transaction/data/repositories/category_repository_impl.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:penyintas_app/features/preferences/data/datasources/preferences_local_datasource.dart';
+import 'package:penyintas_app/features/preferences/data/datasources/preferences_remote_datasource.dart';
+import 'package:penyintas_app/features/preferences/data/repositories/preferences_repository_impl.dart';
+import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
+import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
+import 'package:penyintas_app/core/utils/timezone_resolver.dart';
 
 final sl = GetIt.instance;
 
 Future<void> init({required AppDatabase db}) async {
   _registerExternal(db);
+
+  // ── TimezoneResolver (async singleton, RESILIENT) ─────────────────────────
+  // Aset non-kritis: jika gagal load, fallback ke resolver kosong agar boot
+  // tidak brick. Default Asia/Jakarta tetap jalan via caller.
+  TimezoneResolver tzResolver;
+  try {
+    tzResolver = await TimezoneResolver.load();
+  } catch (e, s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
+    } catch (_) {}
+    tzResolver = TimezoneResolver(const []); // resolver kosong → default Asia/Jakarta tetap jalan
+  }
+  sl.registerSingleton<TimezoneResolver>(tzResolver);
+
   _registerCore();
   _registerSettings();
   _initAuth();
+  _initPreferences();
   _initOnboarding();
   _initTransaction();
   _initCategory(); // harus sebelum _initBudget (BudgetLimitsBloc depends on GetLimitableCategoriesUseCase)
@@ -145,7 +173,7 @@ void _registerExternal(AppDatabase db) {
   sl.registerLazySingleton(() => FirebaseMessaging.instance);
   sl.registerLazySingleton(() => FirebaseAnalytics.instance);
   sl.registerLazySingleton(() => FirebaseRemoteConfig.instance);
-  sl.registerLazySingleton(() => FirebaseFunctions.instance);
+  sl.registerLazySingleton(() => FirebaseFunctions.instanceFor(region: 'asia-southeast2'));
   sl.registerLazySingleton(() => FirebasePerformance.instance);
 
   // ── Connectivity ─────────────────────────────────────────────────────────
@@ -163,7 +191,7 @@ void _registerCore() {
 }
 
 void _registerSettings() {
-  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>()));
+  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>(), sl<PreferencesRepository>()));
 }
 
 void _initAuth() {
@@ -197,6 +225,16 @@ void _initAuth() {
     () => UserSettingsRemoteDatasourceImpl(auth: sl(), firestore: sl()),
   );
 
+  sl.registerLazySingleton<PreferencesRemoteDatasource>(
+    () => PreferencesRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+  sl.registerLazySingleton<PreferencesLocalDatasource>(
+    () => PreferencesLocalDatasourceImpl(sl<AppDatabase>()),
+  );
+  sl.registerLazySingleton<PreferencesRepository>(
+    () => PreferencesRepositoryImpl(local: sl(), remote: sl()),
+  );
+
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDataSource: sl()),
   );
@@ -220,6 +258,15 @@ void _initOnboarding() {
         clearDraft: sl(),
       ));
 
+  sl.registerFactory(() => ProfileSetupCubit(
+        repo: sl(),
+        tz: sl(),
+        initialName: sl<FirebaseAuth>().currentUser?.displayName,
+      ));
+
+  sl.registerFactory(() => ProfileEditCubit(repo: sl(), tz: sl()));
+  sl.registerFactory(() => ProfileSummaryCubit(sl()));
+
   sl.registerLazySingleton(() => CalculateDailyBudgetUseCase());
 
   // #247: repository onboarding kini hanya partial-draft.
@@ -236,8 +283,21 @@ void _initOnboarding() {
     () => OnboardingLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<OnboardingGuard>(
-    () => OnboardingGuard(sl<OnboardingLocalDataSource>()),
+    () => OnboardingGuard(
+      onboardingDs: sl(),
+      prefsRepo: sl(),
+    ),
   );
+  // D2/Temuan 1: gerbang bootstrap ber-memo per-sesi, dipakai bersama splash
+  // (cold-start) DAN _redirect (fresh-login/deep-link). onComplete me-reset cache
+  // guard SEKALI agar pembaca berikutnya melihat state ter-bootstrap.
+  sl.registerLazySingleton(() => BootstrapCoordinator(
+        syncUserSettings: sl(),
+        budgetRepository: sl(),
+        onboardingDs: sl(),
+        prefsRepo: sl(),
+        onComplete: () => sl<OnboardingGuard>().resetCache(),
+      ));
 }
 
 void _initTransaction() {
@@ -444,6 +504,19 @@ void _initGoal() {
   sl.registerLazySingleton<GoalLocalDatasource>(
     () => GoalLocalDatasourceImpl(sl()),
   );
+}
+
+void _initPreferences() {
+  // F-D6: lazySingleton — satu instance selama sesi agar _snoozedTz tidak hilang
+  // dan check() tidak mengulang dari nol tiap remount dashboard (NoTransitionPage
+  // bisa rebuild). BlocProvider.value di dashboard route TAK menutup cubit ini saat
+  // route di-pop → snooze tetap dihormati lintas-remount.
+  sl.registerLazySingleton(() => TimezoneReconciliationCubit(
+        repo: sl<PreferencesRepository>(),
+        tz: sl<TimezoneResolver>(),
+        getDeviceTimezone: () async =>
+            (await FlutterTimezone.getLocalTimezone()).identifier,
+      ));
 }
 
 void _initSurvival() {

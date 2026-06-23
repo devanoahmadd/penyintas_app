@@ -106,6 +106,8 @@ class AppLocalizations {
   String get sayaLogoutConfirmYes => _t('saya_logout_confirm_yes');
   String get sayaSectionDanger => _t('saya_section_danger');
   String get sayaDeleteAccount => _t('saya_delete_account');
+  String get sayaEditProfile => _t('saya_edit_profile');
+  String get sayaPerantauBadge => _t('saya_perantau_badge');
   String get deleteAccountTitle => _t('delete_account_title');
   String get deleteAccountBody => _t('delete_account_body');
   String get deleteAccountAck => _t('delete_account_ack');
@@ -374,6 +376,38 @@ class AppLocalizations {
   String get onboardingStatIncome => _t('onboarding_stat_income');
   String get onboardingStatFixed => _t('onboarding_stat_fixed');
 
+  // Profile Leg — B4 mini-wizard
+  String get profileStepATitle => _t('profile_step_a_title');
+  String get profileStepBTitle => _t('profile_step_b_title');
+  String get profileLangLabel => _t('profile_lang_label');
+  String get profileNameLabel => _t('profile_name_label');
+  String get profileNameHint => _t('profile_name_hint');
+  String get profileStatusLabel => _t('profile_status_label');
+  String get profileStatusMahasiswa => _t('profile_status_mahasiswa');
+  String get profileStatusPekerja => _t('profile_status_pekerja');
+  String get profileCountryLabel => _t('profile_country_label');
+  String get profileCityLabel => _t('profile_city_label');
+  String get profileTimezoneLabel => _t('profile_timezone_label');
+  String get profileTimezoneChange => _t('profile_timezone_change');
+  String get profilePerantauLabel => _t('profile_perantau_label');
+  String get profileHomeCountryLabel => _t('profile_home_country_label');
+  String get profileHomeCityLabel => _t('profile_home_city_label');
+  String get profileExitDialogTitle => _t('profile_exit_dialog_title');
+  String get profileExitDialogBody => _t('profile_exit_dialog_body');
+  String get profileExitDialogConfirm => _t('profile_exit_dialog_confirm');
+  String get profileExitDialogContinue => _t('profile_exit_dialog_continue');
+  String get profileErrorRetry => _t('profile_error_retry');
+  String get profileErrorSignout => _t('profile_error_signout');
+
+  // Profile Edit — C3
+  String get profileEditTitle => _t('profile_edit_title');
+  String get profileLoadError => _t('profile_load_error');
+  String get profileSaved => _t('profile_saved');
+  String get profileSelectCityFirst => _t('profile_select_city_first');
+  String get profileDiscardTitle => _t('profile_discard_title');
+  String get profileDiscardKeep => _t('profile_discard_keep');
+  String get profileDiscardLeave => _t('profile_discard_leave');
+
   // Manage categories
   String get manageCategoriesTitle => _t('manage_categories_title');
   String get manageCategoriesSectionBuiltIn => _t('manage_categories_section_built_in');
@@ -395,6 +429,14 @@ class AppLocalizations {
   String get categorySuccessUpdated => _t('category_success_updated');
   String get categorySuccessDeleted => _t('category_success_deleted');
   String get categoryErrorDuplicate => _t('category_error_duplicate');
+
+  // Rekonsiliasi timezone — F5 (D3)
+  String tzReconMessage(String city) =>
+      _t('tz_recon_message').replaceAll('{city}', city);
+  String get tzReconConfirm => _t('tz_recon_confirm');
+  String get tzReconDismiss => _t('tz_recon_dismiss');
+  String tzReconStored(String label) =>
+      _t('tz_recon_stored').replaceAll('{label}', label);
 }
 
 class _AppLocalizationsDelegate

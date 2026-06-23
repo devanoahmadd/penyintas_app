@@ -1,54 +1,66 @@
+// test/core/routing/onboarding_guard_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
+import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
+import 'package:penyintas_app/features/preferences/domain/entities/preferences_entity.dart';
+import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
 
-class MockOnboardingLocalDataSource extends Mock
-    implements OnboardingLocalDataSource {}
+class _MockOnbDs extends Mock implements OnboardingLocalDataSource {}
+class _MockPrefsRepo extends Mock implements PreferencesRepository {}
 
 void main() {
-  late MockOnboardingLocalDataSource mockDatasource;
+  late _MockOnbDs onbDs;
+  late _MockPrefsRepo prefsRepo;
   late OnboardingGuard guard;
 
   setUp(() {
-    mockDatasource = MockOnboardingLocalDataSource();
-    guard = OnboardingGuard(mockDatasource);
+    onbDs = _MockOnbDs();
+    prefsRepo = _MockPrefsRepo();
+    guard = OnboardingGuard(onboardingDs: onbDs, prefsRepo: prefsRepo);
   });
 
-  group('isOnboardingDone', () {
-    test('returns false ketika onboardingCompleted = false', () async {
-      when(() => mockDatasource.isOnboardingCompleted())
-          .thenAnswer((_) async => false);
-      expect(await guard.isOnboardingDone(), false);
-    });
+  PreferencesEntity prefs({required bool profile}) =>
+      PreferencesEntity.defaults.copyWith(profileCompleted: profile);
 
-    test('returns true ketika onboardingCompleted = true', () async {
-      when(() => mockDatasource.isOnboardingCompleted())
-          .thenAnswer((_) async => true);
-      expect(await guard.isOnboardingDone(), true);
-    });
+  test('profil belum → needsProfile (tak peduli budget)', () async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => prefs(profile: false));
+    when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => true);
+    expect(await guard.status(), OnboardingStatus.needsProfile);
+  });
 
-    test('cache result — datasource hanya dipanggil sekali', () async {
-      when(() => mockDatasource.isOnboardingCompleted())
-          .thenAnswer((_) async => true);
-      await guard.isOnboardingDone();
-      await guard.isOnboardingDone();
-      verify(() => mockDatasource.isOnboardingCompleted()).called(1);
-    });
+  test('profil ok + budget belum → needsBudget', () async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => prefs(profile: true));
+    when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => false);
+    expect(await guard.status(), OnboardingStatus.needsBudget);
+  });
 
-    test('resetCache memaksa re-query ke datasource', () async {
-      when(() => mockDatasource.isOnboardingCompleted())
-          .thenAnswer((_) async => true);
-      await guard.isOnboardingDone();
-      guard.resetCache();
-      await guard.isOnboardingDone();
-      verify(() => mockDatasource.isOnboardingCompleted()).called(2);
-    });
+  test('profil ok + budget ok → done', () async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => prefs(profile: true));
+    when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => true);
+    expect(await guard.status(), OnboardingStatus.done);
+  });
 
-    test('exception dari datasource di-propagate', () async {
-      when(() => mockDatasource.isOnboardingCompleted())
-          .thenThrow(Exception('db error'));
-      expect(() => guard.isOnboardingDone(), throwsException);
-    });
+  test('read error → fail-safe needsProfile (A8)', () async {
+    when(() => prefsRepo.read()).thenThrow(Exception('boom'));
+    expect(await guard.status(), OnboardingStatus.needsProfile);
+  });
+
+  test('cache: read kedua tak query ulang', () async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => prefs(profile: true));
+    when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => true);
+    await guard.status();
+    await guard.status();
+    verify(() => prefsRepo.read()).called(1);
+  });
+
+  test('resetCache → query ulang', () async {
+    when(() => prefsRepo.read()).thenAnswer((_) async => prefs(profile: true));
+    when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => true);
+    await guard.status();
+    guard.resetCache();
+    await guard.status();
+    verify(() => prefsRepo.read()).called(2);
   });
 }

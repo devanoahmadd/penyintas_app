@@ -178,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -357,6 +357,28 @@ class AppDatabase extends _$AppDatabase {
         await m.database.customStatement(
           'INSERT OR IGNORE INTO preferences (id) VALUES (1)',
         );
+      }
+      if (from < 11) {
+        // C3 cutover anchor: mulai versi ini `preferences.language` = canonical
+        // bahasa app (SettingsBloc baca dari sini, bukan app_settings.locale lagi).
+        // Re-seed dari app_settings.locale (sumber lama, terbaru pra-cutover) agar
+        // device yang sudah migrasi 9→10 lalu mengubah bahasa via SettingsBloc lama
+        // tidak ter-flip bahasanya. CLAMP {id,en} (konsisten C5). Idempoten, sekali jalan.
+        //
+        // L2 (self-contained): jangan diam-diam bergantung pada Phase A men-seed row.
+        // Pastikan singleton id=1 ADA dulu agar UPDATE di bawah tak pernah no-op —
+        // no-op = read() jatuh ke default 'id' → bahasa user ter-flip. Idempoten.
+        await m.database.customStatement(
+          'INSERT OR IGNORE INTO preferences (id) VALUES (1)',
+        );
+        await m.database.customStatement('''
+          UPDATE preferences
+          SET language = (
+            SELECT CASE WHEN s.locale IN ('id','en') THEN s.locale ELSE 'id' END
+            FROM app_settings s WHERE s.id = 1
+          )
+          WHERE id = 1 AND EXISTS (SELECT 1 FROM app_settings WHERE id = 1)
+        ''');
       }
     },
   );

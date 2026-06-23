@@ -20,6 +20,52 @@ service cloud.firestore {
           && request.auth.uid == userId;
       }
 
+      match /preferences/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // Singleton — row selalu ada; tak ada jalur delete dari client. Eksplisit
+        // (bukan efek samping dari validasi data null saat delete). (M3)
+        allow delete: if false;
+
+        allow create, update: if request.auth != null && request.auth.uid == userId
+          && docId == 'current'
+          && request.resource.data.keys().hasAll([
+               'timezone','baseCurrency','homeCurrency','language',
+               'currentCountry','homeCountry','isPerantau',
+               'profileCompleted','schemaVersion','updatedAt'])
+          && request.resource.data.keys().hasOnly([
+               'timezone','baseCurrency','homeCurrency','language',
+               'displayName','status','currentCountry','currentCity',
+               'homeCountry','homeCity','isPerantau',
+               'profileCompleted','schemaVersion','updatedAt'])
+          && request.resource.data.timezone is string
+          && request.resource.data.timezone.size() > 0
+          && request.resource.data.timezone.size() <= 64
+          && request.resource.data.baseCurrency is string
+          && request.resource.data.baseCurrency.size() == 3
+          && request.resource.data.homeCurrency is string
+          && request.resource.data.homeCurrency.size() == 3
+          && request.resource.data.language in ['id', 'en']
+          && request.resource.data.currentCountry is string
+          && request.resource.data.currentCountry.size() == 2
+          && request.resource.data.homeCountry is string
+          && request.resource.data.homeCountry.size() == 2
+          && request.resource.data.isPerantau is bool
+          && request.resource.data.profileCompleted is bool
+          // Kunci ke versi yg memang client tahu (v1). Longgarkan HANYA saat
+          // format dokumen benar-benar naik versi. (M4) — paling ketat, paling aman.
+          && request.resource.data.schemaVersion == 1
+          && request.resource.data.updatedAt == request.time
+          // Field opsional: jika hadir, wajib string ber-bound (defense-in-depth, M2).
+          && (!('currentCity' in request.resource.data)
+               || (request.resource.data.currentCity is string && request.resource.data.currentCity.size() <= 64))
+          && (!('homeCity' in request.resource.data)
+               || (request.resource.data.homeCity is string && request.resource.data.homeCity.size() <= 64))
+          && (!('displayName' in request.resource.data)
+               || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80))
+          && (!('status' in request.resource.data) || request.resource.data.status in ['student', 'worker']);
+      }
+
       // Ditulis oleh Cloud Functions (admin SDK) — Flutter client hanya perlu read
       match /meta/{docId} {
         allow read: if request.auth != null
