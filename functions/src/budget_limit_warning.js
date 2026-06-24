@@ -1,6 +1,7 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getEffectiveCycleKey, resolveTimezone } = require('./utils/cycle');
 
 /**
  * Trigger per transaksi baru. Cek apakah kategori transaksi punya limit
@@ -40,38 +41,31 @@ exports.budgetLimitWarning = onDocumentCreated(
     const limitAmount = limitData.limitAmount;
     if (!limitAmount || limitAmount <= 0) return;
 
-    // Ambil paymentDate user
-    const settingsDoc = await db
-      .collection(`users/${uid}/budget_settings`)
-      .doc('current')
-      .get();
-    const paymentDate = settingsDoc.exists ? (settingsDoc.data()?.paymentDate ?? 25) : 25;
+    // Baca settings + preferences paralel (0 tambahan latency)
+    const [settingsDoc, prefsDoc] = await Promise.all([
+      db.collection(`users/${uid}/budget_settings`).doc('current').get(),
+      db.collection(`users/${uid}/preferences`).doc('current').get(),
+    ]);
+    const paymentDate = settingsDoc.exists ? settingsDoc.data()?.paymentDate : undefined;
+    const timezone = resolveTimezone(prefsDoc.exists ? prefsDoc.data() : null);
 
-    // Hitung cycleKey = tanggal awal siklus berjalan (YYYY-MM-DD)
-    // #WIB: Cloud Functions run UTC — offset +7h to get Jakarta local date
-    const wibNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
-    const year = wibNow.getUTCFullYear();
-    const month = wibNow.getUTCMonth() + 1;
-    const day = wibNow.getUTCDate();
-    let cycleYear = year;
-    let cycleMonth = month;
-    if (day < paymentDate) {
-      if (month === 1) { cycleYear--; cycleMonth = 12; }
-      else { cycleMonth--; }
-    }
-    const cycleKey = `${cycleYear}-${String(cycleMonth).padStart(2, '0')}-${String(paymentDate).padStart(2, '0')}`;
-    // Midnight WIB on paymentDate = UTC midnight - 7h
-    const cycleStartMs = Date.UTC(cycleYear, cycleMonth - 1, paymentDate) - 7 * 60 * 60 * 1000;
-    const cycleStart = new Date(cycleStartMs);
+    // Cycle boundary timezone-aware (DST-aware, clamp F-D8) — ganti math +7h lama.
+    const { cycleKey, cycleStartLocalIso } = getEffectiveCycleKey({
+      timestampMs: Date.now(),
+      timezone,
+      paymentDate,
+    });
 
-    // Sum semua expense kategori ini sejak cycleStart
+    // Sum semua expense kategori ini sejak awal siklus.
+    // K-1: date disimpan string ISO lokal-naif → bandingkan string-vs-string.
     const txSnapshot = await db
       .collection(`users/${uid}/transactions`)
       .where('category', '==', category)
       .where('type', '==', 'expense')
-      .where('date', '>=', cycleStart.getTime())
+      .where('date', '>=', cycleStartLocalIso)
       .get();
 
+    // SEAM NOMINAL — asumsi IDR-tunggal; Spec 2 inject konversi di sini.
     const totalSpent = txSnapshot.docs.reduce((sum, d) => sum + (d.data().amount ?? 0), 0);
     const pct = totalSpent / limitAmount;
 
