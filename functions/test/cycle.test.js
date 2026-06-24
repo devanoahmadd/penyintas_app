@@ -92,3 +92,45 @@ test('getEffectiveCycleKey: tz tak dikenal tidak melempar (T-1)', () => {
   const r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 5, 16, 3), timezone: 'Foo/Bar', paymentDate: 25 });
   assert.match(r.cycleKey, /^\d{4}-\d{2}-\d{2}$/);
 });
+
+test('getEffectiveCycleKey: clamp F-D8 pd=31 ke akhir bulan pendek', () => {
+  // Feb 2026 (28 hari), hari 28 → pdThisMonth=min(31,28)=28 → 28<28 false → siklus Feb
+  let r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 1, 28, 5), timezone: 'Asia/Jakarta', paymentDate: 31 });
+  assert.equal(r.cycleKey, '2026-02-28');
+  // Feb 2028 kabisat, hari 29 → clamp 29
+  r = getEffectiveCycleKey({ timestampMs: Date.UTC(2028, 1, 29, 5), timezone: 'Asia/Jakarta', paymentDate: 31 });
+  assert.equal(r.cycleKey, '2028-02-29');
+  // April (30 hari), hari 30 → clamp 30
+  r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 3, 30, 5), timezone: 'Asia/Jakarta', paymentDate: 31 });
+  assert.equal(r.cycleKey, '2026-04-30');
+});
+
+test('getEffectiveCycleKey: pertengahan bulan pendek pd=31 mundur ke bulan sebelumnya', () => {
+  // Feb 2026 hari 15 → pdThisMonth=28 → 15<28 → mundur ke Jan, cycleDay=min(31,31)=31
+  const r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 1, 15, 5), timezone: 'Asia/Jakarta', paymentDate: 31 });
+  assert.equal(r.cycleKey, '2026-01-31');
+});
+
+test('getEffectiveCycleKey: cycleStartLocalIso format & ordering leksikografis (K-1)', () => {
+  const r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 5, 16, 3), timezone: 'Asia/Jakarta', paymentDate: 25 });
+  assert.equal(r.cycleStartLocalIso, '2026-05-25T00:00:00.000');
+  assert.match(r.cycleStartLocalIso, /^\d{4}-\d{2}-\d{2}T00:00:00\.000$/);
+  // tx dalam siklus (16 Jun) > boundary; tx pra-siklus (24 Mei 23:59) < boundary
+  assert.ok(r.cycleStartLocalIso <= '2026-06-16T10:00:00.000');
+  assert.ok(r.cycleStartLocalIso > '2026-05-24T23:59:59.999');
+  // batas-bawah aman lintas presisi: microsecond 6-digit tetap > boundary .000
+  assert.ok('2026-05-25T00:00:00.123456' > r.cycleStartLocalIso);
+});
+
+test('getEffectiveCycleKey: cycleKey selalu valid pd[1..31] x 12 bulan (kriteria #2)', () => {
+  const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+  for (let mo = 0; mo < 12; mo++) {
+    for (let pd = 1; pd <= 31; pd++) {
+      const r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, mo, 15, 5), timezone: 'Asia/Jakarta', paymentDate: pd });
+      const [yy, mm, dd] = r.cycleKey.split('-').map(Number);
+      assert.ok(dd >= 1 && dd <= daysIn(yy, mm), `cycleKey invalid: ${r.cycleKey} (pd=${pd} mo=${mo})`);
+      assert.equal(r.cycleStartLocalIso, `${r.cycleKey}T00:00:00.000`);
+      assert.ok(Number.isFinite(r.cycleStartMs));
+    }
+  }
+});
