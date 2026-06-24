@@ -1,6 +1,7 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getEffectiveMonthKey, resolveTimezone } = require('./utils/cycle');
 
 /**
  * Dipicu saat transaksi baru disimpan ke Firestore.
@@ -21,7 +22,11 @@ exports.budgetWarning = onDocumentCreated(
     const db = getFirestore();
     const messaging = getMessaging();
 
-    const userDoc = await db.collection('users').doc(uid).get();
+    // Baca user + preferences paralel (0 tambahan latency)
+    const [userDoc, prefsDoc] = await Promise.all([
+      db.collection('users').doc(uid).get(),
+      db.collection(`users/${uid}/preferences`).doc('current').get(),
+    ]);
     const userData = userDoc.data();
 
     const settings = userData?.budgetSettings;
@@ -36,24 +41,30 @@ exports.budgetWarning = onDocumentCreated(
     );
     if (monthlyBudget === 0) return;
 
-    // #114: gunakan WIB (UTC+7) agar monthKey tidak meleset di tengah malam
-    const wibNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
-    const monthKey = `${wibNow.getUTCFullYear()}_${String(wibNow.getUTCMonth() + 1).padStart(2, '0')}`;
+    // monthKey timezone-aware (bulan kalender) — ganti math +7h lama.
+    const timezone = resolveTimezone(prefsDoc.exists ? prefsDoc.data() : null);
+    const { monthKey, monthStartLocalIso, nextMonthStartLocalIso } = getEffectiveMonthKey({
+      timestampMs: Date.now(),
+      timezone,
+    });
 
-    // #116: cache increment selalu dijalankan — tidak bergantung pada fcmToken
-    // agar running total tetap akurat meski user belum punya token notifikasi
-    const cacheRef = db.doc(`users/${uid}/meta/budgetCache`);
-    await cacheRef.set(
-      { [`spent_${monthKey}`]: FieldValue.increment(txData.amount ?? 0) },
-      { merge: true },
-    );
-
-    // Keluar setelah cache update jika tidak ada fcmToken — tidak ada notif yang bisa dikirim
+    // Tak ada token → tak ada notif; keluar sebelum query (S-2: tak ada cache yang wajib di-update).
     if (!userData?.fcmToken) return;
 
-    // Single read instead of scanning all transactions
-    const cache = await cacheRef.get();
-    const totalSpent = cache.data()?.[`spent_${monthKey}`] ?? 0;
+    // S-2: hitung total bulan ini via query rentang (akurat terhadap edit/hapus, tanpa drift cache).
+    // Range single-field `date` (auto-indexed); filter type/category di JS agar tak butuh composite index.
+    // K-1: date disimpan string ISO lokal-naif → boundary string-vs-string.
+    const txSnapshot = await db
+      .collection(`users/${uid}/transactions`)
+      .where('date', '>=', monthStartLocalIso)
+      .where('date', '<', nextMonthStartLocalIso)
+      .get();
+    // SEAM NOMINAL — asumsi IDR-tunggal; Spec 2 inject konversi di sini.
+    const totalSpent = txSnapshot.docs.reduce((sum, d) => {
+      const t = d.data();
+      if (t.type !== 'expense' || t.category === 'fixed') return sum;
+      return sum + (t.amount ?? 0);
+    }, 0);
 
     const remaining = monthlyBudget - totalSpent;
     const ratio = remaining / monthlyBudget;
