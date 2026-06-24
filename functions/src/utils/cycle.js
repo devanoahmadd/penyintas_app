@@ -95,9 +95,27 @@ function getEffectiveCycleKey({ timestampMs, timezone, paymentDate }) {
   return { cycleKey, cycleStartMs, cycleStartLocalIso };
 }
 
+/**
+ * Month-key & boundary kalender IANA-aware untuk Survival-Mode (bulan kalender).
+ * @param {{ timestampMs:number, timezone:string }} args
+ * @returns {{ monthKey:string, monthStartLocalIso:string, nextMonthStartLocalIso:string }}
+ */
+function getEffectiveMonthKey({ timestampMs, timezone }) {
+  const tz = _safeZone((typeof timezone === 'string' && timezone.trim()) ? timezone.trim() : DEFAULT_TZ);
+  const now = _zonedParts(timestampMs, tz);
+  const monthKey = `${now.year}_${_pad2(now.month)}`;
+  const monthStartLocalIso = `${now.year}-${_pad2(now.month)}-01T00:00:00.000`;
+  let ny = now.year;
+  let nm = now.month + 1;
+  if (nm === 13) { ny += 1; nm = 1; }
+  const nextMonthStartLocalIso = `${ny}-${_pad2(nm)}-01T00:00:00.000`;
+  return { monthKey, monthStartLocalIso, nextMonthStartLocalIso };
+}
+
 module.exports = {
   resolveTimezone,
   getEffectiveCycleKey,
+  getEffectiveMonthKey,
   DEFAULT_TZ,
   DEFAULT_PAYMENT_DATE,
   _daysInMonth,

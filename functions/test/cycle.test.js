@@ -2,7 +2,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveTimezone, getEffectiveCycleKey, DEFAULT_PAYMENT_DATE, _daysInMonth, _normalizePaymentDate, _safeZone } = require('../src/utils/cycle');
+const { resolveTimezone, getEffectiveCycleKey, getEffectiveMonthKey, DEFAULT_PAYMENT_DATE, _daysInMonth, _normalizePaymentDate, _safeZone } = require('../src/utils/cycle');
 
 // Replikasi math lama (budget_limit_warning.js:52-64) — basis regresi drop-in.
 function legacyWib(nowMs, paymentDate) {
@@ -133,4 +133,31 @@ test('getEffectiveCycleKey: cycleKey selalu valid pd[1..31] x 12 bulan (kriteria
       assert.ok(Number.isFinite(r.cycleStartMs));
     }
   }
+});
+
+test('getEffectiveMonthKey: parity WIB == monthKey legacy', () => {
+  function legacyMonthKeyWib(nowMs) {
+    const w = new Date(nowMs + 7 * 60 * 60 * 1000);
+    return `${w.getUTCFullYear()}_${String(w.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
+  for (const ts of [Date.UTC(2026, 5, 16, 3), Date.UTC(2026, 0, 3, 20), Date.UTC(2026, 11, 31, 17, 30)]) {
+    assert.equal(getEffectiveMonthKey({ timestampMs: ts, timezone: 'Asia/Jakarta' }).monthKey, legacyMonthKeyWib(ts));
+  }
+});
+
+test('getEffectiveMonthKey: boundary ISO + rollover Desember', () => {
+  let m = getEffectiveMonthKey({ timestampMs: Date.UTC(2026, 5, 16, 3), timezone: 'Asia/Jakarta' });
+  assert.equal(m.monthKey, '2026_06');
+  assert.equal(m.monthStartLocalIso, '2026-06-01T00:00:00.000');
+  assert.equal(m.nextMonthStartLocalIso, '2026-07-01T00:00:00.000');
+  m = getEffectiveMonthKey({ timestampMs: Date.UTC(2026, 11, 15, 3), timezone: 'Asia/Jakarta' });
+  assert.equal(m.monthKey, '2026_12');
+  assert.equal(m.nextMonthStartLocalIso, '2027-01-01T00:00:00.000');
+});
+
+test('getEffectiveMonthKey: zona menggeser bulan di batas (non-WIB)', () => {
+  // 2026-06-30T17:30Z == 2026-07-01T00:30 WIB → WIB sudah Juli, UTC masih Juni
+  const ts = Date.UTC(2026, 5, 30, 17, 30);
+  assert.equal(getEffectiveMonthKey({ timestampMs: ts, timezone: 'Asia/Jakarta' }).monthKey, '2026_07');
+  assert.equal(getEffectiveMonthKey({ timestampMs: ts, timezone: 'UTC' }).monthKey, '2026_06');
 });
