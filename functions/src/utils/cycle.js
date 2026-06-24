@@ -42,6 +42,21 @@ function _pad2(n) {
   return String(n).padStart(2, '0');
 }
 
+const DEFAULT_PAYMENT_DATE = 25;
+
+/** Jumlah hari dalam bulan (month 1-based). Tz-independent. */
+function _daysInMonth(year, month) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** paymentDate kanonik: integer [1..31]; default 25 bila invalid/<1; clamp 31. */
+function _normalizePaymentDate(paymentDate) {
+  const n = Number(paymentDate);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_PAYMENT_DATE;
+  if (n > 31) return 31;
+  return Math.floor(n);
+}
+
 /**
  * Cycle boundary IANA-aware untuk siklus anggaran berbasis paymentDate.
  * Pengganti DST-/non-jam-bulat-benar dari math `+7h WIB` mentah
@@ -69,4 +84,11 @@ function getEffectiveCycleKey({ timestampMs, timezone, paymentDate }) {
   return { cycleKey, cycleStartMs };
 }
 
-module.exports = { resolveTimezone, getEffectiveCycleKey, DEFAULT_TZ };
+module.exports = {
+  resolveTimezone,
+  getEffectiveCycleKey,
+  DEFAULT_TZ,
+  DEFAULT_PAYMENT_DATE,
+  _daysInMonth,
+  _normalizePaymentDate,
+};

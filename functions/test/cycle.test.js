@@ -2,7 +2,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveTimezone, getEffectiveCycleKey } = require('../src/utils/cycle');
+const { resolveTimezone, getEffectiveCycleKey, DEFAULT_PAYMENT_DATE, _daysInMonth, _normalizePaymentDate } = require('../src/utils/cycle');
 
 // Replikasi math lama (budget_limit_warning.js:52-64) — basis regresi drop-in.
 function legacyWib(nowMs, paymentDate) {
@@ -52,4 +52,23 @@ test('regresi: WIB (Asia/Jakarta) == math +7h lama (drop-in aman)', () => {
       assert.equal(got.cycleStartMs, want.cycleStartMs, `cycleStartMs ts=${ts} pd=${pd}`);
     }
   }
+});
+
+test('_daysInMonth: panjang bulan termasuk kabisat', () => {
+  assert.equal(_daysInMonth(2026, 1), 31);  // Januari
+  assert.equal(_daysInMonth(2026, 2), 28);  // Februari non-kabisat
+  assert.equal(_daysInMonth(2028, 2), 29);  // Februari kabisat
+  assert.equal(_daysInMonth(2026, 4), 30);  // April
+  assert.equal(_daysInMonth(2026, 12), 31); // Desember
+});
+
+test('_normalizePaymentDate: default 25 saat invalid, clamp [1..31]', () => {
+  assert.equal(_normalizePaymentDate(25), 25);
+  assert.equal(_normalizePaymentDate(1), 1);
+  assert.equal(_normalizePaymentDate(31), 31);
+  assert.equal(_normalizePaymentDate(0), DEFAULT_PAYMENT_DATE);         // pd=0 jebakan lama
+  assert.equal(_normalizePaymentDate(undefined), DEFAULT_PAYMENT_DATE); // absen
+  assert.equal(_normalizePaymentDate(null), DEFAULT_PAYMENT_DATE);
+  assert.equal(_normalizePaymentDate(40), 31);                          // di atas batas → clamp
+  assert.equal(_normalizePaymentDate(25.9), 25);                        // floor
 });
