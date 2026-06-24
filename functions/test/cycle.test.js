@@ -2,7 +2,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveTimezone, getEffectiveCycleKey, DEFAULT_PAYMENT_DATE, _daysInMonth, _normalizePaymentDate } = require('../src/utils/cycle');
+const { resolveTimezone, getEffectiveCycleKey, DEFAULT_PAYMENT_DATE, _daysInMonth, _normalizePaymentDate, _safeZone } = require('../src/utils/cycle');
 
 // Replikasi math lama (budget_limit_warning.js:52-64) — basis regresi drop-in.
 function legacyWib(nowMs, paymentDate) {
@@ -71,4 +71,24 @@ test('_normalizePaymentDate: default 25 saat invalid, clamp [1..31]', () => {
   assert.equal(_normalizePaymentDate(null), DEFAULT_PAYMENT_DATE);
   assert.equal(_normalizePaymentDate(40), 31);                          // di atas batas → clamp
   assert.equal(_normalizePaymentDate(25.9), 25);                        // floor
+});
+
+test('_safeZone: zona valid lolos, zona tak dikenal → Asia/Jakarta', () => {
+  assert.equal(_safeZone('Europe/Moscow'), 'Europe/Moscow');
+  assert.equal(_safeZone('Asia/Jakarta'), 'Asia/Jakarta');
+  assert.equal(_safeZone('Foo/Bar'), 'Asia/Jakarta');     // ter-tamper / tak dikenal
+  assert.equal(_safeZone(''), 'Asia/Jakarta');
+});
+
+test('resolveTimezone: tz tak dikenal yang lolos rules → fallback (T-1)', () => {
+  assert.equal(resolveTimezone({ timezone: 'Foo/Bar' }), 'Asia/Jakarta');
+});
+
+test('getEffectiveCycleKey: tz tak dikenal tidak melempar (T-1)', () => {
+  assert.doesNotThrow(() =>
+    getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 5, 16, 3), timezone: 'Foo/Bar', paymentDate: 25 }),
+  );
+  // jatuh ke WIB → cycleKey valid
+  const r = getEffectiveCycleKey({ timestampMs: Date.UTC(2026, 5, 16, 3), timezone: 'Foo/Bar', paymentDate: 25 });
+  assert.match(r.cycleKey, /^\d{4}-\d{2}-\d{2}$/);
 });

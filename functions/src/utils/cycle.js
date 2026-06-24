@@ -3,10 +3,20 @@
 
 const DEFAULT_TZ = 'Asia/Jakarta';
 
+/** Kembalikan tz bila zona IANA valid; selainnya DEFAULT_TZ (cegah RangeError Intl). */
+function _safeZone(tz) {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return tz;
+  } catch {
+    return DEFAULT_TZ;
+  }
+}
+
 /** prefs.timezone bila string non-kosong, selainnya Asia/Jakarta. */
 function resolveTimezone(prefs) {
   const tz = prefs && typeof prefs.timezone === 'string' ? prefs.timezone.trim() : '';
-  return tz.length > 0 ? tz : DEFAULT_TZ;
+  return _safeZone(tz.length > 0 ? tz : DEFAULT_TZ);
 }
 
 /** Wall-clock parts sebuah instant di zona IANA tertentu. */
@@ -66,7 +76,7 @@ function _normalizePaymentDate(paymentDate) {
  * @returns {{ cycleKey:string, cycleStartMs:number }}
  */
 function getEffectiveCycleKey({ timestampMs, timezone, paymentDate }) {
-  const tz = (typeof timezone === 'string' && timezone.trim()) ? timezone.trim() : DEFAULT_TZ;
+  const tz = _safeZone((typeof timezone === 'string' && timezone.trim()) ? timezone.trim() : DEFAULT_TZ);
   const pd = Number(paymentDate) || 1;
   const now = _zonedParts(timestampMs, tz);
   let cycleYear = now.year;
@@ -91,4 +101,5 @@ module.exports = {
   DEFAULT_PAYMENT_DATE,
   _daysInMonth,
   _normalizePaymentDate,
+  _safeZone,
 };
