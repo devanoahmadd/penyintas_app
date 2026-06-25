@@ -12,6 +12,11 @@ abstract class TransactionLocalDataSource {
   Future<List<TransactionModel>> getTransactionsByDateRange(
       DateTime from, DateTime to);
   Stream<List<TransactionModel>> watchTodayTransactions();
+
+  /// Sinyal perubahan tabel transaksi (insert/update/delete) — tanpa
+  /// memmaterialisasi baris. Dipakai konsumen yang perlu recompute saat
+  /// transaksi berubah (mis. BudgetLimitsBloc) lintas rentang waktu apa pun.
+  Stream<void> watchTransactionChanges();
   Future<void> markSynced(String txId);
   Future<List<TransactionModel>> getUnsyncedTransactions();
   Future<void> addToSyncQueue({
@@ -77,6 +82,11 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
         .watch()
         .map((rows) => rows.map(TransactionModel.fromDrift).toList());
   }
+
+  @override
+  Stream<void> watchTransactionChanges() =>
+      _db.tableUpdates(TableUpdateQuery.onTable(_db.transactions))
+          .map<void>((_) {});
 
   @override
   Future<void> markSynced(String txId) =>

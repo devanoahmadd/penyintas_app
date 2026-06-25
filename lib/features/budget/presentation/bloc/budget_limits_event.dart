@@ -7,7 +7,22 @@ abstract class BudgetLimitsEvent extends Equatable {
 }
 
 class LoadBudgetLimits extends BudgetLimitsEvent {
-  const LoadBudgetLimits();
+  const LoadBudgetLimits({this.force = false});
+
+  /// `false` (default) = load-untuk-mount: jika state sudah Loaded, di-skip
+  /// (dedup mount ganda dashboard↔budget pada singleton).
+  /// `true` = refresh eksplisit: selalu recompute overview, tanpa skeleton
+  /// flash. Dipakai saat balik dari edit-settings / kelola kategori.
+  final bool force;
+
+  @override
+  List<Object> get props => [force];
+}
+
+/// Event internal: dipicu oleh stream perubahan transaksi. Membuat overview
+/// reaktif terhadap tambah/edit/hapus catatan dari entry-point mana pun.
+class _TransactionsChanged extends BudgetLimitsEvent {
+  const _TransactionsChanged();
 }
 
 class SaveBudgetLimit extends BudgetLimitsEvent {

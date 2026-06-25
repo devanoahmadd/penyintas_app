@@ -12,4 +12,9 @@ abstract class TransactionRepository {
     String? categoryFilter,
   });
   Stream<Either<Failure, List<TransactionEntity>>> watchTodayTransactions();
+
+  /// Sinyal perubahan transaksi (tambah/edit/hapus) dari entry-point mana pun.
+  /// Konsumen reaktif (mis. BudgetLimitsBloc) memakai ini untuk memicu
+  /// recompute agar angka turunan (spent per kategori) tidak basi.
+  Stream<void> watchTransactionChanges();
 }

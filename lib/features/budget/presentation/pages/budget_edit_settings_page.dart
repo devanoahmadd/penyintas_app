@@ -365,9 +365,10 @@ class _BudgetEditSettingsPageState
                   onTap: () async {
                     await context.push('/budget/categories');
                     if (context.mounted) {
+                      // force: kategori bisa berubah — refresh eksplisit.
                       context
                           .read<BudgetLimitsBloc>()
-                          .add(const LoadBudgetLimits());
+                          .add(const LoadBudgetLimits(force: true));
                     }
                   },
                 ),

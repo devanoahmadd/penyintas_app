@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,7 +42,17 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     on<SaveBudgetLimit>(_onSave, transformer: sequential());
     on<DeleteBudgetLimit>(_onDelete, transformer: sequential());
     on<ToggleBudgetLimit>(_onToggle, transformer: sequential());
+    // restartable: ledakan perubahan (mis. markSynced saat sync awal)
+    // dikoalesi — event baru membatalkan recompute yang masih in-flight.
+    on<_TransactionsChanged>(_onTxChanged, transformer: restartable());
+
+    // Reaktif: setiap perubahan transaksi (tambah/edit/hapus) dari mana pun
+    // memicu recompute overview agar `spent` per kategori tidak basi.
+    _txChangeSub =
+        _txRepo.watchTransactionChanges().listen((_) => add(const _TransactionsChanged()));
   }
+
+  StreamSubscription<void>? _txChangeSub;
 
   final GetBudgetSettingsUseCase _getSettings;
   final GetBudgetLimitsUseCase _getLimits;
@@ -54,7 +66,15 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     LoadBudgetLimits event,
     Emitter<BudgetLimitsState> emit,
   ) async {
-    if (state is BudgetLimitsLoaded) return; // singleton — skip re-fetch jika sudah loaded
+    final alreadyLoaded = state is BudgetLimitsLoaded;
+    // Mount ganda (dashboard↔budget pada singleton): skip jika sudah loaded.
+    if (alreadyLoaded && !event.force) return;
+    // Refresh eksplisit (force): recompute tanpa emit Loading → tak ada
+    // skeleton flash. Pakai jalur mutasi yang sudah teruji.
+    if (alreadyLoaded && event.force) {
+      await _reloadAfterMutation(emit);
+      return;
+    }
     emit(const BudgetLimitsLoading());
 
     final settingsResult = await _getSettings(const NoParams());
@@ -133,6 +153,16 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     );
   }
 
+  /// Reaktif: transaksi berubah → recompute overview tanpa skeleton flash.
+  /// No-op jika belum pernah Loaded — first load ditangani LoadBudgetLimits.
+  Future<void> _onTxChanged(
+    _TransactionsChanged event,
+    Emitter<BudgetLimitsState> emit,
+  ) async {
+    if (state is! BudgetLimitsLoaded) return;
+    await _reloadAfterMutation(emit);
+  }
+
   /// Reload state setelah mutasi (save/toggle/delete) — fix #8.
   /// Jika [updatedLimits] diberikan (misal setelah delete), pakai langsung.
   /// Jika null, re-fetch limits dari DB.
@@ -196,5 +226,11 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
       daysElapsed: daysElapsed,
       limitableCategories: limitableCategories,
     ));
+  }
+
+  @override
+  Future<void> close() {
+    _txChangeSub?.cancel();
+    return super.close();
   }
 }

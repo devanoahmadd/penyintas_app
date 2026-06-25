@@ -31,7 +31,9 @@ class BudgetOverviewPage extends StatelessWidget {
   Future<void> _openSettings(BuildContext context) async {
     final saved = await context.push<bool>('/budget/edit-settings');
     if ((saved ?? false) && context.mounted) {
-      context.read<BudgetLimitsBloc>().add(const LoadBudgetLimits());
+      // force: income/payday berubah memengaruhi overview — bukan perubahan
+      // transaksi, jadi tak terpicu stream reaktif.
+      context.read<BudgetLimitsBloc>().add(const LoadBudgetLimits(force: true));
     }
   }
 
@@ -56,8 +58,8 @@ class BudgetOverviewPage extends StatelessWidget {
 
     if (saved == true && context.mounted) {
       sl<GoalBloc>().add(const LoadGoals());
-      // Refresh overview agar angka budget ikut update setelah transaksi baru
-      context.read<BudgetLimitsBloc>().add(const LoadBudgetLimits());
+      // Overview budget tak perlu di-refresh manual di sini: BudgetLimitsBloc
+      // sudah reaktif terhadap perubahan transaksi (watchTransactionChanges).
     }
   }
 
@@ -276,9 +278,11 @@ class _PageHeader extends StatelessWidget {
                 onPressed: () async {
                   await context.push('/budget/categories');
                   if (context.mounted) {
+                    // force: daftar/limitabilitas kategori bisa berubah —
+                    // bukan perubahan transaksi, jadi perlu refresh eksplisit.
                     context
                         .read<BudgetLimitsBloc>()
-                        .add(const LoadBudgetLimits());
+                        .add(const LoadBudgetLimits(force: true));
                   }
                 },
               ),

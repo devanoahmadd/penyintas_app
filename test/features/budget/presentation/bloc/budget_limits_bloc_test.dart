@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +49,30 @@ final _tLimit = BudgetLimitEntity(
   updatedAt: DateTime(2026, 5, 1),
 );
 
+// Kategori operasional yang bisa dibatasi — slug 'food' cocok dengan _tLimit.
+const _foodCat = CategoryEntity(
+  id: 1,
+  slug: 'food',
+  labelKey: 'category_food',
+  isBuiltIn: true,
+  isLimitable: true,
+  type: 'expense',
+  sortOrder: 0,
+);
+
+// Catatan pengeluaran 90.000 kategori 'food' — harus mengisi limit 'food'.
+final _txFood90k = TransactionEntity(
+  id: 't1',
+  amount: 90000,
+  category: 'food',
+  type: TransactionType.expense,
+  date: DateTime(2026, 5, 10),
+  isFixed: false,
+  isSynced: false,
+  createdAt: DateTime(2026, 5, 10),
+  updatedAt: DateTime(2026, 5, 10),
+);
+
 BudgetOverviewEntity _emptyOverview() => const BudgetOverviewEntity(
   monthlyIncome: 5000000,
   totalFixedExpenses: 1000000,
@@ -74,6 +100,7 @@ void main() {
   late MockDeleteBudgetLimit mockDelete;
   late MockTransactionRepository mockTxRepo;
   late MockGetLimitableCategories mockGetLimitableCategories;
+  late StreamController<void> txChangeController;
 
   setUp(() {
     mockGetSettings = MockGetBudgetSettings();
@@ -82,9 +109,13 @@ void main() {
     mockDelete = MockDeleteBudgetLimit();
     mockTxRepo = MockTransactionRepository();
     mockGetLimitableCategories = MockGetLimitableCategories();
+    txChangeController = StreamController<void>.broadcast();
 
     when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
         .thenAnswer((_) async => const Right(<TransactionEntity>[]));
+    // Stream pemicu reaktif — bloc subscribe di constructor, jadi wajib di-stub.
+    when(() => mockTxRepo.watchTransactionChanges())
+        .thenAnswer((_) => txChangeController.stream);
     // Default: kembalikan daftar kosong → overview tanpa categoryItems
     when(() => mockGetLimitableCategories(any()))
         .thenAnswer((_) async => const Right(<CategoryEntity>[]));
@@ -100,7 +131,10 @@ void main() {
     );
   });
 
-  tearDown(() => bloc.close());
+  tearDown(() async {
+    await bloc.close();
+    await txChangeController.close();
+  });
 
   group('LoadBudgetLimits', () {
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
@@ -177,6 +211,64 @@ void main() {
       seed: () => BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
       act: (b) => b.add(const DeleteBudgetLimit(id: 1, categoryName: 'food')),
       expect: () => [const BudgetLimitsError('Gagal.')],
+    );
+  });
+
+  group('force-refresh & reaktif transaksi (fix: catatan mengisi limit)', () {
+    // Stub bersama untuk recompute yang menghasilkan spent food = 90.000.
+    void stubRecomputeWithFoodTx() {
+      when(() => mockGetSettings(any()))
+          .thenAnswer((_) async => Right(_tSettings));
+      when(() => mockGetLimits(any()))
+          .thenAnswer((_) async => Right([_tLimit]));
+      when(() => mockGetLimitableCategories(any()))
+          .thenAnswer((_) async => Right([_foodCat]));
+      when(() => mockTxRepo.getTransactions(
+              from: any(named: 'from'), to: any(named: 'to')))
+          .thenAnswer((_) async => Right([_txFood90k]));
+    }
+
+    Matcher loadedWithFoodSpent(int amount) => isA<BudgetLimitsLoaded>().having(
+          (s) => s.overview.categoryItems
+              .firstWhere((i) => i.category.slug == 'food')
+              .spentAmount,
+          'spent food',
+          amount,
+        );
+
+    blocTest<BudgetLimitsBloc, BudgetLimitsState>(
+      'force:true saat Loaded → recompute TANPA emit Loading (anti-flicker), spent terisi',
+      build: () {
+        stubRecomputeWithFoodTx();
+        return bloc;
+      },
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      act: (b) => b.add(const LoadBudgetLimits(force: true)),
+      // Hanya satu emisi Loaded — TIDAK ada BudgetLimitsLoading (skeleton flash).
+      expect: () => [loadedWithFoodSpent(90000)],
+    );
+
+    blocTest<BudgetLimitsBloc, BudgetLimitsState>(
+      'force:false saat sudah Loaded → no-op (dedup mount ganda terjaga)',
+      build: () => bloc,
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      act: (b) => b.add(const LoadBudgetLimits()),
+      expect: () => const <BudgetLimitsState>[],
+    );
+
+    blocTest<BudgetLimitsBloc, BudgetLimitsState>(
+      'perubahan transaksi (stream) saat Loaded → auto-recompute overview',
+      build: () {
+        stubRecomputeWithFoodTx();
+        return bloc;
+      },
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      act: (_) => txChangeController.add(null),
+      wait: const Duration(milliseconds: 50),
+      expect: () => [loadedWithFoodSpent(90000)],
     );
   });
 }

@@ -181,4 +181,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
               ),
         );
   }
+
+  @override
+  Stream<void> watchTransactionChanges() => _local.watchTransactionChanges();
 }
