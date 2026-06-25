@@ -8,6 +8,9 @@ PROMPT.md
 .superpowers/
 .agents/
 docs/
+AGENTS.md
+DESIGN.md
+PRODUCT.md
 
 # Miscellaneous
 *.class
