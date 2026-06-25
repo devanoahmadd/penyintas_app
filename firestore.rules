@@ -15,6 +15,24 @@ service cloud.firestore {
           && request.auth.uid == userId;
       }
 
+      // Batas kategori (ditulis client, dibaca CF budgetLimitWarning).
+      // Owner-check + validasi tipe ringan pada field yang dibaca server
+      // (limitAmount, isEnabled). TANPA hasOnly: field baru tetap lolos agar
+      // rules tak ketinggalan dari model (hindari drift permission-denied).
+      match /budget_limits/{categoryName} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        // delete dipisah: saat delete request.resource.data == null,
+        // sehingga validasi tipe tak bisa (dan tak perlu) diterapkan.
+        allow delete: if request.auth != null
+          && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.limitAmount is number
+          && request.resource.data.limitAmount >= 0
+          && request.resource.data.isEnabled is bool;
+      }
+
       match /settings/{docId} {
         allow read, write: if request.auth != null
           && request.auth.uid == userId;
