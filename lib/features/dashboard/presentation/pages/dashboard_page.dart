@@ -1154,66 +1154,80 @@ class _BannerContent extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
       ),
-      decoration: BoxDecoration(
-        color: surfaceBg,
+      // Rounding sengaja ditangani ClipRRect, BUKAN BoxDecoration.borderRadius.
+      // Sisi kiri (caution) beda warna dari 3 sisi lain (non-uniform) sebagai
+      // accent stripe. Flutter melarang borderRadius + border non-uniform dalam
+      // satu BoxDecoration ("A borderRadius can only be given on borders with
+      // uniform colors") — itu yang sebelumnya bikin paint() throw & layar gelap.
+      // ClipRRect membulatkan sudut tanpa melanggar aturan; accent stripe ikut
+      // mengikuti kurva 12px yang sama. JANGAN pindahkan borderRadius kembali ke
+      // BoxDecoration di bawah.
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border(
-          left: BorderSide(color: AppColors.caution, width: 3),
-          top: BorderSide(color: borderColor, width: 1),
-          right: BorderSide(color: borderColor, width: 1),
-          bottom: BorderSide(color: borderColor, width: 1),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Copy pesan — hangat, netral, tidak menakuti
-            Text(
-              l10n.tzReconMessage(prompt.deviceLabel),
-              style: AppTextStyles.bodySmall.copyWith(color: textColor),
+        child: Container(
+          decoration: BoxDecoration(
+            color: surfaceBg,
+            border: Border(
+              left: BorderSide(color: AppColors.caution, width: 3),
+              top: BorderSide(color: borderColor, width: 1),
+              right: BorderSide(color: borderColor, width: 1),
+              bottom: BorderSide(color: borderColor, width: 1),
             ),
-            // Zona tersimpan saat ini (konteks tambahan, muted)
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              // Zona tersimpan saat ini — informatif, tidak menghakimi
-              l10n.tzReconStored(prompt.storedLabel),
-              style: AppTextStyles.caption.copyWith(color: mutedColor),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
             ),
-            const SizedBox(height: AppSpacing.md),
-            // Tombol aksi — row dengan spacing minimal agar compact
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Aksi utama: "Pakai zona ini"
-                // hit-target ≥48dp via InkWell + padding
-                Expanded(
-                  child: _BannerButton(
-                    key: const Key('tz_recon_confirm'),
-                    label: l10n.tzReconConfirm,
-                    isPrimary: true,
-                    isDark: isDark,
-                    onTap: () =>
-                        context.read<TimezoneReconciliationCubit>().confirm(),
-                  ),
+                // Copy pesan — hangat, netral, tidak menakuti
+                Text(
+                  l10n.tzReconMessage(prompt.deviceLabel),
+                  style: AppTextStyles.bodySmall.copyWith(color: textColor),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                // Aksi sekunder: "Nanti"
-                _BannerButton(
-                  key: const Key('tz_recon_dismiss'),
-                  label: l10n.tzReconDismiss,
-                  isPrimary: false,
-                  isDark: isDark,
-                  onTap: () =>
-                      context.read<TimezoneReconciliationCubit>().dismiss(),
+                // Zona tersimpan saat ini (konteks tambahan, muted)
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  // Zona tersimpan saat ini — informatif, tidak menghakimi
+                  l10n.tzReconStored(prompt.storedLabel),
+                  style: AppTextStyles.caption.copyWith(color: mutedColor),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Tombol aksi — row dengan spacing minimal agar compact
+                Row(
+                  children: [
+                    // Aksi utama: "Pakai zona ini"
+                    // hit-target ≥48dp via InkWell + padding
+                    Expanded(
+                      child: _BannerButton(
+                        key: const Key('tz_recon_confirm'),
+                        label: l10n.tzReconConfirm,
+                        isPrimary: true,
+                        isDark: isDark,
+                        onTap: () => context
+                            .read<TimezoneReconciliationCubit>()
+                            .confirm(),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // Aksi sekunder: "Nanti"
+                    _BannerButton(
+                      key: const Key('tz_recon_dismiss'),
+                      label: l10n.tzReconDismiss,
+                      isPrimary: false,
+                      isDark: isDark,
+                      onTap: () => context
+                          .read<TimezoneReconciliationCubit>()
+                          .dismiss(),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
