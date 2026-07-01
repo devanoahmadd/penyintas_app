@@ -12,6 +12,8 @@ import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_use
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/unregister_fcm_token_usecase.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -26,6 +28,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.wipeLocalData,
     required this.deleteAccount,
     required this.sendPasswordReset,
+    required this.registerFcmToken,
+    required this.unregisterFcmToken,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -45,6 +49,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final WipeLocalDataUseCase wipeLocalData;
   final DeleteAccountUseCase deleteAccount;
   final SendPasswordResetUseCase sendPasswordReset;
+  final RegisterFcmTokenUseCase registerFcmToken;
+  final UnregisterFcmTokenUseCase unregisterFcmToken;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -60,6 +66,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthStateChanged(_AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
+      // G1/K1 self-heal: daftar token tiap transisi ke Authenticated
+      // (cold-launch restore, login, signup). Best-effort — jangan blok.
+      unawaited(registerFcmToken(event.user!.uid));
       emit(Authenticated(event.user!));
     } else {
       emit(const Unauthenticated());
@@ -102,11 +111,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // G2: capture uid SAAT MASIH valid (sebelum emit AuthLoading & signOut).
+    final current = state;
+    final uid = current is Authenticated ? current.user.uid : null;
+
     emit(const AuthLoading());
     final wipeResult = await wipeLocalData(const NoParams());
     await wipeResult.fold((failure) async => emit(AuthError(failure.message)), (
       _,
     ) async {
+      // G2: putus pemetaan device→akun SEBELUM signOut. Best-effort.
+      if (uid != null) {
+        await unregisterFcmToken(uid);
+      }
       final signOutResult = await signOut(const NoParams());
       signOutResult.fold(
         (failure) => emit(AuthError(failure.message)),

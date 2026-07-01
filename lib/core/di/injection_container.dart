@@ -207,6 +207,8 @@ void _initAuth() {
         wipeLocalData: sl(),
         deleteAccount: sl(),
         sendPasswordReset: sl(),
+        registerFcmToken: sl(),
+        unregisterFcmToken: sl(),
       ));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
