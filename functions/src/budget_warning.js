@@ -127,14 +127,19 @@ exports.budgetWarning = onDocumentCreated(
 
     // Prune presisi token mati (incl. legacy bila mati).
     const dead = deadTokensFromResponses(tokens, resp.responses);
-    await Promise.all(
-      dead.map((t) => db.collection(`users/${uid}/fcmTokens`).doc(t).delete()),
-    );
-    if (legacyToken && dead.includes(legacyToken)) {
-      await db.collection('users').doc(uid).update({
-        fcmToken: FieldValue.delete(),
-        fcmUpdatedAt: FieldValue.delete(),
-      });
+    // Prune best-effort: kegagalan hapus token mati JANGAN mencegah revert dedup.
+    try {
+      await Promise.all(
+        dead.map((t) => db.collection(`users/${uid}/fcmTokens`).doc(t).delete()),
+      );
+      if (legacyToken && dead.includes(legacyToken)) {
+        await db.collection('users').doc(uid).update({
+          fcmToken: FieldValue.delete(),
+          fcmUpdatedAt: FieldValue.delete(),
+        });
+      }
+    } catch (e) {
+      console.error('Prune token mati gagal (diabaikan agar revert dedup tetap jalan):', e);
     }
 
     // Revert dedup HANYA bila semua gagal (M2) — budgetWarning sebelumnya tak punya revert.
