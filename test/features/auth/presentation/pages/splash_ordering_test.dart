@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -45,6 +46,11 @@ void main() {
       await syncGate.future; // tahan sampai test melepas → amati "belum navigate"
     });
     sl.registerSingleton<BootstrapCoordinator>(coordinator);
+    // Task 8: SplashPage kini mengambil pending-route via
+    // sl<NotificationLaunchHolder>() di _syncThenNavigate — WAJIB terdaftar agar
+    // lookup tak melempar StateError. Tanpa route yang di-set, takePendingRoute()
+    // mengembalikan null → resolveSplashRoute → '/dashboard' (perilaku uji tetap).
+    sl.registerSingleton<NotificationLaunchHolder>(NotificationLaunchHolder());
 
     // Temuan 3: WAJIB emit TRANSISI (bukan mulai langsung di Authenticated) —
     // BlocListener splash tak fire untuk initial-state, hanya transisi.
