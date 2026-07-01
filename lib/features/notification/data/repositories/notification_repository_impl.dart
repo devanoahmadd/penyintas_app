@@ -15,13 +15,20 @@ class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationLocalDatasource _local;
   final NotificationRemoteDatasource _remote;
 
+  /// Catat error ke Crashlytics, aman saat Firebase belum siap (mis. di test).
+  static void _logError(Object e, StackTrace s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s);
+    } catch (_) {}
+  }
+
   @override
   Future<Either<Failure, bool>> requestPermission() async {
     try {
       final granted = await _local.requestPermission();
       return Right(granted);
     } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(e, s);
+      _logError(e, s);
       return Left(UnknownFailure(e.toString()));
     }
   }
@@ -32,7 +39,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       await _remote.saveFcmToken(uid, token);
       return const Right(null);
     } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(e, s);
+      _logError(e, s);
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -46,7 +53,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       await _local.scheduleDailyReminder(hour: hour, minute: minute);
       return const Right(null);
     } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(e, s);
+      _logError(e, s);
       return Left(CacheFailure(e.toString()));
     }
   }
@@ -57,8 +64,55 @@ class NotificationRepositoryImpl implements NotificationRepository {
       await _local.cancelDailyReminder();
       return const Right(null);
     } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(e, s);
+      _logError(e, s);
       return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> registerToken(String uid) async {
+    try {
+      final token = await _remote.getFcmToken();
+      if (token == null) return const Right(null);
+      await _remote.registerToken(uid, token);
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s);
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> unregisterToken(String uid) async {
+    try {
+      final token = await _remote.getFcmToken();
+      if (token != null) await _remote.unregisterToken(uid, token);
+      await _remote.deleteToken();
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s);
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> getPushEnabled(String uid) async {
+    try {
+      return Right(await _remote.getPushEnabled(uid));
+    } catch (e, s) {
+      _logError(e, s);
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> setPushEnabled(String uid, bool enabled) async {
+    try {
+      await _remote.setPushEnabled(uid, enabled);
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s);
+      return Left(ServerFailure(e.toString()));
     }
   }
 }
