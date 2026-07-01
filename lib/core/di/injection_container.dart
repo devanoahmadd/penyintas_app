@@ -21,9 +21,12 @@ import 'package:penyintas_app/features/notification/data/datasources/notificatio
 import 'package:penyintas_app/features/notification/data/repositories/notification_repository_impl.dart';
 import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/cancel_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/save_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/schedule_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/set_push_preference_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/unregister_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
@@ -463,6 +466,9 @@ void _initNotification() {
 
   sl.registerLazySingleton(() => RequestPermissionUseCase(sl()));
   sl.registerLazySingleton(() => SaveFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => RegisterFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => UnregisterFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => SetPushPreferenceUseCase(sl()));
   sl.registerLazySingleton(() => ScheduleDailyReminderUseCase(sl()));
   sl.registerLazySingleton(() => CancelDailyReminderUseCase(sl()));
 
