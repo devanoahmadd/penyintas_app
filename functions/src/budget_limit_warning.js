@@ -1,7 +1,8 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getEffectiveCycleKey, resolveTimezone } = require('./utils/cycle');
+const { collectTokens, deadTokensFromResponses, isPushEnabled } = require('./utils/fcm');
 
 /**
  * Trigger per transaksi baru. Cek apakah kategori transaksi punya limit
@@ -41,13 +42,27 @@ exports.budgetLimitWarning = onDocumentCreated(
     const limitAmount = limitData.limitAmount;
     if (!limitAmount || limitAmount <= 0) return;
 
-    // Baca settings + preferences paralel (0 tambahan latency)
-    const [settingsDoc, prefsDoc] = await Promise.all([
-      db.collection(`users/${uid}/budget_settings`).doc('current').get(),
-      db.collection(`users/${uid}/preferences`).doc('current').get(),
-    ]);
+    // Baca settings + prefs + token + toggle push + user(legacy) paralel.
+    const [settingsDoc, prefsDoc, tokensSnap, notifDoc, userDoc] =
+      await Promise.all([
+        db.collection(`users/${uid}/budget_settings`).doc('current').get(),
+        db.collection(`users/${uid}/preferences`).doc('current').get(),
+        db.collection(`users/${uid}/fcmTokens`).get(),
+        db.collection(`users/${uid}/settings`).doc('notifications').get(),
+        db.collection('users').doc(uid).get(),
+      ]);
     const paymentDate = settingsDoc.exists ? settingsDoc.data()?.paymentDate : undefined;
     const timezone = resolveTimezone(prefsDoc.exists ? prefsDoc.data() : null);
+
+    // G8: hormati toggle push (default aktif/opt-out).
+    if (!isPushEnabled(notifDoc.exists ? notifDoc.data() : null)) return;
+
+    // Kumpulkan token subcollection ∪ legacy.
+    const { tokens, legacyToken } = collectTokens(
+      tokensSnap.docs.map((d) => d.id),
+      userDoc.exists ? userDoc.data()?.fcmToken : null,
+    );
+    if (tokens.length === 0) return;
 
     // Cycle boundary timezone-aware (DST-aware, clamp F-D8) — ganti math +7h lama.
     const { cycleKey, cycleStartLocalIso } = getEffectiveCycleKey({
@@ -78,11 +93,6 @@ exports.budgetLimitWarning = onDocumentCreated(
     const prevCycleKey = prevStatus.cycleKey ?? '';
     const prevThreshold = prevCycleKey === cycleKey ? (prevStatus.threshold ?? 'none') : 'none';
 
-    // Ambil FCM token
-    const userDoc = await db.collection('users').doc(uid).get();
-    const fcmToken = userDoc.exists ? userDoc.data()?.fcmToken : null;
-    if (!fcmToken) return;
-
     let notifTitle = null;
     let notifBody = null;
     let newThreshold = prevThreshold;
@@ -102,20 +112,32 @@ exports.budgetLimitWarning = onDocumentCreated(
 
     if (!notifTitle) return;
 
-    // Update dedup sebelum kirim — kurangi window race condition
+    // Update dedup SEBELUM kirim — kurangi window race condition.
     await statusRef.set({ cycleKey, threshold: newThreshold });
 
-    try {
-      await getMessaging().send({
-        token: fcmToken,
-        notification: { title: notifTitle, body: notifBody },
-        android: { priority: 'high' },
-        apns: { payload: { aps: { badge: 1 } } },
+    const resp = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title: notifTitle, body: notifBody },
+      android: { priority: 'high' },
+      apns: { payload: { aps: { badge: 1 } } },
+      data: { route: '/budget' }, // G7
+    });
+
+    // Prune presisi token mati (incl. legacy bila mati).
+    const dead = deadTokensFromResponses(tokens, resp.responses);
+    await Promise.all(
+      dead.map((t) => db.collection(`users/${uid}/fcmTokens`).doc(t).delete()),
+    );
+    if (legacyToken && dead.includes(legacyToken)) {
+      await db.collection('users').doc(uid).update({
+        fcmToken: FieldValue.delete(),
+        fcmUpdatedAt: FieldValue.delete(),
       });
-    } catch (_) {
-      // Token stale/invalid — revert dedup doc + clear token
+    }
+
+    // Revert dedup HANYA bila semua gagal (M2).
+    if (resp.successCount === 0) {
       await statusRef.set({ cycleKey, threshold: prevThreshold });
-      await db.collection('users').doc(uid).update({ fcmToken: null });
     }
   }
 );
