@@ -2,6 +2,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getEffectiveMonthKey, resolveTimezone } = require('./utils/cycle');
+const { collectTokens, deadTokensFromResponses, isPushEnabled } = require('./utils/fcm');
 
 /**
  * Dipicu saat transaksi baru disimpan ke Firestore.
@@ -22,10 +23,12 @@ exports.budgetWarning = onDocumentCreated(
     const db = getFirestore();
     const messaging = getMessaging();
 
-    // Baca user + preferences paralel (0 tambahan latency)
-    const [userDoc, prefsDoc] = await Promise.all([
+    // Baca user + preferences + token subcol + toggle push paralel (0 tambahan latency)
+    const [userDoc, prefsDoc, tokensSnap, pushToggleDoc] = await Promise.all([
       db.collection('users').doc(uid).get(),
       db.collection(`users/${uid}/preferences`).doc('current').get(),
+      db.collection(`users/${uid}/fcmTokens`).get(),
+      db.collection(`users/${uid}/settings`).doc('notifications').get(),
     ]);
     const userData = userDoc.data();
 
@@ -48,8 +51,15 @@ exports.budgetWarning = onDocumentCreated(
       timezone,
     });
 
-    // Tak ada token → tak ada notif; keluar sebelum query (S-2: tak ada cache yang wajib di-update).
-    if (!userData?.fcmToken) return;
+    // G8: hormati toggle push (default aktif/opt-out).
+    if (!isPushEnabled(pushToggleDoc.exists ? pushToggleDoc.data() : null)) return;
+
+    // Kumpulkan token subcollection ∪ legacy; keluar sebelum query bila kosong.
+    const { tokens, legacyToken } = collectTokens(
+      tokensSnap.docs.map((d) => d.id),
+      userData?.fcmToken,
+    );
+    if (tokens.length === 0) return;
 
     // S-2: hitung total bulan ini via query rentang (akurat terhadap edit/hapus, tanpa drift cache).
     // Range single-field `date` (auto-indexed); filter type/category di JS agar tak butuh composite index.
@@ -109,14 +119,30 @@ exports.budgetWarning = onDocumentCreated(
       { merge: true },
     );
 
-    try {
-      await messaging.send({
-        token: userData.fcmToken,
-        notification: { title: message.title, body: message.body },
-        data: message.data,
+    const resp = await messaging.sendEachForMulticast({
+      tokens,
+      notification: { title: message.title, body: message.body },
+      data: message.data, // route: '/dashboard'
+    });
+
+    // Prune presisi token mati (incl. legacy bila mati).
+    const dead = deadTokensFromResponses(tokens, resp.responses);
+    await Promise.all(
+      dead.map((t) => db.collection(`users/${uid}/fcmTokens`).doc(t).delete()),
+    );
+    if (legacyToken && dead.includes(legacyToken)) {
+      await db.collection('users').doc(uid).update({
+        fcmToken: FieldValue.delete(),
+        fcmUpdatedAt: FieldValue.delete(),
       });
-    } catch (_) {
-      await db.collection('users').doc(uid).update({ fcmToken: null });
+    }
+
+    // Revert dedup HANYA bila semua gagal (M2) — budgetWarning sebelumnya tak punya revert.
+    if (resp.successCount === 0) {
+      await notifRef.set(
+        { budgetStatus: prevStatus, month: monthKey, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true },
+      );
     }
   },
 );
