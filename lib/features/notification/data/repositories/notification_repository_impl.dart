@@ -16,9 +16,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationRemoteDatasource _remote;
 
   /// Catat error ke Crashlytics, aman saat Firebase belum siap (mis. di test).
-  static void _logError(Object e, StackTrace s) {
+  static void _logError(Object e, StackTrace stack) {
     try {
-      FirebaseCrashlytics.instance.recordError(e, s);
+      FirebaseCrashlytics.instance.recordError(e, stack);
     } catch (_) {}
   }
 

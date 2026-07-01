@@ -58,6 +58,19 @@ void main() {
       verify(() => remote.unregisterToken(tUid, tToken)).called(1);
       verify(() => remote.deleteToken()).called(1);
     });
+
+    test(
+        'token null → deleteToken TETAP dipanggil, unregisterToken(datasource) TIDAK dipanggil',
+        () async {
+      when(() => remote.getFcmToken()).thenAnswer((_) async => null);
+      when(() => remote.deleteToken()).thenAnswer((_) async {});
+
+      final result = await repo.unregisterToken(tUid);
+
+      expect(result, const Right<Failure, void>(null));
+      verify(() => remote.deleteToken()).called(1);
+      verifyNever(() => remote.unregisterToken(any(), any()));
+    });
   });
 
   group('getPushEnabled', () {
@@ -75,6 +88,10 @@ void main() {
       when(() => remote.setPushEnabled(tUid, true)).thenThrow(Exception('boom'));
       final result = await repo.setPushEnabled(tUid, true);
       expect(result.isLeft(), isTrue);
+      result.fold(
+        (failure) => expect(failure, isA<ServerFailure>()),
+        (_) => fail('harus Left(ServerFailure)'),
+      );
     });
   });
 }
