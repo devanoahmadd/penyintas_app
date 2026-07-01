@@ -9,6 +9,7 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
@@ -471,6 +472,8 @@ void _initNotification() {
   sl.registerLazySingleton(() => SetPushPreferenceUseCase(sl()));
   sl.registerLazySingleton(() => ScheduleDailyReminderUseCase(sl()));
   sl.registerLazySingleton(() => CancelDailyReminderUseCase(sl()));
+
+  sl.registerLazySingleton(() => NotificationLaunchHolder());
 
   sl.registerLazySingleton<NotificationRepository>(
     () => NotificationRepositoryImpl(local: sl(), remote: sl()),
