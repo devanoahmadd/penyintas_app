@@ -10,10 +10,15 @@ import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
+
+/// Diskriminator toggle terakhir yang diubah — dipakai di revert listener.
+enum _ToggleKind { reminder, push }
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -29,10 +34,16 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _reminderLoaded = false;
   bool _prevReminderEnabled = true;
 
+  bool _pushEnabled = true;
+  bool _prevPushEnabled = true;
+  // Diskriminator: toggle mana yang terakhir diubah (untuk revert yang tepat).
+  _ToggleKind? _lastToggle;
+
   @override
   void initState() {
     super.initState();
     _loadReminder();
+    _loadPushPref();
   }
 
   Future<void> _loadReminder() async {
@@ -48,7 +59,19 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  Future<void> _loadPushPref() async {
+    final uid = sl<FirebaseAuth>().currentUser?.uid;
+    if (uid == null) return;
+    final result = await sl<NotificationRepository>().getPushEnabled(uid);
+    if (!mounted) return;
+    result.fold(
+      (_) {}, // gagal baca → biarkan default true
+      (enabled) => setState(() => _pushEnabled = enabled),
+    );
+  }
+
   void _onToggleReminder(bool value) {
+    _lastToggle = _ToggleKind.reminder;
     _prevReminderEnabled = _reminderEnabled;
     setState(() => _reminderEnabled = value);
     if (value) {
@@ -58,6 +81,13 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       context.read<NotificationBloc>().add(const CancelDailyReminder());
     }
+  }
+
+  void _onTogglePush(bool value) {
+    _lastToggle = _ToggleKind.push;
+    _prevPushEnabled = _pushEnabled;
+    setState(() => _pushEnabled = value);
+    context.read<NotificationBloc>().add(SetPushPreference(value));
   }
 
   Future<void> _exportCsv() async {
@@ -135,11 +165,20 @@ class _SettingsPageState extends State<SettingsPage> {
     return BlocListener<NotificationBloc, NotificationState>(
       listener: (context, state) {
         if (state is NotificationError) {
-          setState(() => _reminderEnabled = _prevReminderEnabled);
+          final isPush = _lastToggle == _ToggleKind.push;
+          setState(() {
+            if (isPush) {
+              _pushEnabled = _prevPushEnabled;
+            } else {
+              _reminderEnabled = _prevReminderEnabled;
+            }
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Gagal mengubah pengingat: ${state.message}',
+                isPush
+                    ? 'Gagal mengubah peringatan anggaran: ${state.message}'
+                    : 'Gagal mengubah pengingat: ${state.message}',
                 style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
               ),
               backgroundColor: AppColors.warn,
@@ -286,6 +325,27 @@ class _SettingsPageState extends State<SettingsPage> {
                           onTap: _onPickTime,
                         ),
                       ],
+                      Divider(height: 1, color: borderColor),
+                      SwitchListTile(
+                        value: _pushEnabled,
+                        onChanged: _onTogglePush,
+                        title: Text(
+                          'Peringatan anggaran',
+                          style: AppTextStyles.body.copyWith(color: textColor),
+                        ),
+                        subtitle: Text(
+                          'Notifikasi saat pengeluaran mendekati atau melewati batas.',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: textSoftColor),
+                        ),
+                        activeThumbColor: AppColors.primary,
+                        activeTrackColor:
+                            AppColors.primary.withValues(alpha: 0.4),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.xs,
+                        ),
+                      ),
                     ],
                   ),
                 ),
