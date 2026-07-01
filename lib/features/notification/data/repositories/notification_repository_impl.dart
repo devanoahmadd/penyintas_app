@@ -34,17 +34,6 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveFcmToken(String uid, String token) async {
-    try {
-      await _remote.saveFcmToken(uid, token);
-      return const Right(null);
-    } catch (e, s) {
-      _logError(e, s);
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
   Future<Either<Failure, void>> scheduleDailyReminder({
     required int hour,
     required int minute,

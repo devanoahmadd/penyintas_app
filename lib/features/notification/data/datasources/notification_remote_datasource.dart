@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 
 abstract class NotificationRemoteDatasource {
   Future<String?> getFcmToken();
-  Future<void> saveFcmToken(String uid, String token);
   Stream<String> get onTokenRefresh;
   Future<void> registerToken(String uid, String token);
   Future<void> unregisterToken(String uid, String token);
@@ -25,13 +24,6 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
 
   @override
   Future<String?> getFcmToken() => _messaging.getToken();
-
-  @override
-  Future<void> saveFcmToken(String uid, String token) =>
-      _firestore.collection('users').doc(uid).set(
-    {'fcmToken': token, 'fcmUpdatedAt': FieldValue.serverTimestamp()},
-    SetOptions(merge: true),
-  );
 
   @override
   Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;

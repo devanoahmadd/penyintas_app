@@ -45,3 +45,17 @@ class ScheduleDailyReminder extends NotificationEvent {
 class CancelDailyReminder extends NotificationEvent {
   const CancelDailyReminder();
 }
+
+/// Set preferensi push (toggle in-app). Bloc mengambil uid dari FirebaseAuth.
+class SetPushPreference extends NotificationEvent {
+  const SetPushPreference(this.enabled);
+  final bool enabled;
+  @override
+  List<Object?> get props => [enabled];
+}
+
+/// Periksa pesan FCM yang meluncurkan app dari state terminated.
+/// Route disimpan ke NotificationLaunchHolder (TIDAK navigasi langsung — K3).
+class CheckInitialMessage extends NotificationEvent {
+  const CheckInitialMessage();
+}
