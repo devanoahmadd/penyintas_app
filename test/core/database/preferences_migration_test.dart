@@ -4,6 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+// DB v9 nyata punya tabel categories (dibuat di from<7, +icon_slug di from<8).
+// Fixture wajib memuatnya agar migrasi 9→12 (yang kini re-seed categories di
+// from<12) tidak gagal "no such table: categories".
+const _createCategoriesV9 = '''
+  CREATE TABLE categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL,
+    label_key TEXT, label_override TEXT,
+    is_built_in INTEGER NOT NULL DEFAULT 1,
+    is_limitable INTEGER NOT NULL DEFAULT 0,
+    type TEXT NOT NULL DEFAULT 'expense',
+    sort_order INTEGER NOT NULL DEFAULT 0, icon_slug TEXT,
+    UNIQUE(slug)
+  )
+''';
+
 void main() {
   test('migrasi 9→10: buat tabel preferences + copy locale dari app_settings', () async {
     final raw = sqlite3.openInMemory();
@@ -11,6 +26,7 @@ void main() {
     raw.execute(
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
+    raw.execute(_createCategoriesV9);
     raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'en')");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
@@ -32,6 +48,7 @@ void main() {
     raw.execute(
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
+    raw.execute(_createCategoriesV9);
     raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'fr')");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
@@ -50,6 +67,7 @@ void main() {
     raw.execute(
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
+    raw.execute(_createCategoriesV9);
     // sengaja TIDAK INSERT row app_settings
 
     final db = AppDatabase(NativeDatabase.opened(raw));

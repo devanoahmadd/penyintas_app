@@ -178,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -189,6 +189,11 @@ class AppDatabase extends _$AppDatabase {
       await m.database.customStatement(
         'INSERT OR IGNORE INTO preferences (id) VALUES (1)',
       );
+      // Seed 8 kategori built-in di fresh install. Sebelumnya seed HANYA ada di
+      // jalur onUpgrade (if (from < 7)), sehingga fresh install lewat onCreate
+      // punya tabel categories kosong → tombol "Tambah batas kategori" dan
+      // picker kategori transaksi ikut hilang (limitableCategories == []).
+      await _seedBuiltInCategories();
     },
     beforeOpen: (details) async {
       // #138: enforce foreign key constraints — OFF by default in SQLite
@@ -380,8 +385,77 @@ class AppDatabase extends _$AppDatabase {
           WHERE id = 1 AND EXISTS (SELECT 1 FROM app_settings WHERE id = 1)
         ''');
       }
+      if (from < 12) {
+        // Heal: device yang ter-create via onCreate pada skema 7–11 tak pernah
+        // masuk blok if (from < 7), jadi tabel categories-nya kosong. Re-seed
+        // idempoten (INSERT OR IGNORE) — takkan menduplikasi built-in yang sudah
+        // ada (mis. dari jalur onUpgrade<7) maupun mengubah kategori custom user.
+        await _seedBuiltInCategories();
+      }
     },
   );
+
+  /// Seed 8 kategori built-in secara idempoten. Dipakai di onCreate (fresh
+  /// install) DAN migrasi from<12 (heal DB lama yang terlanjur kosong).
+  ///
+  /// Sengaja pakai companion typed + InsertMode.insertOrIgnore, BUKAN positional
+  /// `INSERT ... VALUES (...)` seperti di blok from<7: pada onCreate/from<12
+  /// tabel sudah punya kolom `icon_slug` (ditambah di from<8), jadi insert
+  /// positional 8-nilai akan mismatch. Kunci unik `slug` membuat re-run aman.
+  Future<void> _seedBuiltInCategories() async {
+    final seeds = <CategoriesCompanion>[
+      CategoriesCompanion.insert(
+        slug: 'food',
+        labelKey: const Value('category_food'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(0),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'transport',
+        labelKey: const Value('category_transport'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(1),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'shopping',
+        labelKey: const Value('category_shopping'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(2),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'health',
+        labelKey: const Value('category_health'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(3),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'internet',
+        labelKey: const Value('category_internet'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(4),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'other',
+        labelKey: const Value('category_other'),
+        isLimitable: const Value(true),
+        sortOrder: const Value(5),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'fixed',
+        labelKey: const Value('category_fixed'),
+        sortOrder: const Value(6),
+      ),
+      CategoriesCompanion.insert(
+        slug: 'income',
+        labelKey: const Value('category_income'),
+        type: const Value('income'),
+        sortOrder: const Value(7),
+      ),
+    ];
+    await batch((b) {
+      b.insertAll(categories, seeds, mode: InsertMode.insertOrIgnore);
+    });
+  }
 
   /// Wipe semua data lokal (logout flow). Menghapus semua baris di semua tabel dan
   /// menjalankan VACUUM untuk reclaim disk space.
