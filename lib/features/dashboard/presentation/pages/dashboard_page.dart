@@ -1107,7 +1107,8 @@ class _TxCard extends StatelessWidget {
 //
 // Banner non-modal compact — muncul di bawah header saat zona device beda dari
 // yang tersimpan. Tak pernah silent, selalu tunggu konfirmasi user.
-// Desain token: surface*/border*/text*/caution — sesuai panduan CLAUDE.md.
+// Desain token: card*/border*/text* + aksen primary/shoot — sesuai CLAUDE.md.
+// Tenang & menyatu dengan kartu dashboard lain (bukan alert box), tanpa stripe.
 //
 // Keputusan Temuan-4 (Opsi a): banner tetap tampil, copy netral (tidak janji
 // rekalkulasi instan). Efek angka Days-to-Live menyusul di rewrite budget-warning.
@@ -1144,41 +1145,49 @@ class _BannerContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = context.l10n;
 
-    // Token surface — konsisten dengan BottomSheet & Chip (CLAUDE.md)
-    final surfaceBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    // Permukaan disamakan dengan kartu dashboard lain (cardLight/cardDark) agar
+    // banner menyatu — bukan "alert box". Border hairline + radius lg (lembut).
+    final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
+    // Aksen tunggal: hijau brand di light, shoot (mint) di dark agar kontras AAA
+    // di atas cardDark. Dipakai konsisten untuk chip ikon + tombol tonal.
+    final accent = isDark ? AppColors.shoot : AppColors.primary;
+
+    // Border uniform (tanpa stripe non-uniform), jadi borderRadius aman di
+    // BoxDecoration — tak perlu ClipRRect & tak memicu crash paint() seperti dulu.
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
       ),
-      // Rounding sengaja ditangani ClipRRect, BUKAN BoxDecoration.borderRadius.
-      // Sisi kiri (caution) beda warna dari 3 sisi lain (non-uniform) sebagai
-      // accent stripe. Flutter melarang borderRadius + border non-uniform dalam
-      // satu BoxDecoration ("A borderRadius can only be given on borders with
-      // uniform colors") — itu yang sebelumnya bikin paint() throw & layar gelap.
-      // ClipRRect membulatkan sudut tanpa melanggar aturan; accent stripe ikut
-      // mengikuti kurva 12px yang sama. JANGAN pindahkan borderRadius kembali ke
-      // BoxDecoration di bawah.
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          decoration: BoxDecoration(
-            color: surfaceBg,
-            border: Border(
-              left: BorderSide(color: AppColors.caution, width: 3),
-              top: BorderSide(color: borderColor, width: 1),
-              right: BorderSide(color: borderColor, width: 1),
-              bottom: BorderSide(color: borderColor, width: 1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Chip ikon lembut — pola kanonik dashboard (aksen @ alpha rendah).
+          // Memberi konteks "zona waktu" tanpa warna peringatan.
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: isDark ? 0.16 : 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
+            alignment: Alignment.center,
+            child: Icon(Icons.public_rounded, size: 18, color: accent),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -1188,32 +1197,17 @@ class _BannerContent extends StatelessWidget {
                   l10n.tzReconMessage(prompt.deviceLabel),
                   style: AppTextStyles.bodySmall.copyWith(color: textColor),
                 ),
-                // Zona tersimpan saat ini (konteks tambahan, muted)
                 const SizedBox(height: AppSpacing.xs),
+                // Zona tersimpan saat ini — informatif, muted
                 Text(
-                  // Zona tersimpan saat ini — informatif, tidak menghakimi
                   l10n.tzReconStored(prompt.storedLabel),
                   style: AppTextStyles.caption.copyWith(color: mutedColor),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                // Tombol aksi — row dengan spacing minimal agar compact
+                // Aksi rata-kanan: sekunder (Nanti) lalu CTA tonal (Pakai zona ini)
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // Aksi utama: "Pakai zona ini"
-                    // hit-target ≥48dp via InkWell + padding
-                    Expanded(
-                      child: _BannerButton(
-                        key: const Key('tz_recon_confirm'),
-                        label: l10n.tzReconConfirm,
-                        isPrimary: true,
-                        isDark: isDark,
-                        onTap: () => context
-                            .read<TimezoneReconciliationCubit>()
-                            .confirm(),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    // Aksi sekunder: "Nanti"
                     _BannerButton(
                       key: const Key('tz_recon_dismiss'),
                       label: l10n.tzReconDismiss,
@@ -1223,12 +1217,22 @@ class _BannerContent extends StatelessWidget {
                           .read<TimezoneReconciliationCubit>()
                           .dismiss(),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
+                    _BannerButton(
+                      key: const Key('tz_recon_confirm'),
+                      label: l10n.tzReconConfirm,
+                      isPrimary: true,
+                      isDark: isDark,
+                      onTap: () => context
+                          .read<TimezoneReconciliationCubit>()
+                          .confirm(),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1250,33 +1254,30 @@ class _BannerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Token warna: primary tombol utama, muted tombol sekunder
-    final bg = isPrimary ? AppColors.primary : Colors.transparent;
+    // Aksen hijau lembut: shoot (mint) di dark agar kontras AAA di cardDark.
+    final accent = isDark ? AppColors.shoot : AppColors.primary;
+    // CTA utama = pill tonal (bg hijau tipis + teks hijau). Sekunder = teks muted.
+    final bg = isPrimary
+        ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
+        : Colors.transparent;
     final fgColor = isPrimary
-        ? Colors.white
+        ? accent
         : (isDark ? AppColors.mutedDark : AppColors.mutedLight);
-    final borderCol = isPrimary
-        ? Colors.transparent
-        : (isDark ? AppColors.borderDark : AppColors.borderLight);
 
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        splashColor: Colors.white.withAlpha(30),
-        highlightColor: Colors.white.withAlpha(15),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        splashColor: accent.withValues(alpha: 0.14),
+        highlightColor: accent.withValues(alpha: 0.07),
         child: Container(
           // hit-target min 48dp (Android)
           constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
+          padding: EdgeInsets.symmetric(
+            horizontal: isPrimary ? AppSpacing.lg : AppSpacing.md,
             vertical: AppSpacing.sm2,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: borderCol, width: 1),
           ),
           alignment: Alignment.center,
           child: Text(
