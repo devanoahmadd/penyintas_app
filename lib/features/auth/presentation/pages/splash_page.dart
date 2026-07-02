@@ -4,11 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
+
+/// Tentukan route tujuan splash: pending route deep-link (terminated) bila ada,
+/// selainnya dashboard. Diisolasi agar dapat diuji unit (K3).
+@visibleForTesting
+String resolveSplashRoute(String? pendingRoute) => pendingRoute ?? '/dashboard';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -50,7 +56,10 @@ class _SplashPageState extends State<SplashPage>
       _recordNonFatal(e, s);
     }
     if (!mounted) return;
-    _navigateWhenReady(() => context.go('/dashboard'));
+    // K3: ambil pending route (one-shot) SETELAH bootstrap, sebelum navigasi.
+    final pending = sl<NotificationLaunchHolder>().takePendingRoute();
+    final target = resolveSplashRoute(pending);
+    _navigateWhenReady(() => context.go(target));
   }
 
   void _recordNonFatal(Object e, StackTrace s) {

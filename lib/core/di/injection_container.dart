@@ -9,6 +9,7 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
@@ -21,9 +22,11 @@ import 'package:penyintas_app/features/notification/data/datasources/notificatio
 import 'package:penyintas_app/features/notification/data/repositories/notification_repository_impl.dart';
 import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/cancel_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
-import 'package:penyintas_app/features/notification/domain/usecases/save_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/schedule_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/set_push_preference_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/unregister_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
@@ -204,6 +207,8 @@ void _initAuth() {
         wipeLocalData: sl(),
         deleteAccount: sl(),
         sendPasswordReset: sl(),
+        registerFcmToken: sl(),
+        unregisterFcmToken: sl(),
       ));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
@@ -452,19 +457,25 @@ void _initReport() {
 void _initNotification() {
   sl.registerFactory(() => NotificationBloc(
         requestPermission: sl(),
-        saveFcmToken: sl(),
+        registerToken: sl(),
+        setPushPreference: sl(),
         scheduleDailyReminder: sl(),
         cancelDailyReminder: sl(),
         messaging: sl(),
         auth: sl(),
         local: sl(),
+        launchHolder: sl(),
         db: sl(),
       ));
 
   sl.registerLazySingleton(() => RequestPermissionUseCase(sl()));
-  sl.registerLazySingleton(() => SaveFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => RegisterFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => UnregisterFcmTokenUseCase(sl()));
+  sl.registerLazySingleton(() => SetPushPreferenceUseCase(sl()));
   sl.registerLazySingleton(() => ScheduleDailyReminderUseCase(sl()));
   sl.registerLazySingleton(() => CancelDailyReminderUseCase(sl()));
+
+  sl.registerLazySingleton(() => NotificationLaunchHolder());
 
   sl.registerLazySingleton<NotificationRepository>(
     () => NotificationRepositoryImpl(local: sl(), remote: sl()),

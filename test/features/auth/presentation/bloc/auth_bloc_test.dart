@@ -14,6 +14,8 @@ import 'package:penyintas_app/features/auth/domain/usecases/delete_account_useca
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/unregister_fcm_token_usecase.dart';
 
 // Mocks
 class MockSignInUseCase extends Mock implements SignInUseCase {}
@@ -24,6 +26,8 @@ class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
 class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
 class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
+class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
+class MockUnregisterFcmTokenUseCase extends Mock implements UnregisterFcmTokenUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
@@ -41,6 +45,8 @@ void main() {
   late MockWipeLocalDataUseCase mockWipe;
   late MockDeleteAccountUseCase mockDeleteAccount;
   late MockSendPasswordResetUseCase mockSendPasswordReset;
+  late MockRegisterFcmTokenUseCase mockRegisterFcm;
+  late MockUnregisterFcmTokenUseCase mockUnregisterFcm;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -69,6 +75,10 @@ void main() {
 
     mockDeleteAccount = MockDeleteAccountUseCase();
     mockSendPasswordReset = MockSendPasswordResetUseCase();
+    mockRegisterFcm = MockRegisterFcmTokenUseCase();
+    mockUnregisterFcm = MockUnregisterFcmTokenUseCase();
+    when(() => mockRegisterFcm(any())).thenAnswer((_) async => const Right(null));
+    when(() => mockUnregisterFcm(any())).thenAnswer((_) async => const Right(null));
 
     // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
     when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
@@ -83,6 +93,8 @@ void main() {
         wipeLocalData: mockWipe,
         deleteAccount: mockDeleteAccount,
         sendPasswordReset: mockSendPasswordReset,
+        registerFcmToken: mockRegisterFcm,
+        unregisterFcmToken: mockUnregisterFcm,
       );
 
   group('SignInRequested', () {
@@ -352,6 +364,37 @@ void main() {
         verify(() => mockDeleteAccount(any())).called(1);
         verify(() => mockWipe(any())).called(1);
         verify(() => mockSignOut(any())).called(1);
+      },
+    );
+  });
+
+  group('FCM token lifecycle (auth-driven)', () {
+    blocTest<AuthBloc, AuthState>(
+      'AuthCheckRequested + stream user → registerFcmToken(uid) dipanggil',
+      build: buildBloc,
+      setUp: () => when(() => mockWatchAuthState())
+          .thenAnswer((_) => Stream.value(tUser)),
+      act: (bloc) => bloc.add(const AuthCheckRequested()),
+      expect: () => [Authenticated(tUser)],
+      verify: (_) => verify(() => mockRegisterFcm('uid-123')).called(1),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'SignOut → unregisterFcmToken dipanggil SEBELUM signOut',
+      build: buildBloc,
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+      verify: (_) {
+        // verifyInOrder membuktikan: unregister dipanggil SEBELUM signOut
+        verifyInOrder([
+          () => mockUnregisterFcm('uid-123'),
+          () => mockSignOut(any()),
+        ]);
       },
     );
   });

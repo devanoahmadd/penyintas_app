@@ -30,7 +30,6 @@ class UserModel extends UserEntity {
         'displayName': displayName,
         'photoUrl': photoUrl,
         'createdAt': Timestamp.fromDate(createdAt),
-        'fcmToken': fcmToken,
       };
 
   UserModel copyWith({String? fcmToken}) => UserModel(

@@ -6,31 +6,37 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/cancel_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
-import 'package:penyintas_app/features/notification/domain/usecases/save_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/schedule_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/domain/usecases/set_push_preference_usecase.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   NotificationBloc({
     required RequestPermissionUseCase requestPermission,
-    required SaveFcmTokenUseCase saveFcmToken,
+    required RegisterFcmTokenUseCase registerToken,
+    required SetPushPreferenceUseCase setPushPreference,
     required ScheduleDailyReminderUseCase scheduleDailyReminder,
     required CancelDailyReminderUseCase cancelDailyReminder,
     required FirebaseMessaging messaging,
     required FirebaseAuth auth,
     required NotificationLocalDatasource local,
+    required NotificationLaunchHolder launchHolder,
     required AppDatabase db,
   })  : _requestPermission = requestPermission,
-        _saveFcmToken = saveFcmToken,
+        _registerToken = registerToken,
+        _setPushPreference = setPushPreference,
         _scheduleDailyReminder = scheduleDailyReminder,
         _cancelDailyReminder = cancelDailyReminder,
         _messaging = messaging,
         _auth = auth,
         _local = local,
+        _launchHolder = launchHolder,
         _db = db,
         super(const NotificationInitial()) {
     on<InitNotification>(_onInit);
@@ -39,15 +45,19 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<NotificationTapped>(_onTapped);
     on<ScheduleDailyReminder>(_onSchedule);
     on<CancelDailyReminder>(_onCancel);
+    on<SetPushPreference>(_onSetPushPreference);
+    on<CheckInitialMessage>(_onCheckInitialMessage);
   }
 
   final RequestPermissionUseCase _requestPermission;
-  final SaveFcmTokenUseCase _saveFcmToken;
+  final RegisterFcmTokenUseCase _registerToken;
+  final SetPushPreferenceUseCase _setPushPreference;
   final ScheduleDailyReminderUseCase _scheduleDailyReminder;
   final CancelDailyReminderUseCase _cancelDailyReminder;
   final FirebaseMessaging _messaging;
   final FirebaseAuth _auth;
   final NotificationLocalDatasource _local;
+  final NotificationLaunchHolder _launchHolder;
   final AppDatabase _db;
 
   StreamSubscription<String>? _tokenRefreshSub;
@@ -66,14 +76,25 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       });
 
       _foregroundSub = FirebaseMessaging.onMessage.listen((message) {
-        final route = message.data['route'] as String?;
-        if (route != null) add(NotificationTapped(route));
+        // Foreground: FCM tak meng-auto-display di state ini. Tampilkan sendiri
+        // sebagai local notif. Navigasi HANYA saat user mengetuk (via onTap di
+        // initialize, atau onMessageOpenedApp) — bukan saat pesan datang.
+        final notif = message.notification;
+        if (notif == null) return; // pesan data-only: tak ada yang ditampilkan
+        unawaited(_local.show(
+          title: notif.title ?? '',
+          body: notif.body ?? '',
+          payload: message.data['route'] as String?,
+        ));
       });
 
       _openedAppSub = FirebaseMessaging.onMessageOpenedApp.listen((message) {
         final route = message.data['route'] as String?;
         if (route != null) add(NotificationTapped(route));
       });
+
+      // G6: app diluncurkan dari terminated via tap notif → simpan route.
+      add(const CheckInitialMessage());
 
       final settings = await (_db.select(_db.appSettings)
             ..where((t) => t.id.equals(1)))
@@ -102,11 +123,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           final uid = _auth.currentUser?.uid;
           if (uid != null) {
             try {
-              // iOS: give the native permission dialog time to dismiss before
-              // requesting an FCM token, which can trigger a second dialog.
+              // iOS: beri jeda agar dialog izin native sempat tertutup sebelum
+              // getToken (di dalam registerToken) memicu dialog kedua.
               await Future.delayed(const Duration(milliseconds: 300));
-              final token = await _messaging.getToken();
-              if (token != null) await _saveFcmToken(uid, token);
+              await _registerToken(uid);
             } catch (e, s) {
               FirebaseCrashlytics.instance.recordError(e, s);
             }
@@ -124,7 +144,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
-    await _saveFcmToken(uid, event.token);
+    await _registerToken(uid);
   }
 
   void _onTapped(
@@ -174,6 +194,33 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         emit(const NotificationCancelled());
       },
     );
+  }
+
+  Future<void> _onSetPushPreference(
+    SetPushPreference event,
+    Emitter<NotificationState> emit,
+  ) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    final result = await _setPushPreference(uid, event.enabled);
+    result.fold(
+      (failure) => emit(NotificationError(failure.message)),
+      (_) {}, // sukses: nilai sudah optimistik di widget
+    );
+  }
+
+  Future<void> _onCheckInitialMessage(
+    CheckInitialMessage event,
+    Emitter<NotificationState> emit,
+  ) async {
+    try {
+      final initial = await _messaging.getInitialMessage();
+      final route = initial?.data['route'] as String?;
+      // K3: simpan ke holder — SplashPage menerapkannya pasca-bootstrap.
+      if (route != null) _launchHolder.pendingRoute = route;
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s);
+    }
   }
 
   @override

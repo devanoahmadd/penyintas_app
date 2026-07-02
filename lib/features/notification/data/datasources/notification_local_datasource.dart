@@ -8,6 +8,15 @@ abstract class NotificationLocalDatasource {
   Future<bool> requestPermission();
   Future<void> scheduleDailyReminder({required int hour, required int minute});
   Future<void> cancelDailyReminder();
+
+  /// Tampilkan notifikasi seketika (dipakai untuk pesan FCM saat app
+  /// foreground — FCM tak meng-auto-display di state ini). [payload] dikirim
+  /// balik saat notif diketuk untuk navigasi.
+  Future<void> show({
+    required String title,
+    required String body,
+    String? payload,
+  });
 }
 
 class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
@@ -16,6 +25,16 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
   static const _dailyReminderId = 1;
   static const _channelId = 'penyintas_daily';
   static const _channelName = 'Pengingat Harian';
+
+  // Channel khusus peringatan anggaran (heads-up). Channel terpisah karena
+  // importance Android 8+ immutable setelah dibuat — reminder harian pakai
+  // defaultImportance, alert butuh high.
+  static const _alertChannelId = 'penyintas_alerts';
+  static const _alertChannelName = 'Peringatan Anggaran';
+
+  // ID band 1000–1999 agar tak pernah bentrok reminder (id=1) & multi-kategori
+  // menumpuk seperti perilaku notif background.
+  int _alertSeq = 0;
 
   // v21 API: semua parameter named
   @override
@@ -101,4 +120,33 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
   @override
   Future<void> cancelDailyReminder() =>
       _plugin.cancel(id: _dailyReminderId);
+
+  @override
+  Future<void> show({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _plugin.show(
+      id: 1000 + (_alertSeq++ % 1000),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _alertChannelId,
+          _alertChannelName,
+          channelDescription:
+              'Peringatan saat pengeluaran mendekati atau melewati batas.',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: payload,
+    );
+  }
 }
