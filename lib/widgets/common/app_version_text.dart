@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-/// Teks versi aplikasi dinamis dari platform (pengganti literal 'v0.1.0+1').
+/// Teks versi aplikasi dinamis dari platform (pengganti label versi statis lama).
 /// Future di-cache static agar PackageInfo hanya dibaca sekali per sesi.
 class AppVersionText extends StatelessWidget {
   const AppVersionText({super.key, this.style});
