@@ -17,6 +17,7 @@ import 'package:penyintas_app/features/notification/presentation/bloc/notificati
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:penyintas_app/widgets/common/app_version_text.dart';
 
 /// Diskriminator toggle terakhir yang diubah — dipakai di revert listener.
 enum _ToggleKind { reminder, push }
@@ -412,8 +413,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         context.l10n.sayaVersionLabel,
                         style: AppTextStyles.body.copyWith(color: textColor),
                       ),
-                      trailing: Text(
-                        'v0.1.0+1',
+                      trailing: AppVersionText(
                         style: AppTextStyles.bodySmall
                             .copyWith(color: mutedColor),
                       ),

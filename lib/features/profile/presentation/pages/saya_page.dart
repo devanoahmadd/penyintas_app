@@ -19,6 +19,7 @@ import 'package:penyintas_app/features/transaction/presentation/bloc/add_transac
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/features/auth/presentation/widgets/delete_account_sheet.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+import 'package:penyintas_app/widgets/common/app_version_text.dart';
 
 class SayaPage extends StatelessWidget {
   const SayaPage({super.key});
@@ -652,8 +653,7 @@ class _AccountSection extends StatelessWidget {
                     l10n.sayaVersionLabel,
                     style: AppTextStyles.body.copyWith(color: textColor),
                   ),
-                  trailing: Text(
-                    'v0.1.0+1',
+                  trailing: AppVersionText(
                     style:
                         AppTextStyles.bodySmall.copyWith(color: mutedColor),
                   ),
