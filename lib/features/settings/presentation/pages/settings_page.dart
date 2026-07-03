@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -91,6 +92,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _exportCsv() async {
+    final subjectText = context.l10n.settingsExportSubject(
+      DateFormat('yyyy-MM').format(DateTime.now()),
+    );
+    final failedText = context.l10n.settingsExportFailed;
     try {
       final db = sl<AppDatabase>();
       final txs = await db.select(db.transactions).get();
@@ -113,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile(file.path, mimeType: 'text/csv')],
-            subject: 'Ekspor Transaksi Penyintas $month',
+            subject: subjectText,
           ),
         );
       } finally {
@@ -124,7 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Gagal mengekspor data.',
+            failedText,
             style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
           ),
           backgroundColor: AppColors.warn,
@@ -177,8 +182,8 @@ class _SettingsPageState extends State<SettingsPage> {
             SnackBar(
               content: Text(
                 isPush
-                    ? 'Gagal mengubah peringatan anggaran: ${state.message}'
-                    : 'Gagal mengubah pengingat: ${state.message}',
+                    ? context.l10n.settingsErrorPush(state.message)
+                    : context.l10n.settingsErrorReminder(state.message),
                 style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
               ),
               backgroundColor: AppColors.warn,
@@ -194,7 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'Pengaturan',
+          context.l10n.settingsPageTitle,
           style: AppTextStyles.h3.copyWith(color: textColor),
         ),
         iconTheme: IconThemeData(color: textColor),
@@ -204,7 +209,10 @@ class _SettingsPageState extends State<SettingsPage> {
           return ListView(
             padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
             children: [
-              _SectionHeader(label: 'TAMPILAN', mutedColor: mutedColor),
+              _SectionHeader(
+                label: context.l10n.settingsTheme.toUpperCase(),
+                mutedColor: mutedColor,
+              ),
               _CardContainer(
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
@@ -218,21 +226,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     children: [
                       _RadioTile(
-                        title: 'Terang',
+                        title: context.l10n.settingsThemeLight,
                         value: ThemeMode.light,
                         textColor: textColor,
                         borderColor: borderColor,
                         showDivider: true,
                       ),
                       _RadioTile(
-                        title: 'Gelap',
+                        title: context.l10n.settingsThemeDark,
                         value: ThemeMode.dark,
                         textColor: textColor,
                         borderColor: borderColor,
                         showDivider: true,
                       ),
                       _RadioTile(
-                        title: 'Ikut sistem',
+                        title: context.l10n.settingsThemeSystem,
                         value: ThemeMode.system,
                         textColor: textColor,
                         borderColor: borderColor,
@@ -242,7 +250,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              _SectionHeader(label: 'BAHASA', mutedColor: mutedColor),
+              _SectionHeader(
+                label: context.l10n.settingsLanguage.toUpperCase(),
+                mutedColor: mutedColor,
+              ),
               _CardContainer(
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
@@ -274,7 +285,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               if (_reminderLoaded) ...[
-                _SectionHeader(label: 'NOTIFIKASI', mutedColor: mutedColor),
+                _SectionHeader(
+                  label: context.l10n.settingsSectionNotification
+                      .toUpperCase(),
+                  mutedColor: mutedColor,
+                ),
                 _CardContainer(
                   surfaceColor: surfaceColor,
                   borderColor: borderColor,
@@ -284,12 +299,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: _reminderEnabled,
                         onChanged: _onToggleReminder,
                         title: Text(
-                          'Pengingat harian',
+                          context.l10n.settingsReminderTitle,
                           style:
                               AppTextStyles.body.copyWith(color: textColor),
                         ),
                         subtitle: Text(
-                          'Ingatkan untuk mencatat pengeluaran setiap hari',
+                          context.l10n.settingsReminderSubtitle,
                           style: AppTextStyles.bodySmall
                               .copyWith(color: textSoftColor),
                         ),
@@ -309,7 +324,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             vertical: AppSpacing.xs,
                           ),
                           title: Text(
-                            'Waktu pengingat',
+                            context.l10n.settingsReminderTime,
                             style:
                                 AppTextStyles.body.copyWith(color: textColor),
                           ),
@@ -330,11 +345,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: _pushEnabled,
                         onChanged: _onTogglePush,
                         title: Text(
-                          'Peringatan anggaran',
+                          context.l10n.settingsPushTitle,
                           style: AppTextStyles.body.copyWith(color: textColor),
                         ),
                         subtitle: Text(
-                          'Notifikasi saat pengeluaran mendekati atau melewati batas.',
+                          context.l10n.settingsPushSubtitle,
                           style: AppTextStyles.bodySmall
                               .copyWith(color: textSoftColor),
                         ),
@@ -350,7 +365,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
-              _SectionHeader(label: 'EKSPOR DATA', mutedColor: mutedColor),
+              _SectionHeader(
+                label: context.l10n.settingsSectionExport.toUpperCase(),
+                mutedColor: mutedColor,
+              ),
               _CardContainer(
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
@@ -360,11 +378,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     vertical: AppSpacing.xs,
                   ),
                   title: Text(
-                    'Export Transaksi (CSV)',
+                    context.l10n.settingsExportCsvTitle,
                     style: AppTextStyles.body.copyWith(color: textColor),
                   ),
                   subtitle: Text(
-                    'Ekspor semua transaksi ke file CSV',
+                    context.l10n.settingsExportCsvSubtitle,
                     style:
                         AppTextStyles.bodySmall.copyWith(color: textSoftColor),
                   ),
@@ -376,7 +394,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: _exportCsv,
                 ),
               ),
-              _SectionHeader(label: 'TENTANG', mutedColor: mutedColor),
+              _SectionHeader(
+                label: context.l10n.settingsSectionAbout.toUpperCase(),
+                mutedColor: mutedColor,
+              ),
               _CardContainer(
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
@@ -388,7 +409,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         vertical: AppSpacing.xs,
                       ),
                       title: Text(
-                        'Versi',
+                        context.l10n.sayaVersionLabel,
                         style: AppTextStyles.body.copyWith(color: textColor),
                       ),
                       trailing: Text(
@@ -404,7 +425,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         vertical: AppSpacing.xs,
                       ),
                       title: Text(
-                        'Kirim Feedback',
+                        context.l10n.settingsFeedbackLabel,
                         style: AppTextStyles.body.copyWith(color: textColor),
                       ),
                       trailing: Icon(
