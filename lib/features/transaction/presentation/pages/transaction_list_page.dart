@@ -370,8 +370,7 @@ class _V2TitleRow extends StatelessWidget {
                       size: 13, color: textColor),
                   const SizedBox(width: 6),
                   Text(
-                    DateFormat('MMMM yyyy', locale == 'id' ? 'id_ID' : 'en_US')
-                        .format(selectedMonth),
+                    DateFormat('MMMM yyyy', locale).format(selectedMonth),
                     style: AppTextStyles.label.copyWith(
                       fontSize: 12,
                       color: textColor,
@@ -541,15 +540,16 @@ class _V2FilterRow extends StatelessWidget {
           AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
       child: Row(
         children: [
-          _TypePill(label: 'Semua', type: null, active: typeFilter),
+          _TypePill(
+              label: context.l10n.txFilterAll, type: null, active: typeFilter),
           const SizedBox(width: AppSpacing.sm),
           _TypePill(
-              label: 'Masuk',
+              label: context.l10n.txIncomeLabel,
               type: TransactionType.income,
               active: typeFilter),
           const SizedBox(width: AppSpacing.sm),
           _TypePill(
-              label: 'Keluar',
+              label: context.l10n.txExpenseLabel,
               type: TransactionType.expense,
               active: typeFilter),
           const Spacer(),
@@ -790,7 +790,7 @@ class _V2DayGroup extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _dayLabel(date),
+                          _dayLabel(context, date),
                           style: AppTextStyles.label.copyWith(
                             fontWeight: FontWeight.w700,
                             height: 1.2,
@@ -799,7 +799,7 @@ class _V2DayGroup extends StatelessWidget {
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          '${items.length} transaksi',
+                          context.l10n.txDayCount(items.length),
                           style: AppTextStyles.caption.copyWith(
                             color: mutedColor,
                             fontSize: 10,
@@ -855,12 +855,15 @@ class _V2DayGroup extends StatelessWidget {
     );
   }
 
-  String _dayLabel(DateTime date) {
+  String _dayLabel(BuildContext context, DateTime date) {
     final today = DateUtils.dateOnly(DateTime.now());
     final diff = today.difference(date).inDays;
-    if (diff == 0) return 'Hari ini';
-    if (diff == 1) return 'Kemarin';
-    return DateFormat('EEEE, d MMMM', 'id_ID').format(date);
+    if (diff == 0) return context.l10n.txDateToday;
+    if (diff == 1) return context.l10n.txDateYesterday;
+    return DateFormat(
+      'EEEE, d MMMM',
+      Localizations.localeOf(context).languageCode,
+    ).format(date);
   }
 }
 
@@ -874,7 +877,8 @@ class _DayNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final monthAbbr = DateFormat('MMM', 'id_ID')
+    final monthAbbr = DateFormat(
+            'MMM', Localizations.localeOf(context).languageCode)
         .format(date)
         .toUpperCase()
         .replaceAll('.', '');
@@ -1035,7 +1039,7 @@ class _V2EndCap extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           Text(
-            'Awal bulan',
+            context.l10n.txMonthStart,
             style: AppTextStyles.bodySmall.copyWith(
               color: mutedColor,
               fontStyle: FontStyle.italic,
@@ -1070,10 +1074,11 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des',
-    ];
+    final langCode = Localizations.localeOf(context).languageCode;
+    final monthNames = List.generate(
+      12,
+      (i) => DateFormat('MMM', langCode).format(DateTime(2000, i + 1)),
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -1367,7 +1372,9 @@ class _V2EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              isFiltered ? 'Tidak ada hasil' : 'Belum ada transaksi',
+              isFiltered
+                  ? context.l10n.txEmptyFilteredTitle
+                  : context.l10n.txEmptyTitle,
               style: AppTextStyles.h2.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -1378,8 +1385,8 @@ class _V2EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               isFiltered
-                  ? 'Coba ubah filter atau pilih periode lain.'
-                  : 'Catat pengeluaran pertama kamu hari ini.',
+                  ? context.l10n.txEmptyFilteredSub
+                  : context.l10n.txEmptySub,
               style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
               textAlign: TextAlign.center,
             ),
@@ -1395,7 +1402,7 @@ class _V2EmptyState extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
-                    'Tambah Transaksi',
+                    context.l10n.txAddButton,
                     style: AppTextStyles.label.copyWith(
                       color: Colors.white,
                       fontSize: 14,
@@ -1465,7 +1472,7 @@ class _V2SearchBar extends StatelessWidget {
                         fontSize: 14,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Cari transaksi...',
+                        hintText: context.l10n.txSearchHint,
                         hintStyle: AppTextStyles.body.copyWith(
                           color: mutedColor,
                           fontSize: 14,
@@ -1498,7 +1505,7 @@ class _V2SearchBar extends StatelessWidget {
           GestureDetector(
             onTap: onClose,
             child: Text(
-              'Batal',
+              context.l10n.btnCancel,
               style: AppTextStyles.label.copyWith(
                 color: AppColors.primary,
                 fontSize: 13,
