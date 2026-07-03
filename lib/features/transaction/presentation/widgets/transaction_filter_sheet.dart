@@ -112,7 +112,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Kategori',
+                  Text(context.l10n.txSectionCategory,
                       style: AppTextStyles.label.copyWith(
                           fontWeight: FontWeight.w700,
                           color: textColor)),
@@ -164,7 +164,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       }).toList(),
                     ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Periode',
+                  Text(context.l10n.txFilterPeriod,
                       style: AppTextStyles.label.copyWith(
                           fontWeight: FontWeight.w700,
                           color: textColor)),
@@ -178,25 +178,25 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                     childAspectRatio: 3.2,
                     children: [
                       _PeriodButton(
-                          label: 'Minggu Ini',
+                          label: context.l10n.txFilterWeek,
                           selected: _selectedPeriod == _Period.thisWeek,
                           isDark: isDark,
                           onTap: () => setState(
                               () => _selectedPeriod = _Period.thisWeek)),
                       _PeriodButton(
-                          label: 'Bulan Ini',
+                          label: context.l10n.txFilterMonth,
                           selected: _selectedPeriod == _Period.thisMonth,
                           isDark: isDark,
                           onTap: () => setState(
                               () => _selectedPeriod = _Period.thisMonth)),
                       _PeriodButton(
-                          label: '3 Bulan',
+                          label: context.l10n.txFilter3Months,
                           selected: _selectedPeriod == _Period.threeMonths,
                           isDark: isDark,
                           onTap: () => setState(
                               () => _selectedPeriod = _Period.threeMonths)),
                       _PeriodButton(
-                          label: 'Custom',
+                          label: context.l10n.txFilterCustom,
                           selected: _selectedPeriod == _Period.custom,
                           isDark: isDark,
                           onTap: () => setState(
@@ -209,7 +209,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       children: [
                         Expanded(
                           child: _DateBox(
-                            label: 'Dari',
+                            label: context.l10n.txFilterFrom,
                             date: _customFrom,
                             isDark: isDark,
                             onTap: () async {
@@ -228,7 +228,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: _DateBox(
-                            label: 'Sampai',
+                            label: context.l10n.txFilterTo,
                             date: _customTo,
                             isDark: isDark,
                             onTap: () async {
@@ -251,7 +251,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Nominal',
+                      Text(context.l10n.txFilterAmount,
                           style: AppTextStyles.label.copyWith(
                               fontWeight: FontWeight.w700,
                               color: textColor)),
@@ -306,7 +306,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       padding: const EdgeInsets.symmetric(
                           vertical: AppSpacing.md),
                     ),
-                    child: Text('Reset',
+                    child: Text(context.l10n.txFilterReset,
                         style:
                             AppTextStyles.label.copyWith(color: textColor)),
                   ),
@@ -325,7 +325,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       padding: const EdgeInsets.symmetric(
                           vertical: AppSpacing.md),
                     ),
-                    child: Text('Terapkan',
+                    child: Text(context.l10n.txFilterApply,
                         style: AppTextStyles.label
                             .copyWith(color: Colors.white)),
                   ),
@@ -463,7 +463,10 @@ class _DateBox extends StatelessWidget {
               ),
             ),
             Text(
-              DateFormat('d MMM yyyy', 'id_ID').format(date),
+              DateFormat(
+                'd MMM yyyy',
+                Localizations.localeOf(context).languageCode,
+              ).format(date),
               style: AppTextStyles.bodySmall
                   .copyWith(color: textColor, fontWeight: FontWeight.w600),
             ),
