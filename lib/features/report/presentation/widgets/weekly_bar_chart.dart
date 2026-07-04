@@ -53,15 +53,9 @@ class WeeklyBarChart extends StatelessWidget {
                 ),
               ),
             ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),

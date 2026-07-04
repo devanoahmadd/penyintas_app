@@ -42,13 +42,16 @@ class TransactionDetailSheet extends StatelessWidget {
         : (isDark ? AppColors.expenseDark : AppColors.warn);
     final amtBg = _amtBg(isDark, isIncome);
     final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
-        transaction.category, context.l10n);
+      transaction.category,
+      context.l10n,
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -59,7 +62,9 @@ class TransactionDetailSheet extends StatelessWidget {
               width: 36,
               height: 4,
               margin: const EdgeInsets.only(
-                  top: AppSpacing.md, bottom: AppSpacing.sm),
+                top: AppSpacing.md,
+                bottom: AppSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: borderColor,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -68,7 +73,11 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.xs, AppSpacing.sm, AppSpacing.md),
+              AppSpacing.lg,
+              AppSpacing.xs,
+              AppSpacing.sm,
+              AppSpacing.md,
+            ),
             child: Row(
               children: [
                 SizedBox(
@@ -128,8 +137,7 @@ class TransactionDetailSheet extends StatelessWidget {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
@@ -146,8 +154,11 @@ class TransactionDetailSheet extends StatelessWidget {
                       color: amtBg,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(CategoryMetadata.of(transaction.category).$1,
-                        size: 20, color: amtColor),
+                    child: Icon(
+                      CategoryMetadata.of(transaction.category).$1,
+                      size: 20,
+                      color: amtColor,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -188,8 +199,7 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Column(
               children: [
                 _MetaRow(
@@ -206,8 +216,8 @@ class TransactionDetailSheet extends StatelessWidget {
                   value: transaction.type == TransactionType.income
                       ? context.l10n.categoryIncome
                       : (transaction.isFixed
-                          ? context.l10n.categoryFixed
-                          : context.l10n.txDetailTypeVariable),
+                            ? context.l10n.categoryFixed
+                            : context.l10n.txDetailTypeVariable),
                   isDark: isDark,
                 ),
                 if (transaction.note != null) ...[
@@ -223,8 +233,7 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Row(
               children: [
                 Expanded(
@@ -256,8 +265,7 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _ActionButton(
               icon: Icons.delete_outline_rounded,
               label: context.l10n.txDetailDelete,
@@ -277,7 +285,8 @@ class TransactionDetailSheet extends StatelessWidget {
             ),
           ),
           SizedBox(
-              height: MediaQuery.of(context).padding.bottom + AppSpacing.md),
+            height: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+          ),
         ],
       ),
     );
@@ -297,7 +306,6 @@ class TransactionDetailSheet extends StatelessWidget {
         // ignore: deprecated_member_use
         : const Color(0xFFE07A3C).withOpacity(0.08);
   }
-
 }
 
 // ── Delete Confirm Sheet ──────────────────────────────────────────────────
@@ -333,8 +341,9 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
           setState(() => _isLoading = false);
           return;
         }
-        final stillExists =
-            state.transactions.any((t) => t.id == widget.transaction.id);
+        final stillExists = state.transactions.any(
+          (t) => t.id == widget.transaction.id,
+        );
         if (!stillExists && _isLoading) {
           setState(() => _isLoading = false);
           int count = 0;
@@ -344,14 +353,19 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.lg),
+          ),
         ),
         child: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +405,9 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                         child: Text(
                           widget.transaction.note ??
                               CategoryMetadata.resolveLabelFromSlug(
-                                  widget.transaction.category, context.l10n),
+                                widget.transaction.category,
+                                context.l10n,
+                              ),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w500,
@@ -436,14 +452,16 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                   minimumSize: const Size.fromHeight(48),
                                   side: BorderSide(color: borderColor),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 child: Text(
                                   context.l10n.btnCancel,
-                                  style: AppTextStyles.label
-                                      .copyWith(color: textColor),
+                                  style: AppTextStyles.label.copyWith(
+                                    color: textColor,
+                                  ),
                                 ),
                               ),
                             ),
@@ -455,23 +473,27 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                     : () {
                                         setState(() => _isLoading = true);
                                         context.read<TransactionListBloc>().add(
-                                              DeleteTransactionRequested(
-                                                  widget.transaction.id),
-                                            );
+                                          DeleteTransactionRequested(
+                                            widget.transaction.id,
+                                          ),
+                                        );
                                       },
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(48),
                                   backgroundColor: AppColors.warn.withValues(
-                                      alpha: isDark ? 0.15 : 0.08),
+                                    alpha: isDark ? 0.15 : 0.08,
+                                  ),
                                   foregroundColor: AppColors.warn,
                                   elevation: 0,
                                   side: BorderSide(
-                                    color: AppColors.warn
-                                        .withValues(alpha: isDark ? 0.40 : 0.28),
+                                    color: AppColors.warn.withValues(
+                                      alpha: isDark ? 0.40 : 0.28,
+                                    ),
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 child: _isLoading
@@ -485,8 +507,9 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                       )
                                     : Text(
                                         context.l10n.commonDelete,
-                                        style: AppTextStyles.label
-                                            .copyWith(color: AppColors.warn),
+                                        style: AppTextStyles.label.copyWith(
+                                          color: AppColors.warn,
+                                        ),
                                       ),
                               ),
                             ),
@@ -498,8 +521,9 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                             errorMsg.isNotEmpty
                                 ? errorMsg
                                 : context.l10n.txDetailDeleteFailed,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.warn),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.warn,
+                            ),
                           ),
                         ],
                       ],
@@ -516,8 +540,11 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow(
-      {required this.label, required this.value, required this.isDark});
+  const _MetaRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
   final String label;
   final String value;
   final bool isDark;
@@ -531,7 +558,9 @@ class _MetaRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: AppSpacing.sm2),
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm2,
+      ),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(AppRadius.sm),

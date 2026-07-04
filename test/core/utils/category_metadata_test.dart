@@ -39,21 +39,28 @@ void main() {
     });
 
     test('slug built-in dipetakan ke label l10n', () {
-      expect(CategoryMetadata.resolveLabelFromSlug('food', l10n),
-          'Food & Drinks');
+      expect(
+        CategoryMetadata.resolveLabelFromSlug('food', l10n),
+        'Food & Drinks',
+      );
       expect(CategoryMetadata.resolveLabelFromSlug('income', l10n), 'Income');
       expect(CategoryMetadata.resolveLabelFromSlug('other', l10n), 'Other');
     });
 
     test('slug custom fallback apa adanya', () {
-      expect(CategoryMetadata.resolveLabelFromSlug('kopi-senja', l10n),
-          'kopi-senja');
+      expect(
+        CategoryMetadata.resolveLabelFromSlug('kopi-senja', l10n),
+        'kopi-senja',
+      );
     });
   });
 
   group('CategoryMetadata.iconFromSlug', () {
     test('slug dikenal → icon yang benar', () {
-      expect(CategoryMetadata.iconFromSlug('fitness'), Icons.fitness_center_outlined);
+      expect(
+        CategoryMetadata.iconFromSlug('fitness'),
+        Icons.fitness_center_outlined,
+      );
       expect(CategoryMetadata.iconFromSlug('school'), Icons.school_outlined);
       expect(CategoryMetadata.iconFromSlug('pets'), Icons.pets_outlined);
     });

@@ -128,8 +128,9 @@ class _TransactionListViewState extends State<_TransactionListView> {
                           n is TransactionListLoaded &&
                           p.from != n.from),
                   builder: (context, state) => _V2TitleRow(
-                    selectedMonth:
-                        state is TransactionListLoaded ? state.from : DateTime.now(),
+                    selectedMonth: state is TransactionListLoaded
+                        ? state.from
+                        : DateTime.now(),
                   ),
                 ),
               // Summary row — rebuilds only when all-transactions list changes
@@ -175,8 +176,8 @@ class _TransactionListViewState extends State<_TransactionListView> {
                     }
                     if (state is TransactionListError) {
                       return Center(
-                          child:
-                              Text(state.message, style: AppTextStyles.body));
+                        child: Text(state.message, style: AppTextStyles.body),
+                      );
                     }
                     if (state is TransactionListLoaded) {
                       return _V2Timeline(
@@ -218,8 +219,9 @@ class _TransactionListViewState extends State<_TransactionListView> {
       builder: (_) => BlocProvider(
         create: (_) => sl<AddTransactionBloc>(),
         child: Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: AddTransactionSheet(activeGoals: activeGoals),
         ),
       ),
@@ -268,7 +270,9 @@ class _TransactionListViewState extends State<_TransactionListView> {
   }
 
   Future<void> _openDuplicateSheet(
-      TransactionEntity tx, List<GoalEntity> activeGoals) async {
+    TransactionEntity tx,
+    List<GoalEntity> activeGoals,
+  ) async {
     final listBloc = context.read<TransactionListBloc>();
 
     final saved = await showModalBottomSheet<bool>(
@@ -279,11 +283,9 @@ class _TransactionListViewState extends State<_TransactionListView> {
         create: (_) => sl<AddTransactionBloc>(),
         child: Padding(
           padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: AddTransactionSheet(
-            activeGoals: activeGoals,
-            initial: tx,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
+          child: AddTransactionSheet(activeGoals: activeGoals, initial: tx),
         ),
       ),
     );
@@ -295,7 +297,9 @@ class _TransactionListViewState extends State<_TransactionListView> {
   }
 
   Future<void> _openEditSheet(
-      TransactionEntity tx, List<GoalEntity> activeGoals) async {
+    TransactionEntity tx,
+    List<GoalEntity> activeGoals,
+  ) async {
     final listBloc = context.read<TransactionListBloc>();
 
     final saved = await showModalBottomSheet<bool>(
@@ -309,7 +313,8 @@ class _TransactionListViewState extends State<_TransactionListView> {
         ),
         child: Padding(
           padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom),
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: EditTransactionSheet(activeGoals: activeGoals),
         ),
       ),
@@ -334,12 +339,18 @@ class _V2TitleRow extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     final locale = Localizations.localeOf(context).languageCode;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg2, AppSpacing.lg, AppSpacing.md),
+        AppSpacing.lg,
+        AppSpacing.lg2,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -366,8 +377,11 @@ class _V2TitleRow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.calendar_today_outlined,
-                      size: 13, color: textColor),
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 13,
+                    color: textColor,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     DateFormat('MMMM yyyy', locale).format(selectedMonth),
@@ -377,8 +391,11 @@ class _V2TitleRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 13, color: mutedColor),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 13,
+                    color: mutedColor,
+                  ),
                 ],
               ),
             ),
@@ -424,21 +441,27 @@ class _V2SummaryRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
       child: Row(
         children: [
           Expanded(
             child: _SummaryStat(
-                isIncome: false,
-                label: context.l10n.txExpenseLabel.toUpperCase(),
-                value: totalKeluar),
+              isIncome: false,
+              label: context.l10n.txExpenseLabel.toUpperCase(),
+              value: totalKeluar,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm2),
           Expanded(
             child: _SummaryStat(
-                isIncome: true,
-                label: context.l10n.txIncomeLabel.toUpperCase(),
-                value: totalMasuk),
+              isIncome: true,
+              label: context.l10n.txIncomeLabel.toUpperCase(),
+              value: totalMasuk,
+            ),
           ),
         ],
       ),
@@ -481,7 +504,10 @@ class _SummaryStat extends StatelessWidget {
               Container(
                 width: 20,
                 height: 20,
-                decoration: BoxDecoration(color: amtBgColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: amtBgColor,
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(
                   isIncome
                       ? Icons.arrow_downward_rounded
@@ -537,33 +563,44 @@ class _V2FilterRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
       child: Row(
         children: [
           _TypePill(
-              label: context.l10n.txFilterAll, type: null, active: typeFilter),
+            label: context.l10n.txFilterAll,
+            type: null,
+            active: typeFilter,
+          ),
           const SizedBox(width: AppSpacing.sm),
           _TypePill(
-              label: context.l10n.txIncomeLabel,
-              type: TransactionType.income,
-              active: typeFilter),
+            label: context.l10n.txIncomeLabel,
+            type: TransactionType.income,
+            active: typeFilter,
+          ),
           const SizedBox(width: AppSpacing.sm),
           _TypePill(
-              label: context.l10n.txExpenseLabel,
-              type: TransactionType.expense,
-              active: typeFilter),
+            label: context.l10n.txExpenseLabel,
+            type: TransactionType.expense,
+            active: typeFilter,
+          ),
           const Spacer(),
           _IconRoundButton(
-              icon: Icons.search_rounded,
-              borderColor: borderColor,
-              iconColor: textColor,
-              onTap: onSearchTap),
+            icon: Icons.search_rounded,
+            borderColor: borderColor,
+            iconColor: textColor,
+            onTap: onSearchTap,
+          ),
           const SizedBox(width: AppSpacing.sm),
           _IconRoundButton(
-              icon: Icons.tune_rounded,
-              borderColor: borderColor,
-              iconColor: textColor,
-              onTap: onFilterTap),
+            icon: Icons.tune_rounded,
+            borderColor: borderColor,
+            iconColor: textColor,
+            onTap: onFilterTap,
+          ),
         ],
       ),
     );
@@ -571,8 +608,11 @@ class _V2FilterRow extends StatelessWidget {
 }
 
 class _TypePill extends StatelessWidget {
-  const _TypePill(
-      {required this.label, required this.type, required this.active});
+  const _TypePill({
+    required this.label,
+    required this.type,
+    required this.active,
+  });
   final String label;
   final TransactionType? type;
   final TransactionType? active;
@@ -585,8 +625,7 @@ class _TypePill extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return GestureDetector(
-      onTap: () =>
-          context.read<TransactionListBloc>().add(FilterChanged(type)),
+      onTap: () => context.read<TransactionListBloc>().add(FilterChanged(type)),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: _filterPillH,
@@ -654,7 +693,9 @@ class _V2Timeline extends StatelessWidget {
 
   static bool _matchesSearch(TransactionEntity t, String q) {
     final lower = q.toLowerCase();
-    if (t.note?.toLowerCase().contains(lower) ?? false) { return true; }
+    if (t.note?.toLowerCase().contains(lower) ?? false) {
+      return true;
+    }
     return t.category.toLowerCase().contains(lower);
   }
 
@@ -681,7 +722,9 @@ class _V2Timeline extends StatelessWidget {
       onRefresh: () async => bloc.add(const RefreshTransactions()),
       child: ListView.builder(
         padding: const EdgeInsets.only(
-            top: AppSpacing.md2, bottom: AppSpacing.xxxl),
+          top: AppSpacing.md2,
+          bottom: AppSpacing.xxxl,
+        ),
         itemCount: dates.length + 1,
         itemBuilder: (context, i) {
           if (i == dates.length) {
@@ -703,7 +746,8 @@ class _V2Timeline extends StatelessWidget {
   }
 
   Map<DateTime, List<TransactionEntity>> _groupByDate(
-      List<TransactionEntity> list) {
+    List<TransactionEntity> list,
+  ) {
     final map = <DateTime, List<TransactionEntity>>{};
     for (final t in list) {
       final key = DateTime(t.date.year, t.date.month, t.date.day);
@@ -736,8 +780,7 @@ class _V2DayGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtotal = items.fold<int>(
       0,
-      (s, t) =>
-          t.type == TransactionType.income ? s + t.amount : s - t.amount,
+      (s, t) => t.type == TransactionType.income ? s + t.amount : s - t.amount,
     );
     final isPositive = subtotal >= 0;
     final subtotalColor = _txColor(isDark, isPositive);
@@ -748,7 +791,10 @@ class _V2DayGroup extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.only(
-          left: AppSpacing.lg, right: AppSpacing.lg, bottom: _groupGap),
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: _groupGap,
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -812,7 +858,9 @@ class _V2DayGroup extends StatelessWidget {
                   // Daily subtotal pill
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm2, vertical: 5),
+                      horizontal: AppSpacing.sm2,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: subtotalBg,
                       borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -842,8 +890,7 @@ class _V2DayGroup extends StatelessWidget {
                         onDelete: () => onDelete(items[i].id),
                         onTap: () => onTap(items[i]),
                       ),
-                      if (i < items.length - 1)
-                        const SizedBox(height: _rowGap),
+                      if (i < items.length - 1) const SizedBox(height: _rowGap),
                     ],
                   ],
                 ),
@@ -878,10 +925,9 @@ class _DayNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final monthAbbr = DateFormat(
-            'MMM', Localizations.localeOf(context).languageCode)
-        .format(date)
-        .toUpperCase()
-        .replaceAll('.', '');
+      'MMM',
+      Localizations.localeOf(context).languageCode,
+    ).format(date).toUpperCase().replaceAll('.', '');
 
     return Container(
       width: _dayNodeD,
@@ -889,9 +935,7 @@ class _DayNode extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.primary,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: bgColor, spreadRadius: 4, blurRadius: 0),
-        ],
+        boxShadow: [BoxShadow(color: bgColor, spreadRadius: 4, blurRadius: 0)],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -994,8 +1038,11 @@ class _V2TxRow extends StatelessWidget {
                   color: AppColors.warn,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: const Icon(Icons.delete_outline,
-                    color: Colors.white, size: 18),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
               onDismissed: (_) => onDelete?.call(),
               child: GestureDetector(
@@ -1024,7 +1071,10 @@ class _V2EndCap extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(
-          left: AppSpacing.lg, right: AppSpacing.lg, top: AppSpacing.xs),
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        top: AppSpacing.xs,
+      ),
       child: Row(
         children: [
           Container(
@@ -1083,11 +1133,16 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xl),
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1111,8 +1166,9 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
               Text('$_year', style: AppTextStyles.h3),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed:
-                    _year >= now.year ? null : () => setState(() => _year++),
+                onPressed: _year >= now.year
+                    ? null
+                    : () => setState(() => _year++),
                 color: _year >= now.year
                     ? (isDark ? AppColors.mutedDark : AppColors.mutedLight)
                     : (isDark ? AppColors.textDark : AppColors.textLight),
@@ -1129,8 +1185,10 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
             childAspectRatio: 2.2,
             children: List.generate(12, (i) {
               final month = i + 1;
-              final isFuture = DateTime(_year, month)
-                  .isAfter(DateTime(now.year, now.month));
+              final isFuture = DateTime(
+                _year,
+                month,
+              ).isAfter(DateTime(now.year, now.month));
               final isSelected =
                   _year == widget.initial.year && month == widget.initial.month;
               return GestureDetector(
@@ -1140,8 +1198,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected ? AppColors.primary : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   alignment: Alignment.center,
@@ -1151,12 +1208,10 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                       color: isSelected
                           ? Colors.white
                           : isFuture
-                              ? (isDark
-                                  ? AppColors.mutedDark
-                                  : AppColors.mutedLight)
-                              : (isDark
-                                  ? AppColors.textDark
-                                  : AppColors.textLight),
+                          ? (isDark
+                                ? AppColors.mutedDark
+                                : AppColors.mutedLight)
+                          : (isDark ? AppColors.textDark : AppColors.textLight),
                     ),
                   ),
                 ),
@@ -1164,7 +1219,8 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
             }),
           ),
           SizedBox(
-              height: MediaQuery.of(context).padding.bottom + AppSpacing.sm),
+            height: MediaQuery.of(context).padding.bottom + AppSpacing.sm,
+          ),
         ],
       ),
     );
@@ -1212,36 +1268,64 @@ class _V2SkeletonState extends State<_V2Skeleton>
         child: SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxxl),
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.xxxl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                Expanded(
-                    child: _SkBox(skColor,
-                        height: 72, radius: AppRadius.md)),
-                const SizedBox(width: AppSpacing.sm2),
-                Expanded(
-                    child: _SkBox(skColor,
-                        height: 72, radius: AppRadius.md)),
-              ]),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SkBox(skColor, height: 72, radius: AppRadius.md),
+                  ),
+                  const SizedBox(width: AppSpacing.sm2),
+                  Expanded(
+                    child: _SkBox(skColor, height: 72, radius: AppRadius.md),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.md),
-              Row(children: [
-                _SkBox(skColor,
-                    width: 64, height: _filterPillH, radius: AppRadius.pill),
-                const SizedBox(width: AppSpacing.sm),
-                _SkBox(skColor,
-                    width: 54, height: _filterPillH, radius: AppRadius.pill),
-                const SizedBox(width: AppSpacing.sm),
-                _SkBox(skColor,
-                    width: 58, height: _filterPillH, radius: AppRadius.pill),
-                const Spacer(),
-                _SkBox(skColor,
-                    width: 36, height: 36, radius: AppRadius.pill),
-                const SizedBox(width: AppSpacing.sm),
-                _SkBox(skColor,
-                    width: 36, height: 36, radius: AppRadius.pill),
-              ]),
+              Row(
+                children: [
+                  _SkBox(
+                    skColor,
+                    width: 64,
+                    height: _filterPillH,
+                    radius: AppRadius.pill,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _SkBox(
+                    skColor,
+                    width: 54,
+                    height: _filterPillH,
+                    radius: AppRadius.pill,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _SkBox(
+                    skColor,
+                    width: 58,
+                    height: _filterPillH,
+                    radius: AppRadius.pill,
+                  ),
+                  const Spacer(),
+                  _SkBox(
+                    skColor,
+                    width: 36,
+                    height: 36,
+                    radius: AppRadius.pill,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _SkBox(
+                    skColor,
+                    width: 36,
+                    height: 36,
+                    radius: AppRadius.pill,
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.md2),
               for (final rowCount in [3, 2, 4]) ...[
                 _SkDayGroup(skColor: skColor, rowCount: rowCount),
@@ -1256,8 +1340,12 @@ class _V2SkeletonState extends State<_V2Skeleton>
 }
 
 class _SkBox extends StatelessWidget {
-  const _SkBox(this.color,
-      {this.width, required this.height, this.radius = AppRadius.sm});
+  const _SkBox(
+    this.color, {
+    this.width,
+    required this.height,
+    this.radius = AppRadius.sm,
+  });
   final Color color;
   final double? width;
   final double height;
@@ -1265,13 +1353,13 @@ class _SkBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(radius),
-        ),
-      );
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(radius),
+    ),
+  );
 }
 
 class _SkDayGroup extends StatelessWidget {
@@ -1284,25 +1372,36 @@ class _SkDayGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          _SkBox(skColor,
-              width: _dayNodeD, height: _dayNodeD, radius: _dayNodeD),
-          const SizedBox(width: AppSpacing.md),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _SkBox(skColor, width: 90, height: 13, radius: AppRadius.sm),
-            const SizedBox(height: 4),
-            _SkBox(skColor, width: 54, height: 10, radius: AppRadius.sm),
-          ]),
-        ]),
+        Row(
+          children: [
+            _SkBox(
+              skColor,
+              width: _dayNodeD,
+              height: _dayNodeD,
+              radius: _dayNodeD,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkBox(skColor, width: 90, height: 13, radius: AppRadius.sm),
+                const SizedBox(height: 4),
+                _SkBox(skColor, width: 54, height: 10, radius: AppRadius.sm),
+              ],
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.sm2),
         Padding(
           padding: const EdgeInsets.only(left: _txOffset),
-          child: Column(children: [
-            for (int i = 0; i < rowCount; i++) ...[
-              _SkBox(skColor, height: 52, radius: AppRadius.md),
-              if (i < rowCount - 1) const SizedBox(height: _rowGap),
+          child: Column(
+            children: [
+              for (int i = 0; i < rowCount; i++) ...[
+                _SkBox(skColor, height: 52, radius: AppRadius.md),
+                if (i < rowCount - 1) const SizedBox(height: _rowGap),
+              ],
             ],
-          ]),
+          ),
         ),
       ],
     );
@@ -1312,10 +1411,7 @@ class _SkDayGroup extends StatelessWidget {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 class _V2EmptyState extends StatelessWidget {
-  const _V2EmptyState({
-    required this.onAddTap,
-    this.isFiltered = false,
-  });
+  const _V2EmptyState({required this.onAddTap, this.isFiltered = false});
   final VoidCallback onAddTap;
   final bool isFiltered;
 
@@ -1356,7 +1452,10 @@ class _V2EmptyState extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                      Icons.add_rounded, color: Colors.white, size: 24),
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Container(
@@ -1396,7 +1495,9 @@ class _V2EmptyState extends StatelessWidget {
                 onTap: onAddTap,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -1435,15 +1536,20 @@ class _V2SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -1458,9 +1564,13 @@ class _V2SearchBar extends StatelessWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md),
-                    child: Icon(Icons.search_rounded,
-                        size: 16, color: mutedColor),
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 16,
+                      color: mutedColor,
+                    ),
                   ),
                   Expanded(
                     child: TextField(
@@ -1480,7 +1590,8 @@ class _V2SearchBar extends StatelessWidget {
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.sm2),
+                          vertical: AppSpacing.sm2,
+                        ),
                       ),
                     ),
                   ),
@@ -1492,9 +1603,13 @@ class _V2SearchBar extends StatelessWidget {
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm),
-                        child: Icon(Icons.close_rounded,
-                            size: 16, color: mutedColor),
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: mutedColor,
+                        ),
                       ),
                     ),
                 ],

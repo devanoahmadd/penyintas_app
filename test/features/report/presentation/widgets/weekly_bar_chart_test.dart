@@ -11,19 +11,27 @@ void main() {
     WeeklySpendEntity(weekNumber: 2, totalSpent: 80000),
   ];
 
-  testWidgets('bar chart punya tooltip aktif berformat Rupiah',
-      (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: WeeklyBarChart(weeklyData: data)),
-    ));
+  testWidgets('bar chart punya tooltip aktif berformat Rupiah', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WeeklyBarChart(weeklyData: data)),
+      ),
+    );
     final chart = tester.widget<BarChart>(find.byType(BarChart));
     final touch = chart.data.barTouchData;
-    expect(touch.enabled, isTrue,
-        reason: 'barTouchData harus enabled untuk tooltip (#98)');
+    expect(
+      touch.enabled,
+      isTrue,
+      reason: 'barTouchData harus enabled untuk tooltip (#98)',
+    );
 
     final group = chart.data.barGroups.first;
-    final item = touch.touchTooltipData
-        .getTooltipItem(group, 0, group.barRods.first, 0);
+    final item = touch.touchTooltipData.getTooltipItem(
+      group,
+      0,
+      group.barRods.first,
+      0,
+    );
     expect(item, isNotNull);
     expect(item!.text, formatRupiah(150000));
   });

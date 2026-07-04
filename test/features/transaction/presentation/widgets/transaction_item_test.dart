@@ -12,8 +12,8 @@ class _FakeL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
   bool isSupported(Locale locale) => true;
   @override
   Future<AppLocalizations> load(Locale locale) => SynchronousFuture(
-        AppLocalizations(locale, const {'category_other': 'Lainnya'}),
-      );
+    AppLocalizations(locale, const {'category_other': 'Lainnya'}),
+  );
   @override
   bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) =>
       false;
@@ -32,10 +32,10 @@ final _mockTx = TransactionEntity(
 );
 
 Widget _harness({Brightness brightness = Brightness.light}) => MaterialApp(
-      theme: ThemeData(brightness: brightness),
-      localizationsDelegates: const [_FakeL10nDelegate()],
-      home: Material(child: TransactionItem(transaction: _mockTx)),
-    );
+  theme: ThemeData(brightness: brightness),
+  localizationsDelegates: const [_FakeL10nDelegate()],
+  home: Material(child: TransactionItem(transaction: _mockTx)),
+);
 
 // Finds the outer Container of TransactionItem by its unique padding.
 Container _outerContainer(WidgetTester tester) {
@@ -43,8 +43,7 @@ Container _outerContainer(WidgetTester tester) {
     find.byWidgetPredicate(
       (w) =>
           w is Container &&
-          w.padding ==
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          w.padding == const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     ),
   );
 }
@@ -89,8 +88,9 @@ void main() {
       expect(border.bottom.width, 0.8);
     });
 
-    testWidgets('label kategori built-in ter-l10n (slug other → Lainnya)',
-        (tester) async {
+    testWidgets('label kategori built-in ter-l10n (slug other → Lainnya)', (
+      tester,
+    ) async {
       await tester.pumpWidget(_harness());
       expect(find.text('LAINNYA'), findsOneWidget); // baris kategori uppercase
       expect(find.text('OTHER'), findsNothing); // slug mentah tak tampil lagi

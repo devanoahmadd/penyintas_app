@@ -11,17 +11,25 @@ void main() {
   late Map<String, dynamic> en;
 
   setUpAll(() {
-    id = json.decode(File('assets/translations/id.json').readAsStringSync())
-        as Map<String, dynamic>;
-    en = json.decode(File('assets/translations/en.json').readAsStringSync())
-        as Map<String, dynamic>;
+    id =
+        json.decode(File('assets/translations/id.json').readAsStringSync())
+            as Map<String, dynamic>;
+    en =
+        json.decode(File('assets/translations/en.json').readAsStringSync())
+            as Map<String, dynamic>;
   });
 
   test('id.json dan en.json punya set key identik', () {
-    expect(id.keys.toSet().difference(en.keys.toSet()), isEmpty,
-        reason: 'key ini hanya ada di id.json');
-    expect(en.keys.toSet().difference(id.keys.toSet()), isEmpty,
-        reason: 'key ini hanya ada di en.json');
+    expect(
+      id.keys.toSet().difference(en.keys.toSet()),
+      isEmpty,
+      reason: 'key ini hanya ada di id.json',
+    );
+    expect(
+      en.keys.toSet().difference(id.keys.toSet()),
+      isEmpty,
+      reason: 'key ini hanya ada di en.json',
+    );
   });
 
   test('semua key baru D-sprint 1 tersedia di kedua file', () {

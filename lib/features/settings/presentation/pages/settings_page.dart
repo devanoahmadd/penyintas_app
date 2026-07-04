@@ -49,9 +49,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadReminder() async {
-    final row = await (sl<AppDatabase>().select(sl<AppDatabase>().appSettings)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final row = await (sl<AppDatabase>().select(
+      sl<AppDatabase>().appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     if (!mounted) return;
     setState(() {
       _reminderEnabled = row?.reminderEnabled ?? true;
@@ -78,8 +78,8 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _reminderEnabled = value);
     if (value) {
       context.read<NotificationBloc>().add(
-            ScheduleDailyReminder(hour: _reminderHour, minute: _reminderMinute),
-          );
+        ScheduleDailyReminder(hour: _reminderHour, minute: _reminderMinute),
+      );
     } else {
       context.read<NotificationBloc>().add(const CancelDailyReminder());
     }
@@ -151,8 +151,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _reminderMinute = picked.minute;
       });
       context.read<NotificationBloc>().add(
-            ScheduleDailyReminder(hour: picked.hour, minute: picked.minute),
-          );
+        ScheduleDailyReminder(hour: picked.hour, minute: picked.minute),
+      );
     }
   }
 
@@ -161,11 +161,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return BlocListener<NotificationBloc, NotificationState>(
@@ -196,99 +198,216 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Scaffold(
         backgroundColor: bgColor,
         appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          context.l10n.settingsPageTitle,
-          style: AppTextStyles.h3.copyWith(color: textColor),
+          backgroundColor: bgColor,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            context.l10n.settingsPageTitle,
+            style: AppTextStyles.h3.copyWith(color: textColor),
+          ),
+          iconTheme: IconThemeData(color: textColor),
         ),
-        iconTheme: IconThemeData(color: textColor),
-      ),
-      body: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
-          return ListView(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
-            children: [
-              _SectionHeader(
-                label: context.l10n.settingsTheme.toUpperCase(),
-                mutedColor: mutedColor,
-              ),
-              _CardContainer(
-                surfaceColor: surfaceColor,
-                borderColor: borderColor,
-                child: RadioGroup<ThemeMode>(
-                  groupValue: state.themeMode,
-                  onChanged: (v) {
-                    if (v != null) {
-                      context.read<SettingsBloc>().add(ChangeTheme(v));
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      _RadioTile(
-                        title: context.l10n.settingsThemeLight,
-                        value: ThemeMode.light,
-                        textColor: textColor,
-                        borderColor: borderColor,
-                        showDivider: true,
-                      ),
-                      _RadioTile(
-                        title: context.l10n.settingsThemeDark,
-                        value: ThemeMode.dark,
-                        textColor: textColor,
-                        borderColor: borderColor,
-                        showDivider: true,
-                      ),
-                      _RadioTile(
-                        title: context.l10n.settingsThemeSystem,
-                        value: ThemeMode.system,
-                        textColor: textColor,
-                        borderColor: borderColor,
-                        showDivider: false,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              _SectionHeader(
-                label: context.l10n.settingsLanguage.toUpperCase(),
-                mutedColor: mutedColor,
-              ),
-              _CardContainer(
-                surfaceColor: surfaceColor,
-                borderColor: borderColor,
-                child: RadioGroup<String>(
-                  groupValue: state.locale,
-                  onChanged: (v) {
-                    if (v != null) {
-                      context.read<SettingsBloc>().add(ChangeLanguage(v));
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      _RadioTile(
-                        title: 'Indonesia',
-                        value: 'id',
-                        textColor: textColor,
-                        borderColor: borderColor,
-                        showDivider: true,
-                      ),
-                      _RadioTile(
-                        title: 'English',
-                        value: 'en',
-                        textColor: textColor,
-                        borderColor: borderColor,
-                        showDivider: false,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_reminderLoaded) ...[
+        body: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, state) {
+            return ListView(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
+              children: [
                 _SectionHeader(
-                  label: context.l10n.settingsSectionNotification
-                      .toUpperCase(),
+                  label: context.l10n.settingsTheme.toUpperCase(),
+                  mutedColor: mutedColor,
+                ),
+                _CardContainer(
+                  surfaceColor: surfaceColor,
+                  borderColor: borderColor,
+                  child: RadioGroup<ThemeMode>(
+                    groupValue: state.themeMode,
+                    onChanged: (v) {
+                      if (v != null) {
+                        context.read<SettingsBloc>().add(ChangeTheme(v));
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        _RadioTile(
+                          title: context.l10n.settingsThemeLight,
+                          value: ThemeMode.light,
+                          textColor: textColor,
+                          borderColor: borderColor,
+                          showDivider: true,
+                        ),
+                        _RadioTile(
+                          title: context.l10n.settingsThemeDark,
+                          value: ThemeMode.dark,
+                          textColor: textColor,
+                          borderColor: borderColor,
+                          showDivider: true,
+                        ),
+                        _RadioTile(
+                          title: context.l10n.settingsThemeSystem,
+                          value: ThemeMode.system,
+                          textColor: textColor,
+                          borderColor: borderColor,
+                          showDivider: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _SectionHeader(
+                  label: context.l10n.settingsLanguage.toUpperCase(),
+                  mutedColor: mutedColor,
+                ),
+                _CardContainer(
+                  surfaceColor: surfaceColor,
+                  borderColor: borderColor,
+                  child: RadioGroup<String>(
+                    groupValue: state.locale,
+                    onChanged: (v) {
+                      if (v != null) {
+                        context.read<SettingsBloc>().add(ChangeLanguage(v));
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        _RadioTile(
+                          title: 'Indonesia',
+                          value: 'id',
+                          textColor: textColor,
+                          borderColor: borderColor,
+                          showDivider: true,
+                        ),
+                        _RadioTile(
+                          title: 'English',
+                          value: 'en',
+                          textColor: textColor,
+                          borderColor: borderColor,
+                          showDivider: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_reminderLoaded) ...[
+                  _SectionHeader(
+                    label: context.l10n.settingsSectionNotification
+                        .toUpperCase(),
+                    mutedColor: mutedColor,
+                  ),
+                  _CardContainer(
+                    surfaceColor: surfaceColor,
+                    borderColor: borderColor,
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          value: _reminderEnabled,
+                          onChanged: _onToggleReminder,
+                          title: Text(
+                            context.l10n.settingsReminderTitle,
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
+                          ),
+                          subtitle: Text(
+                            context.l10n.settingsReminderSubtitle,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: textSoftColor,
+                            ),
+                          ),
+                          activeThumbColor: AppColors.primary,
+                          activeTrackColor: AppColors.primary.withValues(
+                            alpha: 0.4,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.xs,
+                          ),
+                        ),
+                        if (_reminderEnabled) ...[
+                          Divider(height: 1, color: borderColor),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.xs,
+                            ),
+                            title: Text(
+                              context.l10n.settingsReminderTime,
+                              style: AppTextStyles.body.copyWith(
+                                color: textColor,
+                              ),
+                            ),
+                            trailing: Text(
+                              '${_reminderHour.toString().padLeft(2, '0')}:${_reminderMinute.toString().padLeft(2, '0')}',
+                              style: AppTextStyles.label.copyWith(
+                                color: AppColors.primary,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            onTap: _onPickTime,
+                          ),
+                        ],
+                        Divider(height: 1, color: borderColor),
+                        SwitchListTile(
+                          value: _pushEnabled,
+                          onChanged: _onTogglePush,
+                          title: Text(
+                            context.l10n.settingsPushTitle,
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
+                          ),
+                          subtitle: Text(
+                            context.l10n.settingsPushSubtitle,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: textSoftColor,
+                            ),
+                          ),
+                          activeThumbColor: AppColors.primary,
+                          activeTrackColor: AppColors.primary.withValues(
+                            alpha: 0.4,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.xs,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                _SectionHeader(
+                  label: context.l10n.settingsSectionExport.toUpperCase(),
+                  mutedColor: mutedColor,
+                ),
+                _CardContainer(
+                  surfaceColor: surfaceColor,
+                  borderColor: borderColor,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.xs,
+                    ),
+                    title: Text(
+                      context.l10n.settingsExportCsvTitle,
+                      style: AppTextStyles.body.copyWith(color: textColor),
+                    ),
+                    subtitle: Text(
+                      context.l10n.settingsExportCsvSubtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: textSoftColor,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.download_outlined,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    onTap: _exportCsv,
+                  ),
+                ),
+                _SectionHeader(
+                  label: context.l10n.settingsSectionAbout.toUpperCase(),
                   mutedColor: mutedColor,
                 ),
                 _CardContainer(
@@ -296,155 +415,48 @@ class _SettingsPageState extends State<SettingsPage> {
                   borderColor: borderColor,
                   child: Column(
                     children: [
-                      SwitchListTile(
-                        value: _reminderEnabled,
-                        onChanged: _onToggleReminder,
-                        title: Text(
-                          context.l10n.settingsReminderTitle,
-                          style:
-                              AppTextStyles.body.copyWith(color: textColor),
-                        ),
-                        subtitle: Text(
-                          context.l10n.settingsReminderSubtitle,
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: textSoftColor),
-                        ),
-                        activeThumbColor: AppColors.primary,
-                        activeTrackColor:
-                            AppColors.primary.withValues(alpha: 0.4),
+                      ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.lg,
                           vertical: AppSpacing.xs,
                         ),
-                      ),
-                      if (_reminderEnabled) ...[
-                        Divider(height: 1, color: borderColor),
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.xs,
-                          ),
-                          title: Text(
-                            context.l10n.settingsReminderTime,
-                            style:
-                                AppTextStyles.body.copyWith(color: textColor),
-                          ),
-                          trailing: Text(
-                            '${_reminderHour.toString().padLeft(2, '0')}:${_reminderMinute.toString().padLeft(2, '0')}',
-                            style: AppTextStyles.label.copyWith(
-                              color: AppColors.primary,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                          onTap: _onPickTime,
-                        ),
-                      ],
-                      Divider(height: 1, color: borderColor),
-                      SwitchListTile(
-                        value: _pushEnabled,
-                        onChanged: _onTogglePush,
                         title: Text(
-                          context.l10n.settingsPushTitle,
+                          context.l10n.sayaVersionLabel,
                           style: AppTextStyles.body.copyWith(color: textColor),
                         ),
-                        subtitle: Text(
-                          context.l10n.settingsPushSubtitle,
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: textSoftColor),
+                        trailing: AppVersionText(
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: mutedColor,
+                          ),
                         ),
-                        activeThumbColor: AppColors.primary,
-                        activeTrackColor:
-                            AppColors.primary.withValues(alpha: 0.4),
+                      ),
+                      Divider(height: 1, color: borderColor),
+                      ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.lg,
                           vertical: AppSpacing.xs,
                         ),
+                        title: Text(
+                          context.l10n.settingsFeedbackLabel,
+                          style: AppTextStyles.body.copyWith(color: textColor),
+                        ),
+                        trailing: Icon(
+                          Icons.open_in_new,
+                          size: 16,
+                          color: mutedColor,
+                        ),
+                        onTap: () {
+                          // placeholder — mailto link
+                        },
                       ),
                     ],
                   ),
                 ),
               ],
-              _SectionHeader(
-                label: context.l10n.settingsSectionExport.toUpperCase(),
-                mutedColor: mutedColor,
-              ),
-              _CardContainer(
-                surfaceColor: surfaceColor,
-                borderColor: borderColor,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.xs,
-                  ),
-                  title: Text(
-                    context.l10n.settingsExportCsvTitle,
-                    style: AppTextStyles.body.copyWith(color: textColor),
-                  ),
-                  subtitle: Text(
-                    context.l10n.settingsExportCsvSubtitle,
-                    style:
-                        AppTextStyles.bodySmall.copyWith(color: textSoftColor),
-                  ),
-                  trailing: Icon(
-                    Icons.download_outlined,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
-                  onTap: _exportCsv,
-                ),
-              ),
-              _SectionHeader(
-                label: context.l10n.settingsSectionAbout.toUpperCase(),
-                mutedColor: mutedColor,
-              ),
-              _CardContainer(
-                surfaceColor: surfaceColor,
-                borderColor: borderColor,
-                child: Column(
-                  children: [
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.xs,
-                      ),
-                      title: Text(
-                        context.l10n.sayaVersionLabel,
-                        style: AppTextStyles.body.copyWith(color: textColor),
-                      ),
-                      trailing: AppVersionText(
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: mutedColor),
-                      ),
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.xs,
-                      ),
-                      title: Text(
-                        context.l10n.settingsFeedbackLabel,
-                        style: AppTextStyles.body.copyWith(color: textColor),
-                      ),
-                      trailing: Icon(
-                        Icons.open_in_new,
-                        size: 16,
-                        color: mutedColor,
-                      ),
-                      onTap: () {
-                        // placeholder — mailto link
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
-    ),
     );
   }
 }
@@ -518,10 +530,12 @@ class _RadioTile<T> extends StatelessWidget {
       children: [
         RadioListTile<T>(
           value: value,
-          title: Text(title, style: AppTextStyles.body.copyWith(color: textColor)),
+          title: Text(
+            title,
+            style: AppTextStyles.body.copyWith(color: textColor),
+          ),
           activeColor: AppColors.primary,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           dense: true,
         ),
         if (showDivider) Divider(height: 1, color: borderColor),
