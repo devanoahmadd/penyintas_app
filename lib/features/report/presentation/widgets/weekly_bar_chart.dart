@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/report/domain/entities/report_entity.dart';
 
 class WeeklyBarChart extends StatelessWidget {
@@ -31,6 +32,17 @@ class WeeklyBarChart extends StatelessWidget {
               ],
             );
           }).toList(),
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (_) => AppColors.primaryDeep,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                  BarTooltipItem(
+                    formatRupiah(rod.toY.round()),
+                    AppTextStyles.caption.copyWith(color: Colors.white),
+                  ),
+            ),
+          ),
           titlesData: FlTitlesData(
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
