@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
 
@@ -27,6 +28,26 @@ void main() {
       final (icon, color) = CategoryMetadata.of('gym', iconSlug: 'xyz_unknown');
       expect(icon, Icons.grid_view_outlined);
       expect(color, AppColors.primary);
+    });
+  });
+
+  group('CategoryMetadata.resolveLabelFromSlug', () {
+    final l10n = AppLocalizations(const Locale('en'), const {
+      'category_food': 'Food & Drinks',
+      'category_income': 'Income',
+      'category_other': 'Other',
+    });
+
+    test('slug built-in dipetakan ke label l10n', () {
+      expect(CategoryMetadata.resolveLabelFromSlug('food', l10n),
+          'Food & Drinks');
+      expect(CategoryMetadata.resolveLabelFromSlug('income', l10n), 'Income');
+      expect(CategoryMetadata.resolveLabelFromSlug('other', l10n), 'Other');
+    });
+
+    test('slug custom fallback apa adanya', () {
+      expect(CategoryMetadata.resolveLabelFromSlug('kopi-senja', l10n),
+          'kopi-senja');
     });
   });
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -30,7 +31,8 @@ class TransactionItem extends StatelessWidget {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     final (icon, _) = CategoryMetadata.of(transaction.category);
-    final categorySlug = transaction.category;
+    final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
+        transaction.category, context.l10n);
 
     return Container(
         decoration: BoxDecoration(
@@ -58,7 +60,7 @@ class TransactionItem extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    transaction.note ?? categorySlug,
+                    transaction.note ?? categoryLabel,
                     style: AppTextStyles.label.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -72,7 +74,7 @@ class TransactionItem extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        categorySlug.toUpperCase(),
+                        categoryLabel.toUpperCase(),
                         style: AppTextStyles.caption.copyWith(
                           fontSize: 10,
                           color: mutedColor,

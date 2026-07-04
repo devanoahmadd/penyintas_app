@@ -41,6 +41,8 @@ class TransactionDetailSheet extends StatelessWidget {
         ? (isDark ? AppColors.incomeDark : AppColors.success)
         : (isDark ? AppColors.expenseDark : AppColors.warn);
     final amtBg = _amtBg(isDark, isIncome);
+    final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
+        transaction.category, context.l10n);
 
     return Container(
       decoration: BoxDecoration(
@@ -153,7 +155,7 @@ class TransactionDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          transaction.note ?? transaction.category,
+                          transaction.note ?? categoryLabel,
                           style: AppTextStyles.label.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -163,7 +165,7 @@ class TransactionDetailSheet extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          transaction.category.toUpperCase(),
+                          categoryLabel.toUpperCase(),
                           style: AppTextStyles.caption.copyWith(
                             fontSize: 10,
                             color: mutedColor,
@@ -388,7 +390,8 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                       Expanded(
                         child: Text(
                           widget.transaction.note ??
-                              widget.transaction.category,
+                              CategoryMetadata.resolveLabelFromSlug(
+                                  widget.transaction.category, context.l10n),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w500,
