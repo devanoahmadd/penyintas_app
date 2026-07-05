@@ -55,10 +55,18 @@ Dokumen ini merangkum semua bug, error, kelemahan, dan kekurangan yang ditemukan
 
 | Status | Jumlah | Catatan |
 |--------|--------|---------|
-| ✅ Selesai | 146 | +1 dari Hotfix 2026-05-27: #186 (DashboardBloc factory → lazySingleton · dashboard stuck loading) · sebelumnya: #185 (filter chip stale closure) · #182–#184 (ListTile fix, GoalBloc context.read, DashboardBloc singleton closed) · #155 (SurvivalTipsPage blank screen) |
-| ⚠️ Sebagian | 1 | #98 (pie chart done, bar chart masih 🔲) |
-| 🔲 Terbuka | 39 | #17, #63, #67–#70, #83, #99, #100, #103, #105, #108–#113, #115, #122, #142, #143, #152–#154, #156, #157–#161, #167, #169, #170, #173–#177, #179 |
+| ✅ Selesai | 155 | +9 dari D-sprint 1 2026-07-03: #98 (bar chart tooltip selesai) · #103 #109 #112 #157 #158 #159 #160 · #161 (adaptasi DB-backed) · sebelumnya +1 Hotfix 2026-05-27: #186 (DashboardBloc factory → lazySingleton · dashboard stuck loading) · #185 (filter chip stale closure) · #182–#184 (ListTile fix, GoalBloc context.read, DashboardBloc singleton closed) · #155 (SurvivalTipsPage blank screen) |
+| ⚠️ Sebagian | 0 | — |
+| 🔲 Terbuka | 31 | #17, #63, #67–#70, #83, #99, #100, #105, #108, #110, #111, #113, #115, #122, #142, #143, #152–#154, #156, #167, #169, #170, #173–#177, #179 |
 | ❌ Obsolete | 2 | #3, #86 |
+
+**D-sprint 1 — Kualitas User-Facing (2026-07-03, branch `fix/d-sprint-1-quality`):**
+- `#103` `#112` ✅ — l10n penuh `settings_page.dart` (16 key `settings_*` baru + getter existing); label 'Versi' → `sayaVersionLabel` ('Versi aplikasi'/'App version', perubahan copy disengaja).
+- `#109` ✅ — widget reusable `AppVersionText` (`lib/widgets/common/`, cache static `PackageInfo`); dipakai di Settings & Saya; dependency baru `package_info_plus`.
+- `#157` `#158` `#159` `#160` ✅ — l10n + tanggal locale-aware `transaction_list_page.dart` (filter pills, empty state, day label, month picker `List.generate` CLDR — 'Ags'→'Agu' disengaja, header bulan, day count, end cap, search bar) + sheet filter & detail (`DateFormat` `'id_ID'` → locale aktif).
+- `#161` ✅ — diselesaikan sebagai adaptasi: kategori kini DB-backed; `CategoryMetadata.resolveLabelFromSlug` (helper existing) dipakai di `TransactionItem` & `TransactionDetailSheet` — slug built-in ke l10n, custom fallback nama.
+- `#98` ✅ — bar chart tooltip selesai (`barTouchData` + `formatRupiah`, `AppColors.primaryDeep`); pie sudah ✅ sebelumnya.
+- Test: +8 test baru (2 paritas l10n, 1 AppVersionText, 2 resolveLabelFromSlug, 1 TransactionItem l10n, 1 WeeklyBarChart tooltip — plus 1 harness fake delegate).
 | **Total** | **188** | Hotfix 2026-05-27: 1 issue baru #186, langsung diperbaiki · Transactions V2 States: #185 · Phase 7 SELESAI · hotfix 2026-05-26: #182–#184 semuanya langsung diperbaiki · deferred #155 sekaligus fix |
 
 ---
@@ -615,7 +623,7 @@ Cloud Functions WIB timezone fix, Report Polish, savingTip chain. 109/109 tests.
 | `#95` | P3 | `CategoryPieChart` pakai `AppColors` (ganti Material colors) | ✅ |
 | `#96` | P4 | `InsightCard` `BorderRadius.circular(12)` → `AppRadius.md` | ✅ |
 | `#97` | P4 | `MonthSelector` chevron disabled: `mutedLight` → dark-aware `mutedColor` | ✅ |
-| `#98` | P4 | `CategoryPieChart` → `StatefulWidget` + `pieTouchData` tooltip | ⚠️ (pie ✅, bar 🔲) |
+| `#98` | P4 | `CategoryPieChart` → `StatefulWidget` + `pieTouchData` tooltip | ✅ (pie ✅ · bar chart tooltip selesai — D-sprint 1 2026-07-03) |
 | `#99` tracker | P4 | `comparedToPreviousMonth == 0.0` label palsu | 🔲 Deferred ke 6C |
 | `#100` tracker | P4 | `enforceAppCheck: false` di `insights.js` | 🔲 Deferred ke 6C |
 

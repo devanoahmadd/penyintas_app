@@ -20,8 +20,7 @@ class TransactionFilterSheet extends StatefulWidget {
   final TransactionListLoaded currentState;
 
   @override
-  State<TransactionFilterSheet> createState() =>
-      _TransactionFilterSheetState();
+  State<TransactionFilterSheet> createState() => _TransactionFilterSheetState();
 }
 
 class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
@@ -38,8 +37,9 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
   void initState() {
     super.initState();
     final s = widget.currentState;
-    _selectedCategories =
-        s.categoryFilter != null ? Set.from(s.categoryFilter!) : {};
+    _selectedCategories = s.categoryFilter != null
+        ? Set.from(s.categoryFilter!)
+        : {};
     _customFrom = s.from;
     _customTo = s.to;
     _nominalRange = RangeValues(
@@ -52,12 +52,9 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
 
   Future<void> _loadCategories() async {
     final result = await sl<GetCategoriesUseCase>().call(const NoParams());
-    result.fold(
-      (_) {},
-      (cats) {
-        if (mounted) setState(() => _allCategories = cats);
-      },
-    );
+    result.fold((_) {}, (cats) {
+      if (mounted) setState(() => _allCategories = cats);
+    });
   }
 
   _Period _inferPeriod(DateTime from, DateTime to) {
@@ -65,15 +62,21 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     final monthStart = DateTime(now.year, now.month, 1);
     if (from.year == monthStart.year &&
         from.month == monthStart.month &&
-        from.day == monthStart.day) { return _Period.thisMonth; }
+        from.day == monthStart.day) {
+      return _Period.thisMonth;
+    }
     final weekAgo = now.subtract(const Duration(days: 7));
     if (from.year == weekAgo.year &&
         from.month == weekAgo.month &&
-        from.day == weekAgo.day) { return _Period.thisWeek; }
+        from.day == weekAgo.day) {
+      return _Period.thisWeek;
+    }
     final threeMonthsStart = DateTime(now.year, now.month - 2, 1);
     if (from.year == threeMonthsStart.year &&
         from.month == threeMonthsStart.month &&
-        from.day == 1) { return _Period.threeMonths; }
+        from.day == 1) {
+      return _Period.threeMonths;
+    }
     return _Period.custom;
   }
 
@@ -88,8 +91,9 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -108,14 +112,21 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Kategori',
-                      style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: textColor)),
+                  Text(
+                    context.l10n.txSectionCategory,
+                    style: AppTextStyles.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   if (_allCategories.isEmpty)
                     const SizedBox(height: 32)
@@ -124,10 +135,13 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
                       children: _allCategories.map((cat) {
-                        final isSelected =
-                            _selectedCategories.contains(cat.slug);
-                        final label =
-                            CategoryMetadata.resolveLabel(cat, context.l10n);
+                        final isSelected = _selectedCategories.contains(
+                          cat.slug,
+                        );
+                        final label = CategoryMetadata.resolveLabel(
+                          cat,
+                          context.l10n,
+                        );
                         return GestureDetector(
                           onTap: () => setState(() {
                             if (isSelected) {
@@ -139,18 +153,21 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm),
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.primary
                                   : Colors.transparent,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.pill),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
                               border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : borderColor),
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : borderColor,
+                              ),
                             ),
                             child: Text(
                               label,
@@ -164,10 +181,13 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       }).toList(),
                     ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Periode',
-                      style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: textColor)),
+                  Text(
+                    context.l10n.txFilterPeriod,
+                    style: AppTextStyles.label.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   GridView.count(
                     crossAxisCount: 2,
@@ -178,29 +198,34 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                     childAspectRatio: 3.2,
                     children: [
                       _PeriodButton(
-                          label: 'Minggu Ini',
-                          selected: _selectedPeriod == _Period.thisWeek,
-                          isDark: isDark,
-                          onTap: () => setState(
-                              () => _selectedPeriod = _Period.thisWeek)),
+                        label: context.l10n.txFilterWeek,
+                        selected: _selectedPeriod == _Period.thisWeek,
+                        isDark: isDark,
+                        onTap: () =>
+                            setState(() => _selectedPeriod = _Period.thisWeek),
+                      ),
                       _PeriodButton(
-                          label: 'Bulan Ini',
-                          selected: _selectedPeriod == _Period.thisMonth,
-                          isDark: isDark,
-                          onTap: () => setState(
-                              () => _selectedPeriod = _Period.thisMonth)),
+                        label: context.l10n.txFilterMonth,
+                        selected: _selectedPeriod == _Period.thisMonth,
+                        isDark: isDark,
+                        onTap: () =>
+                            setState(() => _selectedPeriod = _Period.thisMonth),
+                      ),
                       _PeriodButton(
-                          label: '3 Bulan',
-                          selected: _selectedPeriod == _Period.threeMonths,
-                          isDark: isDark,
-                          onTap: () => setState(
-                              () => _selectedPeriod = _Period.threeMonths)),
+                        label: context.l10n.txFilter3Months,
+                        selected: _selectedPeriod == _Period.threeMonths,
+                        isDark: isDark,
+                        onTap: () => setState(
+                          () => _selectedPeriod = _Period.threeMonths,
+                        ),
+                      ),
                       _PeriodButton(
-                          label: 'Custom',
-                          selected: _selectedPeriod == _Period.custom,
-                          isDark: isDark,
-                          onTap: () => setState(
-                              () => _selectedPeriod = _Period.custom)),
+                        label: context.l10n.txFilterCustom,
+                        selected: _selectedPeriod == _Period.custom,
+                        isDark: isDark,
+                        onTap: () =>
+                            setState(() => _selectedPeriod = _Period.custom),
+                      ),
                     ],
                   ),
                   if (_selectedPeriod == _Period.custom) ...[
@@ -209,7 +234,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       children: [
                         Expanded(
                           child: _DateBox(
-                            label: 'Dari',
+                            label: context.l10n.txFilterFrom,
                             date: _customFrom,
                             isDark: isDark,
                             onTap: () async {
@@ -228,7 +253,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: _DateBox(
-                            label: 'Sampai',
+                            label: context.l10n.txFilterTo,
                             date: _customTo,
                             isDark: isDark,
                             onTap: () async {
@@ -251,10 +276,13 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Nominal',
-                          style: AppTextStyles.label.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: textColor)),
+                      Text(
+                        context.l10n.txFilterAmount,
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                      ),
                       Text(
                         '${formatRupiah(_nominalRange.start.toInt())} — '
                         '${formatRupiah(_nominalRange.end.toInt())}',
@@ -301,14 +329,16 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       foregroundColor: textColor,
                       side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.pill)),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
                       padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md),
+                        vertical: AppSpacing.md,
+                      ),
                     ),
-                    child: Text('Reset',
-                        style:
-                            AppTextStyles.label.copyWith(color: textColor)),
+                    child: Text(
+                      context.l10n.txFilterReset,
+                      style: AppTextStyles.label.copyWith(color: textColor),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm2),
@@ -320,14 +350,16 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.pill)),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
                       padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md),
+                        vertical: AppSpacing.md,
+                      ),
                     ),
-                    child: Text('Terapkan',
-                        style: AppTextStyles.label
-                            .copyWith(color: Colors.white)),
+                    child: Text(
+                      context.l10n.txFilterApply,
+                      style: AppTextStyles.label.copyWith(color: Colors.white),
+                    ),
                   ),
                 ),
               ],
@@ -358,7 +390,8 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     };
 
     final cur = widget.currentState;
-    final sameRange = from.year == cur.from.year &&
+    final sameRange =
+        from.year == cur.from.year &&
         from.month == cur.from.month &&
         from.day == cur.from.day &&
         to.year == cur.to.year &&
@@ -368,15 +401,17 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
       bloc.add(LoadTransactions(from: from, to: to));
     }
 
-    bloc.add(FilterSheetApplied(
-      categories:
-          _selectedCategories.isEmpty ? null : Set.from(_selectedCategories),
-      minAmount:
-          _nominalRange.start > 0 ? _nominalRange.start.toInt() : null,
-      maxAmount: _nominalRange.end < _maxNominal
-          ? _nominalRange.end.toInt()
-          : null,
-    ));
+    bloc.add(
+      FilterSheetApplied(
+        categories: _selectedCategories.isEmpty
+            ? null
+            : Set.from(_selectedCategories),
+        minAmount: _nominalRange.start > 0 ? _nominalRange.start.toInt() : null,
+        maxAmount: _nominalRange.end < _maxNominal
+            ? _nominalRange.end.toInt()
+            : null,
+      ),
+    );
 
     Navigator.pop(context);
   }
@@ -407,8 +442,7 @@ class _PeriodButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border:
-              Border.all(color: selected ? AppColors.primary : borderColor),
+          border: Border.all(color: selected ? AppColors.primary : borderColor),
         ),
         child: Text(
           label,
@@ -445,7 +479,9 @@ class _DateBox extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -463,9 +499,14 @@ class _DateBox extends StatelessWidget {
               ),
             ),
             Text(
-              DateFormat('d MMM yyyy', 'id_ID').format(date),
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: textColor, fontWeight: FontWeight.w600),
+              DateFormat(
+                'd MMM yyyy',
+                Localizations.localeOf(context).languageCode,
+              ).format(date),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

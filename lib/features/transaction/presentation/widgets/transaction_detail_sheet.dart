@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -40,12 +41,17 @@ class TransactionDetailSheet extends StatelessWidget {
         ? (isDark ? AppColors.incomeDark : AppColors.success)
         : (isDark ? AppColors.expenseDark : AppColors.warn);
     final amtBg = _amtBg(isDark, isIncome);
+    final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
+      transaction.category,
+      context.l10n,
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -56,7 +62,9 @@ class TransactionDetailSheet extends StatelessWidget {
               width: 36,
               height: 4,
               margin: const EdgeInsets.only(
-                  top: AppSpacing.md, bottom: AppSpacing.sm),
+                top: AppSpacing.md,
+                bottom: AppSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: borderColor,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -65,7 +73,11 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.xs, AppSpacing.sm, AppSpacing.md),
+              AppSpacing.lg,
+              AppSpacing.xs,
+              AppSpacing.sm,
+              AppSpacing.md,
+            ),
             child: Row(
               children: [
                 SizedBox(
@@ -108,7 +120,7 @@ class TransactionDetailSheet extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Detail Transaksi',
+                    context.l10n.txDetailTitle,
                     style: AppTextStyles.h3.copyWith(
                       fontWeight: FontWeight.w600,
                       color: textColor,
@@ -125,8 +137,7 @@ class TransactionDetailSheet extends StatelessWidget {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
@@ -143,8 +154,11 @@ class TransactionDetailSheet extends StatelessWidget {
                       color: amtBg,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(CategoryMetadata.of(transaction.category).$1,
-                        size: 20, color: amtColor),
+                    child: Icon(
+                      CategoryMetadata.of(transaction.category).$1,
+                      size: 20,
+                      color: amtColor,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -152,7 +166,7 @@ class TransactionDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          transaction.note ?? transaction.category,
+                          transaction.note ?? categoryLabel,
                           style: AppTextStyles.label.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -162,7 +176,7 @@ class TransactionDetailSheet extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          transaction.category.toUpperCase(),
+                          categoryLabel.toUpperCase(),
                           style: AppTextStyles.caption.copyWith(
                             fontSize: 10,
                             color: mutedColor,
@@ -185,30 +199,31 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Column(
               children: [
                 _MetaRow(
-                  label: 'Waktu',
-                  value: DateFormat('HH:mm · dd MMM yyyy', 'id_ID')
-                      .format(transaction.date),
+                  label: context.l10n.txDetailTime,
+                  value: DateFormat(
+                    'HH:mm · dd MMM yyyy',
+                    Localizations.localeOf(context).languageCode,
+                  ).format(transaction.date),
                   isDark: isDark,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _MetaRow(
-                  label: 'Jenis',
+                  label: context.l10n.txDetailType,
                   value: transaction.type == TransactionType.income
-                      ? 'Pemasukan'
+                      ? context.l10n.categoryIncome
                       : (transaction.isFixed
-                          ? 'Pengeluaran Tetap'
-                          : 'Pengeluaran Variabel'),
+                            ? context.l10n.categoryFixed
+                            : context.l10n.txDetailTypeVariable),
                   isDark: isDark,
                 ),
                 if (transaction.note != null) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _MetaRow(
-                    label: 'Catatan',
+                    label: context.l10n.txDetailNote,
                     value: transaction.note!,
                     isDark: isDark,
                   ),
@@ -218,14 +233,13 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Row(
               children: [
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.edit_outlined,
-                    label: 'Edit',
+                    label: context.l10n.txDetailEdit,
                     isDark: isDark,
                     variant: _ButtonVariant.primary,
                     onTap: () {
@@ -238,7 +252,7 @@ class TransactionDetailSheet extends StatelessWidget {
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.copy_outlined,
-                    label: 'Duplikat',
+                    label: context.l10n.txDetailDuplicate,
                     isDark: isDark,
                     onTap: () {
                       Navigator.pop(context);
@@ -251,11 +265,10 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _ActionButton(
               icon: Icons.delete_outline_rounded,
-              label: 'Hapus Transaksi',
+              label: context.l10n.txDetailDelete,
               isDark: isDark,
               variant: _ButtonVariant.destructive,
               fullWidth: true,
@@ -272,7 +285,8 @@ class TransactionDetailSheet extends StatelessWidget {
             ),
           ),
           SizedBox(
-              height: MediaQuery.of(context).padding.bottom + AppSpacing.md),
+            height: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+          ),
         ],
       ),
     );
@@ -292,7 +306,6 @@ class TransactionDetailSheet extends StatelessWidget {
         // ignore: deprecated_member_use
         : const Color(0xFFE07A3C).withOpacity(0.08);
   }
-
 }
 
 // ── Delete Confirm Sheet ──────────────────────────────────────────────────
@@ -328,8 +341,9 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
           setState(() => _isLoading = false);
           return;
         }
-        final stillExists =
-            state.transactions.any((t) => t.id == widget.transaction.id);
+        final stillExists = state.transactions.any(
+          (t) => t.id == widget.transaction.id,
+        );
         if (!stillExists && _isLoading) {
           setState(() => _isLoading = false);
           int count = 0;
@@ -339,14 +353,19 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.lg),
+          ),
         ),
         child: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +382,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                   ),
                 ),
                 Text(
-                  'Hapus Transaksi?',
+                  context.l10n.txDetailDeleteConfirmTitle,
                   style: AppTextStyles.h3.copyWith(color: textColor),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -385,7 +404,10 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                       Expanded(
                         child: Text(
                           widget.transaction.note ??
-                              widget.transaction.category,
+                              CategoryMetadata.resolveLabelFromSlug(
+                                widget.transaction.category,
+                                context.l10n,
+                              ),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w500,
@@ -407,7 +429,7 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Tindakan ini tidak bisa dibatalkan.',
+                  context.l10n.txDetailDeleteConfirmBody,
                   style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -430,14 +452,16 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                   minimumSize: const Size.fromHeight(48),
                                   side: BorderSide(color: borderColor),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 child: Text(
-                                  'Batal',
-                                  style: AppTextStyles.label
-                                      .copyWith(color: textColor),
+                                  context.l10n.btnCancel,
+                                  style: AppTextStyles.label.copyWith(
+                                    color: textColor,
+                                  ),
                                 ),
                               ),
                             ),
@@ -449,23 +473,27 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                     : () {
                                         setState(() => _isLoading = true);
                                         context.read<TransactionListBloc>().add(
-                                              DeleteTransactionRequested(
-                                                  widget.transaction.id),
-                                            );
+                                          DeleteTransactionRequested(
+                                            widget.transaction.id,
+                                          ),
+                                        );
                                       },
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(48),
                                   backgroundColor: AppColors.warn.withValues(
-                                      alpha: isDark ? 0.15 : 0.08),
+                                    alpha: isDark ? 0.15 : 0.08,
+                                  ),
                                   foregroundColor: AppColors.warn,
                                   elevation: 0,
                                   side: BorderSide(
-                                    color: AppColors.warn
-                                        .withValues(alpha: isDark ? 0.40 : 0.28),
+                                    color: AppColors.warn.withValues(
+                                      alpha: isDark ? 0.40 : 0.28,
+                                    ),
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 child: _isLoading
@@ -478,9 +506,10 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                                         ),
                                       )
                                     : Text(
-                                        'Hapus',
-                                        style: AppTextStyles.label
-                                            .copyWith(color: AppColors.warn),
+                                        context.l10n.commonDelete,
+                                        style: AppTextStyles.label.copyWith(
+                                          color: AppColors.warn,
+                                        ),
                                       ),
                               ),
                             ),
@@ -491,9 +520,10 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
                           Text(
                             errorMsg.isNotEmpty
                                 ? errorMsg
-                                : 'Gagal menghapus. Coba lagi.',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.warn),
+                                : context.l10n.txDetailDeleteFailed,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.warn,
+                            ),
                           ),
                         ],
                       ],
@@ -510,8 +540,11 @@ class _DeleteConfirmSheetState extends State<_DeleteConfirmSheet> {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow(
-      {required this.label, required this.value, required this.isDark});
+  const _MetaRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
   final String label;
   final String value;
   final bool isDark;
@@ -525,7 +558,9 @@ class _MetaRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: AppSpacing.sm2),
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm2,
+      ),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(AppRadius.sm),

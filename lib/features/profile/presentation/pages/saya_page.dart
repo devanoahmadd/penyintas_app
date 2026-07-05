@@ -19,13 +19,13 @@ import 'package:penyintas_app/features/transaction/presentation/bloc/add_transac
 import 'package:penyintas_app/features/transaction/presentation/widgets/add_transaction_sheet.dart';
 import 'package:penyintas_app/features/auth/presentation/widgets/delete_account_sheet.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+import 'package:penyintas_app/widgets/common/app_version_text.dart';
 
 class SayaPage extends StatelessWidget {
   const SayaPage({super.key});
 
   Future<void> _openAddSheet(BuildContext context) async {
-    final goalsResult =
-        await sl<LoadGoalsUseCase>().call(const NoParams());
+    final goalsResult = await sl<LoadGoalsUseCase>().call(const NoParams());
     final activeGoals = goalsResult.fold(
       (_) => <GoalEntity>[],
       (goals) => goals.where((g) => !g.isCompleted).toList(),
@@ -63,7 +63,10 @@ class SayaPage extends StatelessWidget {
                   _ProfileHeader(isDark: isDark),
                   const SizedBox(height: AppSpacing.lg),
                   _QuickAccess(isDark: isDark),
-                  _SettingsSection(isDark: isDark, settingsState: settingsState),
+                  _SettingsSection(
+                    isDark: isDark,
+                    settingsState: settingsState,
+                  ),
                   _AccountSection(isDark: isDark),
                   _DangerZoneSection(isDark: isDark),
                 ],
@@ -98,16 +101,17 @@ class _ProfileHeader extends StatelessWidget {
     final l10n = context.l10n;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return BlocBuilder<ProfileSummaryCubit, ProfileSummaryState>(
       builder: (context, summary) {
         // Nama: dari cubit prefs jika tersedia, fallback FirebaseAuth, fallback 'Penyintas'
         final user = FirebaseAuth.instance.currentUser;
-        final name = summary.prefs?.displayName ??
-            user?.displayName ??
-            'Penyintas';
+        final name =
+            summary.prefs?.displayName ?? user?.displayName ?? 'Penyintas';
         final email = user?.email ?? '';
         final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
 
@@ -126,7 +130,10 @@ class _ProfileHeader extends StatelessWidget {
             highlightColor: AppColors.primary.withValues(alpha: 0.05),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.md,
               ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 48),
@@ -173,8 +180,9 @@ class _ProfileHeader extends StatelessWidget {
                           if (email.isNotEmpty)
                             Text(
                               email,
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: mutedColor),
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: mutedColor,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -338,11 +346,11 @@ class _QuickCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
     return GestureDetector(
       onTap: onTap,
@@ -381,10 +389,7 @@ class _QuickCard extends StatelessWidget {
 // ── Settings Section ───────────────────────────────────────────────────────
 
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.isDark,
-    required this.settingsState,
-  });
+  const _SettingsSection({required this.isDark, required this.settingsState});
 
   final bool isDark;
   final SettingsState settingsState;
@@ -495,14 +500,18 @@ class _SettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,8 +577,9 @@ class _AccountSection extends StatelessWidget {
   Future<void> _onLogout(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
     final sheetBg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     final confirmed = await showDialog<bool>(
@@ -617,14 +627,18 @@ class _AccountSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -652,10 +666,8 @@ class _AccountSection extends StatelessWidget {
                     l10n.sayaVersionLabel,
                     style: AppTextStyles.body.copyWith(color: textColor),
                   ),
-                  trailing: Text(
-                    'v0.1.0+1',
-                    style:
-                        AppTextStyles.bodySmall.copyWith(color: mutedColor),
+                  trailing: AppVersionText(
+                    style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
                   ),
                 ),
                 Divider(height: 1, color: borderColor),
@@ -706,13 +718,17 @@ class _DangerZoneSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -851,11 +867,7 @@ class _SettingsTile extends StatelessWidget {
                   style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
                 ),
               const SizedBox(width: AppSpacing.xs),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: mutedColor,
-              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: mutedColor),
             ],
           ),
           onTap: onTap,
