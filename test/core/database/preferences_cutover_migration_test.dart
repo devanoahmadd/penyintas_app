@@ -26,6 +26,19 @@ void _seedV10(Database raw, {required String appLocale, required String prefsLan
       UNIQUE(slug)
     )
   ''');
+  // DB v10 nyata punya tabel goals (dibuat di from<4). Wajib ada agar migrasi
+  // 10→13 (yang kini ALTER goals di from<13) tak gagal "no such table: goals".
+  raw.execute('''
+    CREATE TABLE goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      target_amount INTEGER NOT NULL,
+      target_date INTEGER NOT NULL,
+      is_completed INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  ''');
   raw.execute(
     "INSERT INTO app_settings (id, locale) VALUES (1, '$appLocale')",
   );

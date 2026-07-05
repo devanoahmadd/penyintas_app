@@ -19,6 +19,21 @@ const _createCategoriesV9 = '''
   )
 ''';
 
+// DB v9 nyata SELALU punya tabel goals (dibuat di from<4). Fixture wajib
+// memuatnya agar migrasi 9→13 (yang kini ALTER goals di from<13) tidak gagal
+// "no such table: goals" — pola sama seperti _createCategoriesV9 di atas.
+const _createGoalsV12 = '''
+  CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    target_amount INTEGER NOT NULL,
+    target_date INTEGER NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+''';
+
 void main() {
   test('migrasi 9→10: buat tabel preferences + copy locale dari app_settings', () async {
     final raw = sqlite3.openInMemory();
@@ -27,6 +42,7 @@ void main() {
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
     raw.execute(_createCategoriesV9);
+    raw.execute(_createGoalsV12);
     raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'en')");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
@@ -49,6 +65,7 @@ void main() {
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
     raw.execute(_createCategoriesV9);
+    raw.execute(_createGoalsV12);
     raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'fr')");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
@@ -68,6 +85,7 @@ void main() {
       "CREATE TABLE app_settings (id INTEGER PRIMARY KEY, locale TEXT NOT NULL DEFAULT 'id')",
     );
     raw.execute(_createCategoriesV9);
+    raw.execute(_createGoalsV12);
     // sengaja TIDAK INSERT row app_settings
 
     final db = AppDatabase(NativeDatabase.opened(raw));

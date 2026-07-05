@@ -6,6 +6,22 @@ import 'package:sqlite3/sqlite3.dart';
 
 AppDatabase _openTestDb() => AppDatabase(NativeDatabase.memory());
 
+// DB nyata pra-v13 SELALU punya tabel goals (dibuat di from<4, tak berubah
+// sampai v12). Fixture yang menyeberang ke v13 wajib memuatnya agar migrasi
+// from<13 (ALTER TABLE goals ADD firestore_id) tak gagal "no such table: goals"
+// — pola yang sama seperti categories pada migrasi from<12.
+const _createGoalsPreV13 = '''
+  CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    target_amount INTEGER NOT NULL,
+    target_date INTEGER NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+''';
+
 void main() {
   late AppDatabase db;
 
@@ -100,6 +116,7 @@ void main() {
           UNIQUE(slug)
         )
       ''');
+      raw.execute(_createGoalsPreV13);
       raw.execute(
         'INSERT INTO app_settings '
         '(id, monthly_income, payment_date, fixed_expenses, rent_expense, '
@@ -180,6 +197,7 @@ void main() {
         () async {
       final raw = sqlite3.openInMemory();
       raw.execute(createV11Categories);
+      raw.execute(_createGoalsPreV13);
       raw.execute('PRAGMA user_version = 11');
 
       // Buka AppDatabase di atas DB v11 → migrasi 11→12 re-seed kategori.
@@ -201,6 +219,7 @@ void main() {
         () async {
       final raw = sqlite3.openInMemory();
       raw.execute(createV11Categories);
+      raw.execute(_createGoalsPreV13);
       // Sudah ada 'food' (kasus DB yang seed-nya jalan via jalur onUpgrade<7).
       raw.execute(
         "INSERT INTO categories (slug, label_key, is_built_in, is_limitable, "
