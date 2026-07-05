@@ -125,6 +125,10 @@ void main() {
     // Perilaku existing: SUM amount>0 dari SEMUA transaksi ter-link — TIDAK
     // ada filter type='income' (goal_local_datasource.dart:29-36). Jangan
     // "memperbaiki" jadi filter income di sprint ini.
+    //
+    // Fixture SENGAJA memakai type='expense': dengan implementasi existing
+    // (tanpa filter type) hasilnya tetap 250; bila kelak ada yang menambah
+    // filter income, test ini gagal (0 ≠ 250) — itulah regression guard-nya.
     test('savedAmount = SUM amount positif transaksi ter-link (tanpa filter type)',
         () async {
       await ds.createGoal(
@@ -133,8 +137,8 @@ void main() {
       await db.into(db.transactions).insert(TransactionsCompanion.insert(
             txId: 'tx-1',
             amount: 250,
-            category: 'income',
-            type: 'income',
+            category: 'makan',
+            type: 'expense',
             date: DateTime(2026, 7, 1),
             createdAt: DateTime(2026, 7, 1),
             updatedAt: DateTime(2026, 7, 1),
