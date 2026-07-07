@@ -300,6 +300,7 @@ void _initOnboarding() {
   sl.registerLazySingleton(() => BootstrapCoordinator(
         syncUserSettings: sl(),
         budgetRepository: sl(),
+        goalRepository: sl(),
         onboardingDs: sl(),
         prefsRepo: sl(),
         onComplete: () => sl<OnboardingGuard>().resetCache(),
