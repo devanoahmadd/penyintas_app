@@ -102,6 +102,7 @@ import 'package:penyintas_app/features/survival/domain/usecases/get_survival_mod
 import 'package:penyintas_app/features/survival/domain/usecases/get_survival_tips_usecase.dart';
 import 'package:penyintas_app/features/survival/domain/usecases/record_survival_activated_usecase.dart';
 import 'package:penyintas_app/features/goal/data/datasources/goal_local_datasource.dart';
+import 'package:penyintas_app/features/goal/data/datasources/goal_remote_datasource.dart';
 import 'package:penyintas_app/features/goal/data/repositories/goal_repository_impl.dart';
 import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
 import 'package:penyintas_app/features/goal/domain/usecases/complete_goal_usecase.dart';
@@ -509,11 +510,20 @@ void _initGoal() {
   sl.registerLazySingleton(() => DeleteGoalUseCase(sl()));
 
   sl.registerLazySingleton<GoalRepository>(
-    () => GoalRepositoryImpl(local: sl()),
+    () => GoalRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      networkInfo: sl(),
+      auth: sl(),
+    ),
   );
 
   sl.registerLazySingleton<GoalLocalDatasource>(
     () => GoalLocalDatasourceImpl(sl()),
+  );
+
+  sl.registerLazySingleton<GoalRemoteDatasource>(
+    () => GoalRemoteDatasourceImpl(auth: sl(), firestore: sl()),
   );
 }
 
