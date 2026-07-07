@@ -12,9 +12,13 @@ import 'package:penyintas_app/features/preferences/domain/entities/preferences_e
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
 
 class _MockSyncUserSettings extends Mock implements SyncUserSettingsUseCase {}
+
 class _MockBudgetRepo extends Mock implements BudgetRepository {}
+
 class _MockGoalRepo extends Mock implements GoalRepository {}
+
 class _MockOnbDs extends Mock implements OnboardingLocalDataSource {}
+
 class _MockPrefsRepo extends Mock implements PreferencesRepository {}
 
 void main() {
@@ -36,55 +40,79 @@ void main() {
     onbDs = _MockOnbDs();
     prefsRepo = _MockPrefsRepo();
     onCompleteCalls = 0;
-    when(() => syncUserSettings(any())).thenAnswer((_) async => const Right(unit));
-    when(() => budgetRepo.syncBudgetFromRemote())
-        .thenAnswer((_) async => const Right(null));
-    when(() => goalRepo.syncGoalsFromRemote())
-        .thenAnswer((_) async => const Right(0));
+    when(
+      () => syncUserSettings(any()),
+    ).thenAnswer((_) async => const Right(unit));
+    when(
+      () => budgetRepo.syncBudgetFromRemote(),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => goalRepo.syncGoalsFromRemote(),
+    ).thenAnswer((_) async => const Right(0));
     when(() => onbDs.isOnboardingCompleted()).thenAnswer((_) async => true);
-    when(() => prefsRepo.syncOnLaunch(budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted')))
-        .thenAnswer((_) async => const Right(unit));
+    when(
+      () => prefsRepo.syncOnLaunch(
+        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+      ),
+    ).thenAnswer((_) async => const Right(unit));
   });
 
   BootstrapCoordinator build() => BootstrapCoordinator(
-        syncUserSettings: syncUserSettings,
-        budgetRepository: budgetRepo,
-        goalRepository: goalRepo,
-        onboardingDs: onbDs,
-        prefsRepo: prefsRepo,
-        onComplete: () => onCompleteCalls++,
-      );
+    syncUserSettings: syncUserSettings,
+    budgetRepository: budgetRepo,
+    goalRepository: goalRepo,
+    onboardingDs: onbDs,
+    prefsRepo: prefsRepo,
+    onComplete: () => onCompleteCalls++,
+  );
 
-  test('ensure() menjalankan keempat langkah sync + onComplete (reset cache guard) SEKALI', () async {
-    final c = build();
-    await c.ensure();
-    verify(() => syncUserSettings(any())).called(1);
-    verify(() => budgetRepo.syncBudgetFromRemote()).called(1);
-    verify(() => goalRepo.syncGoalsFromRemote()).called(1);
-    verify(() => prefsRepo.syncOnLaunch(
-        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'))).called(1);
-    expect(onCompleteCalls, 1);
-    expect(c.isDone, true);
-  });
+  test(
+    'ensure() menjalankan keempat langkah sync + onComplete (reset cache guard) SEKALI',
+    () async {
+      final c = build();
+      await c.ensure();
+      verify(() => syncUserSettings(any())).called(1);
+      verify(() => budgetRepo.syncBudgetFromRemote()).called(1);
+      verify(() => goalRepo.syncGoalsFromRemote()).called(1);
+      verify(
+        () => prefsRepo.syncOnLaunch(
+          budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+        ),
+      ).called(1);
+      expect(onCompleteCalls, 1);
+      expect(c.isDone, true);
+    },
+  );
 
   test('memo: panggilan paralel & berurutan → kerja jalan SEKALI', () async {
     final c = build();
     await Future.wait([c.ensure(), c.ensure()]);
     await c.ensure();
-    verify(() => prefsRepo.syncOnLaunch(
-        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'))).called(1);
+    verify(
+      () => prefsRepo.syncOnLaunch(
+        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+      ),
+    ).called(1);
     expect(onCompleteCalls, 1); // onComplete tak berulang tiap ensure()
   });
 
-  test('non-fatal: identity/budget gagal → syncOnLaunch tetap jalan, ensure() selesai', () async {
-    when(() => syncUserSettings(any())).thenThrow(Exception('offline'));
-    when(() => budgetRepo.syncBudgetFromRemote()).thenThrow(Exception('offline'));
-    final c = build();
-    await c.ensure(); // tak melempar
-    verify(() => prefsRepo.syncOnLaunch(
-        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'))).called(1);
-    expect(c.isDone, true);
-  });
+  test(
+    'non-fatal: identity/budget gagal → syncOnLaunch tetap jalan, ensure() selesai',
+    () async {
+      when(() => syncUserSettings(any())).thenThrow(Exception('offline'));
+      when(
+        () => budgetRepo.syncBudgetFromRemote(),
+      ).thenThrow(Exception('offline'));
+      final c = build();
+      await c.ensure(); // tak melempar
+      verify(
+        () => prefsRepo.syncOnLaunch(
+          budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+        ),
+      ).called(1);
+      expect(c.isDone, true);
+    },
+  );
 
   test('reset(): user berikutnya bootstrap dari awal', () async {
     final c = build();
@@ -92,18 +120,28 @@ void main() {
     c.reset();
     expect(c.isDone, false);
     await c.ensure();
-    verify(() => prefsRepo.syncOnLaunch(
-        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'))).called(2);
+    verify(
+      () => prefsRepo.syncOnLaunch(
+        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+      ),
+    ).called(2);
     expect(onCompleteCalls, 2);
   });
 
-  test('non-fatal: goal restore gagal → langkah lain tetap jalan, ensure() selesai',
-      () async {
-    when(() => goalRepo.syncGoalsFromRemote()).thenThrow(Exception('offline'));
-    final c = build();
-    await c.ensure(); // tak melempar
-    verify(() => prefsRepo.syncOnLaunch(
-        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'))).called(1);
-    expect(c.isDone, true);
-  });
+  test(
+    'non-fatal: goal restore gagal → langkah lain tetap jalan, ensure() selesai',
+    () async {
+      when(
+        () => goalRepo.syncGoalsFromRemote(),
+      ).thenThrow(Exception('offline'));
+      final c = build();
+      await c.ensure(); // tak melempar
+      verify(
+        () => prefsRepo.syncOnLaunch(
+          budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+        ),
+      ).called(1);
+      expect(c.isDone, true);
+    },
+  );
 }

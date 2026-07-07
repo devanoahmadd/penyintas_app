@@ -19,15 +19,16 @@ class BootstrapCoordinator {
     required GoalRepository goalRepository,
     required OnboardingLocalDataSource onboardingDs,
     required PreferencesRepository prefsRepo,
-    required void Function() onComplete, // produksi: () => resetOnboardingCache()
+    required void Function()
+    onComplete, // produksi: () => resetOnboardingCache()
     Duration stepTimeout = const Duration(seconds: 3),
-  })  : _syncUserSettings = syncUserSettings,
-        _budget = budgetRepository,
-        _goals = goalRepository,
-        _onboardingDs = onboardingDs,
-        _prefs = prefsRepo,
-        _onComplete = onComplete,
-        _stepTimeout = stepTimeout;
+  }) : _syncUserSettings = syncUserSettings,
+       _budget = budgetRepository,
+       _goals = goalRepository,
+       _onboardingDs = onboardingDs,
+       _prefs = prefsRepo,
+       _onComplete = onComplete,
+       _stepTimeout = stepTimeout;
 
   final SyncUserSettingsUseCase _syncUserSettings;
   final BudgetRepository _budget;

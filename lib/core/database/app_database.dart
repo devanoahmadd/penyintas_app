@@ -27,6 +27,7 @@ class BudgetCycleConverter extends TypeConverter<BudgetCycle, String> {
     return BudgetCycle.values.where((e) => e.name == s).firstOrNull ??
         BudgetCycle.cycle;
   }
+
   @override
   String toSql(BudgetCycle v) => v.name;
 }
@@ -43,8 +44,7 @@ class AppSettings extends Table {
   IntColumn get monthlyIncome => integer().withDefault(const Constant(0))();
   IntColumn get paymentDate => integer().withDefault(const Constant(1))();
   IntColumn get fixedExpenses => integer().withDefault(const Constant(0))();
-  RealColumn get emergencyFundPct =>
-      real().withDefault(const Constant(0.10))();
+  RealColumn get emergencyFundPct => real().withDefault(const Constant(0.10))();
   // Set once on first onboarding completion — jangan overwrite
   DateTimeColumn get onboardingCreatedAt => dateTime().nullable()();
   // Notification reminder settings (added schemaVersion 2)
@@ -74,8 +74,7 @@ class SyncQueue extends Table {
   TextColumn get itemId => text()();
   TextColumn get collectionPath => text()();
   TextColumn get data => text()();
-  TextColumn get operation =>
-      text().map(const SyncOperationConverter())();
+  TextColumn get operation => text().map(const SyncOperationConverter())();
   DateTimeColumn get createdAt => dateTime()();
 }
 
@@ -105,8 +104,7 @@ class Goals extends Table {
   TextColumn get title => text()();
   IntColumn get targetAmount => integer()();
   DateTimeColumn get targetDate => dateTime()();
-  BoolColumn get isCompleted =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   // Identitas cloud stabil = doc ID Firestore (B1 goal sync, schemaVersion 13).
@@ -122,18 +120,21 @@ class Goals extends Table {
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get slug => text()(); // unique key for category identifier
-  TextColumn get labelKey => text().nullable()(); // l10n key (mis. 'category_food')
-  TextColumn get labelOverride => text().nullable()(); // nama custom buatan user
+  TextColumn get labelKey =>
+      text().nullable()(); // l10n key (mis. 'category_food')
+  TextColumn get labelOverride =>
+      text().nullable()(); // nama custom buatan user
   BoolColumn get isBuiltIn => boolean().withDefault(const Constant(true))();
   BoolColumn get isLimitable => boolean().withDefault(const Constant(false))();
-  TextColumn get type => text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
+  TextColumn get type =>
+      text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get iconSlug => text().nullable()(); // null=built-in, diisi=custom
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {slug},
-      ];
+    {slug},
+  ];
 }
 
 class BudgetLimits extends Table {
@@ -154,7 +155,8 @@ class BudgetLimits extends Table {
 /// Currency Spec 1 = IDR-seragam (base/home tak diubah user); UX currency → Spec 2.
 class Preferences extends Table {
   IntColumn get id => integer()();
-  TextColumn get timezone => text().withDefault(const Constant('Asia/Jakarta'))();
+  TextColumn get timezone =>
+      text().withDefault(const Constant('Asia/Jakarta'))();
   TextColumn get baseCurrency => text().withDefault(const Constant('IDR'))();
   TextColumn get homeCurrency => text().withDefault(const Constant('IDR'))();
   TextColumn get language => text().withDefault(const Constant('id'))();
@@ -178,7 +180,17 @@ class Preferences extends Table {
 
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits, Categories, Preferences])
+@DriftDatabase(
+  tables: [
+    AppSettings,
+    SyncQueue,
+    Transactions,
+    Goals,
+    BudgetLimits,
+    Categories,
+    Preferences,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
@@ -492,10 +504,10 @@ class AppDatabase extends _$AppDatabase {
       await delete(budgetLimits).go();
       await delete(syncQueue).go();
       // Pertahankan language (device-scoped UX); reset profil/lokasi ke default.
-      final keepLang = (await (select(preferences)
-                  ..where((t) => t.id.equals(1)))
-              .getSingleOrNull())
-          ?.language ??
+      final keepLang =
+          (await (select(
+            preferences,
+          )..where((t) => t.id.equals(1))).getSingleOrNull())?.language ??
           'id';
       await delete(preferences).go();
       await into(preferences).insert(

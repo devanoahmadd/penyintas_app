@@ -100,8 +100,10 @@ void main() {
 
     test('throws AuthException jika belum login', () async {
       when(() => auth.currentUser).thenReturn(null);
-      expect(() => datasource.deleteGoal('fid-123'),
-          throwsA(isA<AuthException>()));
+      expect(
+        () => datasource.deleteGoal('fid-123'),
+        throwsA(isA<AuthException>()),
+      );
     });
   });
 }

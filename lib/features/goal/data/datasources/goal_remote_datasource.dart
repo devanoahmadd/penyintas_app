@@ -19,8 +19,8 @@ class GoalRemoteDatasourceImpl implements GoalRemoteDatasource {
   GoalRemoteDatasourceImpl({
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
-  })  : _auth = auth,
-        _firestore = firestore;
+  }) : _auth = auth,
+       _firestore = firestore;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;

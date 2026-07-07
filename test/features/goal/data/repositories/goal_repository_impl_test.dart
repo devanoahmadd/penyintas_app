@@ -65,18 +65,20 @@ void main() {
   });
 
   Future<Either<Failure, void>> callCreate() => repo.createGoal(
-        title: 'Pulang kampung',
-        targetAmount: 1500000,
-        targetDate: DateTime(2026, 12, 31),
-      );
+    title: 'Pulang kampung',
+    targetAmount: 1500000,
+    targetDate: DateTime(2026, 12, 31),
+  );
 
   group('createGoal (local-first)', () {
     setUp(() {
-      when(() => local.createGoal(
-            title: any(named: 'title'),
-            targetAmount: any(named: 'targetAmount'),
-            targetDate: any(named: 'targetDate'),
-          )).thenAnswer((_) async => tModel);
+      when(
+        () => local.createGoal(
+          title: any(named: 'title'),
+          targetAmount: any(named: 'targetAmount'),
+          targetDate: any(named: 'targetDate'),
+        ),
+      ).thenAnswer((_) async => tModel);
     });
 
     test('online → lokal dulu, lalu push remote; tanpa queue', () async {
@@ -86,87 +88,111 @@ void main() {
       final result = await callCreate();
 
       expect(result.isRight(), isTrue);
-      verify(() => local.createGoal(
-            title: 'Pulang kampung',
-            targetAmount: 1500000,
-            targetDate: DateTime(2026, 12, 31),
-          )).called(1);
+      verify(
+        () => local.createGoal(
+          title: 'Pulang kampung',
+          targetAmount: 1500000,
+          targetDate: DateTime(2026, 12, 31),
+        ),
+      ).called(1);
       verify(() => remote.saveGoal(tModel)).called(1);
-      verifyNever(() => local.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          ));
+      verifyNever(
+        () => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      );
     });
 
-    test('offline → enqueue create dengan path doc penuh (pola transaction)',
-        () async {
-      when(() => network.isConnected).thenAnswer((_) async => false);
-      when(() => local.addToSyncQueue(
+    test(
+      'offline → enqueue create dengan path doc penuh (pola transaction)',
+      () async {
+        when(() => network.isConnected).thenAnswer((_) async => false);
+        when(
+          () => local.addToSyncQueue(
             itemId: any(named: 'itemId'),
             collectionPath: any(named: 'collectionPath'),
             data: any(named: 'data'),
             operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      final result = await callCreate();
+        final result = await callCreate();
 
-      expect(result.isRight(), isTrue);
-      verifyNever(() => remote.saveGoal(any()));
-      verify(() => local.addToSyncQueue(
+        expect(result.isRight(), isTrue);
+        verifyNever(() => remote.saveGoal(any()));
+        verify(
+          () => local.addToSyncQueue(
             itemId: 'fid-1',
             collectionPath: tPath,
             data: tModel.toFirestore(),
             operation: SyncOperation.create,
-          )).called(1);
-    });
+          ),
+        ).called(1);
+      },
+    );
 
     test('online tapi remote gagal → fallback queue, tetap Right', () async {
       when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.saveGoal(any()))
-          .thenThrow(const ServerException('boom'));
-      when(() => local.addToSyncQueue(
+      when(
+        () => remote.saveGoal(any()),
+      ).thenThrow(const ServerException('boom'));
+      when(
+        () => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final result = await callCreate();
+
+      expect(
+        result.isRight(),
+        isTrue,
+        reason: 'local-first: kegagalan remote tak menggagalkan operasi',
+      );
+      verify(
+        () => local.addToSyncQueue(
+          itemId: 'fid-1',
+          collectionPath: tPath,
+          data: tModel.toFirestore(),
+          operation: SyncOperation.create,
+        ),
+      ).called(1);
+    });
+
+    test(
+      'belum login (uid null) → simpan lokal saja, tanpa remote/queue',
+      () async {
+        when(() => auth.currentUser).thenReturn(null);
+
+        final result = await callCreate();
+
+        expect(result.isRight(), isTrue);
+        verifyNever(() => remote.saveGoal(any()));
+        verifyNever(
+          () => local.addToSyncQueue(
             itemId: any(named: 'itemId'),
             collectionPath: any(named: 'collectionPath'),
             data: any(named: 'data'),
             operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
-
-      final result = await callCreate();
-
-      expect(result.isRight(), isTrue,
-          reason: 'local-first: kegagalan remote tak menggagalkan operasi');
-      verify(() => local.addToSyncQueue(
-            itemId: 'fid-1',
-            collectionPath: tPath,
-            data: tModel.toFirestore(),
-            operation: SyncOperation.create,
-          )).called(1);
-    });
-
-    test('belum login (uid null) → simpan lokal saja, tanpa remote/queue',
-        () async {
-      when(() => auth.currentUser).thenReturn(null);
-
-      final result = await callCreate();
-
-      expect(result.isRight(), isTrue);
-      verifyNever(() => remote.saveGoal(any()));
-      verifyNever(() => local.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          ));
-    });
+          ),
+        );
+      },
+    );
 
     test('lokal gagal → Left(CacheFailure), tanpa remote', () async {
-      when(() => local.createGoal(
-            title: any(named: 'title'),
-            targetAmount: any(named: 'targetAmount'),
-            targetDate: any(named: 'targetDate'),
-          )).thenThrow(Exception('disk penuh'));
+      when(
+        () => local.createGoal(
+          title: any(named: 'title'),
+          targetAmount: any(named: 'targetAmount'),
+          targetDate: any(named: 'targetDate'),
+        ),
+      ).thenThrow(Exception('disk penuh'));
 
       final result = await callCreate();
 
@@ -207,64 +233,74 @@ void main() {
       when(() => local.completeGoal(3)).thenAnswer((_) async {});
       when(() => local.findById(3)).thenAnswer((_) async => tCompleted);
       when(() => network.isConnected).thenAnswer((_) async => false);
-      when(() => local.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
+      when(
+        () => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      ).thenAnswer((_) async {});
 
       final result = await repo.completeGoal(3);
 
       expect(result.isRight(), isTrue);
-      verify(() => local.addToSyncQueue(
-            itemId: 'fid-1',
-            collectionPath: tPath,
-            data: tCompleted.toFirestore(),
-            operation: SyncOperation.update,
-          )).called(1);
+      verify(
+        () => local.addToSyncQueue(
+          itemId: 'fid-1',
+          collectionPath: tPath,
+          data: tCompleted.toFirestore(),
+          operation: SyncOperation.update,
+        ),
+      ).called(1);
     });
   });
 
   group('deleteGoal (local-first)', () {
-    test('firestoreId diambil SEBELUM delete lokal; online → remote delete',
-        () async {
-      when(() => local.firestoreIdOf(3)).thenAnswer((_) async => 'fid-1');
-      when(() => local.deleteGoal(3)).thenAnswer((_) async {});
-      when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.deleteGoal('fid-1')).thenAnswer((_) async {});
+    test(
+      'firestoreId diambil SEBELUM delete lokal; online → remote delete',
+      () async {
+        when(() => local.firestoreIdOf(3)).thenAnswer((_) async => 'fid-1');
+        when(() => local.deleteGoal(3)).thenAnswer((_) async {});
+        when(() => network.isConnected).thenAnswer((_) async => true);
+        when(() => remote.deleteGoal('fid-1')).thenAnswer((_) async {});
 
-      final result = await repo.deleteGoal(3);
+        final result = await repo.deleteGoal(3);
 
-      expect(result.isRight(), isTrue);
-      verifyInOrder([
-        () => local.firestoreIdOf(3),
-        () => local.deleteGoal(3),
-        () => remote.deleteGoal('fid-1'),
-      ]);
-    });
+        expect(result.isRight(), isTrue);
+        verifyInOrder([
+          () => local.firestoreIdOf(3),
+          () => local.deleteGoal(3),
+          () => remote.deleteGoal('fid-1'),
+        ]);
+      },
+    );
 
     test('offline → enqueue delete dengan data kosong', () async {
       when(() => local.firestoreIdOf(3)).thenAnswer((_) async => 'fid-1');
       when(() => local.deleteGoal(3)).thenAnswer((_) async {});
       when(() => network.isConnected).thenAnswer((_) async => false);
-      when(() => local.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
+      when(
+        () => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      ).thenAnswer((_) async {});
 
       final result = await repo.deleteGoal(3);
 
       expect(result.isRight(), isTrue);
       verifyNever(() => remote.deleteGoal(any()));
-      verify(() => local.addToSyncQueue(
-            itemId: 'fid-1',
-            collectionPath: tPath,
-            data: const <String, dynamic>{},
-            operation: SyncOperation.delete,
-          )).called(1);
+      verify(
+        () => local.addToSyncQueue(
+          itemId: 'fid-1',
+          collectionPath: tPath,
+          data: const <String, dynamic>{},
+          operation: SyncOperation.delete,
+        ),
+      ).called(1);
     });
   });
 

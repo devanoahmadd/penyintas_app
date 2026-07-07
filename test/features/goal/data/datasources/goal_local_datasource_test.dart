@@ -8,17 +8,18 @@ import 'package:penyintas_app/features/goal/data/datasources/goal_local_datasour
 import 'package:penyintas_app/features/goal/data/models/goal_model.dart';
 
 final _uuidV4 = RegExp(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+);
 
 GoalModel _remoteModel(String fid, {String title = 'Dari remote'}) => GoalModel(
-      firestoreId: fid,
-      title: title,
-      targetAmount: 2000000,
-      targetDate: DateTime(2026, 12, 31),
-      isCompleted: false,
-      createdAt: DateTime(2026, 6, 1),
-      updatedAt: DateTime(2026, 6, 1),
-    );
+  firestoreId: fid,
+  title: title,
+  targetAmount: 2000000,
+  targetDate: DateTime(2026, 12, 31),
+  isCompleted: false,
+  createdAt: DateTime(2026, 6, 1),
+  updatedAt: DateTime(2026, 6, 1),
+);
 
 void main() {
   late AppDatabase db;
@@ -38,8 +39,11 @@ void main() {
         targetDate: DateTime(2026, 12, 31),
       );
 
-      expect(_uuidV4.hasMatch(model.firestoreId), isTrue,
-          reason: 'firestoreId harus UUID v4, dapat: ${model.firestoreId}');
+      expect(
+        _uuidV4.hasMatch(model.firestoreId),
+        isTrue,
+        reason: 'firestoreId harus UUID v4, dapat: ${model.firestoreId}',
+      );
       expect(model.title, 'Pulang kampung');
       expect(model.isCompleted, isFalse);
 
@@ -51,9 +55,15 @@ void main() {
 
     test('dua goal → firestoreId berbeda', () async {
       final a = await ds.createGoal(
-          title: 'A', targetAmount: 1, targetDate: DateTime(2027));
+        title: 'A',
+        targetAmount: 1,
+        targetDate: DateTime(2027),
+      );
       final b = await ds.createGoal(
-          title: 'B', targetAmount: 2, targetDate: DateTime(2027));
+        title: 'B',
+        targetAmount: 2,
+        targetDate: DateTime(2027),
+      );
       expect(a.firestoreId, isNot(b.firestoreId));
     });
   });
@@ -61,7 +71,10 @@ void main() {
   group('findById / firestoreIdOf', () {
     test('mengembalikan model & firestoreId untuk id valid', () async {
       final created = await ds.createGoal(
-          title: 'X', targetAmount: 10, targetDate: DateTime(2027));
+        title: 'X',
+        targetAmount: 10,
+        targetDate: DateTime(2027),
+      );
       final row = await db.select(db.goals).getSingle();
 
       final found = await ds.findById(row.id);
@@ -80,7 +93,10 @@ void main() {
     test('false saat kosong, true setelah create', () async {
       expect(await ds.hasAnyGoals(), isFalse);
       await ds.createGoal(
-          title: 'X', targetAmount: 10, targetDate: DateTime(2027));
+        title: 'X',
+        targetAmount: 10,
+        targetDate: DateTime(2027),
+      );
       expect(await ds.hasAnyGoals(), isTrue);
     });
   });
@@ -129,24 +145,33 @@ void main() {
     // Fixture SENGAJA memakai type='expense': dengan implementasi existing
     // (tanpa filter type) hasilnya tetap 250; bila kelak ada yang menambah
     // filter income, test ini gagal (0 ≠ 250) — itulah regression guard-nya.
-    test('savedAmount = SUM amount positif transaksi ter-link (tanpa filter type)',
-        () async {
-      await ds.createGoal(
-          title: 'X', targetAmount: 1000, targetDate: DateTime(2027));
-      final goalRow = await db.select(db.goals).getSingle();
-      await db.into(db.transactions).insert(TransactionsCompanion.insert(
-            txId: 'tx-1',
-            amount: 250,
-            category: 'makan',
-            type: 'expense',
-            date: DateTime(2026, 7, 1),
-            createdAt: DateTime(2026, 7, 1),
-            updatedAt: DateTime(2026, 7, 1),
-            goalId: Value(goalRow.id),
-          ));
+    test(
+      'savedAmount = SUM amount positif transaksi ter-link (tanpa filter type)',
+      () async {
+        await ds.createGoal(
+          title: 'X',
+          targetAmount: 1000,
+          targetDate: DateTime(2027),
+        );
+        final goalRow = await db.select(db.goals).getSingle();
+        await db
+            .into(db.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                txId: 'tx-1',
+                amount: 250,
+                category: 'makan',
+                type: 'expense',
+                date: DateTime(2026, 7, 1),
+                createdAt: DateTime(2026, 7, 1),
+                updatedAt: DateTime(2026, 7, 1),
+                goalId: Value(goalRow.id),
+              ),
+            );
 
-      final goals = await ds.loadGoals();
-      expect(goals.single.savedAmount, 250);
-    });
+        final goals = await ds.loadGoals();
+        expect(goals.single.savedAmount, 250);
+      },
+    );
   });
 }

@@ -14,20 +14,22 @@ void main() {
     updatedAt: DateTime.fromMillisecondsSinceEpoch(1751700000000),
   );
 
-  test('toFirestore: semua tanggal epoch millis, tanpa savedAmount/id lokal',
-      () {
-    final map = tModel.toFirestore();
-    expect(map, {
-      'title': 'Pulang kampung',
-      'targetAmount': 1500000,
-      'targetDate': 1798675200000,
-      'isCompleted': false,
-      'createdAt': 1751700000000,
-      'updatedAt': 1751700000000,
-    });
-    expect(map.containsKey('savedAmount'), isFalse);
-    expect(map.containsKey('id'), isFalse);
-  });
+  test(
+    'toFirestore: semua tanggal epoch millis, tanpa savedAmount/id lokal',
+    () {
+      final map = tModel.toFirestore();
+      expect(map, {
+        'title': 'Pulang kampung',
+        'targetAmount': 1500000,
+        'targetDate': 1798675200000,
+        'isCompleted': false,
+        'createdAt': 1751700000000,
+        'updatedAt': 1751700000000,
+      });
+      expect(map.containsKey('savedAmount'), isFalse);
+      expect(map.containsKey('id'), isFalse);
+    },
+  );
 
   test('fromFirestore ∘ toFirestore = identitas (roundtrip)', () {
     final back = GoalModel.fromFirestore('fid-123', tModel.toFirestore());

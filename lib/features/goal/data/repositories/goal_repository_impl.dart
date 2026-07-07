@@ -22,10 +22,10 @@ class GoalRepositoryImpl implements GoalRepository {
     required GoalRemoteDatasource remote,
     required NetworkInfo networkInfo,
     required FirebaseAuth auth,
-  })  : _local = local,
-        _remote = remote,
-        _network = networkInfo,
-        _auth = auth;
+  }) : _local = local,
+       _remote = remote,
+       _network = networkInfo,
+       _auth = auth;
 
   final GoalLocalDatasource _local;
   final GoalRemoteDatasource _remote;

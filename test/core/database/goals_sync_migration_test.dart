@@ -19,8 +19,7 @@ const _createGoalsV12 = '''
 ''';
 
 void main() {
-  test('migrasi 12→13: kolom firestore_id ditambah + backfill 32-hex unik',
-      () async {
+  test('migrasi 12→13: kolom firestore_id ditambah + backfill 32-hex unik', () async {
     final raw = sqlite3.openInMemory();
     raw.execute('PRAGMA user_version = 12');
     raw.execute(_createGoalsV12);
@@ -41,12 +40,18 @@ void main() {
     // Backfill: 32 hex chars (randomblob), tidak null, unik antar-baris.
     for (final id in ids) {
       expect(id, isNotNull);
-      expect(RegExp(r'^[0-9a-f]{32}$').hasMatch(id!), isTrue,
-          reason: 'backfill harus 32-hex lowercase, dapat: $id');
+      expect(
+        RegExp(r'^[0-9a-f]{32}$').hasMatch(id!),
+        isTrue,
+        reason: 'backfill harus 32-hex lowercase, dapat: $id',
+      );
     }
     expect(ids.toSet().length, 2, reason: 'firestore_id wajib unik');
     // Data lama tidak berubah.
-    expect(rows.map((r) => r.title), containsAll(['Pulang kampung', 'Laptop baru']));
+    expect(
+      rows.map((r) => r.title),
+      containsAll(['Pulang kampung', 'Laptop baru']),
+    );
     await db.close();
   });
 
@@ -63,13 +68,13 @@ void main() {
   test('fresh install (onCreate): index unik firestore_id aktif', () async {
     final db = AppDatabase(NativeDatabase.memory());
     GoalsCompanion goal(String fid, String title) => GoalsCompanion.insert(
-          title: title,
-          targetAmount: 1000000,
-          targetDate: DateTime(2026, 12, 31),
-          createdAt: DateTime(2026, 7, 5),
-          updatedAt: DateTime(2026, 7, 5),
-          firestoreId: Value(fid),
-        );
+      title: title,
+      targetAmount: 1000000,
+      targetDate: DateTime(2026, 12, 31),
+      createdAt: DateTime(2026, 7, 5),
+      updatedAt: DateTime(2026, 7, 5),
+      firestoreId: Value(fid),
+    );
     await db.into(db.goals).insert(goal('fid-sama', 'Goal A'));
     await expectLater(
       db.into(db.goals).insert(goal('fid-sama', 'Goal B')),

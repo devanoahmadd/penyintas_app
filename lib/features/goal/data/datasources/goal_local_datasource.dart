@@ -47,33 +47,40 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
 
   @override
   Future<List<GoalEntity>> loadGoals() async {
-    final goals = await (_db.select(_db.goals)
-          ..orderBy([(g) => OrderingTerm(expression: g.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final goals =
+        await (_db.select(_db.goals)..orderBy([
+              (g) => OrderingTerm(
+                expression: g.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
 
-    return Future.wait(goals.map((goal) async {
-      // savedAmount = SUM amount dari transaksi income yang dikaitkan ke goal ini
-      final sumExp = _db.transactions.amount.sum();
-      final query = _db.selectOnly(_db.transactions)
-        ..addColumns([sumExp])
-        ..where(
-          _db.transactions.goalId.equals(goal.id) &
-              _db.transactions.amount.isBiggerThanValue(0),
+    return Future.wait(
+      goals.map((goal) async {
+        // savedAmount = SUM amount dari transaksi income yang dikaitkan ke goal ini
+        final sumExp = _db.transactions.amount.sum();
+        final query = _db.selectOnly(_db.transactions)
+          ..addColumns([sumExp])
+          ..where(
+            _db.transactions.goalId.equals(goal.id) &
+                _db.transactions.amount.isBiggerThanValue(0),
+          );
+        final savedAmount = await query
+            .map((row) => row.read(sumExp) ?? 0)
+            .getSingle();
+
+        return GoalEntity(
+          id: goal.id,
+          title: goal.title,
+          targetAmount: goal.targetAmount,
+          savedAmount: savedAmount,
+          targetDate: goal.targetDate,
+          isCompleted: goal.isCompleted,
+          createdAt: goal.createdAt,
         );
-      final savedAmount = await query
-          .map((row) => row.read(sumExp) ?? 0)
-          .getSingle();
-
-      return GoalEntity(
-        id: goal.id,
-        title: goal.title,
-        targetAmount: goal.targetAmount,
-        savedAmount: savedAmount,
-        targetDate: goal.targetDate,
-        isCompleted: goal.isCompleted,
-        createdAt: goal.createdAt,
-      );
-    }));
+      }),
+    );
   }
 
   static const _uuid = Uuid();
@@ -86,15 +93,19 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
   }) async {
     final now = DateTime.now();
     final firestoreId = _uuid.v4();
-    await _db.into(_db.goals).insert(GoalsCompanion(
-          title: Value(title),
-          targetAmount: Value(targetAmount),
-          targetDate: Value(targetDate),
-          isCompleted: const Value(false),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-          firestoreId: Value(firestoreId),
-        ));
+    await _db
+        .into(_db.goals)
+        .insert(
+          GoalsCompanion(
+            title: Value(title),
+            targetAmount: Value(targetAmount),
+            targetDate: Value(targetDate),
+            isCompleted: const Value(false),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+            firestoreId: Value(firestoreId),
+          ),
+        );
     return GoalModel(
       firestoreId: firestoreId,
       title: title,
@@ -130,8 +141,7 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
   @override
   Future<void> deleteGoal(int goalId) async {
     // Unlink semua transaksi yang terkait dulu
-    await (_db.update(_db.transactions)
-          ..where((t) => t.goalId.equals(goalId)))
+    await (_db.update(_db.transactions)..where((t) => t.goalId.equals(goalId)))
         .write(const TransactionsCompanion(goalId: Value(null)));
     // Hapus goal
     await (_db.delete(_db.goals)..where((g) => g.id.equals(goalId))).go();
@@ -139,17 +149,17 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
 
   @override
   Future<GoalModel?> findById(int goalId) async {
-    final row = await (_db.select(_db.goals)
-          ..where((g) => g.id.equals(goalId)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.goals,
+    )..where((g) => g.id.equals(goalId))).getSingleOrNull();
     return row == null ? null : GoalModel.fromRow(row);
   }
 
   @override
   Future<String?> firestoreIdOf(int goalId) async {
-    final row = await (_db.select(_db.goals)
-          ..where((g) => g.id.equals(goalId)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.goals,
+    )..where((g) => g.id.equals(goalId))).getSingleOrNull();
     return row?.firestoreId;
   }
 
@@ -163,9 +173,10 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
   Future<void> upsertFromRemote(List<GoalModel> models) async {
     await _db.transaction(() async {
       for (final model in models) {
-        final existing = await (_db.select(_db.goals)
-              ..where((g) => g.firestoreId.equals(model.firestoreId)))
-            .getSingleOrNull();
+        final existing =
+            await (_db.select(_db.goals)
+                  ..where((g) => g.firestoreId.equals(model.firestoreId)))
+                .getSingleOrNull();
         if (existing == null) {
           await _db.into(_db.goals).insert(model.toCompanion());
         }
@@ -180,12 +191,16 @@ class GoalLocalDatasourceImpl implements GoalLocalDatasource {
     required Map<String, dynamic> data,
     required SyncOperation operation,
   }) async {
-    await _db.into(_db.syncQueue).insert(SyncQueueCompanion(
-          itemId: Value(itemId),
-          collectionPath: Value(collectionPath),
-          data: Value(jsonEncode(data)),
-          operation: Value(operation),
-          createdAt: Value(DateTime.now()),
-        ));
+    await _db
+        .into(_db.syncQueue)
+        .insert(
+          SyncQueueCompanion(
+            itemId: Value(itemId),
+            collectionPath: Value(collectionPath),
+            data: Value(jsonEncode(data)),
+            operation: Value(operation),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
   }
 }
