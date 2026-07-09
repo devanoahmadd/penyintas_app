@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Baseline deny-all — diganti rules per-user di task berikutnya.
+// JANGAN pernah diganti kembali ke `if true`.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
