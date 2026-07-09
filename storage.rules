@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Rules per-user: semua file di-scope ke pemiliknya (data finansial
+// personal — tidak ada yang boleh publicly readable).
+// `read, delete` dipisah dari `create, update` karena saat delete
+// request.resource == null sehingga validasi contentType/size tak bisa
+// (dan tak perlu) diterapkan — preseden: blok budget_limits di
+// firestore.rules.
+// Catatan: contentType adalah deklarasi client (lapisan pertama, bukan
+// inspeksi byte); `image/.*` mencakup image/svg+xml — aman selama
+// owner-only read, revisit ke whitelist jika ada fitur sharing/publik.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{userId}/{allPaths=**} {
+      allow read, delete: if request.auth != null
+                          && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                          && request.auth.uid == userId
+                          && request.resource.contentType.matches('image/.*')
+                          && request.resource.size < 5 * 1024 * 1024;
+    }
+  }
+}
