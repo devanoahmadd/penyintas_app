@@ -23,4 +23,9 @@ abstract class GoalRepository {
 
   /// Unlink semua transaksi terkait sebelum menghapus goal.
   Future<Either<Failure, void>> deleteGoal(int goalId);
+
+  /// Hydrate goals dari Firestore SEKALI saat tabel lokal kosong
+  /// (reinstall / ganti device / login akun lama) — KD-2 pull-all-on-first-sync.
+  /// Return jumlah goal yang dipulihkan (0 bila lokal berisi/offline/remote kosong).
+  Future<Either<Failure, int>> syncGoalsFromRemote();
 }

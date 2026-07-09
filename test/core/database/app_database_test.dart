@@ -6,6 +6,22 @@ import 'package:sqlite3/sqlite3.dart';
 
 AppDatabase _openTestDb() => AppDatabase(NativeDatabase.memory());
 
+// DB nyata pra-v13 SELALU punya tabel goals (dibuat di from<4, tak berubah
+// sampai v12). Fixture yang menyeberang ke v13 wajib memuatnya agar migrasi
+// from<13 (ALTER TABLE goals ADD firestore_id) tak gagal "no such table: goals"
+// — pola yang sama seperti categories pada migrasi from<12.
+const _createGoalsPreV13 = '''
+  CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    target_amount INTEGER NOT NULL,
+    target_date INTEGER NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+''';
+
 void main() {
   late AppDatabase db;
 
@@ -13,37 +29,53 @@ void main() {
   tearDown(() => db.close());
 
   test('clearAllLocalData menghapus semua baris di semua tabel', () async {
-    await db.into(db.appSettings).insert(
-          const AppSettingsCompanion(id: Value(1)),
+    await db
+        .into(db.appSettings)
+        .insert(const AppSettingsCompanion(id: Value(1)));
+    await db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            txId: 'tx-1',
+            amount: 1000,
+            category: 'food',
+            type: 'expense',
+            date: DateTime(2026, 6, 1),
+            createdAt: DateTime(2026, 6, 1),
+            updatedAt: DateTime(2026, 6, 1),
+          ),
         );
-    await db.into(db.transactions).insert(TransactionsCompanion.insert(
-          txId: 'tx-1',
-          amount: 1000,
-          category: 'food',
-          type: 'expense',
-          date: DateTime(2026, 6, 1),
-          createdAt: DateTime(2026, 6, 1),
-          updatedAt: DateTime(2026, 6, 1),
-        ));
-    await db.into(db.goals).insert(GoalsCompanion.insert(
-          title: 'Laptop',
-          targetAmount: 5000000,
-          targetDate: DateTime(2026, 12, 1),
-          createdAt: DateTime(2026, 6, 1),
-          updatedAt: DateTime(2026, 6, 1),
-        ));
-    await db.into(db.budgetLimits).insert(BudgetLimitsCompanion.insert(
-          category: 'food',
-          limitAmount: 500000,
-          updatedAt: DateTime(2026, 6, 1),
-        ));
-    await db.into(db.syncQueue).insert(SyncQueueCompanion.insert(
-          itemId: 'i-1',
-          collectionPath: 'users/{uid}/x',
-          data: '{}',
-          operation: SyncOperation.create,
-          createdAt: DateTime(2026, 6, 1),
-        ));
+    await db
+        .into(db.goals)
+        .insert(
+          GoalsCompanion.insert(
+            title: 'Laptop',
+            targetAmount: 5000000,
+            targetDate: DateTime(2026, 12, 1),
+            createdAt: DateTime(2026, 6, 1),
+            updatedAt: DateTime(2026, 6, 1),
+          ),
+        );
+    await db
+        .into(db.budgetLimits)
+        .insert(
+          BudgetLimitsCompanion.insert(
+            category: 'food',
+            limitAmount: 500000,
+            updatedAt: DateTime(2026, 6, 1),
+          ),
+        );
+    await db
+        .into(db.syncQueue)
+        .insert(
+          SyncQueueCompanion.insert(
+            itemId: 'i-1',
+            collectionPath: 'users/{uid}/x',
+            data: '{}',
+            operation: SyncOperation.create,
+            createdAt: DateTime(2026, 6, 1),
+          ),
+        );
 
     await db.clearAllLocalData();
 
@@ -79,14 +111,15 @@ void main() {
       )
     ''';
 
-    test('upgrade menambah kolom partial (NULL) & mempertahankan data budget',
-        () async {
-      final raw = sqlite3.openInMemory();
-      raw.execute(createV8);
-      // DB v8 nyata SELALU punya tabel categories (dibuat di from<7, +icon_slug
-      // di from<8). Fixture wajib memuatnya agar migrasi 8→12 (yang kini re-seed
-      // categories di from<12) tidak gagal "no such table".
-      raw.execute('''
+    test(
+      'upgrade menambah kolom partial (NULL) & mempertahankan data budget',
+      () async {
+        final raw = sqlite3.openInMemory();
+        raw.execute(createV8);
+        // DB v8 nyata SELALU punya tabel categories (dibuat di from<7, +icon_slug
+        // di from<8). Fixture wajib memuatnya agar migrasi 8→12 (yang kini re-seed
+        // categories di from<12) tidak gagal "no such table".
+        raw.execute('''
         CREATE TABLE categories (
           id             INTEGER PRIMARY KEY AUTOINCREMENT,
           slug           TEXT NOT NULL,
@@ -100,33 +133,35 @@ void main() {
           UNIQUE(slug)
         )
       ''');
-      raw.execute(
-        'INSERT INTO app_settings '
-        '(id, monthly_income, payment_date, fixed_expenses, rent_expense, '
-        'onboarding_completed) '
-        'VALUES (1, 3000000, 25, 1000000, 1000000, 1)',
-      );
-      raw.execute('PRAGMA user_version = 8');
+        raw.execute(_createGoalsPreV13);
+        raw.execute(
+          'INSERT INTO app_settings '
+          '(id, monthly_income, payment_date, fixed_expenses, rent_expense, '
+          'onboarding_completed) '
+          'VALUES (1, 3000000, 25, 1000000, 1000000, 1)',
+        );
+        raw.execute('PRAGMA user_version = 8');
 
-      // Membuka AppDatabase di atas DB v8 → migrasi 8→9 berjalan saat query.
-      final migrated = AppDatabase(NativeDatabase.opened(raw));
-      addTearDown(migrated.close);
+        // Membuka AppDatabase di atas DB v8 → migrasi 8→9 berjalan saat query.
+        final migrated = AppDatabase(NativeDatabase.opened(raw));
+        addTearDown(migrated.close);
 
-      final row = await (migrated.select(migrated.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
+        final row = await (migrated.select(
+          migrated.appSettings,
+        )..where((t) => t.id.equals(1))).getSingleOrNull();
 
-      expect(row, isNotNull);
-      // Data existing v8 TIDAK hilang saat upgrade.
-      expect(row!.monthlyIncome, 3000000);
-      expect(row.paymentDate, 25);
-      expect(row.rentExpense, 1000000);
-      expect(row.onboardingCompleted, true);
-      // Kolom baru v9 ADA & NULL (bukan crash NOT NULL).
-      // Kalau migrasi tak jalan, baca kolom ini akan throw "no such column".
-      expect(row.partialOnboardingStep, isNull);
-      expect(row.partialOnboardingAt, isNull);
-    });
+        expect(row, isNotNull);
+        // Data existing v8 TIDAK hilang saat upgrade.
+        expect(row!.monthlyIncome, 3000000);
+        expect(row.paymentDate, 25);
+        expect(row.rentExpense, 1000000);
+        expect(row.onboardingCompleted, true);
+        // Kolom baru v9 ADA & NULL (bukan crash NOT NULL).
+        // Kalau migrasi tak jalan, baca kolom ini akan throw "no such column".
+        expect(row.partialOnboardingStep, isNull);
+        expect(row.partialOnboardingAt, isNull);
+      },
+    );
   });
 
   group('seed kategori built-in', () {
@@ -134,16 +169,25 @@ void main() {
       // Fresh in-memory DB → onCreate berjalan saat query pertama.
       final cats = await db.select(db.categories).get();
 
-      expect(cats, hasLength(8),
-          reason: 'onCreate harus men-seed 8 kategori built-in — '
-              'tanpa ini fresh install punya tabel categories kosong');
+      expect(
+        cats,
+        hasLength(8),
+        reason:
+            'onCreate harus men-seed 8 kategori built-in — '
+            'tanpa ini fresh install punya tabel categories kosong',
+      );
 
       final slugs = cats.map((c) => c.slug).toSet();
-      expect(
-        slugs,
-        {'food', 'transport', 'shopping', 'health', 'internet', 'other',
-            'fixed', 'income'},
-      );
+      expect(slugs, {
+        'food',
+        'transport',
+        'shopping',
+        'health',
+        'internet',
+        'other',
+        'fixed',
+        'income',
+      });
 
       // 6 kategori expense limitable; 'fixed' & 'income' tidak limitable.
       final limitable = cats.where((c) => c.isLimitable).map((c) => c.slug);
@@ -176,45 +220,60 @@ void main() {
       )
     ''';
 
-    test('upgrade men-seed built-in ke DB v11 yang categories-nya kosong',
-        () async {
-      final raw = sqlite3.openInMemory();
-      raw.execute(createV11Categories);
-      raw.execute('PRAGMA user_version = 11');
+    test(
+      'upgrade men-seed built-in ke DB v11 yang categories-nya kosong',
+      () async {
+        final raw = sqlite3.openInMemory();
+        raw.execute(createV11Categories);
+        raw.execute(_createGoalsPreV13);
+        raw.execute('PRAGMA user_version = 11');
 
-      // Buka AppDatabase di atas DB v11 → migrasi 11→12 re-seed kategori.
-      final migrated = AppDatabase(NativeDatabase.opened(raw));
-      addTearDown(migrated.close);
+        // Buka AppDatabase di atas DB v11 → migrasi 11→12 re-seed kategori.
+        final migrated = AppDatabase(NativeDatabase.opened(raw));
+        addTearDown(migrated.close);
 
-      final cats = await migrated.select(migrated.categories).get();
-      expect(cats, hasLength(8),
-          reason: 'migrasi from<12 harus men-seed built-in untuk '
-              'menyembuhkan fresh install lama yang terlanjur kosong');
-      expect(
-        cats.map((c) => c.slug).toSet(),
-        {'food', 'transport', 'shopping', 'health', 'internet', 'other',
-            'fixed', 'income'},
-      );
-    });
+        final cats = await migrated.select(migrated.categories).get();
+        expect(
+          cats,
+          hasLength(8),
+          reason:
+              'migrasi from<12 harus men-seed built-in untuk '
+              'menyembuhkan fresh install lama yang terlanjur kosong',
+        );
+        expect(cats.map((c) => c.slug).toSet(), {
+          'food',
+          'transport',
+          'shopping',
+          'health',
+          'internet',
+          'other',
+          'fixed',
+          'income',
+        });
+      },
+    );
 
-    test('re-seed idempoten — kategori built-in yang sudah ada tidak dobel',
-        () async {
-      final raw = sqlite3.openInMemory();
-      raw.execute(createV11Categories);
-      // Sudah ada 'food' (kasus DB yang seed-nya jalan via jalur onUpgrade<7).
-      raw.execute(
-        "INSERT INTO categories (slug, label_key, is_built_in, is_limitable, "
-        "type, sort_order) VALUES ('food','category_food',1,1,'expense',0)",
-      );
-      raw.execute('PRAGMA user_version = 11');
+    test(
+      're-seed idempoten — kategori built-in yang sudah ada tidak dobel',
+      () async {
+        final raw = sqlite3.openInMemory();
+        raw.execute(createV11Categories);
+        raw.execute(_createGoalsPreV13);
+        // Sudah ada 'food' (kasus DB yang seed-nya jalan via jalur onUpgrade<7).
+        raw.execute(
+          "INSERT INTO categories (slug, label_key, is_built_in, is_limitable, "
+          "type, sort_order) VALUES ('food','category_food',1,1,'expense',0)",
+        );
+        raw.execute('PRAGMA user_version = 11');
 
-      final migrated = AppDatabase(NativeDatabase.opened(raw));
-      addTearDown(migrated.close);
+        final migrated = AppDatabase(NativeDatabase.opened(raw));
+        addTearDown(migrated.close);
 
-      final cats = await migrated.select(migrated.categories).get();
-      // Tetap 8 (bukan 9) — INSERT OR IGNORE tidak menduplikasi 'food'.
-      expect(cats, hasLength(8));
-      expect(cats.where((c) => c.slug == 'food'), hasLength(1));
-    });
+        final cats = await migrated.select(migrated.categories).get();
+        // Tetap 8 (bukan 9) — INSERT OR IGNORE tidak menduplikasi 'food'.
+        expect(cats, hasLength(8));
+        expect(cats.where((c) => c.slug == 'food'), hasLength(1));
+      },
+    );
   });
 }

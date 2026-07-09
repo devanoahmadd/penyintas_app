@@ -102,6 +102,7 @@ import 'package:penyintas_app/features/survival/domain/usecases/get_survival_mod
 import 'package:penyintas_app/features/survival/domain/usecases/get_survival_tips_usecase.dart';
 import 'package:penyintas_app/features/survival/domain/usecases/record_survival_activated_usecase.dart';
 import 'package:penyintas_app/features/goal/data/datasources/goal_local_datasource.dart';
+import 'package:penyintas_app/features/goal/data/datasources/goal_remote_datasource.dart';
 import 'package:penyintas_app/features/goal/data/repositories/goal_repository_impl.dart';
 import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
 import 'package:penyintas_app/features/goal/domain/usecases/complete_goal_usecase.dart';
@@ -145,7 +146,9 @@ Future<void> init({required AppDatabase db}) async {
     try {
       FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
     } catch (_) {}
-    tzResolver = TimezoneResolver(const []); // resolver kosong → default Asia/Jakarta tetap jalan
+    tzResolver = TimezoneResolver(
+      const [],
+    ); // resolver kosong → default Asia/Jakarta tetap jalan
   }
   sl.registerSingleton<TimezoneResolver>(tzResolver);
 
@@ -176,7 +179,9 @@ void _registerExternal(AppDatabase db) {
   sl.registerLazySingleton(() => FirebaseMessaging.instance);
   sl.registerLazySingleton(() => FirebaseAnalytics.instance);
   sl.registerLazySingleton(() => FirebaseRemoteConfig.instance);
-  sl.registerLazySingleton(() => FirebaseFunctions.instanceFor(region: 'asia-southeast2'));
+  sl.registerLazySingleton(
+    () => FirebaseFunctions.instanceFor(region: 'asia-southeast2'),
+  );
   sl.registerLazySingleton(() => FirebasePerformance.instance);
 
   // ── Connectivity ─────────────────────────────────────────────────────────
@@ -185,31 +190,31 @@ void _registerExternal(AppDatabase db) {
 
 void _registerCore() {
   sl.registerLazySingleton<GoRouter>(() => createAppRouter());
-  sl.registerLazySingleton<NetworkInfo>(
-    () => NetworkInfoImpl(sl()),
-  );
-  sl.registerLazySingleton(
-    () => AnalyticsService(sl()),
-  );
+  sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
+  sl.registerLazySingleton(() => AnalyticsService(sl()));
 }
 
 void _registerSettings() {
-  sl.registerFactory(() => SettingsBloc(sl<AppDatabase>(), sl<PreferencesRepository>()));
+  sl.registerFactory(
+    () => SettingsBloc(sl<AppDatabase>(), sl<PreferencesRepository>()),
+  );
 }
 
 void _initAuth() {
-  sl.registerFactory(() => AuthBloc(
-        signIn: sl(),
-        signUp: sl(),
-        signOut: sl(),
-        getCurrentUser: sl(),
-        watchAuthState: sl(),
-        wipeLocalData: sl(),
-        deleteAccount: sl(),
-        sendPasswordReset: sl(),
-        registerFcmToken: sl(),
-        unregisterFcmToken: sl(),
-      ));
+  sl.registerFactory(
+    () => AuthBloc(
+      signIn: sl(),
+      signUp: sl(),
+      signOut: sl(),
+      getCurrentUser: sl(),
+      watchAuthState: sl(),
+      wipeLocalData: sl(),
+      deleteAccount: sl(),
+      sendPasswordReset: sl(),
+      registerFcmToken: sl(),
+      unregisterFcmToken: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));
@@ -245,29 +250,36 @@ void _initAuth() {
   );
 
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
+    () =>
+        AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
   );
 }
 
 void _initOnboarding() {
-  sl.registerFactory(() => OnboardingBloc(
-        saveBudgetSettings: sl(),
-        calculateDailyBudget: sl(),
-        analyticsService: sl(),
-        pushUserSettings: sl(),
-      ));
+  sl.registerFactory(
+    () => OnboardingBloc(
+      saveBudgetSettings: sl(),
+      calculateDailyBudget: sl(),
+      analyticsService: sl(),
+      pushUserSettings: sl(),
+    ),
+  );
 
-  sl.registerFactory(() => OnboardingDraftCubit(
-        loadDraft: sl(),
-        saveDraft: sl(),
-        clearDraft: sl(),
-      ));
+  sl.registerFactory(
+    () => OnboardingDraftCubit(
+      loadDraft: sl(),
+      saveDraft: sl(),
+      clearDraft: sl(),
+    ),
+  );
 
-  sl.registerFactory(() => ProfileSetupCubit(
-        repo: sl(),
-        tz: sl(),
-        initialName: sl<FirebaseAuth>().currentUser?.displayName,
-      ));
+  sl.registerFactory(
+    () => ProfileSetupCubit(
+      repo: sl(),
+      tz: sl(),
+      initialName: sl<FirebaseAuth>().currentUser?.displayName,
+    ),
+  );
 
   sl.registerFactory(() => ProfileEditCubit(repo: sl(), tz: sl()));
   sl.registerFactory(() => ProfileSummaryCubit(sl()));
@@ -288,35 +300,29 @@ void _initOnboarding() {
     () => OnboardingLocalDataSourceImpl(sl()),
   );
   sl.registerLazySingleton<OnboardingGuard>(
-    () => OnboardingGuard(
-      onboardingDs: sl(),
-      prefsRepo: sl(),
-    ),
+    () => OnboardingGuard(onboardingDs: sl(), prefsRepo: sl()),
   );
   // D2/Temuan 1: gerbang bootstrap ber-memo per-sesi, dipakai bersama splash
   // (cold-start) DAN _redirect (fresh-login/deep-link). onComplete me-reset cache
   // guard SEKALI agar pembaca berikutnya melihat state ter-bootstrap.
-  sl.registerLazySingleton(() => BootstrapCoordinator(
-        syncUserSettings: sl(),
-        budgetRepository: sl(),
-        onboardingDs: sl(),
-        prefsRepo: sl(),
-        onComplete: () => sl<OnboardingGuard>().resetCache(),
-      ));
+  sl.registerLazySingleton(
+    () => BootstrapCoordinator(
+      syncUserSettings: sl(),
+      budgetRepository: sl(),
+      goalRepository: sl(),
+      onboardingDs: sl(),
+      prefsRepo: sl(),
+      onComplete: () => sl<OnboardingGuard>().resetCache(),
+    ),
+  );
 }
 
 void _initTransaction() {
   sl.registerFactory(
-    () => AddTransactionBloc(
-      addTransaction: sl(),
-      getCategories: sl(),
-    ),
+    () => AddTransactionBloc(addTransaction: sl(), getCategories: sl()),
   );
   sl.registerFactory(
-    () => TransactionListBloc(
-      getTransactions: sl(),
-      deleteTransaction: sl(),
-    ),
+    () => TransactionListBloc(getTransactions: sl(), deleteTransaction: sl()),
   );
 
   sl.registerLazySingleton(() => AddTransactionUseCase(sl()));
@@ -343,12 +349,9 @@ void _initTransaction() {
 }
 
 void _initSync() {
-  sl.registerLazySingleton(() => SyncService(
-        db: sl(),
-        networkInfo: sl(),
-        auth: sl(),
-        firestore: sl(),
-      ));
+  sl.registerLazySingleton(
+    () => SyncService(db: sl(), networkInfo: sl(), auth: sl(), firestore: sl()),
+  );
 }
 
 void _initCategory() {
@@ -358,12 +361,14 @@ void _initCategory() {
   sl.registerLazySingleton(() => UpdateCategoryUseCase(sl()));
   sl.registerLazySingleton(() => DeleteCategoryUseCase(sl()));
 
-  sl.registerFactory(() => CategoryBloc(
-    getCategories: sl(),
-    createCategory: sl(),
-    updateCategory: sl(),
-    deleteCategory: sl(),
-  ));
+  sl.registerFactory(
+    () => CategoryBloc(
+      getCategories: sl(),
+      createCategory: sl(),
+      updateCategory: sl(),
+      deleteCategory: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<CategoryRepository>(
     () => CategoryRepositoryImpl(sl()),
@@ -374,33 +379,32 @@ void _initCategory() {
 }
 
 void _initBudget() {
-  sl.registerFactory(() => BudgetSettingsBloc(
-        getBudgetSettings: sl(),
-        saveBudgetSettings: sl(),
-      ));
-  sl.registerLazySingleton(() => BudgetLimitsBloc(
-        getBudgetSettings: sl(),
-        getBudgetLimits: sl(),
-        saveBudgetLimit: sl(),
-        deleteBudgetLimit: sl(),
-        getBudgetOverview: sl(),
-        transactionRepository: sl(),
-        getLimitableCategories: sl(),
-      ));
+  sl.registerFactory(
+    () => BudgetSettingsBloc(getBudgetSettings: sl(), saveBudgetSettings: sl()),
+  );
+  sl.registerLazySingleton(
+    () => BudgetLimitsBloc(
+      getBudgetSettings: sl(),
+      getBudgetLimits: sl(),
+      saveBudgetLimit: sl(),
+      deleteBudgetLimit: sl(),
+      getBudgetOverview: sl(),
+      transactionRepository: sl(),
+      getLimitableCategories: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(() => GetBudgetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => SaveBudgetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => GetBudgetLimitsUseCase(sl()));
   sl.registerLazySingleton(() => SaveBudgetLimitUseCase(sl()));
   sl.registerLazySingleton(() => DeleteBudgetLimitUseCase(sl()));
-  sl.registerLazySingleton<GetBudgetOverviewUseCase>(() => const GetBudgetOverviewUseCase());
+  sl.registerLazySingleton<GetBudgetOverviewUseCase>(
+    () => const GetBudgetOverviewUseCase(),
+  );
 
   sl.registerLazySingleton<BudgetRepository>(
-    () => BudgetRepositoryImpl(
-      local: sl(),
-      remote: sl(),
-      networkInfo: sl(),
-    ),
+    () => BudgetRepositoryImpl(local: sl(), remote: sl(), networkInfo: sl()),
   );
   sl.registerLazySingleton<BudgetLocalDatasource>(
     () => BudgetLocalDatasourceImpl(sl()),
@@ -430,10 +434,9 @@ void _initDashboard() {
 }
 
 void _initReport() {
-  sl.registerFactory(() => ReportBloc(
-        getMonthlyReport: sl(),
-        getAiInsight: sl(),
-      ));
+  sl.registerFactory(
+    () => ReportBloc(getMonthlyReport: sl(), getAiInsight: sl()),
+  );
 
   sl.registerLazySingleton(() => GetMonthlyReportUseCase(sl()));
   sl.registerLazySingleton(() => GetAiInsightUseCase(sl()));
@@ -447,26 +450,28 @@ void _initReport() {
   );
   sl.registerLazySingleton<ReportRemoteDatasource>(
     () => ReportRemoteDatasourceImpl(
-          functions: sl(),
-          firestore: sl(),
-          auth: sl(),
-        ),
+      functions: sl(),
+      firestore: sl(),
+      auth: sl(),
+    ),
   );
 }
 
 void _initNotification() {
-  sl.registerFactory(() => NotificationBloc(
-        requestPermission: sl(),
-        registerToken: sl(),
-        setPushPreference: sl(),
-        scheduleDailyReminder: sl(),
-        cancelDailyReminder: sl(),
-        messaging: sl(),
-        auth: sl(),
-        local: sl(),
-        launchHolder: sl(),
-        db: sl(),
-      ));
+  sl.registerFactory(
+    () => NotificationBloc(
+      requestPermission: sl(),
+      registerToken: sl(),
+      setPushPreference: sl(),
+      scheduleDailyReminder: sl(),
+      cancelDailyReminder: sl(),
+      messaging: sl(),
+      auth: sl(),
+      local: sl(),
+      launchHolder: sl(),
+      db: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(() => RequestPermissionUseCase(sl()));
   sl.registerLazySingleton(() => RegisterFcmTokenUseCase(sl()));
@@ -492,14 +497,16 @@ void _initNotification() {
 void _initGoal() {
   // Singleton — instance yang sama dipakai di GoalListPage, GoalDetailPage,
   // dan dipicu reload dari Dashboard/TransactionList/Profile setelah save
-  sl.registerLazySingleton(() => GoalBloc(
-        loadGoals: sl(),
-        createGoal: sl(),
-        linkTransaction: sl(),
-        unlinkTransaction: sl(),
-        completeGoal: sl(),
-        deleteGoal: sl(),
-      ));
+  sl.registerLazySingleton(
+    () => GoalBloc(
+      loadGoals: sl(),
+      createGoal: sl(),
+      linkTransaction: sl(),
+      unlinkTransaction: sl(),
+      completeGoal: sl(),
+      deleteGoal: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(() => LoadGoalsUseCase(sl()));
   sl.registerLazySingleton(() => CreateGoalUseCase(sl()));
@@ -509,11 +516,20 @@ void _initGoal() {
   sl.registerLazySingleton(() => DeleteGoalUseCase(sl()));
 
   sl.registerLazySingleton<GoalRepository>(
-    () => GoalRepositoryImpl(local: sl()),
+    () => GoalRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      networkInfo: sl(),
+      auth: sl(),
+    ),
   );
 
   sl.registerLazySingleton<GoalLocalDatasource>(
     () => GoalLocalDatasourceImpl(sl()),
+  );
+
+  sl.registerLazySingleton<GoalRemoteDatasource>(
+    () => GoalRemoteDatasourceImpl(auth: sl(), firestore: sl()),
   );
 }
 
@@ -522,22 +538,26 @@ void _initPreferences() {
   // dan check() tidak mengulang dari nol tiap remount dashboard (NoTransitionPage
   // bisa rebuild). BlocProvider.value di dashboard route TAK menutup cubit ini saat
   // route di-pop → snooze tetap dihormati lintas-remount.
-  sl.registerLazySingleton(() => TimezoneReconciliationCubit(
-        repo: sl<PreferencesRepository>(),
-        tz: sl<TimezoneResolver>(),
-        getDeviceTimezone: () async =>
-            (await FlutterTimezone.getLocalTimezone()).identifier,
-      ));
+  sl.registerLazySingleton(
+    () => TimezoneReconciliationCubit(
+      repo: sl<PreferencesRepository>(),
+      tz: sl<TimezoneResolver>(),
+      getDeviceTimezone: () async =>
+          (await FlutterTimezone.getLocalTimezone()).identifier,
+    ),
+  );
 }
 
 void _initSurvival() {
   // Singleton — tips ter-cache in-memory selama sesi, persist antar navigasi
-  sl.registerLazySingleton(() => SurvivalBloc(
-        getSurvivalMode: sl(),
-        getSurvivalTips: sl(),
-        recordActivated: sl(),
-        clearActivated: sl(),
-      ));
+  sl.registerLazySingleton(
+    () => SurvivalBloc(
+      getSurvivalMode: sl(),
+      getSurvivalTips: sl(),
+      recordActivated: sl(),
+      clearActivated: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(() => GetSurvivalModeUseCase(sl()));
   sl.registerLazySingleton(() => GetSurvivalTipsUseCase(sl()));

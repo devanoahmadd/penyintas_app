@@ -2361,6 +2361,17 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _firestoreIdMeta = const VerificationMeta(
+    'firestoreId',
+  );
+  @override
+  late final GeneratedColumn<String> firestoreId = GeneratedColumn<String>(
+    'firestore_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2370,6 +2381,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     isCompleted,
     createdAt,
     updatedAt,
+    firestoreId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2438,6 +2450,15 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('firestore_id')) {
+      context.handle(
+        _firestoreIdMeta,
+        firestoreId.isAcceptableOrUnknown(
+          data['firestore_id']!,
+          _firestoreIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2475,6 +2496,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      firestoreId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}firestore_id'],
+      ),
     );
   }
 
@@ -2492,6 +2517,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? firestoreId;
   const Goal({
     required this.id,
     required this.title,
@@ -2500,6 +2526,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     required this.isCompleted,
     required this.createdAt,
     required this.updatedAt,
+    this.firestoreId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2511,6 +2538,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || firestoreId != null) {
+      map['firestore_id'] = Variable<String>(firestoreId);
+    }
     return map;
   }
 
@@ -2523,6 +2553,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      firestoreId: firestoreId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firestoreId),
     );
   }
 
@@ -2539,6 +2572,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      firestoreId: serializer.fromJson<String?>(json['firestoreId']),
     );
   }
   @override
@@ -2552,6 +2586,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'firestoreId': serializer.toJson<String?>(firestoreId),
     };
   }
 
@@ -2563,6 +2598,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<String?> firestoreId = const Value.absent(),
   }) => Goal(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -2571,6 +2607,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    firestoreId: firestoreId.present ? firestoreId.value : this.firestoreId,
   );
   Goal copyWithCompanion(GoalsCompanion data) {
     return Goal(
@@ -2587,6 +2624,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           : this.isCompleted,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      firestoreId: data.firestoreId.present
+          ? data.firestoreId.value
+          : this.firestoreId,
     );
   }
 
@@ -2599,7 +2639,8 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('targetDate: $targetDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('firestoreId: $firestoreId')
           ..write(')'))
         .toString();
   }
@@ -2613,6 +2654,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     isCompleted,
     createdAt,
     updatedAt,
+    firestoreId,
   );
   @override
   bool operator ==(Object other) =>
@@ -2624,7 +2666,8 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.targetDate == this.targetDate &&
           other.isCompleted == this.isCompleted &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.firestoreId == this.firestoreId);
 }
 
 class GoalsCompanion extends UpdateCompanion<Goal> {
@@ -2635,6 +2678,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> firestoreId;
   const GoalsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -2643,6 +2687,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.firestoreId = const Value.absent(),
   });
   GoalsCompanion.insert({
     this.id = const Value.absent(),
@@ -2652,6 +2697,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.isCompleted = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.firestoreId = const Value.absent(),
   }) : title = Value(title),
        targetAmount = Value(targetAmount),
        targetDate = Value(targetDate),
@@ -2665,6 +2711,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? firestoreId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2674,6 +2721,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (firestoreId != null) 'firestore_id': firestoreId,
     });
   }
 
@@ -2685,6 +2733,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<String?>? firestoreId,
   }) {
     return GoalsCompanion(
       id: id ?? this.id,
@@ -2694,6 +2743,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      firestoreId: firestoreId ?? this.firestoreId,
     );
   }
 
@@ -2721,6 +2771,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (firestoreId.present) {
+      map['firestore_id'] = Variable<String>(firestoreId.value);
+    }
     return map;
   }
 
@@ -2733,7 +2786,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('targetDate: $targetDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('firestoreId: $firestoreId')
           ..write(')'))
         .toString();
   }
@@ -5680,6 +5734,7 @@ typedef $$GoalsTableCreateCompanionBuilder =
       Value<bool> isCompleted,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<String?> firestoreId,
     });
 typedef $$GoalsTableUpdateCompanionBuilder =
     GoalsCompanion Function({
@@ -5690,6 +5745,7 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> firestoreId,
     });
 
 class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
@@ -5732,6 +5788,11 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get firestoreId => $composableBuilder(
+    column: $table.firestoreId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5779,6 +5840,11 @@ class $$GoalsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get firestoreId => $composableBuilder(
+    column: $table.firestoreId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GoalsTableAnnotationComposer
@@ -5816,6 +5882,11 @@ class $$GoalsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get firestoreId => $composableBuilder(
+    column: $table.firestoreId,
+    builder: (column) => column,
+  );
 }
 
 class $$GoalsTableTableManager
@@ -5853,6 +5924,7 @@ class $$GoalsTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> firestoreId = const Value.absent(),
               }) => GoalsCompanion(
                 id: id,
                 title: title,
@@ -5861,6 +5933,7 @@ class $$GoalsTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                firestoreId: firestoreId,
               ),
           createCompanionCallback:
               ({
@@ -5871,6 +5944,7 @@ class $$GoalsTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<String?> firestoreId = const Value.absent(),
               }) => GoalsCompanion.insert(
                 id: id,
                 title: title,
@@ -5879,6 +5953,7 @@ class $$GoalsTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                firestoreId: firestoreId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

@@ -27,6 +27,7 @@ class BudgetCycleConverter extends TypeConverter<BudgetCycle, String> {
     return BudgetCycle.values.where((e) => e.name == s).firstOrNull ??
         BudgetCycle.cycle;
   }
+
   @override
   String toSql(BudgetCycle v) => v.name;
 }
@@ -43,8 +44,7 @@ class AppSettings extends Table {
   IntColumn get monthlyIncome => integer().withDefault(const Constant(0))();
   IntColumn get paymentDate => integer().withDefault(const Constant(1))();
   IntColumn get fixedExpenses => integer().withDefault(const Constant(0))();
-  RealColumn get emergencyFundPct =>
-      real().withDefault(const Constant(0.10))();
+  RealColumn get emergencyFundPct => real().withDefault(const Constant(0.10))();
   // Set once on first onboarding completion — jangan overwrite
   DateTimeColumn get onboardingCreatedAt => dateTime().nullable()();
   // Notification reminder settings (added schemaVersion 2)
@@ -74,8 +74,7 @@ class SyncQueue extends Table {
   TextColumn get itemId => text()();
   TextColumn get collectionPath => text()();
   TextColumn get data => text()();
-  TextColumn get operation =>
-      text().map(const SyncOperationConverter())();
+  TextColumn get operation => text().map(const SyncOperationConverter())();
   DateTimeColumn get createdAt => dateTime()();
 }
 
@@ -105,10 +104,14 @@ class Goals extends Table {
   TextColumn get title => text()();
   IntColumn get targetAmount => integer()();
   DateTimeColumn get targetDate => dateTime()();
-  BoolColumn get isCompleted =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  // Identitas cloud stabil = doc ID Firestore (B1 goal sync, schemaVersion 13).
+  // Nullable di SQL (ALTER TABLE tabel berisi data); setelah backfill migrasi
+  // 12→13 SELALU terisi — baris baru diisi UUID v4 oleh GoalLocalDatasource.
+  // Unik via index idx_goals_firestore_id (dibuat onCreate & onUpgrade).
+  TextColumn get firestoreId => text().nullable()();
 }
 
 /// Kategori transaksi — built-in dan custom buatan user.
@@ -117,18 +120,21 @@ class Goals extends Table {
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get slug => text()(); // unique key for category identifier
-  TextColumn get labelKey => text().nullable()(); // l10n key (mis. 'category_food')
-  TextColumn get labelOverride => text().nullable()(); // nama custom buatan user
+  TextColumn get labelKey =>
+      text().nullable()(); // l10n key (mis. 'category_food')
+  TextColumn get labelOverride =>
+      text().nullable()(); // nama custom buatan user
   BoolColumn get isBuiltIn => boolean().withDefault(const Constant(true))();
   BoolColumn get isLimitable => boolean().withDefault(const Constant(false))();
-  TextColumn get type => text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
+  TextColumn get type =>
+      text().withDefault(const Constant('expense'))(); // 'expense' | 'income'
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get iconSlug => text().nullable()(); // null=built-in, diisi=custom
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {slug},
-      ];
+    {slug},
+  ];
 }
 
 class BudgetLimits extends Table {
@@ -149,7 +155,8 @@ class BudgetLimits extends Table {
 /// Currency Spec 1 = IDR-seragam (base/home tak diubah user); UX currency → Spec 2.
 class Preferences extends Table {
   IntColumn get id => integer()();
-  TextColumn get timezone => text().withDefault(const Constant('Asia/Jakarta'))();
+  TextColumn get timezone =>
+      text().withDefault(const Constant('Asia/Jakarta'))();
   TextColumn get baseCurrency => text().withDefault(const Constant('IDR'))();
   TextColumn get homeCurrency => text().withDefault(const Constant('IDR'))();
   TextColumn get language => text().withDefault(const Constant('id'))();
@@ -173,12 +180,22 @@ class Preferences extends Table {
 
 // ─── Database ──────────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [AppSettings, SyncQueue, Transactions, Goals, BudgetLimits, Categories, Preferences])
+@DriftDatabase(
+  tables: [
+    AppSettings,
+    SyncQueue,
+    Transactions,
+    Goals,
+    BudgetLimits,
+    Categories,
+    Preferences,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -194,6 +211,11 @@ class AppDatabase extends _$AppDatabase {
       // punya tabel categories kosong → tombol "Tambah batas kategori" dan
       // picker kategori transaksi ikut hilang (limitableCategories == []).
       await _seedBuiltInCategories();
+      // Index unik firestore_id (B1): fresh install dapat guard yang sama
+      // dengan jalur upgrade — pull remote tak boleh menduplikasi goal.
+      await m.database.customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_firestore_id ON goals (firestore_id)',
+      );
     },
     beforeOpen: (details) async {
       // #138: enforce foreign key constraints — OFF by default in SQLite
@@ -392,6 +414,22 @@ class AppDatabase extends _$AppDatabase {
         // ada (mis. dari jalur onUpgrade<7) maupun mengubah kategori custom user.
         await _seedBuiltInCategories();
       }
+      if (from < 13) {
+        // B1 goal cloud sync: identitas stabil goal ↔ dokumen Firestore.
+        // Backfill baris lama dengan 32-hex random (setara UUID v4 tanpa dash,
+        // valid sebagai Firestore doc ID) via randomblob — self-contained SQL,
+        // tanpa loop Dart. Baris baru diisi UUID v4 oleh GoalLocalDatasource.
+        await m.database.customStatement(
+          'ALTER TABLE goals ADD COLUMN firestore_id TEXT',
+        );
+        await m.database.customStatement(
+          'UPDATE goals SET firestore_id = lower(hex(randomblob(16))) '
+          'WHERE firestore_id IS NULL',
+        );
+        await m.database.customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_firestore_id ON goals (firestore_id)',
+        );
+      }
     },
   );
 
@@ -466,10 +504,10 @@ class AppDatabase extends _$AppDatabase {
       await delete(budgetLimits).go();
       await delete(syncQueue).go();
       // Pertahankan language (device-scoped UX); reset profil/lokasi ke default.
-      final keepLang = (await (select(preferences)
-                  ..where((t) => t.id.equals(1)))
-              .getSingleOrNull())
-          ?.language ??
+      final keepLang =
+          (await (select(
+            preferences,
+          )..where((t) => t.id.equals(1))).getSingleOrNull())?.language ??
           'id';
       await delete(preferences).go();
       await into(preferences).insert(
