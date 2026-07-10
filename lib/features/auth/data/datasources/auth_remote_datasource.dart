@@ -11,6 +11,7 @@ abstract class AuthRemoteDataSource {
     required String email,
     required String password,
     required String name,
+    String? languageCode,
   });
   Future<void> signOut();
   Future<UserModel?> getCurrentUser();
@@ -42,15 +43,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         password: password,
       );
       final uid = credential.user!.uid;
+      final fbUser = credential.user!;
       final doc = await firestore.collection('users').doc(uid).get();
-      if (doc.exists) return UserModel.fromFirestore(doc);
+      if (doc.exists) {
+        return UserModel.fromFirestore(
+          doc,
+          emailVerified: fbUser.emailVerified,
+          hasPasswordProvider: _hasPasswordProvider(fbUser),
+        );
+      }
       // Fallback jika dokumen Firestore belum ada
       return UserModel(
         uid: uid,
-        email: credential.user!.email ?? email,
-        displayName: credential.user!.displayName ?? '',
-        photoUrl: credential.user!.photoURL,
+        email: fbUser.email ?? email,
+        displayName: fbUser.displayName ?? '',
+        photoUrl: fbUser.photoURL,
         createdAt: DateTime.now(),
+        emailVerified: fbUser.emailVerified,
+        hasPasswordProvider: _hasPasswordProvider(fbUser),
       );
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
@@ -65,6 +75,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
     required String name,
+    String? languageCode,
   }) async {
     try {
       final credential = await auth.createUserWithEmailAndPassword(
@@ -73,11 +84,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
       await credential.user!.updateDisplayName(name);
 
+      // B4: kirim email verifikasi — non-fatal, user bisa resend dari banner.
+      try {
+        if (languageCode != null) await auth.setLanguageCode(languageCode);
+        await credential.user!.sendEmailVerification();
+      } catch (e, s) {
+        try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      }
+
       final model = UserModel(
         uid: credential.user!.uid,
         email: email,
         displayName: name,
         createdAt: DateTime.now(),
+        emailVerified: false,       // baru register — pasti belum verifikasi
+        hasPasswordProvider: true,  // jalur ini selalu email/password
       );
 
       await firestore
@@ -110,13 +131,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     if (user == null) return null;
     try {
       final doc = await firestore.collection('users').doc(user.uid).get();
-      if (doc.exists) return UserModel.fromFirestore(doc);
+      if (doc.exists) {
+        return UserModel.fromFirestore(
+          doc,
+          emailVerified: user.emailVerified,
+          hasPasswordProvider: _hasPasswordProvider(user),
+        );
+      }
       return UserModel(
         uid: user.uid,
         email: user.email ?? '',
         displayName: user.displayName ?? '',
         photoUrl: user.photoURL,
         createdAt: DateTime.now(),
+        emailVerified: user.emailVerified,
+        hasPasswordProvider: _hasPasswordProvider(user),
       );
     } catch (e, s) {
       try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
@@ -131,7 +160,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       try {
         final doc =
             await firestore.collection('users').doc(user.uid).get();
-        if (doc.exists) return UserModel.fromFirestore(doc);
+        if (doc.exists) {
+          return UserModel.fromFirestore(
+            doc,
+            emailVerified: user.emailVerified,
+            hasPasswordProvider: _hasPasswordProvider(user),
+          );
+        }
       } catch (_) {}
       return UserModel(
         uid: user.uid,
@@ -139,6 +174,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: user.displayName ?? '',
         photoUrl: user.photoURL,
         createdAt: DateTime.now(),
+        emailVerified: user.emailVerified,
+        hasPasswordProvider: _hasPasswordProvider(user),
       );
     });
   }
@@ -190,6 +227,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw const AuthException();
     }
   }
+
+  // Deteksi apakah akun punya provider email/password (bukan hanya Google).
+  static bool _hasPasswordProvider(User user) =>
+      user.providerData.any((p) => p.providerId == 'password');
 
   static String _mapFirebaseCode(String code) => switch (code) {
         'email-already-in-use' =>
