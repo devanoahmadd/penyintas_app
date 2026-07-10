@@ -26,15 +26,23 @@ final class SignUpRequested extends AuthEvent {
   final String email;
   final String password;
   final String name;
+  final String? languageCode;
   const SignUpRequested({
     required this.email,
     required this.password,
     required this.name,
+    this.languageCode,
   });
 
   @override
   // password dikecualikan dari props — lihat komentar di SignInRequested.
-  List<Object> get props => [email, name];
+  List<Object?> get props => [email, name, languageCode];
+}
+
+/// B4: minta refresh status user dari server (mis. setelah verifikasi email).
+/// Handler bersifat oportunistik — lihat _onAuthUserReloadRequested.
+final class AuthUserReloadRequested extends AuthEvent {
+  const AuthUserReloadRequested();
 }
 
 final class SignOutRequested extends AuthEvent {

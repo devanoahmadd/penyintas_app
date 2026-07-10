@@ -125,6 +125,7 @@ class _RegisterPageState extends State<RegisterPage>
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
+          languageCode: Localizations.localeOf(context).languageCode,
         ));
   }
 

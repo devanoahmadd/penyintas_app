@@ -54,6 +54,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.
 import 'package:penyintas_app/features/auth/domain/usecases/send_email_verification_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:penyintas_app/features/auth/presentation/cubit/email_verification_cubit.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
@@ -215,8 +216,11 @@ void _initAuth() {
       sendPasswordReset: sl(),
       registerFcmToken: sl(),
       unregisterFcmToken: sl(),
+      reloadUser: sl(),
     ),
   );
+
+  sl.registerFactory(() => EmailVerificationCubit(sl()));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));

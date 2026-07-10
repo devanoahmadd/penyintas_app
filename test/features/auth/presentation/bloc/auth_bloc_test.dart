@@ -11,6 +11,7 @@ import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dar
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -28,6 +29,7 @@ class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
 class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
 class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
 class MockUnregisterFcmTokenUseCase extends Mock implements UnregisterFcmTokenUseCase {}
+class MockReloadUserUseCase extends Mock implements ReloadUserUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
@@ -47,6 +49,7 @@ void main() {
   late MockSendPasswordResetUseCase mockSendPasswordReset;
   late MockRegisterFcmTokenUseCase mockRegisterFcm;
   late MockUnregisterFcmTokenUseCase mockUnregisterFcm;
+  late MockReloadUserUseCase mockReloadUser;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -77,6 +80,7 @@ void main() {
     mockSendPasswordReset = MockSendPasswordResetUseCase();
     mockRegisterFcm = MockRegisterFcmTokenUseCase();
     mockUnregisterFcm = MockUnregisterFcmTokenUseCase();
+    mockReloadUser = MockReloadUserUseCase();
     when(() => mockRegisterFcm(any())).thenAnswer((_) async => const Right(null));
     when(() => mockUnregisterFcm(any())).thenAnswer((_) async => const Right(null));
 
@@ -95,6 +99,7 @@ void main() {
         sendPasswordReset: mockSendPasswordReset,
         registerFcmToken: mockRegisterFcm,
         unregisterFcmToken: mockUnregisterFcm,
+        reloadUser: mockReloadUser,
       );
 
   group('SignInRequested', () {
@@ -396,6 +401,62 @@ void main() {
           () => mockSignOut(any()),
         ]);
       },
+    );
+  });
+
+  group('AuthUserReloadRequested', () {
+    final tVerifiedUser = UserEntity(
+      uid: 'uid-123',
+      email: 'test@email.com',
+      displayName: 'Tester',
+      createdAt: DateTime(2025),
+      emailVerified: true,
+      hasPasswordProvider: true,
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'state Authenticated + reload sukses → emit Authenticated(freshUser)',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => Right(tVerifiedUser));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => [Authenticated(tVerifiedUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'state bukan Authenticated → tidak melakukan apa pun',
+      build: buildBloc,
+      seed: () => const Unauthenticated(),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
+      verify: (_) => verifyNever(() => mockReloadUser(any())),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'reload gagal → tidak emit (status lama dipertahankan)',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => const Left(UnknownFailure()));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'reload return null (sesi hilang) → tidak emit',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => const Right(null));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
     );
   });
 }
