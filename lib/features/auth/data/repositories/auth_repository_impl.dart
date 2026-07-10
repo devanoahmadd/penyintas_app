@@ -32,12 +32,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String name,
+    String? languageCode,
   }) async {
     try {
       final user = await remoteDataSource.signUp(
         email: email,
         password: password,
         name: name,
+        languageCode: languageCode,
       );
       return Right(user);
     } on AuthException catch (e) {
@@ -104,4 +106,28 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Stream<UserEntity?> get authStateChanges =>
       remoteDataSource.authStateChanges;
+
+  @override
+  Future<Either<Failure, void>> sendEmailVerification({String? languageCode}) async {
+    try {
+      await remoteDataSource.sendEmailVerification(languageCode: languageCode);
+      return const Right(null);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      return const Left(UnknownFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity?>> reloadCurrentUser() async {
+    try {
+      final user = await remoteDataSource.reloadCurrentUser();
+      return Right(user);
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      return const Left(UnknownFailure());
+    }
+  }
 }

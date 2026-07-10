@@ -3,6 +3,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -117,6 +118,57 @@ void main() {
           await datasource.signIn(email: 'a@b.com', password: 'rahasia123');
       expect(model.hasPasswordProvider, isTrue);
       expect(model.emailVerified, isFalse);
+    });
+  });
+
+  group('sendEmailVerification (resend dari banner)', () {
+    test('tanpa sesi → AuthException', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      await expectLater(datasource.sendEmailVerification(),
+          throwsA(isA<AuthException>()));
+    });
+
+    test('dengan sesi → kirim + set languageCode', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      await datasource.sendEmailVerification(languageCode: 'id');
+      verify(() => auth.setLanguageCode('id')).called(1);
+      verify(() => user.sendEmailVerification()).called(1);
+    });
+
+    test('too-many-requests → AuthException dengan pesan tenang', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => user.sendEmailVerification())
+          .thenThrow(FirebaseAuthException(code: 'too-many-requests'));
+      await expectLater(datasource.sendEmailVerification(),
+          throwsA(isA<AuthException>()));
+    });
+  });
+
+  group('reloadCurrentUser (refresh status verified)', () {
+    test('tanpa sesi → null', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      expect(await datasource.reloadCurrentUser(), isNull);
+    });
+
+    test('reload gagal (offline) → null, tanpa throw', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => user.reload())
+          .thenThrow(FirebaseAuthException(code: 'network-request-failed'));
+      expect(await datasource.reloadCurrentUser(), isNull);
+    });
+
+    test('sukses → model dengan flag terbaru', () async {
+      final pwdInfo = MockUserInfo();
+      when(() => pwdInfo.providerId).thenReturn('password');
+      when(() => user.providerData).thenReturn([pwdInfo]);
+      when(() => user.emailVerified).thenReturn(true); // baru saja verifikasi
+      when(() => user.reload()).thenAnswer((_) async {});
+      when(() => auth.currentUser).thenReturn(user);
+
+      final model = await datasource.reloadCurrentUser();
+      expect(model, isNotNull);
+      expect(model!.emailVerified, isTrue);
+      expect(model.hasPasswordProvider, isTrue);
     });
   });
 }

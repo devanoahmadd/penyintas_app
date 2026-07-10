@@ -50,6 +50,8 @@ import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_u
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/send_email_verification_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
@@ -227,6 +229,8 @@ void _initAuth() {
   sl.registerLazySingleton(() => SendPasswordResetUseCase(sl()));
   sl.registerLazySingleton(() => SyncUserSettingsUseCase(sl()));
   sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => SendEmailVerificationUseCase(sl()));
+  sl.registerLazySingleton(() => ReloadUserUseCase(sl()));
 
   sl.registerLazySingleton<UserSettingsRepository>(
     () => UserSettingsRepositoryImpl(db: sl(), remote: sl()),

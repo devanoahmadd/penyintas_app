@@ -19,6 +19,8 @@ abstract class AuthRemoteDataSource {
   Future<void> reauthenticate({required String password});
   Future<void> callDeleteAccount();
   Future<void> sendPasswordResetEmail(String email);
+  Future<void> sendEmailVerification({String? languageCode});
+  Future<UserModel?> reloadCurrentUser();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -226,6 +228,55 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
       throw const AuthException();
     }
+  }
+
+  @override
+  Future<void> sendEmailVerification({String? languageCode}) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw const AuthException('Sesi tidak ditemukan. Login ulang.');
+    }
+    try {
+      if (languageCode != null) await auth.setLanguageCode(languageCode);
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapFirebaseCode(e.code));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException();
+    }
+  }
+
+  @override
+  Future<UserModel?> reloadCurrentUser() async {
+    final user = auth.currentUser;
+    if (user == null) return null;
+    try {
+      await user.reload();
+    } catch (_) {
+      return null; // reload oportunistik — gagal = pertahankan status lama
+    }
+    final fresh = auth.currentUser;
+    if (fresh == null) return null;
+    try {
+      final doc = await firestore.collection('users').doc(fresh.uid).get();
+      if (doc.exists) {
+        return UserModel.fromFirestore(
+          doc,
+          emailVerified: fresh.emailVerified,
+          hasPasswordProvider: _hasPasswordProvider(fresh),
+        );
+      }
+    } catch (_) {}
+    return UserModel(
+      uid: fresh.uid,
+      email: fresh.email ?? '',
+      displayName: fresh.displayName ?? '',
+      photoUrl: fresh.photoURL,
+      createdAt: DateTime.now(),
+      emailVerified: fresh.emailVerified,
+      hasPasswordProvider: _hasPasswordProvider(fresh),
+    );
   }
 
   // Deteksi apakah akun punya provider email/password (bukan hanya Google).
