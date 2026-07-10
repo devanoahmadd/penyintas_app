@@ -30,4 +30,41 @@ void main() {
     final model = UserModel.fromFirestore(doc);
     expect(model.fcmToken, 'legacy-tok');
   });
+
+  group('flag verifikasi email (B4)', () {
+    test('default: emailVerified true, hasPasswordProvider false (banner tersembunyi)', () {
+      final model = UserModel(
+        uid: 'u1',
+        email: 'a@b.com',
+        displayName: 'A',
+        createdAt: DateTime(2026),
+      );
+      expect(model.emailVerified, isTrue);
+      expect(model.hasPasswordProvider, isFalse);
+    });
+
+    test('ctor menerima flag eksplisit dan masuk props (Equatable)', () {
+      final a = UserModel(
+        uid: 'u1', email: 'a@b.com', displayName: 'A',
+        createdAt: DateTime(2026),
+        emailVerified: false, hasPasswordProvider: true,
+      );
+      final b = UserModel(
+        uid: 'u1', email: 'a@b.com', displayName: 'A',
+        createdAt: DateTime(2026),
+      );
+      expect(a == b, isFalse); // flag beda → entity beda → BLoC re-emit terbaca UI
+    });
+
+    test('copyWith mempertahankan flag', () {
+      final model = UserModel(
+        uid: 'u1', email: 'a@b.com', displayName: 'A',
+        createdAt: DateTime(2026),
+        emailVerified: false, hasPasswordProvider: true,
+      );
+      final copied = model.copyWith(fcmToken: 'tok');
+      expect(copied.emailVerified, isFalse);
+      expect(copied.hasPasswordProvider, isTrue);
+    });
+  });
 }
