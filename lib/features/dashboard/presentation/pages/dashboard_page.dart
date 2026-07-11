@@ -21,6 +21,7 @@ import 'package:penyintas_app/features/transaction/presentation/widgets/add_tran
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+import 'package:penyintas_app/widgets/common/email_verification_banner.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
@@ -178,6 +179,10 @@ class _DashboardBody extends StatelessWidget {
             // F5/D3: banner rekonsiliasi zona waktu (non-blocking, selalu konfirmasi)
             const SliverToBoxAdapter(
               child: _TimezoneReconciliationBanner(),
+            ),
+            // B4: banner soft verifikasi email — hilang sendiri saat verified
+            const SliverToBoxAdapter(
+              child: EmailVerificationBanner(),
             ),
             // Financial slider — no horizontal padding so peek bleeds to edges
             SliverToBoxAdapter(
