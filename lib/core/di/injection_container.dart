@@ -43,6 +43,7 @@ import 'package:penyintas_app/features/auth/data/repositories/user_settings_repo
 import 'package:penyintas_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/user_settings_repository.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/push_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -236,6 +237,7 @@ void _initAuth() {
   sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
   sl.registerLazySingleton(() => SendEmailVerificationUseCase(sl()));
   sl.registerLazySingleton(() => ReloadUserUseCase(sl()));
+  sl.registerLazySingleton(() => GoogleSignInUseCase(sl()));
 
   sl.registerLazySingleton<UserSettingsRepository>(
     () => UserSettingsRepositoryImpl(db: sl(), remote: sl()),
@@ -259,8 +261,12 @@ void _initAuth() {
   );
 
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () =>
-        AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
+    () => AuthRemoteDataSourceImpl(
+      auth: sl(),
+      firestore: sl(),
+      functions: sl(),
+      googleSignInService: sl(),
+    ),
   );
 
   sl.registerLazySingleton(() => GoogleSignInService());

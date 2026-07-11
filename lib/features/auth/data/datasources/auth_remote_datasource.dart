@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/features/auth/data/models/user_model.dart';
+import 'package:penyintas_app/features/auth/data/services/google_sign_in_service.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> signIn({required String email, required String password});
@@ -21,6 +22,9 @@ abstract class AuthRemoteDataSource {
   Future<void> sendPasswordResetEmail(String email);
   Future<void> sendEmailVerification({String? languageCode});
   Future<UserModel?> reloadCurrentUser();
+
+  /// null = user MEMBATALKAN dialog Google (bukan kegagalan).
+  Future<UserModel?> signInWithGoogle();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -28,11 +32,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required this.auth,
     required this.firestore,
     required this.functions,
+    required this.googleSignInService,
   });
 
   final FirebaseAuth auth;
   final FirebaseFirestore firestore;
   final FirebaseFunctions functions;
+  final GoogleSignInService googleSignInService;
 
   @override
   Future<UserModel> signIn({
@@ -279,13 +285,59 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
   }
 
+  @override
+  Future<UserModel?> signInWithGoogle() async {
+    final String? idToken;
+    try {
+      idToken = await googleSignInService.getIdToken();
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException('Gagal masuk dengan Google. Coba lagi ya.');
+    }
+    if (idToken == null) return null; // user membatalkan dialog — bukan error
+
+    try {
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final userCredential = await auth.signInWithCredential(credential);
+      final user = userCredential.user!;
+
+      final docRef = firestore.collection('users').doc(user.uid);
+      final doc = await docRef.get();
+      if (doc.exists) {
+        return UserModel.fromFirestore(
+          doc,
+          emailVerified: user.emailVerified,
+          hasPasswordProvider: _hasPasswordProvider(user),
+        );
+      }
+
+      // User Google baru — buat dokumen profil (pola signUp)
+      final model = UserModel(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? '',
+        photoUrl: user.photoURL,
+        createdAt: DateTime.now(),
+        emailVerified: user.emailVerified,
+        hasPasswordProvider: _hasPasswordProvider(user),
+      );
+      await docRef.set(model.toFirestore());
+      return model;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_mapFirebaseCode(e.code));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException('Gagal masuk dengan Google. Coba lagi ya.');
+    }
+  }
+
   // Deteksi apakah akun punya provider email/password (bukan hanya Google).
   static bool _hasPasswordProvider(User user) =>
       user.providerData.any((p) => p.providerId == 'password');
 
   static String _mapFirebaseCode(String code) => switch (code) {
         'email-already-in-use' =>
-          'Email ini sudah terdaftar. Coba login langsung.',
+          'Email ini sudah terdaftar. Coba masuk langsung, atau pakai tombol Google.',
         // user-not-found digabung agar tidak bocorkan info email terdaftar
         // (anti user-enumeration). Pesan signup 'email-already-in-use' di bawah
         // dipertahankan karena UX-nya memang perlu memberi tahu.

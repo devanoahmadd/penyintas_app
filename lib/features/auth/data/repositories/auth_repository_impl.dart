@@ -130,4 +130,17 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(UnknownFailure());
     }
   }
+
+  @override
+  Future<Either<Failure, UserEntity?>> signInWithGoogle() async {
+    try {
+      final user = await remoteDataSource.signInWithGoogle();
+      return Right(user);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      return const Left(UnknownFailure());
+    }
+  }
 }

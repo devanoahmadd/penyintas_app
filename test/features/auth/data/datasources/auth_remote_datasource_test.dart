@@ -5,17 +5,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:penyintas_app/features/auth/data/services/google_sign_in_service.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 class MockUser extends Mock implements User {}
 class MockUserCredential extends Mock implements UserCredential {}
 class MockUserInfo extends Mock implements UserInfo {}
 class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
+class MockGoogleSignInService extends Mock implements GoogleSignInService {}
 
 void main() {
   late MockFirebaseAuth auth;
   late FakeFirebaseFirestore firestore;
   late MockFirebaseFunctions functions;
+  late MockGoogleSignInService googleService;
   late AuthRemoteDataSourceImpl datasource;
   late MockUser user;
   late MockUserCredential credential;
@@ -24,10 +27,12 @@ void main() {
     auth = MockFirebaseAuth();
     firestore = FakeFirebaseFirestore();
     functions = MockFirebaseFunctions();
+    googleService = MockGoogleSignInService();
     datasource = AuthRemoteDataSourceImpl(
       auth: auth,
       firestore: firestore,
       functions: functions,
+      googleSignInService: googleService,
     );
     user = MockUser();
     credential = MockUserCredential();
@@ -169,6 +174,73 @@ void main() {
       expect(model, isNotNull);
       expect(model!.emailVerified, isTrue);
       expect(model.hasPasswordProvider, isTrue);
+    });
+  });
+
+  group('signInWithGoogle', () {
+    setUp(() {
+      when(() => auth.signInWithCredential(any()))
+          .thenAnswer((_) async => credential);
+      when(() => user.emailVerified).thenReturn(true);
+    });
+
+    setUpAll(() {
+      registerFallbackValue(GoogleAuthProvider.credential(idToken: 'x'));
+    });
+
+    test('user batal (service return null) → null tanpa error', () async {
+      when(() => googleService.getIdToken()).thenAnswer((_) async => null);
+      expect(await datasource.signInWithGoogle(), isNull);
+      verifyNever(() => auth.signInWithCredential(any()));
+    });
+
+    test('user baru → dokumen users/{uid} dibuat + model kembali', () async {
+      when(() => googleService.getIdToken())
+          .thenAnswer((_) async => 'token-1');
+
+      final model = await datasource.signInWithGoogle();
+
+      expect(model, isNotNull);
+      expect(model!.uid, 'uid-1');
+      expect(model.emailVerified, isTrue);
+      expect(model.hasPasswordProvider, isFalse);
+      final doc = await firestore.collection('users').doc('uid-1').get();
+      expect(doc.exists, isTrue);
+      expect(doc.data()!['email'], 'a@b.com');
+    });
+
+    test('user existing → baca dokumen, TIDAK menimpa createdAt', () async {
+      await firestore.collection('users').doc('uid-1').set({
+        'email': 'a@b.com',
+        'displayName': 'Andi Lama',
+        'createdAt': DateTime(2025),
+      });
+      when(() => googleService.getIdToken())
+          .thenAnswer((_) async => 'token-1');
+
+      final model = await datasource.signInWithGoogle();
+
+      expect(model!.displayName, 'Andi Lama');
+      expect(model.createdAt.year, 2025);
+    });
+
+    test('kegagalan service (bukan batal) → AuthException', () async {
+      when(() => googleService.getIdToken())
+          .thenThrow(Exception('play services'));
+      await expectLater(datasource.signInWithGoogle(),
+          throwsA(isA<AuthException>()));
+    });
+
+    test('email-already-in-use saat signUp → copy mengarahkan ke Google (spec §7)', () async {
+      when(() => auth.createUserWithEmailAndPassword(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+          )).thenThrow(FirebaseAuthException(code: 'email-already-in-use'));
+      await expectLater(
+        datasource.signUp(email: 'a@b.com', password: 'rahasia123', name: 'Andi'),
+        throwsA(isA<AuthException>().having(
+            (e) => e.message, 'message', contains('Google'))),
+      );
     });
   });
 }

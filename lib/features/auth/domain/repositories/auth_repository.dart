@@ -30,4 +30,7 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> sendEmailVerification({String? languageCode});
 
   Future<Either<Failure, UserEntity?>> reloadCurrentUser();
+
+  /// Right(null) = user membatalkan dialog Google (bukan kegagalan).
+  Future<Either<Failure, UserEntity?>> signInWithGoogle();
 }
