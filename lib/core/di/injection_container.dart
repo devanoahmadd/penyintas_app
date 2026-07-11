@@ -38,6 +38,7 @@ import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/datasources/user_settings_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:penyintas_app/features/auth/data/services/google_sign_in_service.dart';
 import 'package:penyintas_app/features/auth/data/repositories/user_settings_repository_impl.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/user_settings_repository.dart';
@@ -261,6 +262,8 @@ void _initAuth() {
     () =>
         AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
   );
+
+  sl.registerLazySingleton(() => GoogleSignInService());
 }
 
 void _initOnboarding() {
