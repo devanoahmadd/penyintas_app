@@ -27,21 +27,22 @@ void main() {
       return buildCubit();
     },
     act: (cubit) => cubit.resend(languageCode: 'id'),
-    expect: () => const [
-      EmailVerificationSending(),
-      EmailVerificationSent(),
-    ],
+    expect: () => const [EmailVerificationSending(), EmailVerificationSent()],
     verify: (_) {
-      verify(() => mockSend(
-          const SendEmailVerificationParams(languageCode: 'id'))).called(1);
+      verify(
+        () => mockSend(const SendEmailVerificationParams(languageCode: 'id')),
+      ).called(1);
     },
   );
 
   blocTest<EmailVerificationCubit, EmailVerificationState>(
     'gagal → [Sending, Failed] — pesan tenang datasource diteruskan apa adanya',
     build: () {
-      when(() => mockSend(any())).thenAnswer((_) async => const Left(
-          AuthFailure('Terlalu banyak percobaan. Tunggu sebentar ya.')));
+      when(() => mockSend(any())).thenAnswer(
+        (_) async => const Left(
+          AuthFailure('Terlalu banyak percobaan. Tunggu sebentar ya.'),
+        ),
+      );
       return buildCubit();
     },
     act: (cubit) => cubit.resend(),
@@ -65,10 +66,7 @@ void main() {
       await cubit.resend(); // masuk saat state masih Sending → no-op
       await first;
     },
-    expect: () => const [
-      EmailVerificationSending(),
-      EmailVerificationSent(),
-    ],
+    expect: () => const [EmailVerificationSending(), EmailVerificationSent()],
     verify: (_) => verify(() => mockSend(any())).called(1),
   );
 }

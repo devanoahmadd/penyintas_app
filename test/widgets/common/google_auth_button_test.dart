@@ -42,7 +42,9 @@ void main() {
         ),
       );
 
-  testWidgets('label dari l10n + logo SVG asset (bukan teks G)', (tester) async {
+  testWidgets('label dari l10n + logo SVG asset (bukan teks G)', (
+    tester,
+  ) async {
     await tester.pumpWidget(harness(isLoading: false, onPressed: () {}));
     await tester.pumpAndSettle();
     expect(find.text('Lanjutkan dengan Google'), findsOneWidget);
@@ -52,12 +54,16 @@ void main() {
 
   testWidgets('tap → onPressed terpanggil; isLoading → tidak', (tester) async {
     var tapped = 0;
-    await tester.pumpWidget(harness(isLoading: false, onPressed: () => tapped++));
+    await tester.pumpWidget(
+      harness(isLoading: false, onPressed: () => tapped++),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(GoogleAuthButton));
     expect(tapped, 1);
 
-    await tester.pumpWidget(harness(isLoading: true, onPressed: () => tapped++));
+    await tester.pumpWidget(
+      harness(isLoading: true, onPressed: () => tapped++),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(GoogleAuthButton));
     expect(tapped, 1); // tidak bertambah

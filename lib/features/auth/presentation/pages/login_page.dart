@@ -422,7 +422,7 @@ class _LoginPageState extends State<LoginPage>
   }
 }
 
-// ── Shared auth screen widgets ─────────────────────────────────────────────
+// ── Sheet lupa kata sandi ──────────────────────────────────────────────────
 
 class _ForgotPasswordSheet extends StatefulWidget {
   const _ForgotPasswordSheet({

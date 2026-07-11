@@ -23,8 +23,7 @@ class GoogleAuthButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Semantics(
       button: true,

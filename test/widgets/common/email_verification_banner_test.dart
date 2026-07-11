@@ -48,19 +48,28 @@ void main() {
   late MockSendEmailVerificationUseCase mockSend;
 
   final unverifiedPasswordUser = UserEntity(
-    uid: 'u1', email: 'a@b.com', displayName: 'A',
+    uid: 'u1',
+    email: 'a@b.com',
+    displayName: 'A',
     createdAt: DateTime(2026),
-    emailVerified: false, hasPasswordProvider: true,
+    emailVerified: false,
+    hasPasswordProvider: true,
   );
   final verifiedUser = UserEntity(
-    uid: 'u1', email: 'a@b.com', displayName: 'A',
+    uid: 'u1',
+    email: 'a@b.com',
+    displayName: 'A',
     createdAt: DateTime(2026),
-    emailVerified: true, hasPasswordProvider: true,
+    emailVerified: true,
+    hasPasswordProvider: true,
   );
   final googleUser = UserEntity(
-    uid: 'u2', email: 'g@gmail.com', displayName: 'G',
+    uid: 'u2',
+    email: 'g@gmail.com',
+    displayName: 'G',
     createdAt: DateTime(2026),
-    emailVerified: true, hasPasswordProvider: false,
+    emailVerified: true,
+    hasPasswordProvider: false,
   );
 
   setUpAll(() async {
@@ -76,31 +85,35 @@ void main() {
     // Banner membuat cubit-nya sendiri via sl — daftarkan cubit ASLI dengan
     // usecase mock agar jalur BlocListener ikut teruji.
     sl.registerFactory<EmailVerificationCubit>(
-        () => EmailVerificationCubit(mockSend));
+      () => EmailVerificationCubit(mockSend),
+    );
   });
 
   tearDown(() => sl.unregister<EmailVerificationCubit>());
 
   Widget harness() => MaterialApp(
-        locale: const Locale('id'),
-        supportedLocales: const [Locale('id'), Locale('en')],
-        localizationsDelegates: [
-          _SyncL10nDelegate(l10n),
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: Scaffold(
-          body: BlocProvider<AuthBloc>.value(
-            value: bloc,
-            child: const EmailVerificationBanner(),
-          ),
-        ),
-      );
+    locale: const Locale('id'),
+    supportedLocales: const [Locale('id'), Locale('en')],
+    localizationsDelegates: [
+      _SyncL10nDelegate(l10n),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: Scaffold(
+      body: BlocProvider<AuthBloc>.value(
+        value: bloc,
+        child: const EmailVerificationBanner(),
+      ),
+    ),
+  );
 
   Future<void> pumpBanner(WidgetTester tester, AuthState initialState) async {
-    whenListen(bloc, const Stream<AuthState>.empty(),
-        initialState: initialState);
+    whenListen(
+      bloc,
+      const Stream<AuthState>.empty(),
+      initialState: initialState,
+    );
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
   }
@@ -126,21 +139,26 @@ void main() {
     expect(find.text('Verifikasi email kamu'), findsNothing);
   });
 
-  testWidgets('mount (belum verified) → reload sekali — tutup celah cold start',
-      (tester) async {
-    await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
-    verify(() => bloc.add(any(that: isA<AuthUserReloadRequested>())))
-        .called(1);
-  });
+  testWidgets(
+    'mount (belum verified) → reload sekali — tutup celah cold start',
+    (tester) async {
+      await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
+      verify(
+        () => bloc.add(any(that: isA<AuthUserReloadRequested>())),
+      ).called(1);
+    },
+  );
 
-  testWidgets('mount (sudah verified) → TIDAK reload (hemat network)',
-      (tester) async {
+  testWidgets('mount (sudah verified) → TIDAK reload (hemat network)', (
+    tester,
+  ) async {
     await pumpBanner(tester, Authenticated(verifiedUser));
     verifyNever(() => bloc.add(any(that: isA<AuthUserReloadRequested>())));
   });
 
-  testWidgets('tap Kirim ulang sukses → snackbar terkirim + cooldown 60 dtk',
-      (tester) async {
+  testWidgets('tap Kirim ulang sukses → snackbar terkirim + cooldown 60 dtk', (
+    tester,
+  ) async {
     await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
 
     await tester.tap(find.text('Kirim ulang'));
@@ -148,8 +166,10 @@ void main() {
     await tester.pump(); // frame snackbar
 
     verify(() => mockSend(any())).called(1);
-    expect(find.text('Email verifikasi terkirim. Cek inbox kamu ya.'),
-        findsOneWidget);
+    expect(
+      find.text('Email verifikasi terkirim. Cek inbox kamu ya.'),
+      findsOneWidget,
+    );
     // Cooldown aktif: CTA berubah jadi teks tunggu ("Tunggu 60 dtk")
     expect(find.text('Kirim ulang'), findsNothing);
     expect(find.textContaining('dtk'), findsOneWidget);
@@ -160,42 +180,48 @@ void main() {
     expect(find.text('Kirim ulang'), findsOneWidget);
   });
 
-  testWidgets('tap Kirim ulang gagal → snackbar pesan tenang + cooldown tetap',
-      (tester) async {
-    when(() => mockSend(any())).thenAnswer((_) async => const Left(
-        AuthFailure('Terlalu banyak percobaan. Tunggu sebentar ya.')));
-    await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
+  testWidgets(
+    'tap Kirim ulang gagal → snackbar pesan tenang + cooldown tetap',
+    (tester) async {
+      when(() => mockSend(any())).thenAnswer(
+        (_) async => const Left(
+          AuthFailure('Terlalu banyak percobaan. Tunggu sebentar ya.'),
+        ),
+      );
+      await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
 
-    await tester.tap(find.text('Kirim ulang'));
-    await tester.pump();
-    await tester.pump();
+      await tester.tap(find.text('Kirim ulang'));
+      await tester.pump();
+      await tester.pump();
 
-    // Feedback JUJUR: pesan gagal tampil, bukan "terkirim"
-    expect(find.text('Terlalu banyak percobaan. Tunggu sebentar ya.'),
-        findsOneWidget);
-    expect(find.text('Email verifikasi terkirim. Cek inbox kamu ya.'),
-        findsNothing);
-    // Cooldown tetap jalan (anti-spam) — cari 'dtk' agar tak bentrok
-    // dengan kata "Tunggu" di pesan snackbar
-    expect(find.textContaining('dtk'), findsOneWidget);
+      // Feedback JUJUR: pesan gagal tampil, bukan "terkirim"
+      expect(
+        find.text('Terlalu banyak percobaan. Tunggu sebentar ya.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Email verifikasi terkirim. Cek inbox kamu ya.'),
+        findsNothing,
+      );
+      // Cooldown tetap jalan (anti-spam) — cari 'dtk' agar tak bentrok
+      // dengan kata "Tunggu" di pesan snackbar
+      expect(find.textContaining('dtk'), findsOneWidget);
 
-    // Habiskan timer cooldown agar test bersih
-    await tester.pump(const Duration(seconds: 61));
-    await tester.pumpAndSettle();
-  });
+      // Habiskan timer cooldown agar test bersih
+      await tester.pump(const Duration(seconds: 61));
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets('app resume → reload lagi', (tester) async {
     await pumpBanner(tester, Authenticated(unverifiedPasswordUser));
     clearInteractions(bloc); // buang dispatch reload saat mount
 
     // inactive dulu — guard duplicate-state binding menelan resumed→resumed
-    tester.binding
-        .handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding
-        .handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
 
-    verify(() => bloc.add(any(that: isA<AuthUserReloadRequested>())))
-        .called(1);
+    verify(() => bloc.add(any(that: isA<AuthUserReloadRequested>()))).called(1);
   });
 }

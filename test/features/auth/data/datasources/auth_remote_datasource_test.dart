@@ -8,10 +8,15 @@ import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasou
 import 'package:penyintas_app/features/auth/data/services/google_sign_in_service.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
 class MockUser extends Mock implements User {}
+
 class MockUserCredential extends Mock implements UserCredential {}
+
 class MockUserInfo extends Mock implements UserInfo {}
+
 class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
+
 class MockGoogleSignInService extends Mock implements GoogleSignInService {}
 
 void main() {
@@ -51,59 +56,85 @@ void main() {
 
   group('signUp — B4 kirim email verifikasi', () {
     setUp(() {
-      when(() => auth.createUserWithEmailAndPassword(
-            email: any(named: 'email'),
-            password: any(named: 'password'),
-          )).thenAnswer((_) async => credential);
+      when(
+        () => auth.createUserWithEmailAndPassword(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        ),
+      ).thenAnswer((_) async => credential);
     });
 
     test('memanggil sendEmailVerification setelah akun dibuat', () async {
       await datasource.signUp(
-          email: 'a@b.com', password: 'rahasia123', name: 'Andi');
+        email: 'a@b.com',
+        password: 'rahasia123',
+        name: 'Andi',
+      );
       verify(() => user.sendEmailVerification()).called(1);
     });
 
     test('set languageCode sebelum kirim bila diberikan', () async {
       await datasource.signUp(
-          email: 'a@b.com',
-          password: 'rahasia123',
-          name: 'Andi',
-          languageCode: 'id');
+        email: 'a@b.com',
+        password: 'rahasia123',
+        name: 'Andi',
+        languageCode: 'id',
+      );
       verify(() => auth.setLanguageCode('id')).called(1);
     });
 
-    test('gagal kirim verifikasi TIDAK menggagalkan register (non-fatal)', () async {
-      when(() => user.sendEmailVerification())
-          .thenThrow(FirebaseAuthException(code: 'too-many-requests'));
-      final model = await datasource.signUp(
-          email: 'a@b.com', password: 'rahasia123', name: 'Andi');
-      expect(model.uid, 'uid-1');
-    });
+    test(
+      'gagal kirim verifikasi TIDAK menggagalkan register (non-fatal)',
+      () async {
+        when(
+          () => user.sendEmailVerification(),
+        ).thenThrow(FirebaseAuthException(code: 'too-many-requests'));
+        final model = await datasource.signUp(
+          email: 'a@b.com',
+          password: 'rahasia123',
+          name: 'Andi',
+        );
+        expect(model.uid, 'uid-1');
+      },
+    );
 
-    test('model hasil signUp: emailVerified false, hasPasswordProvider true', () async {
-      final model = await datasource.signUp(
-          email: 'a@b.com', password: 'rahasia123', name: 'Andi');
-      expect(model.emailVerified, isFalse);
-      expect(model.hasPasswordProvider, isTrue);
-    });
+    test(
+      'model hasil signUp: emailVerified false, hasPasswordProvider true',
+      () async {
+        final model = await datasource.signUp(
+          email: 'a@b.com',
+          password: 'rahasia123',
+          name: 'Andi',
+        );
+        expect(model.emailVerified, isFalse);
+        expect(model.hasPasswordProvider, isTrue);
+      },
+    );
   });
 
   group('signIn — flag dari FirebaseAuth User', () {
-    test('flag terisi dari credential.user (fallback tanpa doc Firestore)', () async {
-      final pwdInfo = MockUserInfo();
-      when(() => pwdInfo.providerId).thenReturn('password');
-      when(() => user.providerData).thenReturn([pwdInfo]);
-      when(() => user.emailVerified).thenReturn(false);
-      when(() => auth.signInWithEmailAndPassword(
+    test(
+      'flag terisi dari credential.user (fallback tanpa doc Firestore)',
+      () async {
+        final pwdInfo = MockUserInfo();
+        when(() => pwdInfo.providerId).thenReturn('password');
+        when(() => user.providerData).thenReturn([pwdInfo]);
+        when(() => user.emailVerified).thenReturn(false);
+        when(
+          () => auth.signInWithEmailAndPassword(
             email: any(named: 'email'),
             password: any(named: 'password'),
-          )).thenAnswer((_) async => credential);
+          ),
+        ).thenAnswer((_) async => credential);
 
-      final model =
-          await datasource.signIn(email: 'a@b.com', password: 'rahasia123');
-      expect(model.emailVerified, isFalse);
-      expect(model.hasPasswordProvider, isTrue);
-    });
+        final model = await datasource.signIn(
+          email: 'a@b.com',
+          password: 'rahasia123',
+        );
+        expect(model.emailVerified, isFalse);
+        expect(model.hasPasswordProvider, isTrue);
+      },
+    );
 
     test('flag juga terisi saat dokumen Firestore ADA', () async {
       await firestore.collection('users').doc('uid-1').set({
@@ -114,13 +145,17 @@ void main() {
       final pwdInfo = MockUserInfo();
       when(() => pwdInfo.providerId).thenReturn('password');
       when(() => user.providerData).thenReturn([pwdInfo]);
-      when(() => auth.signInWithEmailAndPassword(
-            email: any(named: 'email'),
-            password: any(named: 'password'),
-          )).thenAnswer((_) async => credential);
+      when(
+        () => auth.signInWithEmailAndPassword(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        ),
+      ).thenAnswer((_) async => credential);
 
-      final model =
-          await datasource.signIn(email: 'a@b.com', password: 'rahasia123');
+      final model = await datasource.signIn(
+        email: 'a@b.com',
+        password: 'rahasia123',
+      );
       expect(model.hasPasswordProvider, isTrue);
       expect(model.emailVerified, isFalse);
     });
@@ -129,8 +164,10 @@ void main() {
   group('sendEmailVerification (resend dari banner)', () {
     test('tanpa sesi → AuthException', () async {
       when(() => auth.currentUser).thenReturn(null);
-      await expectLater(datasource.sendEmailVerification(),
-          throwsA(isA<AuthException>()));
+      await expectLater(
+        datasource.sendEmailVerification(),
+        throwsA(isA<AuthException>()),
+      );
     });
 
     test('dengan sesi → kirim + set languageCode', () async {
@@ -142,10 +179,13 @@ void main() {
 
     test('too-many-requests → AuthException dengan pesan tenang', () async {
       when(() => auth.currentUser).thenReturn(user);
-      when(() => user.sendEmailVerification())
-          .thenThrow(FirebaseAuthException(code: 'too-many-requests'));
-      await expectLater(datasource.sendEmailVerification(),
-          throwsA(isA<AuthException>()));
+      when(
+        () => user.sendEmailVerification(),
+      ).thenThrow(FirebaseAuthException(code: 'too-many-requests'));
+      await expectLater(
+        datasource.sendEmailVerification(),
+        throwsA(isA<AuthException>()),
+      );
     });
   });
 
@@ -157,8 +197,9 @@ void main() {
 
     test('reload gagal (offline) → null, tanpa throw', () async {
       when(() => auth.currentUser).thenReturn(user);
-      when(() => user.reload())
-          .thenThrow(FirebaseAuthException(code: 'network-request-failed'));
+      when(
+        () => user.reload(),
+      ).thenThrow(FirebaseAuthException(code: 'network-request-failed'));
       expect(await datasource.reloadCurrentUser(), isNull);
     });
 
@@ -179,8 +220,9 @@ void main() {
 
   group('signInWithGoogle', () {
     setUp(() {
-      when(() => auth.signInWithCredential(any()))
-          .thenAnswer((_) async => credential);
+      when(
+        () => auth.signInWithCredential(any()),
+      ).thenAnswer((_) async => credential);
       when(() => user.emailVerified).thenReturn(true);
     });
 
@@ -195,8 +237,7 @@ void main() {
     });
 
     test('user baru → dokumen users/{uid} dibuat + model kembali', () async {
-      when(() => googleService.getIdToken())
-          .thenAnswer((_) async => 'token-1');
+      when(() => googleService.getIdToken()).thenAnswer((_) async => 'token-1');
 
       final model = await datasource.signInWithGoogle();
 
@@ -215,8 +256,7 @@ void main() {
         'displayName': 'Andi Lama',
         'createdAt': DateTime(2025),
       });
-      when(() => googleService.getIdToken())
-          .thenAnswer((_) async => 'token-1');
+      when(() => googleService.getIdToken()).thenAnswer((_) async => 'token-1');
 
       final model = await datasource.signInWithGoogle();
 
@@ -225,22 +265,39 @@ void main() {
     });
 
     test('kegagalan service (bukan batal) → AuthException', () async {
-      when(() => googleService.getIdToken())
-          .thenThrow(Exception('play services'));
-      await expectLater(datasource.signInWithGoogle(),
-          throwsA(isA<AuthException>()));
-    });
-
-    test('email-already-in-use saat signUp → copy mengarahkan ke Google (spec §7)', () async {
-      when(() => auth.createUserWithEmailAndPassword(
-            email: any(named: 'email'),
-            password: any(named: 'password'),
-          )).thenThrow(FirebaseAuthException(code: 'email-already-in-use'));
+      when(
+        () => googleService.getIdToken(),
+      ).thenThrow(Exception('play services'));
       await expectLater(
-        datasource.signUp(email: 'a@b.com', password: 'rahasia123', name: 'Andi'),
-        throwsA(isA<AuthException>().having(
-            (e) => e.message, 'message', contains('Google'))),
+        datasource.signInWithGoogle(),
+        throwsA(isA<AuthException>()),
       );
     });
+
+    test(
+      'email-already-in-use saat signUp → copy mengarahkan ke Google (spec §7)',
+      () async {
+        when(
+          () => auth.createUserWithEmailAndPassword(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+          ),
+        ).thenThrow(FirebaseAuthException(code: 'email-already-in-use'));
+        await expectLater(
+          datasource.signUp(
+            email: 'a@b.com',
+            password: 'rahasia123',
+            name: 'Andi',
+          ),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('Google'),
+            ),
+          ),
+        );
+      },
+    );
   });
 }

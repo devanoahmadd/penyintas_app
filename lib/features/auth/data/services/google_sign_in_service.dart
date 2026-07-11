@@ -24,7 +24,8 @@ class GoogleSignInService {
       final idToken = account.authentication.idToken;
       if (idToken == null) {
         throw StateError(
-            'idToken null — cek serverClientId/google-services.json (oauth_client web).');
+          'idToken null — cek serverClientId/google-services.json (oauth_client web).',
+        );
       }
       return idToken;
     } on GoogleSignInException catch (e) {

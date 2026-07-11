@@ -340,7 +340,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'Email ini sudah terdaftar. Coba masuk langsung, atau pakai tombol Google.',
         // user-not-found digabung agar tidak bocorkan info email terdaftar
         // (anti user-enumeration). Pesan signup 'email-already-in-use' di bawah
-        // dipertahankan karena UX-nya memang perlu memberi tahu.
+        // dipertahankan karena UX-nya memang perlu memberi tahu — kini juga
+        // menyertakan alternatif tombol Google.
         'wrong-password' || 'invalid-credential' || 'user-not-found' =>
           'Email atau password salah. Coba lagi ya.',
         'invalid-email' => 'Format email tidak valid.',

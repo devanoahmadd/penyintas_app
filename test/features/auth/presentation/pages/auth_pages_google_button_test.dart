@@ -36,21 +36,24 @@ void main() {
 
   setUp(() {
     bloc = MockAuthBloc();
-    whenListen(bloc, const Stream<AuthState>.empty(),
-        initialState: const Unauthenticated());
+    whenListen(
+      bloc,
+      const Stream<AuthState>.empty(),
+      initialState: const Unauthenticated(),
+    );
   });
 
   Widget harness(Widget page) => MaterialApp(
-        locale: const Locale('id'),
-        supportedLocales: const [Locale('id'), Locale('en')],
-        localizationsDelegates: [
-          _SyncL10nDelegate(l10n),
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: BlocProvider<AuthBloc>.value(value: bloc, child: page),
-      );
+    locale: const Locale('id'),
+    supportedLocales: const [Locale('id'), Locale('en')],
+    localizationsDelegates: [
+      _SyncL10nDelegate(l10n),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: BlocProvider<AuthBloc>.value(value: bloc, child: page),
+  );
 
   Future<void> pumpPage(WidgetTester tester, Widget page) async {
     // Viewport tinggi agar tombol tidak tergeser keluar lazy viewport

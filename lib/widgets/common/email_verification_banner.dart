@@ -34,7 +34,8 @@ class _EmailVerificationBannerBody extends StatefulWidget {
 }
 
 class _EmailVerificationBannerBodyState
-    extends State<_EmailVerificationBannerBody> with WidgetsBindingObserver {
+    extends State<_EmailVerificationBannerBody>
+    with WidgetsBindingObserver {
   static const _cooldownSeconds = 60;
 
   int _cooldownLeft = 0;
@@ -90,8 +91,8 @@ class _EmailVerificationBannerBodyState
 
   void _onResend(BuildContext context) {
     context.read<EmailVerificationCubit>().resend(
-          languageCode: Localizations.localeOf(context).languageCode,
-        );
+      languageCode: Localizations.localeOf(context).languageCode,
+    );
     // Cooldown mulai saat tap apa pun hasilnya — anti-spam tetap jalan;
     // feedback jujur menyusul lewat BlocListener cubit di build.
     _startCooldown();
@@ -100,10 +101,9 @@ class _EmailVerificationBannerBodyState
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ));
+      ..showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
   }
 
   @override
@@ -127,19 +127,23 @@ class _EmailVerificationBannerBodyState
 
           final l10n = context.l10n;
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          final surface =
-              isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-          final border =
-              isDark ? AppColors.borderDark : AppColors.borderLight;
-          final textColor =
-              isDark ? AppColors.textDark : AppColors.textLight;
-          final textSoft =
-              isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+          final surface = isDark
+              ? AppColors.surfaceDark
+              : AppColors.surfaceLight;
+          final border = isDark ? AppColors.borderDark : AppColors.borderLight;
+          final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+          final textSoft = isDark
+              ? AppColors.textSoftDark
+              : AppColors.textSoftLight;
           final inCooldown = _cooldownLeft > 0;
 
           return Container(
             margin: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               color: surface,
@@ -149,8 +153,11 @@ class _EmailVerificationBannerBodyState
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.mark_email_unread_outlined,
-                    color: AppColors.caution, size: 20),
+                const Icon(
+                  Icons.mark_email_unread_outlined,
+                  color: AppColors.caution,
+                  size: 20,
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -158,23 +165,23 @@ class _EmailVerificationBannerBodyState
                     children: [
                       Text(
                         l10n.authVerifyBannerTitle,
-                        style:
-                            AppTextStyles.label.copyWith(color: textColor),
+                        style: AppTextStyles.label.copyWith(color: textColor),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         l10n.authVerifyBannerBody,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: textSoft),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: textSoft,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       TextButton(
-                        onPressed:
-                            inCooldown ? null : () => _onResend(context),
+                        onPressed: inCooldown ? null : () => _onResend(context),
                         style: TextButton.styleFrom(
                           minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm),
+                            horizontal: AppSpacing.sm,
+                          ),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         child: Text(
@@ -184,8 +191,8 @@ class _EmailVerificationBannerBodyState
                           style: AppTextStyles.bodySmall.copyWith(
                             color: inCooldown
                                 ? (isDark
-                                    ? AppColors.mutedDark
-                                    : AppColors.mutedLight)
+                                      ? AppColors.mutedDark
+                                      : AppColors.mutedLight)
                                 : AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),

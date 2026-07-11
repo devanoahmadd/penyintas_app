@@ -34,7 +34,7 @@ final class EmailVerificationFailed extends EmailVerificationState {
 
 class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   EmailVerificationCubit(this._sendEmailVerification)
-      : super(const EmailVerificationIdle());
+    : super(const EmailVerificationIdle());
 
   final SendEmailVerificationUseCase _sendEmailVerification;
 

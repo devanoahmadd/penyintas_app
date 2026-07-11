@@ -36,20 +36,20 @@ class UserModel extends UserEntity {
   }
 
   Map<String, dynamic> toFirestore() => {
-        'email': email,
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'createdAt': Timestamp.fromDate(createdAt),
-      };
+    'email': email,
+    'displayName': displayName,
+    'photoUrl': photoUrl,
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
 
   UserModel copyWith({String? fcmToken}) => UserModel(
-        uid: uid,
-        email: email,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        createdAt: createdAt,
-        emailVerified: emailVerified,
-        hasPasswordProvider: hasPasswordProvider,
-        fcmToken: fcmToken ?? this.fcmToken,
-      );
+    uid: uid,
+    email: email,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    createdAt: createdAt,
+    emailVerified: emailVerified,
+    hasPasswordProvider: hasPasswordProvider,
+    fcmToken: fcmToken ?? this.fcmToken,
+  );
 }

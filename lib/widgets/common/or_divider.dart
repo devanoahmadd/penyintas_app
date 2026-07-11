@@ -11,9 +11,7 @@ class OrDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Container(height: 1, color: mutedColor.withAlpha(80)),
-        ),
+        Expanded(child: Container(height: 1, color: mutedColor.withAlpha(80))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
@@ -21,9 +19,7 @@ class OrDivider extends StatelessWidget {
             style: AppTextStyles.caption.copyWith(color: mutedColor),
           ),
         ),
-        Expanded(
-          child: Container(height: 1, color: mutedColor.withAlpha(80)),
-        ),
+        Expanded(child: Container(height: 1, color: mutedColor.withAlpha(80))),
       ],
     );
   }
