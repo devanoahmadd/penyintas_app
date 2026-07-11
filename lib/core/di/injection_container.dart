@@ -215,6 +215,7 @@ void _initAuth() {
       watchAuthState: sl(),
       wipeLocalData: sl(),
       deleteAccount: sl(),
+      googleSignIn: sl(),
       sendPasswordReset: sl(),
       registerFcmToken: sl(),
       unregisterFcmToken: sl(),

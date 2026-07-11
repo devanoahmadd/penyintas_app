@@ -6,6 +6,7 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
@@ -26,6 +27,7 @@ class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
 class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
+class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
 class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
 class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
 class MockUnregisterFcmTokenUseCase extends Mock implements UnregisterFcmTokenUseCase {}
@@ -46,6 +48,7 @@ void main() {
   late MockWatchAuthStateUseCase mockWatchAuthState;
   late MockWipeLocalDataUseCase mockWipe;
   late MockDeleteAccountUseCase mockDeleteAccount;
+  late MockGoogleSignInUseCase mockGoogleSignIn;
   late MockSendPasswordResetUseCase mockSendPasswordReset;
   late MockRegisterFcmTokenUseCase mockRegisterFcm;
   late MockUnregisterFcmTokenUseCase mockUnregisterFcm;
@@ -77,6 +80,7 @@ void main() {
     when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
 
     mockDeleteAccount = MockDeleteAccountUseCase();
+    mockGoogleSignIn = MockGoogleSignInUseCase();
     mockSendPasswordReset = MockSendPasswordResetUseCase();
     mockRegisterFcm = MockRegisterFcmTokenUseCase();
     mockUnregisterFcm = MockUnregisterFcmTokenUseCase();
@@ -96,6 +100,7 @@ void main() {
         watchAuthState: mockWatchAuthState,
         wipeLocalData: mockWipe,
         deleteAccount: mockDeleteAccount,
+        googleSignIn: mockGoogleSignIn,
         sendPasswordReset: mockSendPasswordReset,
         registerFcmToken: mockRegisterFcm,
         unregisterFcmToken: mockUnregisterFcm,
@@ -172,6 +177,44 @@ void main() {
       expect: () => [
         const AuthLoading(),
         const AuthError('Email ini sudah terdaftar. Coba login langsung.'),
+      ],
+    );
+  });
+
+  group('GoogleSignInRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'sukses → [AuthLoading, Authenticated]',
+      build: () {
+        when(() => mockGoogleSignIn(any()))
+            .thenAnswer((_) async => Right(tUser));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [const AuthLoading(), Authenticated(tUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'user batal → [AuthLoading, Unauthenticated] TANPA AuthError',
+      build: () {
+        when(() => mockGoogleSignIn(any()))
+            .thenAnswer((_) async => const Right(null));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'gagal → [AuthLoading, AuthError(pesan)]',
+      build: () {
+        when(() => mockGoogleSignIn(any())).thenAnswer((_) async =>
+            const Left(AuthFailure('Gagal masuk dengan Google. Coba lagi ya.')));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Gagal masuk dengan Google. Coba lagi ya.'),
       ],
     );
   });
