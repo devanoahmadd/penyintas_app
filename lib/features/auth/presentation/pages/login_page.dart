@@ -8,11 +8,10 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/auth_validators.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/widgets/common/app_text_field.dart';
+import 'package:penyintas_app/widgets/common/google_auth_button.dart';
+import 'package:penyintas_app/widgets/common/or_divider.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 import 'package:penyintas_app/widgets/common/primary_button.dart';
-
-// Flip ke true saat google_sign_in package terintegrasi untuk free users.
-const _googleSignInEnabled = false;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -368,19 +367,16 @@ class _LoginPageState extends State<LoginPage>
                             onPressed: () => _submit(context),
                             isLoading: isLoading,
                           ),
-                          if (_googleSignInEnabled) ...[
-                            const SizedBox(height: AppSpacing.lg),
-                            _OrDivider(mutedColor: mutedColor),
-                            const SizedBox(height: AppSpacing.lg),
-                            _GoogleButton(
-                              label: 'Lanjutkan dengan Google',
-                              isLoading: isLoading,
-                              onPressed: () => context
-                                  .read<AuthBloc>()
-                                  .add(const GoogleSignInRequested()),
-                            ),
-                            const SizedBox(height: AppSpacing.xl),
-                          ],
+                          const SizedBox(height: AppSpacing.lg),
+                          OrDivider(mutedColor: mutedColor),
+                          const SizedBox(height: AppSpacing.lg),
+                          GoogleAuthButton(
+                            isLoading: isLoading,
+                            onPressed: () => context
+                                .read<AuthBloc>()
+                                .add(const GoogleSignInRequested()),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
                           Semantics(
                             button: true,
                             label: '${l10n.authNoAccount} ${l10n.authSignUpLink}',
@@ -426,106 +422,7 @@ class _LoginPageState extends State<LoginPage>
   }
 }
 
-// ── Shared auth screen widgets ─────────────────────────────────────────────
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider({required this.mutedColor});
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 1,
-            color: mutedColor.withAlpha(80),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Text(
-            context.l10n.authOr,
-            style: AppTextStyles.caption.copyWith(color: mutedColor),
-          ),
-        ),
-        Expanded(
-          child: Container(
-            height: 1,
-            color: mutedColor.withAlpha(80),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GoogleButton extends StatelessWidget {
-  const _GoogleButton({
-    required this.label,
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final textColor =
-        isDark ? AppColors.textDark : AppColors.textLight;
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
-
-    return Semantics(
-      button: true,
-      label: label,
-      child: SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: Material(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: InkWell(
-            onTap: isLoading ? null : onPressed,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            splashColor: AppColors.primary.withAlpha(20),
-            highlightColor: AppColors.primary.withAlpha(10),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: borderColor),
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Google G — placeholder until official asset is added
-                  Text(
-                    'G',
-                    style: AppTextStyles.label.copyWith(
-                      color: const Color(0xFF4285F4),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Text(
-                    label,
-                    style: AppTextStyles.label.copyWith(color: textColor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// ── Sheet lupa kata sandi ──────────────────────────────────────────────────
 
 class _ForgotPasswordSheet extends StatefulWidget {
   const _ForgotPasswordSheet({

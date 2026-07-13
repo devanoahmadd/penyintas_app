@@ -5,11 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
@@ -27,9 +29,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.watchAuthState,
     required this.wipeLocalData,
     required this.deleteAccount,
+    required this.googleSignIn,
     required this.sendPasswordReset,
     required this.registerFcmToken,
     required this.unregisterFcmToken,
+    required this.reloadUser,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -38,6 +42,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccountRequested);
     on<GoogleSignInRequested>(_onGoogleSignInRequested);
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<AuthUserReloadRequested>(_onAuthUserReloadRequested);
     on<_AuthStateChanged>(_onAuthStateChanged);
   }
 
@@ -48,9 +53,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final WatchAuthStateUseCase watchAuthState;
   final WipeLocalDataUseCase wipeLocalData;
   final DeleteAccountUseCase deleteAccount;
+  final GoogleSignInUseCase googleSignIn;
   final SendPasswordResetUseCase sendPasswordReset;
   final RegisterFcmTokenUseCase registerFcmToken;
   final UnregisterFcmTokenUseCase unregisterFcmToken;
+  final ReloadUserUseCase reloadUser;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -99,11 +106,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
         name: event.name,
+        languageCode: event.languageCode,
       ),
     );
     result.fold(
       (failure) => emit(AuthError(failure.message)),
       (user) => emit(Authenticated(user)),
+    );
+  }
+
+  Future<void> _onAuthUserReloadRequested(
+    AuthUserReloadRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is! Authenticated) return;
+    final result = await reloadUser(const NoParams());
+    // Guard race: event beda tipe berjalan interleaved di bloc — signOut bisa
+    // selesai SAAT reload in-flight. Tanpa re-check ini, emit di bawah bisa
+    // "menghidupkan kembali" sesi yang sudah logout.
+    if (state is! Authenticated) return;
+    result.fold(
+      (_) {}, // oportunistik — gagal reload = pertahankan status lama
+      (user) {
+        if (user != null) emit(Authenticated(user));
+      },
     );
   }
 
@@ -163,8 +189,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     GoogleSignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    // TODO: implement with google_sign_in package after configuring OAuth credentials
-    emit(const AuthError('Google Sign-In belum tersedia. Gunakan email dan password.'));
+    emit(const AuthLoading());
+    final result = await googleSignIn(const NoParams());
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) => user == null
+          // User membatalkan dialog — kembali tenang, tanpa pesan error.
+          ? emit(const Unauthenticated())
+          : emit(Authenticated(user)),
+    );
   }
 
   Future<void> _onForgotPasswordRequested(

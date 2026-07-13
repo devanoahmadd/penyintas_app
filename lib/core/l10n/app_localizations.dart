@@ -172,6 +172,13 @@ class AppLocalizations {
   String get authBack => _t('auth_back');
   String get authPasswordMin8 => _t('auth_password_min8');
   String get authOr => _t('auth_or');
+  String get authGoogleCta => _t('auth_google_cta');
+  String get authVerifyBannerTitle => _t('auth_verify_banner_title');
+  String get authVerifyBannerBody => _t('auth_verify_banner_body');
+  String get authVerifyResendCta => _t('auth_verify_resend_cta');
+  String authVerifyResendWait(int seconds) =>
+      _t('auth_verify_resend_wait').replaceAll('{seconds}', '$seconds');
+  String get authVerifyResent => _t('auth_verify_resent');
 
   // Validation errors
   String get errorEmailEmpty => _t('error_email_empty');

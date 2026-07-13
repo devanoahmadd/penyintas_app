@@ -15,6 +15,7 @@ class SignUpUseCase extends UseCase<UserEntity, SignUpParams> {
       email: params.email,
       password: params.password,
       name: params.name,
+      languageCode: params.languageCode,
     );
   }
 }
@@ -23,11 +24,13 @@ class SignUpParams extends Equatable {
   final String email;
   final String password;
   final String name;
+  final String? languageCode;
 
   const SignUpParams({
     required this.email,
     required this.password,
     required this.name,
+    this.languageCode,
   });
 
   @override

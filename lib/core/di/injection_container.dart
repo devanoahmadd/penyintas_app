@@ -39,9 +39,11 @@ import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasou
 import 'package:penyintas_app/features/auth/data/datasources/user_settings_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:penyintas_app/features/auth/data/repositories/user_settings_repository_impl.dart';
+import 'package:penyintas_app/features/auth/data/services/google_sign_in_service.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:penyintas_app/features/auth/domain/repositories/user_settings_repository.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/push_user_settings_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -50,8 +52,11 @@ import 'package:penyintas_app/features/auth/domain/usecases/sync_user_settings_u
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/send_email_verification_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:penyintas_app/features/auth/presentation/cubit/email_verification_cubit.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import 'package:penyintas_app/features/onboarding/domain/repositories/onboarding_repository.dart';
@@ -210,11 +215,15 @@ void _initAuth() {
       watchAuthState: sl(),
       wipeLocalData: sl(),
       deleteAccount: sl(),
+      googleSignIn: sl(),
       sendPasswordReset: sl(),
       registerFcmToken: sl(),
       unregisterFcmToken: sl(),
+      reloadUser: sl(),
     ),
   );
+
+  sl.registerFactory(() => EmailVerificationCubit(sl()));
 
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));
@@ -227,6 +236,9 @@ void _initAuth() {
   sl.registerLazySingleton(() => SendPasswordResetUseCase(sl()));
   sl.registerLazySingleton(() => SyncUserSettingsUseCase(sl()));
   sl.registerLazySingleton(() => PushUserSettingsUseCase(sl()));
+  sl.registerLazySingleton(() => SendEmailVerificationUseCase(sl()));
+  sl.registerLazySingleton(() => ReloadUserUseCase(sl()));
+  sl.registerLazySingleton(() => GoogleSignInUseCase(sl()));
 
   sl.registerLazySingleton<UserSettingsRepository>(
     () => UserSettingsRepositoryImpl(db: sl(), remote: sl()),
@@ -250,9 +262,15 @@ void _initAuth() {
   );
 
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () =>
-        AuthRemoteDataSourceImpl(auth: sl(), firestore: sl(), functions: sl()),
+    () => AuthRemoteDataSourceImpl(
+      auth: sl(),
+      firestore: sl(),
+      functions: sl(),
+      googleSignInService: sl(),
+    ),
   );
+
+  sl.registerLazySingleton(() => GoogleSignInService());
 }
 
 void _initOnboarding() {

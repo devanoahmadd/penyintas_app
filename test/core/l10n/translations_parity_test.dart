@@ -65,4 +65,19 @@ void main() {
       expect(en.containsKey(k), isTrue, reason: 'en.json tidak punya "$k"');
     }
   });
+
+  test('semua key baru A5+B4 tersedia di kedua file', () {
+    const newKeys = [
+      'auth_google_cta',
+      'auth_verify_banner_title',
+      'auth_verify_banner_body',
+      'auth_verify_resend_cta',
+      'auth_verify_resend_wait',
+      'auth_verify_resent',
+    ];
+    for (final key in newKeys) {
+      expect(id.containsKey(key), isTrue, reason: '$key hilang di id.json');
+      expect(en.containsKey(key), isTrue, reason: '$key hilang di en.json');
+    }
+  });
 }

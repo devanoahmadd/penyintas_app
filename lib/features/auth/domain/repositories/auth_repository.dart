@@ -12,6 +12,7 @@ abstract class AuthRepository {
     required String email,
     required String password,
     required String name,
+    String? languageCode,
   });
 
   Future<Either<Failure, void>> signOut();
@@ -25,4 +26,11 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> deleteAccount({required String password});
 
   Future<Either<Failure, void>> sendPasswordResetEmail(String email);
+
+  Future<Either<Failure, void>> sendEmailVerification({String? languageCode});
+
+  Future<Either<Failure, UserEntity?>> reloadCurrentUser();
+
+  /// Right(null) = user membatalkan dialog Google (bukan kegagalan).
+  Future<Either<Failure, UserEntity?>> signInWithGoogle();
 }

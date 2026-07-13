@@ -6,11 +6,13 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/google_sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_out_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/watch_auth_state_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/delete_account_usecase.dart';
+import 'package:penyintas_app/features/auth/domain/usecases/reload_user_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/send_password_reset_usecase.dart';
 import 'package:penyintas_app/features/auth/domain/usecases/wipe_local_data_usecase.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -25,9 +27,11 @@ class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
 class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
+class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
 class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
 class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
 class MockUnregisterFcmTokenUseCase extends Mock implements UnregisterFcmTokenUseCase {}
+class MockReloadUserUseCase extends Mock implements ReloadUserUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
@@ -44,9 +48,11 @@ void main() {
   late MockWatchAuthStateUseCase mockWatchAuthState;
   late MockWipeLocalDataUseCase mockWipe;
   late MockDeleteAccountUseCase mockDeleteAccount;
+  late MockGoogleSignInUseCase mockGoogleSignIn;
   late MockSendPasswordResetUseCase mockSendPasswordReset;
   late MockRegisterFcmTokenUseCase mockRegisterFcm;
   late MockUnregisterFcmTokenUseCase mockUnregisterFcm;
+  late MockReloadUserUseCase mockReloadUser;
 
   final tUser = UserEntity(
     uid: 'uid-123',
@@ -74,9 +80,11 @@ void main() {
     when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
 
     mockDeleteAccount = MockDeleteAccountUseCase();
+    mockGoogleSignIn = MockGoogleSignInUseCase();
     mockSendPasswordReset = MockSendPasswordResetUseCase();
     mockRegisterFcm = MockRegisterFcmTokenUseCase();
     mockUnregisterFcm = MockUnregisterFcmTokenUseCase();
+    mockReloadUser = MockReloadUserUseCase();
     when(() => mockRegisterFcm(any())).thenAnswer((_) async => const Right(null));
     when(() => mockUnregisterFcm(any())).thenAnswer((_) async => const Right(null));
 
@@ -92,9 +100,11 @@ void main() {
         watchAuthState: mockWatchAuthState,
         wipeLocalData: mockWipe,
         deleteAccount: mockDeleteAccount,
+        googleSignIn: mockGoogleSignIn,
         sendPasswordReset: mockSendPasswordReset,
         registerFcmToken: mockRegisterFcm,
         unregisterFcmToken: mockUnregisterFcm,
+        reloadUser: mockReloadUser,
       );
 
   group('SignInRequested', () {
@@ -167,6 +177,44 @@ void main() {
       expect: () => [
         const AuthLoading(),
         const AuthError('Email ini sudah terdaftar. Coba login langsung.'),
+      ],
+    );
+  });
+
+  group('GoogleSignInRequested', () {
+    blocTest<AuthBloc, AuthState>(
+      'sukses → [AuthLoading, Authenticated]',
+      build: () {
+        when(() => mockGoogleSignIn(any()))
+            .thenAnswer((_) async => Right(tUser));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [const AuthLoading(), Authenticated(tUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'user batal → [AuthLoading, Unauthenticated] TANPA AuthError',
+      build: () {
+        when(() => mockGoogleSignIn(any()))
+            .thenAnswer((_) async => const Right(null));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'gagal → [AuthLoading, AuthError(pesan)]',
+      build: () {
+        when(() => mockGoogleSignIn(any())).thenAnswer((_) async =>
+            const Left(AuthFailure('Gagal masuk dengan Google. Coba lagi ya.')));
+        return buildBloc();
+      },
+      act: (bloc) => bloc.add(const GoogleSignInRequested()),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Gagal masuk dengan Google. Coba lagi ya.'),
       ],
     );
   });
@@ -396,6 +444,62 @@ void main() {
           () => mockSignOut(any()),
         ]);
       },
+    );
+  });
+
+  group('AuthUserReloadRequested', () {
+    final tVerifiedUser = UserEntity(
+      uid: 'uid-123',
+      email: 'test@email.com',
+      displayName: 'Tester',
+      createdAt: DateTime(2025),
+      emailVerified: true,
+      hasPasswordProvider: true,
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'state Authenticated + reload sukses → emit Authenticated(freshUser)',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => Right(tVerifiedUser));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => [Authenticated(tVerifiedUser)],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'state bukan Authenticated → tidak melakukan apa pun',
+      build: buildBloc,
+      seed: () => const Unauthenticated(),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
+      verify: (_) => verifyNever(() => mockReloadUser(any())),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'reload gagal → tidak emit (status lama dipertahankan)',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => const Left(UnknownFailure()));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'reload return null (sesi hilang) → tidak emit',
+      build: () {
+        when(() => mockReloadUser(any()))
+            .thenAnswer((_) async => const Right(null));
+        return buildBloc();
+      },
+      seed: () => Authenticated(tUser),
+      act: (bloc) => bloc.add(const AuthUserReloadRequested()),
+      expect: () => const <AuthState>[],
     );
   });
 }
