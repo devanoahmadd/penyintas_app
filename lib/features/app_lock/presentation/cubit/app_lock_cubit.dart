@@ -1,0 +1,171 @@
+import 'dart:async';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/features/app_lock/domain/entities/app_lock_config.dart';
+import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
+import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_state.dart';
+
+/// Otak fitur App Lock — state machine `unknown → disabled → unlocked → locked`.
+///
+/// Device-local murni: tidak pernah menyentuh Firestore atau
+/// `PreferencesEntity`. Semua UI (Task 11–13) hanya membaca state cubit ini.
+///
+/// Lifecycle (grace 60 detik, inactive/paused, `authInProgress` guard penuh)
+/// adalah scope Task 8 — [onLifecycle] di sini sengaja no-op sementara.
+class AppLockCubit extends Cubit<AppLockState> {
+  AppLockCubit({
+    required AppLockRepository repo,
+    required String? Function() currentUid,
+    required Stream<String?> uidChanges,
+    DateTime Function()? clock,
+  })  : _repo = repo,
+        _currentUid = currentUid,
+        _uidChanges = uidChanges,
+        _clock = clock ?? DateTime.now,
+        super(const AppLockUnknown());
+
+  final AppLockRepository _repo;
+  final String? Function() _currentUid;
+  final Stream<String?> _uidChanges;
+  final DateTime Function() _clock;
+
+  AppLockConfig _config = const AppLockConfig(
+      enabled: false, hasPin: false, biometricEnabled: false);
+  bool _biometricAvailable = false;
+  bool _authInProgress = false;
+  StreamSubscription<String?>? _uidSub;
+  Timer? _unknownFallback;
+
+  bool get _enforced =>
+      _config.enabled &&
+      _config.hasPin &&
+      _currentUid() != null &&
+      _currentUid() == _config.ownerUid;
+
+  Future<void> init() async {
+    _config = await _repo.readConfig();
+    _biometricAvailable = await _repo.isBiometricAvailable();
+    _uidSub = _uidChanges.listen((_) => _reevaluate());
+    if (isClosed) return;
+    if (_enforced) {
+      await _emitLocked();
+      return;
+    }
+    if (_config.enabled && _config.hasPin && _currentUid() == null) {
+      // Config ter-enable tapi uid belum resolve (restorasi Firebase Auth
+      // async di cold start). Tahan di Unknown (shade fail-closed) sampai
+      // emisi authStateChanges pertama — JANGAN emit Disabled (pass-through
+      // = bocor privasi). Fallback 3s bila stream diam (firebase_auth selalu
+      // emit saat subscribe; timer hanya jaring pengaman).
+      _unknownFallback = Timer(const Duration(seconds: 3), _reevaluate);
+      return;
+    }
+    emit(const AppLockDisabled());
+  }
+
+  void _reevaluate() {
+    _unknownFallback?.cancel();
+    _unknownFallback = null;
+    if (isClosed) return;
+    if (!_enforced) {
+      emit(const AppLockDisabled());
+      return;
+    }
+    // Baru ter-enforce (login owner / uid resolve dari Unknown) → kunci.
+    if (state is AppLockDisabled || state is AppLockUnknown) {
+      _emitLocked();
+    }
+  }
+
+  /// WAJIB dipanggil Settings setelah setPin/disableLock/toggle biometrik.
+  /// Tanpa ini `_config` basi: lock OFF dari Settings tapi cubit masih
+  /// enforce → resume >60s memunculkan LockScreen dengan PIN yang sudah
+  /// terhapus (user terkunci); atau lock baru ON tak pernah menegakkan
+  /// grace sampai cold restart.
+  Future<void> onSettingsChanged() async {
+    _config = await _repo.readConfig();
+    _biometricAvailable = await _repo.isBiometricAvailable();
+    if (isClosed) return;
+    if (!_enforced) {
+      emit(const AppLockDisabled());
+      return;
+    }
+    // Lock baru dinyalakan dari sesi aktif → user baru saja set PIN,
+    // jangan mengunci layar yang sedang dipakai.
+    if (state is AppLockDisabled || state is AppLockUnknown) {
+      emit(const AppLockUnlocked(obscured: false));
+    }
+    // State Unlocked/Locked lain dibiarkan; internal (_config,
+    // _biometricAvailable) sudah segar untuk keputusan berikutnya.
+  }
+
+  Future<AppLockLocked> _lockedState({bool authInProgress = false}) async {
+    final attempts = await _repo.getFailedAttempts();
+    final until = await _repo.getLockedUntilMs();
+    return AppLockLocked(
+      failedAttempts: attempts,
+      lockedUntilMs: until,
+      biometricAvailable: _biometricAvailable && _config.biometricEnabled,
+      authInProgress: authInProgress,
+    );
+  }
+
+  Future<void> _emitLocked({bool authInProgress = false}) async {
+    final next = await _lockedState(authInProgress: authInProgress);
+    if (isClosed) return; // emit-after-close guard (dipanggil dari path async)
+    emit(next);
+  }
+
+  Future<void> submitPin(String pin) async {
+    // Guard lockout: keypad-disabled hanyalah UI — tolak juga di sini.
+    // WAJIB `>`, BUKAN `!= 0` — getLockedUntilMs() pasif, tetap mengembalikan
+    // timestamp lampau setelah jeda kedaluwarsa.
+    final until = await _repo.getLockedUntilMs();
+    if (until > _clock().millisecondsSinceEpoch) {
+      await _emitLocked();
+      return;
+    }
+    final ok = await _repo.verifyPin(pin);
+    if (isClosed) return;
+    if (ok) {
+      await _repo.resetFailedAttempts();
+      emit(const AppLockUnlocked(obscured: false));
+    } else {
+      await _repo.recordFailedAttempt();
+      await _emitLocked();
+    }
+  }
+
+  Future<void> tryBiometric(String reason) async {
+    if (_authInProgress) return;
+    _authInProgress = true;
+    await _emitLocked(authInProgress: true);
+    final ok = await _repo.authenticateBiometric(reason);
+    _authInProgress = false;
+    if (isClosed) return;
+    if (ok) {
+      await _repo.resetFailedAttempts();
+      emit(const AppLockUnlocked(obscured: false));
+    } else {
+      await _emitLocked(authInProgress: false);
+    }
+  }
+
+  Future<void> forgotPin() async {
+    await _repo.disableLock();
+    _config = const AppLockConfig(
+        enabled: false, hasPin: false, biometricEnabled: false);
+    if (isClosed) return;
+    emit(const AppLockDisabled());
+  }
+
+  // Lifecycle diimplementasi di Task 8.
+  void onLifecycle(AppLifecycleState lifecycle) {}
+
+  @override
+  Future<void> close() {
+    _unknownFallback?.cancel();
+    _uidSub?.cancel();
+    return super.close();
+  }
+}
