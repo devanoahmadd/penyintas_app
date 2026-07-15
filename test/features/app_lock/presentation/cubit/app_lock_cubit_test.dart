@@ -230,6 +230,64 @@ void main() {
       expect(c.state, const AppLockUnlocked(obscured: true));
     });
 
+    test(
+        'inactive semata (tanpa paused/hidden) → resume tetap unlocked walau clock maju 120 detik '
+        '(membuktikan inactive benar-benar tak memulai grace-clock)', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456'); // unlocked
+      c.onLifecycle(AppLifecycleState.inactive);
+      t = t.add(const Duration(seconds: 120));
+      c.onLifecycle(AppLifecycleState.resumed);
+      expect(c.state, const AppLockUnlocked(obscured: false));
+    });
+
+    test(
+        'urutan Android nyata inactive→hidden→paused→[>60s]→hidden→inactive→resumed → locked '
+        '(Flutter mensintesis hidden di kedua arah; regresi jam tertimpa)', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456'); // unlocked
+      // Turun:
+      c.onLifecycle(AppLifecycleState.inactive);
+      c.onLifecycle(AppLifecycleState.hidden);
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(seconds: 61));
+      // Pulang — framework selalu lewat hidden→inactive sebelum resumed:
+      c.onLifecycle(AppLifecycleState.hidden);
+      c.onLifecycle(AppLifecycleState.inactive);
+      c.onLifecycle(AppLifecycleState.resumed);
+      // _emitLocked async (baca attempts/lockedUntil dulu) — drain microtask
+      // sebelum assert, kalau tidak state masih Unlocked saat expect jalan.
+      await Future<void>.delayed(Duration.zero);
+      expect(c.state, isA<AppLockLocked>());
+    });
+
+    test('paused→resumed persis 60000ms → tetap unlocked (ambang eksklusif, sisi bawah)', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456');
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(milliseconds: 60000));
+      c.onLifecycle(AppLifecycleState.resumed);
+      expect(c.state, const AppLockUnlocked(obscured: false));
+    });
+
+    test('paused→resumed 60001ms → locked (tepat 1ms di atas ambang, sisi atas)', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456');
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(milliseconds: 60001));
+      c.onLifecycle(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(c.state, isA<AppLockLocked>());
+    });
+
     test('paused→resumed ≤60s → tetap unlocked', () async {
       var t = DateTime(2026, 1, 1, 12, 0, 0);
       final c = build(clock: () => t);
@@ -282,6 +340,27 @@ void main() {
       completer.complete(true);
       await f;
       expect(c.state, const AppLockUnlocked(obscured: false));
+    });
+
+    test(
+        'authInProgress guard: assert SINKRON tepat setelah paused (sebelum await) — '
+        'tanpa guard onLifecycle akan sempat mengubah state ke obscured:true', () async {
+      when(() => repo.readConfig())
+          .thenAnswer((_) async => _cfg(biometricEnabled: true));
+      when(() => repo.isBiometricAvailable()).thenAnswer((_) async => true);
+      final completer = Completer<bool>();
+      when(() => repo.authenticateBiometric(any()))
+          .thenAnswer((_) => completer.future);
+      final c = build();
+      await c.init();
+      await c.submitPin('123456'); // unlocked
+      final f = c.tryBiometric('buka'); // set _authInProgress = true (sinkron sebelum await pertama)
+      c.onLifecycle(AppLifecycleState.paused);
+      // Guard aktif → onLifecycle no-op, state belum sempat berubah oleh
+      // _emitLocked(authInProgress: true) yang masih pending di microtask.
+      expect(c.state, const AppLockUnlocked(obscured: false));
+      completer.complete(true);
+      await f;
     });
 
     test('onSettingsChanged: biometrik baru ON → lock berikutnya bawa biometricAvailable', () async {

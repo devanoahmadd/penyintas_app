@@ -148,16 +148,23 @@ class AppLockCubit extends Cubit<AppLockState> {
   Future<void> tryBiometric(String reason) async {
     if (_authInProgress) return;
     _authInProgress = true;
-    await _emitLocked(authInProgress: true);
-    final ok = await _repo.authenticateBiometric(reason);
-    _authInProgress = false;
-    if (isClosed) return;
-    if (ok) {
-      await _repo.resetFailedAttempts();
-      if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
-      emit(const AppLockUnlocked(obscured: false));
-    } else {
-      await _emitLocked(authInProgress: false);
+    try {
+      await _emitLocked(authInProgress: true);
+      final ok = await _repo.authenticateBiometric(reason);
+      if (isClosed) return;
+      if (ok) {
+        await _repo.resetFailedAttempts();
+        if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
+        emit(const AppLockUnlocked(obscured: false));
+      } else {
+        await _emitLocked(authInProgress: false);
+      }
+    } finally {
+      // WAJIB try/finally: badan di atas bisa melempar (mis. _store.read()
+      // keystore korup pasca restore) — tanpa ini flag tersangkut true
+      // selamanya, membuat guard di onLifecycle jadi early-return permanen
+      // (shade & grace mati sepanjang umur proses = kebocoran privasi senyap).
+      _authInProgress = false;
     }
   }
 
@@ -178,13 +185,22 @@ class AppLockCubit extends Cubit<AppLockState> {
         // Transient (notif shade / control center / prompt). Shade saja,
         // JANGAN mulai grace-clock.
         if (state is AppLockUnlocked) {
+          if (isClosed) return;
           emit(const AppLockUnlocked(obscured: true));
         }
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
-        // Background sejati → mulai grace-clock.
+        // Background sejati → mulai grace-clock. WAJIB `??=`, BUKAN `=`:
+        // Flutter mensintesis `hidden` di KEDUA arah — turun (paused) MAUPUN
+        // pulang (resumed selalu didahului hidden→inactive). Dengan `=`,
+        // jam pertama tertimpa oleh jam kedua (yang sudah jauh lebih baru)
+        // saat urutan pulang menembak cabang ini lagi, sehingga elapsed
+        // yang dihitung di `resumed` selalu ≈0 dan aplikasi tak pernah
+        // mengunci. `??=` menjamin jam PERTAMA yang menang; `resumed` tetap
+        // satu-satunya yang meng-clear (`_backgroundedAt = null`).
         if (state is AppLockUnlocked) {
-          _backgroundedAt = _clock();
+          _backgroundedAt ??= _clock();
+          if (isClosed) return;
           emit(const AppLockUnlocked(obscured: true));
         }
       case AppLifecycleState.resumed:
@@ -198,6 +214,7 @@ class AppLockCubit extends Cubit<AppLockState> {
               _clock().difference(bg).inMilliseconds > 60000) {
             _emitLocked();
           } else {
+            if (isClosed) return;
             emit(const AppLockUnlocked(obscured: false));
           }
         }
