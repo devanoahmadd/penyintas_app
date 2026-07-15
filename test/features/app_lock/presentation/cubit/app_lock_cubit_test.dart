@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/features/app_lock/domain/entities/app_lock_config.dart';
@@ -212,6 +213,95 @@ void main() {
           (_) async => _cfg(enabled: false, hasPin: false, ownerUid: null));
       await c.onSettingsChanged();
       expect(c.state, isA<AppLockDisabled>());
+    });
+  });
+
+  group('lifecycle', () {
+    setUp(() {
+      when(() => repo.readConfig()).thenAnswer((_) async => _cfg());
+      when(() => repo.verifyPin('123456')).thenAnswer((_) async => true);
+    });
+
+    test('inactive saat unlocked → obscured (shade), tak mulai grace-clock', () async {
+      final c = build();
+      await c.init();
+      await c.submitPin('123456'); // unlocked
+      c.onLifecycle(AppLifecycleState.inactive);
+      expect(c.state, const AppLockUnlocked(obscured: true));
+    });
+
+    test('paused→resumed ≤60s → tetap unlocked', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456');
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(seconds: 30));
+      c.onLifecycle(AppLifecycleState.resumed);
+      expect(c.state, const AppLockUnlocked(obscured: false));
+    });
+
+    test('paused→resumed >60s → locked', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456');
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(seconds: 61));
+      c.onLifecycle(AppLifecycleState.resumed);
+      // _emitLocked async (baca attempts/lockedUntil dulu) — drain microtask
+      // sebelum assert, kalau tidak state masih Unlocked saat expect jalan.
+      await Future<void>.delayed(Duration.zero);
+      expect(c.state, isA<AppLockLocked>());
+    });
+
+    test('resume saat locked tetap locked (cold-start aman)', () async {
+      final c = build();
+      await c.init(); // locked
+      c.onLifecycle(AppLifecycleState.paused);
+      c.onLifecycle(AppLifecycleState.resumed);
+      expect(c.state, isA<AppLockLocked>());
+    });
+
+    test('authInProgress: resume saat prompt biometrik tak me-relock', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      when(() => repo.readConfig())
+          .thenAnswer((_) async => _cfg(biometricEnabled: true));
+      when(() => repo.isBiometricAvailable()).thenAnswer((_) async => true);
+      final completer = Completer<bool>();
+      when(() => repo.authenticateBiometric(any()))
+          .thenAnswer((_) => completer.future);
+      final c = build(clock: () => t);
+      await c.init(); // locked
+      await c.submitPin('123456'); // unlocked untuk skenario ini
+      final f = c.tryBiometric('buka'); // set _authInProgress
+      // Prompt biometrik memicu paused→resumed:
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(seconds: 120));
+      c.onLifecycle(AppLifecycleState.resumed);
+      completer.complete(true);
+      await f;
+      expect(c.state, const AppLockUnlocked(obscured: false));
+    });
+
+    test('onSettingsChanged: biometrik baru ON → lock berikutnya bawa biometricAvailable', () async {
+      var t = DateTime(2026, 1, 1, 12, 0, 0);
+      final c = build(clock: () => t);
+      await c.init();
+      await c.submitPin('123456'); // unlocked
+      // Settings menyalakan sub-toggle biometrik:
+      when(() => repo.readConfig())
+          .thenAnswer((_) async => _cfg(biometricEnabled: true));
+      when(() => repo.isBiometricAvailable()).thenAnswer((_) async => true);
+      await c.onSettingsChanged();
+      // Background >60s → locked HARUS menawarkan biometrik (config segar).
+      c.onLifecycle(AppLifecycleState.paused);
+      t = t.add(const Duration(seconds: 61));
+      c.onLifecycle(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      final s = c.state;
+      expect(s, isA<AppLockLocked>());
+      expect((s as AppLockLocked).biometricAvailable, isTrue);
     });
   });
 }

@@ -10,8 +10,10 @@ import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_stat
 /// Device-local murni: tidak pernah menyentuh Firestore atau
 /// `PreferencesEntity`. Semua UI (Task 11–13) hanya membaca state cubit ini.
 ///
-/// Lifecycle (grace 60 detik, inactive/paused, `authInProgress` guard penuh)
-/// adalah scope Task 8 — [onLifecycle] di sini sengaja no-op sementara.
+/// Lifecycle: grace 60 detik saat background sungguhan (`paused`/`hidden`),
+/// shade tanpa grace-clock saat `inactive` transient, dan guard
+/// `authInProgress` agar prompt biometrik tak memicu lock-diri-sendiri.
+/// Lihat [onLifecycle].
 class AppLockCubit extends Cubit<AppLockState> {
   AppLockCubit({
     required AppLockRepository repo,
@@ -35,6 +37,12 @@ class AppLockCubit extends Cubit<AppLockState> {
   bool _authInProgress = false;
   StreamSubscription<String?>? _uidSub;
   Timer? _unknownFallback;
+
+  /// Jam mulai grace 60 detik — diset saat `paused`/`hidden` sungguhan
+  /// (bukan `inactive` transient). In-memory saja (by design): process
+  /// death → cold start → `init()` selalu emit Locked, jadi aman tanpa
+  /// persist.
+  DateTime? _backgroundedAt;
 
   bool get _enforced =>
       _config.enabled &&
@@ -161,8 +169,42 @@ class AppLockCubit extends Cubit<AppLockState> {
     emit(const AppLockDisabled());
   }
 
-  // Lifecycle diimplementasi di Task 8.
-  void onLifecycle(AppLifecycleState lifecycle) {}
+  void onLifecycle(AppLifecycleState lifecycle) {
+    if (!_enforced) return;
+    if (_authInProgress) return; // prompt biometrik memicu lifecycle palsu
+
+    switch (lifecycle) {
+      case AppLifecycleState.inactive:
+        // Transient (notif shade / control center / prompt). Shade saja,
+        // JANGAN mulai grace-clock.
+        if (state is AppLockUnlocked) {
+          emit(const AppLockUnlocked(obscured: true));
+        }
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // Background sejati → mulai grace-clock.
+        if (state is AppLockUnlocked) {
+          _backgroundedAt = _clock();
+          emit(const AppLockUnlocked(obscured: true));
+        }
+      case AppLifecycleState.resumed:
+        final bg = _backgroundedAt;
+        _backgroundedAt = null;
+        if (state is AppLockLocked) {
+          return; // tetap locked; lock screen sudah tampil
+        }
+        if (state is AppLockUnlocked) {
+          if (bg != null &&
+              _clock().difference(bg).inMilliseconds > 60000) {
+            _emitLocked();
+          } else {
+            emit(const AppLockUnlocked(obscured: false));
+          }
+        }
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
 
   @override
   Future<void> close() {
