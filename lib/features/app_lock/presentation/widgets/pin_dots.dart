@@ -13,7 +13,7 @@ class PinDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final active = AppColors.primary;
+    final active = isDark ? AppColors.shoot : AppColors.primary;
     final inactive = isDark ? AppColors.borderDark : AppColors.borderLight;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

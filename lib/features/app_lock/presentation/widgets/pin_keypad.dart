@@ -38,7 +38,6 @@ class PinKeypad extends StatelessWidget {
                 label: k,
                 enabled: enabled,
                 onTap: () {
-                  if (!enabled) return;
                   HapticFeedback.lightImpact();
                   if (k == 'back') {
                     onBackspace();
