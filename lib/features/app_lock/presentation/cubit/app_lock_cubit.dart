@@ -129,6 +129,7 @@ class AppLockCubit extends Cubit<AppLockState> {
     if (isClosed) return;
     if (ok) {
       await _repo.resetFailedAttempts();
+      if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
       emit(const AppLockUnlocked(obscured: false));
     } else {
       await _repo.recordFailedAttempt();
@@ -145,6 +146,7 @@ class AppLockCubit extends Cubit<AppLockState> {
     if (isClosed) return;
     if (ok) {
       await _repo.resetFailedAttempts();
+      if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
       emit(const AppLockUnlocked(obscured: false));
     } else {
       await _emitLocked(authInProgress: false);

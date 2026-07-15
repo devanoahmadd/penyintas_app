@@ -167,6 +167,26 @@ void main() {
     verifyNever(() => repo.verifyPin(any()));
   });
 
+  test(
+      'submitPin saat jeda lockout sudah kedaluwarsa (getLockedUntilMs pasif) → tetap verifyPin, bukan tertahan permanen',
+      () async {
+    // Regresi guard: getLockedUntilMs() sengaja pasif — tetap mengembalikan
+    // timestamp LAMPAU setelah jeda berakhir (tak pernah self-clear). Guard
+    // WAJIB banding `>` terhadap clock sekarang, BUKAN `!= 0` — kalau
+    // diregresikan ke `!= 0`, timestamp lampau ini akan selalu dibaca sebagai
+    // "masih lockout" dan user terkunci selamanya dari aplikasinya sendiri.
+    when(() => repo.readConfig()).thenAnswer((_) async => _cfg());
+    final now = DateTime(2026, 1, 1, 12);
+    when(() => repo.getLockedUntilMs())
+        .thenAnswer((_) async => now.millisecondsSinceEpoch - 1000);
+    when(() => repo.verifyPin('123456')).thenAnswer((_) async => true);
+    final c = build(clock: () => now);
+    await c.init();
+    await c.submitPin('123456');
+    expect(c.state, const AppLockUnlocked(obscured: false));
+    verify(() => repo.verifyPin(any())).called(1);
+  });
+
   group('onSettingsChanged (sinkronisasi Settings → cubit)', () {
     test('lock baru dinyalakan dari Settings → unlocked (bukan langsung terkunci)', () async {
       when(() => repo.readConfig()).thenAnswer(
