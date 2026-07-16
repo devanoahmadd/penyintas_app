@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
@@ -65,6 +66,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final Future<void> Function()? onAccountDeleted;
 
   StreamSubscription<UserEntity?>? _authSubscription;
+
+  // Crashlytics best-effort — wrap agar TAK pernah throw (mis. Firebase belum
+  // init di unit test, atau plugin gagal). Pola sama dgn `settings_bloc.dart`
+  // & `auth_repository_impl.dart`. Tanpa ini, error-path test bisa crash.
+  static void _log(Object e, StackTrace s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s);
+    } catch (_) {}
+  }
 
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
@@ -180,7 +190,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // ikut dibersihkan (best-effort; JANGAN blokir alur bila gagal).
         try {
           await onAccountDeleted?.call();
-        } catch (_) {}
+        } catch (e, s) {
+          _log(e, s);
+        }
         // Hapus data lokal Drift
         final wipeResult = await wipeLocalData(const NoParams());
         await wipeResult.fold(

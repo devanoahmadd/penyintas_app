@@ -273,6 +273,36 @@ void main() {
         const AuthError('Gagal keluar. Coba lagi.'),
       ],
     );
+
+    blocTest<AuthBloc, AuthState>(
+      'sign-out biasa TIDAK memanggil onAccountDeleted (PIN akun yang sama '
+      'wajib bertahan, hanya hapus akun yang boleh menghapusnya)',
+      build: () => AuthBloc(
+        signIn: mockSignIn,
+        signUp: mockSignUp,
+        signOut: mockSignOut,
+        getCurrentUser: mockGetCurrentUser,
+        watchAuthState: mockWatchAuthState,
+        wipeLocalData: mockWipe,
+        deleteAccount: mockDeleteAccount,
+        googleSignIn: mockGoogleSignIn,
+        sendPasswordReset: mockSendPasswordReset,
+        registerFcmToken: mockRegisterFcm,
+        unregisterFcmToken: mockUnregisterFcm,
+        reloadUser: mockReloadUser,
+        onAccountDeleted: () async => hygieneCalls++,
+      ),
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        hygieneCalls = 0;
+        when(() => mockWipe(any()))
+            .thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any()))
+            .thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+      verify: (_) => expect(hygieneCalls, 0),
+    );
   });
 
   group('ForgotPasswordRequested', () {
