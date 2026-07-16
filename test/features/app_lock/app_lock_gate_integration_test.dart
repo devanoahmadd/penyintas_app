@@ -119,6 +119,21 @@ void main() {
     expect(find.byType(LockScreen), findsNothing);
     expect(find.byType(PrivacyShade), findsNothing);
 
+    // Invariant Temuan 2: init() WAJIB terpanggil TEPAT SEKALI seumur proses.
+    // AppLockCubit adalah singleton get_it; init() melakukan
+    // `_uidSub = _uidChanges.listen(...)` tanpa cancel() sebelumnya — dipanggil
+    // 2x akan menimpa subscription lama (kebocoran senyap + _reevaluate()
+    // dobel). initState() PenyintasApp menjamin ini sekali (dijamin framework:
+    // State.initState() tepat sekali seumur instance), TAPI tak ada test yang
+    // menjaganya — bila kelak seseorang memindahkan init() balik ke
+    // `BlocProvider(create: (_) => sl<AppLockCubit>()..init())` (yang bisa
+    // terpanggil ulang, mis. tiap kali SettingsBloc emit lewat BlocBuilder di
+    // atasnya), test lain tetap PASS tanpa assert ini. init() memanggil
+    // repo.readConfig() PERSIS sekali di awal badannya — assert di sini SEBELUM
+    // Fase 2 (yang men-trigger onSettingsChanged(), pemanggil readConfig()
+    // kedua yang sah) supaya tak salah tangkap.
+    verify(() => repo.readConfig()).called(1);
+
     // --- Fase 2: dorong cubit yang PERSIS sama (via sl singleton, tanpa
     // pernah memanggil init() lagi) melalui siklus "lock baru dinyalakan →
     // background >60 detik → resume" sampai ke AppLockLocked.

@@ -51,8 +51,25 @@ class AppLockCubit extends Cubit<AppLockState> {
       _currentUid() == _config.ownerUid;
 
   Future<void> init() async {
-    _config = await _repo.readConfig();
-    _biometricAvailable = await _repo.isBiometricAvailable();
+    try {
+      _config = await _repo.readConfig();
+      _biometricAvailable = await _repo.isBiometricAvailable();
+    } catch (_) {
+      // `AppLockSecureStoreImpl.read()` TIDAK fail-safe (beda dari
+      // BiometricDataSourceImpl) — keystore korup (mis. pasca device-restore)
+      // akan melempar sampai ke sini, SEBELUM `_unknownFallback` sempat diset.
+      // JANGAN fail-open (mis. anggap `enabled: false`) — itu membuka lock
+      // milik user yang benar-benar mengaktifkannya = bocor privasi. Fail
+      // CLOSED ke Locked: tetap recoverable lewat "Lupa PIN?" -> forgotPin()
+      // -> disableLock() (dibuat fail-safe juga, lihat forgotPin()).
+      if (isClosed) return;
+      emit(const AppLockLocked(
+        failedAttempts: 0,
+        lockedUntilMs: 0,
+        biometricAvailable: false,
+      ));
+      return;
+    }
     _uidSub = _uidChanges.listen((_) => _reevaluate());
     if (isClosed) return;
     if (_enforced) {
@@ -169,7 +186,14 @@ class AppLockCubit extends Cubit<AppLockState> {
   }
 
   Future<void> forgotPin() async {
-    await _repo.disableLock();
+    try {
+      await _repo.disableLock();
+    } catch (_) {
+      // Escape hatch WAJIB tetap jalan walau storage korup — user memang
+      // sedang meminta reset PIN lewat "Lupa PIN?" (akan sign-out setelah
+      // ini). Fail-OPEN di sini disengaja & diminta eksplisit — beda dari
+      // init() di atas yang WAJIB fail-closed.
+    }
     _config = const AppLockConfig(
         enabled: false, hasPin: false, biometricEnabled: false);
     if (isClosed) return;

@@ -129,6 +129,41 @@ void main() {
     expect(c.state, isA<AppLockDisabled>());
   });
 
+  test(
+      'init: readConfig() melempar (keystore korup) → fail-closed ke Locked, '
+      'BUKAN tersangkut Unknown selamanya', () async {
+    // Regresi kritis: AppLockSecureStoreImpl.read() tidak fail-safe (beda dari
+    // BiometricDataSourceImpl) — kegagalan storage melempar sampai ke init()
+    // SEBELUM _unknownFallback sempat diset. Tanpa try/catch, error async ini
+    // hanya tercatat ke Crashlytics dan cubit tersangkut AppLockUnknown
+    // selamanya → AppLockGate menampilkan PrivacyShade permanen tanpa jalan
+    // keluar (app "brick" total). Fail-closed ke Locked itu recoverable:
+    // LockScreen render, user bisa tekan "Lupa PIN?" → forgotPin().
+    when(() => repo.readConfig()).thenThrow(Exception('keystore korup'));
+    final c = build();
+    await expectLater(c.init(), completes);
+    expect(c.state, isA<AppLockLocked>());
+  });
+
+  test(
+      'forgotPin tetap emit Disabled walau disableLock() JUGA melempar '
+      '(escape hatch harus tetap jalan saat storage korup)', () async {
+    // Lanjutan skenario di atas: dari Locked akibat storage korup, escape
+    // hatch "Lupa PIN?" -> forgotPin() sendiri memanggil _repo.disableLock()
+    // yang melakukan _store.delete() tanpa guard — kalau ikut melempar, user
+    // akan tetap terjebak di balik shade tanpa jalan keluar sama sekali. Fail
+    // OPEN di sini disengaja & diminta eksplisit (user memang sedang minta
+    // reset & akan sign-out setelahnya) — beda dari init() yang wajib
+    // fail-closed.
+    when(() => repo.readConfig()).thenThrow(Exception('keystore korup'));
+    when(() => repo.disableLock()).thenThrow(Exception('keystore korup'));
+    final c = build();
+    await c.init();
+    expect(c.state, isA<AppLockLocked>());
+    await expectLater(c.forgotPin(), completes);
+    expect(c.state, isA<AppLockDisabled>());
+  });
+
   test('tryBiometric sukses → unlocked', () async {
     when(() => repo.readConfig())
         .thenAnswer((_) async => _cfg(biometricEnabled: true));
