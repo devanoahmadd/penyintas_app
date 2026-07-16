@@ -407,5 +407,6 @@
   "applock_forgot_confirm": "Sign out",
   "applock_biometric_reason": "Unlock Penyintas",
   "applock_verify_to_disable": "Enter your PIN to turn off the lock",
-  "applock_change_current": "Current PIN"
+  "applock_change_current": "Current PIN",
+  "applock_backspace": "Delete"
 }

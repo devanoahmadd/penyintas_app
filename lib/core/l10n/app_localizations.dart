@@ -548,6 +548,7 @@ class AppLocalizations {
   String get applockBiometricReason => _t('applock_biometric_reason');
   String get applockVerifyToDisable => _t('applock_verify_to_disable');
   String get applockChangeCurrent => _t('applock_change_current');
+  String get applockBackspace => _t('applock_backspace');
 }
 
 class _AppLocalizationsDelegate

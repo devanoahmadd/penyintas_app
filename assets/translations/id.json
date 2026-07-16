@@ -407,5 +407,6 @@
   "applock_forgot_confirm": "Keluar",
   "applock_biometric_reason": "Buka Penyintas",
   "applock_verify_to_disable": "Masukkan PIN untuk mematikan kunci",
-  "applock_change_current": "PIN saat ini"
+  "applock_change_current": "PIN saat ini",
+  "applock_backspace": "Hapus"
 }

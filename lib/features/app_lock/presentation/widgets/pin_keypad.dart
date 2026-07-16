@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -83,7 +84,16 @@ class _Key extends StatelessWidget {
             height: AppSpacing.xxxl,
             child: Center(
               child: isBack
-                  ? Icon(Icons.backspace_outlined, color: textColor, size: 22)
+                  // semanticLabel WAJIB: ikon tanpa teks, jadi screen reader
+                  // tak punya keterangan apa pun tanpa ini. Lewat l10n (bukan
+                  // hardcode) karena label ini DIBACAKAN — user EN akan
+                  // mendengar kata Indonesia yang tak ia pahami.
+                  ? Icon(
+                      Icons.backspace_outlined,
+                      color: textColor,
+                      size: 22,
+                      semanticLabel: context.l10n.applockBackspace,
+                    )
                   : Text(
                       label,
                       style: AppTextStyles.numericMd.copyWith(color: textColor),
