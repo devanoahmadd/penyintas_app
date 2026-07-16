@@ -196,6 +196,32 @@ void main() {
   });
 
   testWidgets(
+    'config milik uid lain (ganti akun tanpa disableLock) → toggle tampil OFF',
+    (tester) async {
+      // Skenario: user A menyalakan lock lalu sign-out (tak memanggil
+      // disableLock — itu disengaja), user B sign-in di device yang sama.
+      // Config bertahan dengan ownerUid: 'A', tapi uid aktif sekarang 'B'.
+      // AppLockCubit._enforced akan false (uid tak cocok) → toggle Settings
+      // WAJIB ikut tampil OFF, bukan ON (kalau ON, itu klaim proteksi palsu).
+      config = const AppLockConfig(
+        enabled: true,
+        hasPin: true,
+        biometricEnabled: false,
+        ownerUid: 'A',
+      );
+      final userB = _MockUser();
+      when(() => userB.uid).thenReturn('B');
+      when(() => auth.currentUser).thenReturn(userB);
+
+      await pumpSection(tester);
+
+      expect(tester.widget<SwitchListTile>(lockSwitch()).value, isFalse);
+      expect(biometricSwitch(), findsNothing);
+      expect(find.text(l10n.applockChangePin), findsNothing);
+    },
+  );
+
+  testWidgets(
     'menyalakan lock → SetPinPage → setPin(uid) lalu onSettingsChanged',
     (tester) async {
       await pumpSection(tester);

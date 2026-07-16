@@ -498,13 +498,17 @@ class _SecuritySectionState extends State<SecuritySection> {
     final repo = sl<AppLockRepository>();
     final cfg = await repo.readConfig();
     final available = await repo.isBiometricAvailable();
+    final uid = sl<FirebaseAuth>().currentUser?.uid;
     if (!mounted) return;
     setState(() {
-      // `enabled && hasPin` — sama persis dengan syarat penegakan di
-      // AppLockCubit. Config tanpa PIN (mis. storage separuh terhapus) berarti
-      // lock tak menegakkan apa pun; menampilkannya ON akan menjebak user:
-      // mematikannya butuh verifikasi PIN yang tak akan pernah cocok.
-      _lockEnabled = cfg.enabled && cfg.hasPin;
+      // Meniru PERSIS syarat penegakan `_enforced` di AppLockCubit: enabled,
+      // hasPin, DAN config milik uid yang sedang login. Tanpa conjunct uid,
+      // config peninggalan akun lain (sign-out tak memanggil disableLock())
+      // akan tampil ON padahal cubit sudah menganggapnya OFF (`_enforced`
+      // false) — toggle berbohong soal proteksi, dan user baru itu buntu:
+      // mematikannya butuh PIN milik pemilik lama yang tak akan pernah cocok.
+      _lockEnabled =
+          cfg.enabled && cfg.hasPin && uid != null && uid == cfg.ownerUid;
       _biometricEnabled = cfg.biometricEnabled;
       _biometricAvailable = available;
       _lockLoaded = true;
