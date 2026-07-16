@@ -56,7 +56,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return BlocBuilder<AppLockCubit, AppLockState>(
       builder: (context, state) {
-        final showShade = state is AppLockUnknown ||
+        final showShade =
+            state is AppLockUnknown ||
             (state is AppLockUnlocked && state.obscured);
         return Stack(
           children: [

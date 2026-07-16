@@ -9,7 +9,9 @@ enum PinVerifyOutcome { ok, wrong, lockedOut }
 /// secure storage lewat [AppLockRepository]), sehingga brute-force PIN lewat
 /// toggle-off Settings tak bisa membypass jeda yang sudah aktif dari LockScreen.
 Future<PinVerifyOutcome> verifyPinWithLockout(
-    AppLockRepository repo, String pin) async {
+  AppLockRepository repo,
+  String pin,
+) async {
   // `getLockedUntilMs()` PASIF — repository tak pernah membersihkannya
   // sendiri setelah jeda kedaluwarsa, jadi WAJIB dibandingkan terhadap waktu
   // sekarang (bukan `!= 0`) di sini juga.
@@ -23,7 +25,9 @@ Future<PinVerifyOutcome> verifyPinWithLockout(
   }
   await repo.recordFailedAttempt();
   final attempts = await repo.getFailedAttempts();
-  return attempts % 5 == 0 ? PinVerifyOutcome.lockedOut : PinVerifyOutcome.wrong;
+  return attempts % 5 == 0
+      ? PinVerifyOutcome.lockedOut
+      : PinVerifyOutcome.wrong;
 }
 
 /// Sisa detik lockout aktif — 0 bila tak aktif (baik karena belum pernah ada

@@ -38,11 +38,13 @@ void main() {
   });
 
   Future<void> pump(WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: [_SyncL10nDelegate(l10n)],
-      locale: const Locale('id'),
-      home: const SetPinPage(uid: 'u1'),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: [_SyncL10nDelegate(l10n)],
+        locale: const Locale('id'),
+        home: const SetPinPage(uid: 'u1'),
+      ),
+    );
     // Frame kedua wajib — frame pertama baru meng-attach root widget
     // (lihat View/RawView di widget tree), belum benar-benar merender isi
     // SetPinPage. Tanpa ini, find.text/find.text(digit) tak menemukan apa pun.
@@ -71,8 +73,9 @@ void main() {
     verify(() => repo.setPin('123456', 'u1')).called(1);
   });
 
-  testWidgets('konfirmasi tak cocok → pesan mismatch, setPin tak dipanggil',
-      (tester) async {
+  testWidgets('konfirmasi tak cocok → pesan mismatch, setPin tak dipanggil', (
+    tester,
+  ) async {
     await pump(tester);
     await enter(tester, ['1', '2', '3', '4', '5', '6']);
     await tester.pump();
@@ -82,8 +85,9 @@ void main() {
     verifyNever(() => repo.setPin(any(), any()));
   });
 
-  testWidgets('setelah mismatch, kembali ke judul set PIN (bukan konfirmasi)',
-      (tester) async {
+  testWidgets('setelah mismatch, kembali ke judul set PIN (bukan konfirmasi)', (
+    tester,
+  ) async {
     await pump(tester);
     await enter(tester, ['1', '2', '3', '4', '5', '6']);
     await tester.pump();

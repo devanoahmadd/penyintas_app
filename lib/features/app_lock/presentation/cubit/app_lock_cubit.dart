@@ -20,11 +20,11 @@ class AppLockCubit extends Cubit<AppLockState> {
     required String? Function() currentUid,
     required Stream<String?> uidChanges,
     DateTime Function()? clock,
-  })  : _repo = repo,
-        _currentUid = currentUid,
-        _uidChanges = uidChanges,
-        _clock = clock ?? DateTime.now,
-        super(const AppLockUnknown());
+  }) : _repo = repo,
+       _currentUid = currentUid,
+       _uidChanges = uidChanges,
+       _clock = clock ?? DateTime.now,
+       super(const AppLockUnknown());
 
   final AppLockRepository _repo;
   final String? Function() _currentUid;
@@ -32,7 +32,10 @@ class AppLockCubit extends Cubit<AppLockState> {
   final DateTime Function() _clock;
 
   AppLockConfig _config = const AppLockConfig(
-      enabled: false, hasPin: false, biometricEnabled: false);
+    enabled: false,
+    hasPin: false,
+    biometricEnabled: false,
+  );
   bool _biometricAvailable = false;
   bool _authInProgress = false;
   StreamSubscription<String?>? _uidSub;
@@ -63,11 +66,13 @@ class AppLockCubit extends Cubit<AppLockState> {
       // CLOSED ke Locked: tetap recoverable lewat "Lupa PIN?" -> forgotPin()
       // -> disableLock() (dibuat fail-safe juga, lihat forgotPin()).
       if (isClosed) return;
-      emit(const AppLockLocked(
-        failedAttempts: 0,
-        lockedUntilMs: 0,
-        biometricAvailable: false,
-      ));
+      emit(
+        const AppLockLocked(
+          failedAttempts: 0,
+          lockedUntilMs: 0,
+          biometricAvailable: false,
+        ),
+      );
       return;
     }
     _uidSub = _uidChanges.listen((_) => _reevaluate());
@@ -154,7 +159,8 @@ class AppLockCubit extends Cubit<AppLockState> {
     if (isClosed) return;
     if (ok) {
       await _repo.resetFailedAttempts();
-      if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
+      // emit-after-close guard: cubit bisa di-close saat await di atas
+      if (isClosed) return;
       emit(const AppLockUnlocked(obscured: false));
     } else {
       await _repo.recordFailedAttempt();
@@ -171,7 +177,8 @@ class AppLockCubit extends Cubit<AppLockState> {
       if (isClosed) return;
       if (ok) {
         await _repo.resetFailedAttempts();
-        if (isClosed) return; // emit-after-close guard: cubit bisa di-close saat await di atas
+        // emit-after-close guard: cubit bisa di-close saat await di atas
+        if (isClosed) return;
         emit(const AppLockUnlocked(obscured: false));
       } else {
         await _emitLocked(authInProgress: false);
@@ -195,7 +202,10 @@ class AppLockCubit extends Cubit<AppLockState> {
       // init() di atas yang WAJIB fail-closed.
     }
     _config = const AppLockConfig(
-        enabled: false, hasPin: false, biometricEnabled: false);
+      enabled: false,
+      hasPin: false,
+      biometricEnabled: false,
+    );
     if (isClosed) return;
     emit(const AppLockDisabled());
   }
@@ -234,8 +244,7 @@ class AppLockCubit extends Cubit<AppLockState> {
           return; // tetap locked; lock screen sudah tampil
         }
         if (state is AppLockUnlocked) {
-          if (bg != null &&
-              _clock().difference(bg).inMilliseconds > 60000) {
+          if (bg != null && _clock().difference(bg).inMilliseconds > 60000) {
             _emitLocked();
           } else {
             if (isClosed) return;

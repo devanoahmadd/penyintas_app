@@ -26,8 +26,7 @@ void main() {
     test('salt berbeda menghasilkan hash berbeda untuk PIN sama', () {
       final s1 = PinHasher.generateSalt(Random(1));
       final s2 = PinHasher.generateSalt(Random(2));
-      expect(PinHasher.hash('123456', s1),
-          isNot(PinHasher.hash('123456', s2)));
+      expect(PinHasher.hash('123456', s1), isNot(PinHasher.hash('123456', s2)));
     });
 
     test('deterministik: PIN+salt sama → hash sama', () {

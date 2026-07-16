@@ -90,21 +90,24 @@ void main() {
     expect(delta, lessThanOrEqualTo(300000));
   });
 
-  test('lockedUntil TIDAK berubah di antara kelipatan 5 (attempts 6-9)', () async {
-    await repo.setPin('123456', 'uid-1');
-    for (var i = 0; i < 5; i++) {
-      await repo.recordFailedAttempt();
-    }
-    final untilAt5 = await repo.getLockedUntilMs();
-    // Percobaan gagal ke-6, ke-7, ke-8, ke-9: BUKAN kelipatan 5.
-    // lockedUntil tidak boleh berubah — kalau di-refresh di sini, pemilik sah
-    // yang salah pencet berulang akan terkunci makin lama tanpa alasan.
-    for (var i = 0; i < 4; i++) {
-      await repo.recordFailedAttempt();
-    }
-    expect(await repo.getFailedAttempts(), 9);
-    expect(await repo.getLockedUntilMs(), untilAt5);
-  });
+  test(
+    'lockedUntil TIDAK berubah di antara kelipatan 5 (attempts 6-9)',
+    () async {
+      await repo.setPin('123456', 'uid-1');
+      for (var i = 0; i < 5; i++) {
+        await repo.recordFailedAttempt();
+      }
+      final untilAt5 = await repo.getLockedUntilMs();
+      // Percobaan gagal ke-6, ke-7, ke-8, ke-9: BUKAN kelipatan 5.
+      // lockedUntil tidak boleh berubah — kalau di-refresh di sini, pemilik sah
+      // yang salah pencet berulang akan terkunci makin lama tanpa alasan.
+      for (var i = 0; i < 4; i++) {
+        await repo.recordFailedAttempt();
+      }
+      expect(await repo.getFailedAttempts(), 9);
+      expect(await repo.getLockedUntilMs(), untilAt5);
+    },
+  );
 
   test('resetFailedAttempts mengosongkan attempts + lockedUntil', () async {
     await repo.setPin('123456', 'uid-1');
@@ -135,17 +138,11 @@ void main() {
       when(
         () => bio.authenticate('Buka kunci Penyintas'),
       ).thenAnswer((_) async => true);
-      expect(
-        await repo.authenticateBiometric('Buka kunci Penyintas'),
-        isTrue,
-      );
+      expect(await repo.authenticateBiometric('Buka kunci Penyintas'), isTrue);
       when(
         () => bio.authenticate('Buka kunci Penyintas'),
       ).thenAnswer((_) async => false);
-      expect(
-        await repo.authenticateBiometric('Buka kunci Penyintas'),
-        isFalse,
-      );
+      expect(await repo.authenticateBiometric('Buka kunci Penyintas'), isFalse);
     },
   );
 

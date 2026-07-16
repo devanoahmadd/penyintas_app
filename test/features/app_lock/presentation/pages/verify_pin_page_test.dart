@@ -44,24 +44,27 @@ void main() {
   });
 
   Future<void> pumpAndEnter(WidgetTester tester, List<String> digits) async {
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: [_SyncL10nDelegate(l10n)],
-      locale: const Locale('id'),
-      home: Builder(
-        builder: (ctx) => Scaffold(
-          body: ElevatedButton(
-            onPressed: () async {
-              popResult = await Navigator.of(ctx).push<bool>(
-                MaterialPageRoute(
-                    builder: (_) => const VerifyPinPage(title: 'Verifikasi')),
-              );
-              popped = true;
-            },
-            child: const Text('go'),
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: [_SyncL10nDelegate(l10n)],
+        locale: const Locale('id'),
+        home: Builder(
+          builder: (ctx) => Scaffold(
+            body: ElevatedButton(
+              onPressed: () async {
+                popResult = await Navigator.of(ctx).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => const VerifyPinPage(title: 'Verifikasi'),
+                  ),
+                );
+                popped = true;
+              },
+              child: const Text('go'),
+            ),
           ),
         ),
       ),
-    ));
+    );
     // Frame kedua wajib — frame pertama baru meng-attach root widget, belum
     // merender tombol "go" (lihat catatan sama di set_pin_page_test.dart).
     await tester.pump();
@@ -81,8 +84,9 @@ void main() {
     expect(popResult, isTrue);
   });
 
-  testWidgets('PIN salah non-blok → tetap di halaman, pesan salah tampil',
-      (tester) async {
+  testWidgets('PIN salah non-blok → tetap di halaman, pesan salah tampil', (
+    tester,
+  ) async {
     when(() => repo.verifyPin(any())).thenAnswer((_) async => false);
     when(() => repo.getFailedAttempts()).thenAnswer((_) async => 2);
     await pumpAndEnter(tester, ['0', '0', '0', '0', '0', '0']);
@@ -90,8 +94,9 @@ void main() {
     expect(find.text(l10n.applockWrong), findsOneWidget);
   });
 
-  testWidgets('salah tepat blok 5 → recordFailedAttempt + pop(false)',
-      (tester) async {
+  testWidgets('salah tepat blok 5 → recordFailedAttempt + pop(false)', (
+    tester,
+  ) async {
     when(() => repo.verifyPin(any())).thenAnswer((_) async => false);
     when(() => repo.getFailedAttempts()).thenAnswer((_) async => 5);
     await pumpAndEnter(tester, ['0', '0', '0', '0', '0', '0']);
@@ -100,12 +105,14 @@ void main() {
   });
 
   testWidgets(
-      'lockout sudah aktif sejak awal → verifyPin tak pernah dipanggil, pop(false)',
-      (tester) async {
-    when(() => repo.getLockedUntilMs()).thenAnswer(
-        (_) async => DateTime.now().millisecondsSinceEpoch + 30000);
-    await pumpAndEnter(tester, ['1', '2', '3', '4', '5', '6']);
-    verifyNever(() => repo.verifyPin(any()));
-    expect(popResult, isFalse);
-  });
+    'lockout sudah aktif sejak awal → verifyPin tak pernah dipanggil, pop(false)',
+    (tester) async {
+      when(
+        () => repo.getLockedUntilMs(),
+      ).thenAnswer((_) async => DateTime.now().millisecondsSinceEpoch + 30000);
+      await pumpAndEnter(tester, ['1', '2', '3', '4', '5', '6']);
+      verifyNever(() => repo.verifyPin(any()));
+      expect(popResult, isFalse);
+    },
+  );
 }

@@ -37,11 +37,13 @@ class _LockScreenState extends State<LockScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final state = context.read<AppLockCubit>().state;
-      if (!_autoBioTried && state is AppLockLocked && state.biometricAvailable) {
+      if (!_autoBioTried &&
+          state is AppLockLocked &&
+          state.biometricAvailable) {
         _autoBioTried = true;
-        context
-            .read<AppLockCubit>()
-            .tryBiometric(context.l10n.applockBiometricReason);
+        context.read<AppLockCubit>().tryBiometric(
+          context.l10n.applockBiometricReason,
+        );
       }
     });
   }
@@ -154,16 +156,18 @@ class _LockScreenState extends State<LockScreen> {
                       child: seconds > 0
                           ? Text(
                               l.applockLockedWait(seconds),
-                              style: AppTextStyles.bodySmall
-                                  .copyWith(color: AppColors.warn),
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.warn,
+                              ),
                             )
                           : (locked.failedAttempts > 0
-                              ? Text(
-                                  l.applockWrong,
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: AppColors.warn),
-                                )
-                              : const SizedBox.shrink()),
+                                ? Text(
+                                    l.applockWrong,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.warn,
+                                    ),
+                                  )
+                                : const SizedBox.shrink()),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -182,8 +186,8 @@ class _LockScreenState extends State<LockScreen> {
                             // boleh dipaksa menunggu, harus bisa coba lagi.
                             onPressed: seconds == 0
                                 ? () => context
-                                    .read<AppLockCubit>()
-                                    .tryBiometric(l.applockBiometricReason)
+                                      .read<AppLockCubit>()
+                                      .tryBiometric(l.applockBiometricReason)
                                 : null,
                             iconSize: AppSpacing.xxl,
                             icon: Icon(Icons.fingerprint, color: textColor),

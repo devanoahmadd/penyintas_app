@@ -21,24 +21,43 @@ import 'package:penyintas_app/features/notification/domain/usecases/unregister_f
 
 // Mocks
 class MockSignInUseCase extends Mock implements SignInUseCase {}
+
 class MockSignUpUseCase extends Mock implements SignUpUseCase {}
+
 class MockSignOutUseCase extends Mock implements SignOutUseCase {}
+
 class MockGetCurrentUserUseCase extends Mock implements GetCurrentUserUseCase {}
+
 class MockWatchAuthStateUseCase extends Mock implements WatchAuthStateUseCase {}
+
 class MockWipeLocalDataUseCase extends Mock implements WipeLocalDataUseCase {}
+
 class MockDeleteAccountUseCase extends Mock implements DeleteAccountUseCase {}
+
 class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
-class MockSendPasswordResetUseCase extends Mock implements SendPasswordResetUseCase {}
-class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
-class MockUnregisterFcmTokenUseCase extends Mock implements UnregisterFcmTokenUseCase {}
+
+class MockSendPasswordResetUseCase extends Mock
+    implements SendPasswordResetUseCase {}
+
+class MockRegisterFcmTokenUseCase extends Mock
+    implements RegisterFcmTokenUseCase {}
+
+class MockUnregisterFcmTokenUseCase extends Mock
+    implements UnregisterFcmTokenUseCase {}
+
 class MockReloadUserUseCase extends Mock implements ReloadUserUseCase {}
 
 // Fallback values
 class FakeSignInParams extends Fake implements SignInParams {}
+
 class FakeSignUpParams extends Fake implements SignUpParams {}
+
 class FakeNoParams extends Fake implements NoParams {}
+
 class FakeDeleteAccountParams extends Fake implements DeleteAccountParams {}
-class FakeSendPasswordResetParams extends Fake implements SendPasswordResetParams {}
+
+class FakeSendPasswordResetParams extends Fake
+    implements SendPasswordResetParams {}
 
 void main() {
   late MockSignInUseCase mockSignIn;
@@ -87,39 +106,41 @@ void main() {
     mockRegisterFcm = MockRegisterFcmTokenUseCase();
     mockUnregisterFcm = MockUnregisterFcmTokenUseCase();
     mockReloadUser = MockReloadUserUseCase();
-    when(() => mockRegisterFcm(any())).thenAnswer((_) async => const Right(null));
-    when(() => mockUnregisterFcm(any())).thenAnswer((_) async => const Right(null));
+    when(
+      () => mockRegisterFcm(any()),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => mockUnregisterFcm(any()),
+    ).thenAnswer((_) async => const Right(null));
 
     // Default: stream kosong agar AuthCheckRequested tidak emit state tambahan
     when(() => mockWatchAuthState()).thenAnswer((_) => const Stream.empty());
   });
 
   AuthBloc buildBloc() => AuthBloc(
-        signIn: mockSignIn,
-        signUp: mockSignUp,
-        signOut: mockSignOut,
-        getCurrentUser: mockGetCurrentUser,
-        watchAuthState: mockWatchAuthState,
-        wipeLocalData: mockWipe,
-        deleteAccount: mockDeleteAccount,
-        googleSignIn: mockGoogleSignIn,
-        sendPasswordReset: mockSendPasswordReset,
-        registerFcmToken: mockRegisterFcm,
-        unregisterFcmToken: mockUnregisterFcm,
-        reloadUser: mockReloadUser,
-      );
+    signIn: mockSignIn,
+    signUp: mockSignUp,
+    signOut: mockSignOut,
+    getCurrentUser: mockGetCurrentUser,
+    watchAuthState: mockWatchAuthState,
+    wipeLocalData: mockWipe,
+    deleteAccount: mockDeleteAccount,
+    googleSignIn: mockGoogleSignIn,
+    sendPasswordReset: mockSendPasswordReset,
+    registerFcmToken: mockRegisterFcm,
+    unregisterFcmToken: mockUnregisterFcm,
+    reloadUser: mockReloadUser,
+  );
 
   group('SignInRequested', () {
     blocTest<AuthBloc, AuthState>(
       'should emit [AuthLoading, Authenticated] when sign in succeeds',
       build: buildBloc,
-      act: (bloc) => bloc.add(SignInRequested(
-        email: 'test@email.com',
-        password: 'password123',
-      )),
+      act: (bloc) => bloc.add(
+        SignInRequested(email: 'test@email.com', password: 'password123'),
+      ),
       setUp: () {
-        when(() => mockSignIn(any()))
-            .thenAnswer((_) async => Right(tUser));
+        when(() => mockSignIn(any())).thenAnswer((_) async => Right(tUser));
       },
       expect: () => [const AuthLoading(), Authenticated(tUser)],
     );
@@ -127,10 +148,8 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'should emit [AuthLoading, AuthError] when sign in fails with wrong password',
       build: buildBloc,
-      act: (bloc) => bloc.add(SignInRequested(
-        email: 'test@email.com',
-        password: 'wrong',
-      )),
+      act: (bloc) =>
+          bloc.add(SignInRequested(email: 'test@email.com', password: 'wrong')),
       setUp: () {
         when(() => mockSignIn(any())).thenAnswer(
           (_) async => const Left(
@@ -149,14 +168,15 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'should emit [AuthLoading, Authenticated] when sign up succeeds',
       build: buildBloc,
-      act: (bloc) => bloc.add(SignUpRequested(
-        email: 'new@email.com',
-        password: 'password123',
-        name: 'Pengguna Baru',
-      )),
+      act: (bloc) => bloc.add(
+        SignUpRequested(
+          email: 'new@email.com',
+          password: 'password123',
+          name: 'Pengguna Baru',
+        ),
+      ),
       setUp: () {
-        when(() => mockSignUp(any()))
-            .thenAnswer((_) async => Right(tUser));
+        when(() => mockSignUp(any())).thenAnswer((_) async => Right(tUser));
       },
       expect: () => [const AuthLoading(), Authenticated(tUser)],
     );
@@ -164,11 +184,13 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'should emit [AuthLoading, AuthError] when email already in use',
       build: buildBloc,
-      act: (bloc) => bloc.add(SignUpRequested(
-        email: 'existing@email.com',
-        password: 'password123',
-        name: 'User',
-      )),
+      act: (bloc) => bloc.add(
+        SignUpRequested(
+          email: 'existing@email.com',
+          password: 'password123',
+          name: 'User',
+        ),
+      ),
       setUp: () {
         when(() => mockSignUp(any())).thenAnswer(
           (_) async => const Left(
@@ -187,8 +209,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'sukses → [AuthLoading, Authenticated]',
       build: () {
-        when(() => mockGoogleSignIn(any()))
-            .thenAnswer((_) async => Right(tUser));
+        when(
+          () => mockGoogleSignIn(any()),
+        ).thenAnswer((_) async => Right(tUser));
         return buildBloc();
       },
       act: (bloc) => bloc.add(const GoogleSignInRequested()),
@@ -198,8 +221,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'user batal → [AuthLoading, Unauthenticated] TANPA AuthError',
       build: () {
-        when(() => mockGoogleSignIn(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockGoogleSignIn(any()),
+        ).thenAnswer((_) async => const Right(null));
         return buildBloc();
       },
       act: (bloc) => bloc.add(const GoogleSignInRequested()),
@@ -209,8 +233,11 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'gagal → [AuthLoading, AuthError(pesan)]',
       build: () {
-        when(() => mockGoogleSignIn(any())).thenAnswer((_) async =>
-            const Left(AuthFailure('Gagal masuk dengan Google. Coba lagi ya.')));
+        when(() => mockGoogleSignIn(any())).thenAnswer(
+          (_) async => const Left(
+            AuthFailure('Gagal masuk dengan Google. Coba lagi ya.'),
+          ),
+        );
         return buildBloc();
       },
       act: (bloc) => bloc.add(const GoogleSignInRequested()),
@@ -227,10 +254,10 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const SignOutRequested()),
       setUp: () {
-        when(() => mockWipe(any()))
-            .thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       expect: () => [const AuthLoading(), const Unauthenticated()],
       verify: (_) {
@@ -262,8 +289,7 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const SignOutRequested()),
       setUp: () {
-        when(() => mockWipe(any()))
-            .thenAnswer((_) async => const Right(unit));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
         when(() => mockSignOut(any())).thenAnswer(
           (_) async => const Left(AuthFailure('Gagal keluar. Coba lagi.')),
         );
@@ -295,10 +321,10 @@ void main() {
       act: (bloc) => bloc.add(const SignOutRequested()),
       setUp: () {
         hygieneCalls = 0;
-        when(() => mockWipe(any()))
-            .thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       expect: () => [const AuthLoading(), const Unauthenticated()],
       verify: (_) => expect(hygieneCalls, 0),
@@ -310,12 +336,12 @@ void main() {
       'success: emits [PasswordResetEmailSent] — AuthLoading TIDAK di-emit',
       build: buildBloc,
       setUp: () {
-        when(() => mockSendPasswordReset(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockSendPasswordReset(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
-      act: (bloc) => bloc.add(
-        const ForgotPasswordRequested(email: 'test@email.com'),
-      ),
+      act: (bloc) =>
+          bloc.add(const ForgotPasswordRequested(email: 'test@email.com')),
       expect: () => [const PasswordResetEmailSent()],
     );
 
@@ -327,12 +353,9 @@ void main() {
           (_) async => const Left(AuthFailure('Terjadi kesalahan. Coba lagi.')),
         );
       },
-      act: (bloc) => bloc.add(
-        const ForgotPasswordRequested(email: 'test@email.com'),
-      ),
-      expect: () => [
-        const AuthError('Terjadi kesalahan. Coba lagi.'),
-      ],
+      act: (bloc) =>
+          bloc.add(const ForgotPasswordRequested(email: 'test@email.com')),
+      expect: () => [const AuthError('Terjadi kesalahan. Coba lagi.')],
     );
   });
 
@@ -341,8 +364,7 @@ void main() {
       'should emit Authenticated when auth stream emits a user',
       build: buildBloc,
       setUp: () {
-        when(() => mockWatchAuthState())
-            .thenAnswer((_) => Stream.value(tUser));
+        when(() => mockWatchAuthState()).thenAnswer((_) => Stream.value(tUser));
       },
       act: (bloc) => bloc.add(const AuthCheckRequested()),
       expect: () => [Authenticated(tUser)],
@@ -352,8 +374,7 @@ void main() {
       'should emit Unauthenticated when auth stream emits null',
       build: buildBloc,
       setUp: () {
-        when(() => mockWatchAuthState())
-            .thenAnswer((_) => Stream.value(null));
+        when(() => mockWatchAuthState()).thenAnswer((_) => Stream.value(null));
       },
       act: (bloc) => bloc.add(const AuthCheckRequested()),
       expect: () => [const Unauthenticated()],
@@ -366,17 +387,15 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
-        when(() => mockDeleteAccount(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockWipe(any()))
-            .thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
-      expect: () => [
-        const DeleteAccountInProgress(),
-        const Unauthenticated(),
-      ],
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
       verify: (_) {
         verify(() => mockDeleteAccount(any())).called(1);
         verify(() => mockWipe(any())).called(1);
@@ -389,9 +408,9 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
-        when(() => mockDeleteAccount(any())).thenAnswer(
-          (_) async => const Left(AuthFailure('Password salah.')),
-        );
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Left(AuthFailure('Password salah.')));
       },
       expect: () => [
         const DeleteAccountInProgress(),
@@ -408,8 +427,9 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
-        when(() => mockDeleteAccount(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
         when(() => mockWipe(any())).thenAnswer(
           (_) async => const Left(CacheFailure('Gagal membersihkan data.')),
         );
@@ -428,18 +448,15 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
-        when(() => mockDeleteAccount(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockWipe(any()))
-            .thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any())).thenAnswer(
-          (_) async => const Left(AuthFailure('Gagal keluar.')),
-        );
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Left(AuthFailure('Gagal keluar.')));
       },
-      expect: () => [
-        const DeleteAccountInProgress(),
-        const Unauthenticated(),
-      ],
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
       verify: (_) {
         verify(() => mockDeleteAccount(any())).called(1);
         verify(() => mockWipe(any())).called(1);
@@ -467,15 +484,15 @@ void main() {
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
         hygieneCalls = 0;
-        when(() => mockDeleteAccount(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
         when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
-      expect: () => [
-        const DeleteAccountInProgress(),
-        const Unauthenticated(),
-      ],
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
       verify: (_) => expect(hygieneCalls, 1),
     );
 
@@ -498,15 +515,15 @@ void main() {
       ),
       act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
       setUp: () {
-        when(() => mockDeleteAccount(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
         when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
-      expect: () => [
-        const DeleteAccountInProgress(),
-        const Unauthenticated(),
-      ],
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
     );
   });
 
@@ -514,8 +531,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'AuthCheckRequested + stream user → registerFcmToken(uid) dipanggil',
       build: buildBloc,
-      setUp: () => when(() => mockWatchAuthState())
-          .thenAnswer((_) => Stream.value(tUser)),
+      setUp: () => when(
+        () => mockWatchAuthState(),
+      ).thenAnswer((_) => Stream.value(tUser)),
       act: (bloc) => bloc.add(const AuthCheckRequested()),
       expect: () => [Authenticated(tUser)],
       verify: (_) => verify(() => mockRegisterFcm('uid-123')).called(1),
@@ -528,7 +546,9 @@ void main() {
       act: (bloc) => bloc.add(const SignOutRequested()),
       setUp: () {
         when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
-        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       expect: () => [const AuthLoading(), const Unauthenticated()],
       verify: (_) {
@@ -554,8 +574,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'state Authenticated + reload sukses → emit Authenticated(freshUser)',
       build: () {
-        when(() => mockReloadUser(any()))
-            .thenAnswer((_) async => Right(tVerifiedUser));
+        when(
+          () => mockReloadUser(any()),
+        ).thenAnswer((_) async => Right(tVerifiedUser));
         return buildBloc();
       },
       seed: () => Authenticated(tUser),
@@ -575,8 +596,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'reload gagal → tidak emit (status lama dipertahankan)',
       build: () {
-        when(() => mockReloadUser(any()))
-            .thenAnswer((_) async => const Left(UnknownFailure()));
+        when(
+          () => mockReloadUser(any()),
+        ).thenAnswer((_) async => const Left(UnknownFailure()));
         return buildBloc();
       },
       seed: () => Authenticated(tUser),
@@ -587,8 +609,9 @@ void main() {
     blocTest<AuthBloc, AuthState>(
       'reload return null (sesi hilang) → tidak emit',
       build: () {
-        when(() => mockReloadUser(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockReloadUser(any()),
+        ).thenAnswer((_) async => const Right(null));
         return buildBloc();
       },
       seed: () => Authenticated(tUser),

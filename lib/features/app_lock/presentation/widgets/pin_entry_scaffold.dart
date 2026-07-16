@@ -89,8 +89,9 @@ class PinEntryScaffold extends StatelessWidget {
                           child: Text(
                             message,
                             textAlign: TextAlign.center,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.warn),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.warn,
+                            ),
                           ),
                         ),
                 ),

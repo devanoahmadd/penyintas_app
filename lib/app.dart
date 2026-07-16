@@ -59,8 +59,7 @@ class _PenyintasAppState extends State<PenyintasApp>
           create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
         ),
         BlocProvider(
-          create: (_) =>
-              sl<NotificationBloc>()..add(const InitNotification()),
+          create: (_) => sl<NotificationBloc>()..add(const InitNotification()),
         ),
         // Singleton app-scoped (Task 14) — WAJIB `.value`, BUKAN `create:`.
         // `create:` membuat BlocProvider mengklaim kepemilikan lifecycle
@@ -91,10 +90,7 @@ class _PenyintasAppState extends State<PenyintasApp>
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-              supportedLocales: const [
-                Locale('id'),
-                Locale('en'),
-              ],
+              supportedLocales: const [Locale('id'), Locale('en')],
               debugShowCheckedModeBanner: false,
               // AppLockGate (Task 13) — overlay di ATAS seluruh route,
               // BUKAN route tersendiri. Gate menangani lifecycle-nya sendiri

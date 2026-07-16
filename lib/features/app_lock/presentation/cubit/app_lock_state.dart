@@ -49,15 +49,18 @@ final class AppLockLocked extends AppLockState {
     int? lockedUntilMs,
     bool? biometricAvailable,
     bool? authInProgress,
-  }) =>
-      AppLockLocked(
-        failedAttempts: failedAttempts ?? this.failedAttempts,
-        lockedUntilMs: lockedUntilMs ?? this.lockedUntilMs,
-        biometricAvailable: biometricAvailable ?? this.biometricAvailable,
-        authInProgress: authInProgress ?? this.authInProgress,
-      );
+  }) => AppLockLocked(
+    failedAttempts: failedAttempts ?? this.failedAttempts,
+    lockedUntilMs: lockedUntilMs ?? this.lockedUntilMs,
+    biometricAvailable: biometricAvailable ?? this.biometricAvailable,
+    authInProgress: authInProgress ?? this.authInProgress,
+  );
 
   @override
-  List<Object?> get props =>
-      [failedAttempts, lockedUntilMs, biometricAvailable, authInProgress];
+  List<Object?> get props => [
+    failedAttempts,
+    lockedUntilMs,
+    biometricAvailable,
+    authInProgress,
+  ];
 }

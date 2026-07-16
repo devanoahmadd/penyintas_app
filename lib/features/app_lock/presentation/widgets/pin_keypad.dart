@@ -32,7 +32,9 @@ class PinKeypad extends StatelessWidget {
       children: _rows.map((row) {
         return Row(
           children: row.map((k) {
-            if (k.isEmpty) return const Expanded(child: SizedBox(height: AppSpacing.huge));
+            if (k.isEmpty) {
+              return const Expanded(child: SizedBox(height: AppSpacing.huge));
+            }
             return Expanded(
               child: _Key(
                 label: k,
@@ -64,7 +66,9 @@ class _Key extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surface = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final isBack = label == 'back';
     return Padding(

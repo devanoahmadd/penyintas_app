@@ -54,24 +54,27 @@ void main() {
   }
 
   Future<void> pumpAndEnter(WidgetTester tester, List<String> digits) async {
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: [_SyncL10nDelegate(l10n)],
-      locale: const Locale('id'),
-      home: Builder(
-        builder: (ctx) => Scaffold(
-          body: ElevatedButton(
-            onPressed: () async {
-              popResult = await Navigator.of(ctx).push<bool>(
-                MaterialPageRoute(
-                    builder: (_) => const ChangePinPage(uid: 'u1')),
-              );
-              popped = true;
-            },
-            child: const Text('go'),
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: [_SyncL10nDelegate(l10n)],
+        locale: const Locale('id'),
+        home: Builder(
+          builder: (ctx) => Scaffold(
+            body: ElevatedButton(
+              onPressed: () async {
+                popResult = await Navigator.of(ctx).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => const ChangePinPage(uid: 'u1'),
+                  ),
+                );
+                popped = true;
+              },
+              child: const Text('go'),
+            ),
           ),
         ),
       ),
-    ));
+    );
     // Frame kedua wajib — frame pertama baru meng-attach root widget, belum
     // merender tombol "go" (lihat catatan sama di set_pin_page_test.dart).
     await tester.pump();
@@ -80,8 +83,9 @@ void main() {
     await tapDigits(tester, digits);
   }
 
-  testWidgets('PIN lama benar → dorong SetPinPage untuk PIN baru',
-      (tester) async {
+  testWidgets('PIN lama benar → dorong SetPinPage untuk PIN baru', (
+    tester,
+  ) async {
     when(() => repo.verifyPin('111111')).thenAnswer((_) async => true);
     await pumpAndEnter(tester, ['1', '1', '1', '1', '1', '1']);
     await tester.pumpAndSettle();
@@ -89,30 +93,32 @@ void main() {
   });
 
   testWidgets(
-      'PIN lama benar → PIN baru cocok → setPin dipanggil → pop(true) sampai pemanggil',
-      (tester) async {
-    when(() => repo.verifyPin('111111')).thenAnswer((_) async => true);
-    when(() => repo.setPin(any(), any())).thenAnswer((_) async {});
-    await pumpAndEnter(tester, ['1', '1', '1', '1', '1', '1']);
-    await tester.pumpAndSettle();
-    await tapDigits(tester, ['2', '2', '2', '2', '2', '2']); // set baru
-    await tester.pump();
-    await tapDigits(tester, ['2', '2', '2', '2', '2', '2']); // confirm
-    await tester.pumpAndSettle();
-    verify(() => repo.setPin('222222', 'u1')).called(1);
-    expect(popped, isTrue);
-    expect(popResult, isTrue);
-  });
+    'PIN lama benar → PIN baru cocok → setPin dipanggil → pop(true) sampai pemanggil',
+    (tester) async {
+      when(() => repo.verifyPin('111111')).thenAnswer((_) async => true);
+      when(() => repo.setPin(any(), any())).thenAnswer((_) async {});
+      await pumpAndEnter(tester, ['1', '1', '1', '1', '1', '1']);
+      await tester.pumpAndSettle();
+      await tapDigits(tester, ['2', '2', '2', '2', '2', '2']); // set baru
+      await tester.pump();
+      await tapDigits(tester, ['2', '2', '2', '2', '2', '2']); // confirm
+      await tester.pumpAndSettle();
+      verify(() => repo.setPin('222222', 'u1')).called(1);
+      expect(popped, isTrue);
+      expect(popResult, isTrue);
+    },
+  );
 
   testWidgets(
-      'PIN lama salah tepat blok 5 → recordFailedAttempt + pop(false), tak pernah dorong SetPinPage',
-      (tester) async {
-    when(() => repo.verifyPin(any())).thenAnswer((_) async => false);
-    when(() => repo.getFailedAttempts()).thenAnswer((_) async => 5);
-    await pumpAndEnter(tester, ['0', '0', '0', '0', '0', '0']);
-    expect(popResult, isFalse);
-    verify(() => repo.recordFailedAttempt()).called(1);
-    verifyNever(() => repo.setPin(any(), any()));
-    expect(find.text(l10n.applockSetTitle), findsNothing);
-  });
+    'PIN lama salah tepat blok 5 → recordFailedAttempt + pop(false), tak pernah dorong SetPinPage',
+    (tester) async {
+      when(() => repo.verifyPin(any())).thenAnswer((_) async => false);
+      when(() => repo.getFailedAttempts()).thenAnswer((_) async => 5);
+      await pumpAndEnter(tester, ['0', '0', '0', '0', '0', '0']);
+      expect(popResult, isFalse);
+      verify(() => repo.recordFailedAttempt()).called(1);
+      verifyNever(() => repo.setPin(any(), any()));
+      expect(find.text(l10n.applockSetTitle), findsNothing);
+    },
+  );
 }

@@ -21,13 +21,17 @@ void main() {
     ds = BiometricDataSourceImpl(auth);
   });
 
-  test('isAvailable true bila supported + canCheck + ada biometrik enrolled', () async {
-    when(() => auth.isDeviceSupported()).thenAnswer((_) async => true);
-    when(() => auth.canCheckBiometrics).thenAnswer((_) async => true);
-    when(() => auth.getAvailableBiometrics())
-        .thenAnswer((_) async => [BiometricType.fingerprint]);
-    expect(await ds.isAvailable(), isTrue);
-  });
+  test(
+    'isAvailable true bila supported + canCheck + ada biometrik enrolled',
+    () async {
+      when(() => auth.isDeviceSupported()).thenAnswer((_) async => true);
+      when(() => auth.canCheckBiometrics).thenAnswer((_) async => true);
+      when(
+        () => auth.getAvailableBiometrics(),
+      ).thenAnswer((_) async => [BiometricType.fingerprint]);
+      expect(await ds.isAvailable(), isTrue);
+    },
+  );
 
   test('isAvailable false bila tak ada biometrik enrolled', () async {
     when(() => auth.isDeviceSupported()).thenAnswer((_) async => true);
@@ -42,16 +46,22 @@ void main() {
   });
 
   test('authenticate memakai biometricOnly + stickyAuth', () async {
-    when(() => auth.authenticate(
-          localizedReason: any(named: 'localizedReason'),
-          options: any(named: 'options'),
-        )).thenAnswer((_) async => true);
+    when(
+      () => auth.authenticate(
+        localizedReason: any(named: 'localizedReason'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer((_) async => true);
     final ok = await ds.authenticate('buka');
     expect(ok, isTrue);
-    final captured = verify(() => auth.authenticate(
-          localizedReason: 'buka',
-          options: captureAny(named: 'options'),
-        )).captured.single as AuthenticationOptions;
+    final captured =
+        verify(
+              () => auth.authenticate(
+                localizedReason: 'buka',
+                options: captureAny(named: 'options'),
+              ),
+            ).captured.single
+            as AuthenticationOptions;
     expect(captured.biometricOnly, isTrue);
     expect(captured.stickyAuth, isTrue);
   });

@@ -59,13 +59,17 @@ class _FakeSyncService extends Mock implements SyncService {}
 void main() {
   final sl = GetIt.instance; // sama dgn `sl` di injection_container.dart
 
-  testWidgets(
-      'app.dart: builder MaterialApp.router memasang AppLockGate yang '
+  testWidgets('app.dart: builder MaterialApp.router memasang AppLockGate yang '
       'terhubung ke AppLockCubit singleton sungguhan — lock ON benar2 '
       'mengunci rute asli lewat gate itu', (tester) async {
     final repo = _MockRepo();
-    when(() => repo.readConfig()).thenAnswer((_) async => const AppLockConfig(
-        enabled: false, hasPin: false, biometricEnabled: false));
+    when(() => repo.readConfig()).thenAnswer(
+      (_) async => const AppLockConfig(
+        enabled: false,
+        hasPin: false,
+        biometricEnabled: false,
+      ),
+    );
     when(() => repo.isBiometricAvailable()).thenAnswer((_) async => false);
     when(() => repo.getFailedAttempts()).thenAnswer((_) async => 0);
     when(() => repo.getLockedUntilMs()).thenAnswer((_) async => 0);
@@ -80,19 +84,28 @@ void main() {
       clock: () => fakeNow,
     );
 
-    final router = GoRouter(routes: [
-      GoRoute(path: '/', builder: (_, _) => const Text('RUTE_ASLI')),
-    ]);
+    final router = GoRouter(
+      routes: [GoRoute(path: '/', builder: (_, _) => const Text('RUTE_ASLI'))],
+    );
 
     final settingsBloc = _FakeSettingsBloc();
-    whenListen(settingsBloc, const Stream<SettingsState>.empty(),
-        initialState: const SettingsState.initial());
+    whenListen(
+      settingsBloc,
+      const Stream<SettingsState>.empty(),
+      initialState: const SettingsState.initial(),
+    );
     final authBloc = _FakeAuthBloc();
-    whenListen(authBloc, const Stream<AuthState>.empty(),
-        initialState: const Unauthenticated());
+    whenListen(
+      authBloc,
+      const Stream<AuthState>.empty(),
+      initialState: const Unauthenticated(),
+    );
     final notificationBloc = _FakeNotificationBloc();
-    whenListen(notificationBloc, const Stream<NotificationState>.empty(),
-        initialState: const NotificationInitial());
+    whenListen(
+      notificationBloc,
+      const Stream<NotificationState>.empty(),
+      initialState: const NotificationInitial(),
+    );
 
     sl.registerLazySingleton<SettingsBloc>(() => settingsBloc);
     sl.registerLazySingleton<AuthBloc>(() => authBloc);
@@ -107,14 +120,18 @@ void main() {
 
     // --- Fase 1: lock OFF → rute asli tampil, AppLockGate NYATA (dari
     // app.dart, bukan replika) sudah terpasang tapi transparan.
-    expect(find.byType(AppLockGate), findsOneWidget,
-        reason: 'AppLockGate harus terpasang lewat builder: di app.dart');
+    expect(
+      find.byType(AppLockGate),
+      findsOneWidget,
+      reason: 'AppLockGate harus terpasang lewat builder: di app.dart',
+    );
     expect(
       find.descendant(
-          of: find.byType(AppLockGate), matching: find.text('RUTE_ASLI')),
+        of: find.byType(AppLockGate),
+        matching: find.text('RUTE_ASLI'),
+      ),
       findsOneWidget,
-      reason:
-          'child hasil routerConfig WAJIB mengalir sbg child AppLockGate',
+      reason: 'child hasil routerConfig WAJIB mengalir sbg child AppLockGate',
     );
     expect(find.byType(LockScreen), findsNothing);
     expect(find.byType(PrivacyShade), findsNothing);
@@ -137,8 +154,14 @@ void main() {
     // --- Fase 2: dorong cubit yang PERSIS sama (via sl singleton, tanpa
     // pernah memanggil init() lagi) melalui siklus "lock baru dinyalakan →
     // background >60 detik → resume" sampai ke AppLockLocked.
-    when(() => repo.readConfig()).thenAnswer((_) async => const AppLockConfig(
-        enabled: true, hasPin: true, biometricEnabled: false, ownerUid: 'u1'));
+    when(() => repo.readConfig()).thenAnswer(
+      (_) async => const AppLockConfig(
+        enabled: true,
+        hasPin: true,
+        biometricEnabled: false,
+        ownerUid: 'u1',
+      ),
+    );
     await cubit.onSettingsChanged();
     await tester.pump();
     cubit.onLifecycle(AppLifecycleState.paused);
@@ -149,15 +172,22 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byType(LockScreen), findsOneWidget,
-        reason: 'AppLockCubit yang SAMA (via sl singleton) harus benar2 '
-            'mengendalikan AppLockGate nyata dari app.dart — bukan cuma '
-            'widget kosong yang tak terhubung ke provider manapun');
+    expect(
+      find.byType(LockScreen),
+      findsOneWidget,
+      reason:
+          'AppLockCubit yang SAMA (via sl singleton) harus benar2 '
+          'mengendalikan AppLockGate nyata dari app.dart — bukan cuma '
+          'widget kosong yang tak terhubung ke provider manapun',
+    );
     expect(
       find.descendant(
-          of: find.byType(AppLockGate), matching: find.byType(LockScreen)),
+        of: find.byType(AppLockGate),
+        matching: find.byType(LockScreen),
+      ),
       findsOneWidget,
-      reason: 'LockScreen harus tampil DI DALAM AppLockGate yang sama, '
+      reason:
+          'LockScreen harus tampil DI DALAM AppLockGate yang sama, '
           'bukan di tempat lain di tree',
     );
   });
