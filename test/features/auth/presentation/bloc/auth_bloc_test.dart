@@ -61,6 +61,8 @@ void main() {
     createdAt: DateTime(2025),
   );
 
+  var hygieneCalls = 0;
+
   setUpAll(() {
     registerFallbackValue(FakeSignInParams());
     registerFallbackValue(FakeSignUpParams());
@@ -413,6 +415,68 @@ void main() {
         verify(() => mockWipe(any())).called(1);
         verify(() => mockSignOut(any())).called(1);
       },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'deleteAccount sukses → onAccountDeleted (hygiene App Lock) dipanggil sekali',
+      build: () => AuthBloc(
+        signIn: mockSignIn,
+        signUp: mockSignUp,
+        signOut: mockSignOut,
+        getCurrentUser: mockGetCurrentUser,
+        watchAuthState: mockWatchAuthState,
+        wipeLocalData: mockWipe,
+        deleteAccount: mockDeleteAccount,
+        googleSignIn: mockGoogleSignIn,
+        sendPasswordReset: mockSendPasswordReset,
+        registerFcmToken: mockRegisterFcm,
+        unregisterFcmToken: mockUnregisterFcm,
+        reloadUser: mockReloadUser,
+        onAccountDeleted: () async => hygieneCalls++,
+      ),
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        hygieneCalls = 0;
+        when(() => mockDeleteAccount(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const Unauthenticated(),
+      ],
+      verify: (_) => expect(hygieneCalls, 1),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'onAccountDeleted melempar → alur hapus akun tetap selesai (best-effort)',
+      build: () => AuthBloc(
+        signIn: mockSignIn,
+        signUp: mockSignUp,
+        signOut: mockSignOut,
+        getCurrentUser: mockGetCurrentUser,
+        watchAuthState: mockWatchAuthState,
+        wipeLocalData: mockWipe,
+        deleteAccount: mockDeleteAccount,
+        googleSignIn: mockGoogleSignIn,
+        sendPasswordReset: mockSendPasswordReset,
+        registerFcmToken: mockRegisterFcm,
+        unregisterFcmToken: mockUnregisterFcm,
+        reloadUser: mockReloadUser,
+        onAccountDeleted: () async => throw Exception('secure storage error'),
+      ),
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(() => mockDeleteAccount(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(() => mockSignOut(any())).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const Unauthenticated(),
+      ],
     );
   });
 

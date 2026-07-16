@@ -228,6 +228,7 @@ void _initAuth() {
       registerFcmToken: sl(),
       unregisterFcmToken: sl(),
       reloadUser: sl(),
+      onAccountDeleted: () => sl<AppLockRepository>().disableLock(),
     ),
   );
 

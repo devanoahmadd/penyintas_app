@@ -34,6 +34,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.registerFcmToken,
     required this.unregisterFcmToken,
     required this.reloadUser,
+    this.onAccountDeleted,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -58,6 +59,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RegisterFcmTokenUseCase registerFcmToken;
   final UnregisterFcmTokenUseCase unregisterFcmToken;
   final ReloadUserUseCase reloadUser;
+
+  /// Hygiene C2 App Lock (spec §6): dipanggil best-effort setelah akun
+  /// terhapus remote — PIN device-local milik akun mati ikut dibersihkan.
+  final Future<void> Function()? onAccountDeleted;
 
   StreamSubscription<UserEntity?>? _authSubscription;
 
@@ -171,6 +176,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.fold(
       (failure) async => emit(DeleteAccountFailure(failure.message)),
       (_) async {
+        // Hygiene C2 App Lock: akun sudah terhapus remote → PIN device-local
+        // ikut dibersihkan (best-effort; JANGAN blokir alur bila gagal).
+        try {
+          await onAccountDeleted?.call();
+        } catch (_) {}
         // Hapus data lokal Drift
         final wipeResult = await wipeLocalData(const NoParams());
         await wipeResult.fold(
