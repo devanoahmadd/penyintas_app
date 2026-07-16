@@ -186,4 +186,65 @@ void main() {
     expect(find.text(l10n.applockEnterTitle), findsNothing);
     expect(find.text('KONTEN_RAHASIA'), findsOneWidget);
   });
+
+  testWidgets(
+      'Urutan Stack: widget.child di BAWAH PrivacyShade (bukan sekadar '
+      'sama-sama ada di tree)', (tester) async {
+    // Ketujuh test di atas semua pakai find.byType/find.text — itu cuma
+    // membuktikan widget ADA di element tree, bukan bahwa ia digambar DI
+    // ATAS child. Bila urutan children Stack dibalik jadi
+    // [shade, child] (mis. saat "merapikan" kode), ketujuh test itu tetap
+    // HIJAU (semua widget tetap "ada"), padahal secara visual konten
+    // finansial akan tergambar DI ATAS shade — kebocoran privasi yang
+    // justru ingin dicegah fitur ini. Test ini memeriksa INDEX children
+    // Stack secara eksplisit, bukan cuma keberadaannya.
+    final cubit = AppLockCubit(
+        repo: repo, currentUid: () => 'u1', uidChanges: uidCtrl.stream);
+    await tester.pumpWidget(app(cubit)); // AppLockUnknown → shade aktif
+    await tester.pump();
+
+    final stackFinder = find.descendant(
+        of: find.byType(AppLockGate), matching: find.byType(Stack));
+    expect(stackFinder, findsOneWidget);
+    final stack = tester.widget<Stack>(stackFinder);
+
+    final childIndex = stack.children
+        .indexWhere((w) => w is Text && w.data == 'KONTEN_RAHASIA');
+    final shadeIndex = stack.children
+        .indexWhere((w) => w is Positioned && w.child is PrivacyShade);
+
+    expect(childIndex, isNot(-1),
+        reason: 'widget.child tak ditemukan di Stack.children');
+    expect(shadeIndex, isNot(-1),
+        reason: 'PrivacyShade tak ditemukan di Stack.children');
+    expect(childIndex, lessThan(shadeIndex),
+        reason: 'widget.child WAJIB digambar sebelum (di bawah) '
+            'PrivacyShade, kalau tidak konten finansial tembus di atas '
+            'shade');
+  });
+
+  testWidgets(
+      'Urutan Stack: widget.child di BAWAH LockScreen (bukan sekadar '
+      'sama-sama ada di tree)', (tester) async {
+    await pump(tester, enabled: true); // AppLockLocked
+
+    final stackFinder = find.descendant(
+        of: find.byType(AppLockGate), matching: find.byType(Stack));
+    expect(stackFinder, findsOneWidget);
+    final stack = tester.widget<Stack>(stackFinder);
+
+    final childIndex = stack.children
+        .indexWhere((w) => w is Text && w.data == 'KONTEN_RAHASIA');
+    final lockIndex = stack.children
+        .indexWhere((w) => w is Positioned && w.child is LockScreen);
+
+    expect(childIndex, isNot(-1),
+        reason: 'widget.child tak ditemukan di Stack.children');
+    expect(lockIndex, isNot(-1),
+        reason: 'LockScreen tak ditemukan di Stack.children');
+    expect(childIndex, lessThan(lockIndex),
+        reason: 'widget.child WAJIB digambar sebelum (di bawah) '
+            'LockScreen, kalau tidak konten finansial tembus di atas '
+            'lock screen');
+  });
 }
