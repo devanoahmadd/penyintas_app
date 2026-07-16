@@ -50,6 +50,13 @@ class AppLockRepositoryImpl implements AppLockRepository {
     await _store.write(_kHash, hash);
     await _store.write(_kOwnerUid, uid);
     await _store.write(_kEnabled, 'true');
+    // Reset WAJIB: tanpa ini flag biometrik warisan pemilik LAMA bertahan
+    // (setPin menimpa hash/salt/ownerUid tapi tak menyentuh kunci ini).
+    // Skenario: A menyalakan biometrik → sign-out → B sign-in & menyalakan
+    // lock → lock B langsung biometrik-aktif tanpa B pernah memilihnya, dan
+    // sidik jari A yang terdaftar di device ikut membukanya. Pemilik baru
+    // harus memilih sendiri.
+    await _store.write(_kBiometric, 'false');
     await resetFailedAttempts();
   }
 

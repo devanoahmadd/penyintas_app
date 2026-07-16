@@ -1,8 +1,10 @@
 // test/features/app_lock/presentation/widgets/app_lock_gate_test.dart
 import 'dart:async';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/app_lock/domain/entities/app_lock_config.dart';
@@ -12,8 +14,12 @@ import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_stat
 import 'package:penyintas_app/features/app_lock/presentation/widgets/app_lock_gate.dart';
 import 'package:penyintas_app/features/app_lock/presentation/widgets/lock_screen.dart';
 import 'package:penyintas_app/features/app_lock/presentation/widgets/privacy_shade.dart';
+import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 class _MockRepo extends Mock implements AppLockRepository {}
+
+class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
+    implements AuthBloc {}
 
 class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _SyncL10nDelegate(this._value);
@@ -30,6 +36,11 @@ void main() {
   late AppLocalizations l10n;
   late _MockRepo repo;
   late StreamController<String?> uidCtrl;
+  late _MockAuthBloc authBloc;
+
+  /// Router yang dibangun [pumpRouterWiring] — dipakai test tombol Back untuk
+  /// mendorong/membaca lokasi rute di BAWAH gate.
+  late GoRouter router;
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +49,7 @@ void main() {
 
   setUp(() {
     repo = _MockRepo();
+    authBloc = _MockAuthBloc();
     uidCtrl = StreamController<String?>.broadcast();
     when(() => repo.isBiometricAvailable()).thenAnswer((_) async => false);
     when(() => repo.getFailedAttempts()).thenAnswer((_) async => 0);
@@ -56,6 +68,64 @@ void main() {
       home: AppLockGate(child: const Text('KONTEN_RAHASIA')),
     ),
   );
+
+  /// Pump memakai WIRING PRODUKSI PERSIS: `MaterialApp.router` + `routerConfig:`
+  /// + `builder: (c, ch) => AppLockGate(child: ch!)` — tiruan `lib/app.dart`.
+  ///
+  /// WAJIB dipakai untuk apa pun yang menyentuh Navigator/Overlay (dialog,
+  /// tooltip). Helper `app()` di bawah memakai `MaterialApp(home: ...)`, yang
+  /// menempatkan gate sebagai route DI DALAM Navigator — kebalikan total dari
+  /// produksi, di mana `builder:` menerima Router sebagai CHILD-nya sehingga
+  /// gate justru jadi ANCESTOR Navigator (lihat `app.dart:1721` di SDK).
+  /// Akibatnya `showDialog`/`tooltip` yang HIJAU lewat `app()` bisa MELEDAK di
+  /// produksi. Aturan: widget yang dipasang di `MaterialApp.builder` WAJIB
+  /// diuji lewat `builder:`, BUKAN `home:`.
+  Future<AppLockCubit> pumpRouterWiring(
+    WidgetTester tester, {
+    required bool enabled,
+    bool biometric = false,
+    String childLabel = 'KONTEN_RAHASIA',
+  }) async {
+    when(() => repo.readConfig()).thenAnswer(
+      (_) async => AppLockConfig(
+        enabled: enabled,
+        hasPin: enabled,
+        biometricEnabled: biometric,
+        ownerUid: enabled ? 'u1' : null,
+      ),
+    );
+    final cubit = AppLockCubit(
+      repo: repo,
+      currentUid: () => 'u1',
+      uidChanges: uidCtrl.stream,
+    );
+    await cubit.init();
+    // Rute '/detail' ada agar test tombol Back punya sesuatu untuk di-pop.
+    router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => Text(childLabel)),
+        GoRoute(path: '/detail', builder: (_, _) => const Text('DETAIL')),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<AppLockCubit>.value(value: cubit),
+          BlocProvider<AuthBloc>.value(value: authBloc),
+        ],
+        child: MaterialApp.router(
+          localizationsDelegates: [_SyncL10nDelegate(l10n)],
+          locale: const Locale('id'),
+          routerConfig: router,
+          builder: (context, child) =>
+              AppLockGate(child: child ?? const SizedBox.shrink()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return cubit;
+  }
 
   /// Pump normal — meng-init cubit (config resolve) lalu mem-build gate.
   /// Mengembalikan cubit agar test lanjutan bisa mendorong transisi state
@@ -230,8 +300,10 @@ void main() {
     expect(stackFinder, findsOneWidget);
     final stack = tester.widget<Stack>(stackFinder);
 
+    // `w.child is Text`: widget.child kini dibungkus ExcludeSemantics (agar
+    // screen reader tak menembus shade) — yang dijaga test ini URUTAN-nya.
     final childIndex = stack.children.indexWhere(
-      (w) => w is Text && w.data == 'KONTEN_RAHASIA',
+      (w) => w is ExcludeSemantics && w.child is Text,
     );
     final shadeIndex = stack.children.indexWhere(
       (w) => w is Positioned && w.child is PrivacyShade,
@@ -269,10 +341,14 @@ void main() {
     final stack = tester.widget<Stack>(stackFinder);
 
     final childIndex = stack.children.indexWhere(
-      (w) => w is Text && w.data == 'KONTEN_RAHASIA',
+      (w) => w is ExcludeSemantics && w.child is Text,
     );
+    // Dicocokkan lewat key, bukan `w.child is LockScreen`: overlay lock kini
+    // dibungkus HeroControllerScope → Navigator → MaterialPageRoute (agar
+    // showDialog & tooltip punya Navigator/Overlay), jadi LockScreen tak lagi
+    // jadi child langsung Positioned. Yang dijaga test ini adalah URUTAN-nya.
     final lockIndex = stack.children.indexWhere(
-      (w) => w is Positioned && w.child is LockScreen,
+      (w) => w is Positioned && w.key == AppLockGate.lockOverlayKey,
     );
 
     expect(
@@ -294,4 +370,167 @@ void main() {
           'lock screen',
     );
   });
+
+  // --- Wiring produksi (MaterialApp.router + builder:) ---------------------
+  // Ketiga test di bawah menutup celah yang meloloskan Critical "Lupa PIN?
+  // mati": Task 11 menguji LockScreen sendirian (via `home:` = DI DALAM
+  // Navigator), Task 15 menguji wiring tapi tak pernah menyentuh dialog /
+  // tooltip. Tak ada yang menguji IRISANNYA — dan justru di irisan itulah
+  // bug-nya hidup.
+
+  testWidgets(
+    'wiring produksi: tap "Lupa PIN?" → dialog SUNGGUH muncul → konfirmasi '
+    'memicu disableLock + SignOutRequested',
+    (tester) async {
+      when(() => repo.disableLock()).thenAnswer((_) async {});
+      await pumpRouterWiring(tester, enabled: true);
+      expect(find.byType(LockScreen), findsOneWidget); // sanity: mulai Locked
+
+      await tester.tap(find.text(l10n.applockForgot));
+      await tester.pumpAndSettle();
+
+      // Inti Critical: tanpa Navigator milik gate, showDialog() melempar
+      // "Navigator operation requested with a context that does not include a
+      // Navigator" dan dialog TAK PERNAH muncul — user yang lupa PIN terkunci
+      // permanen (pulih hanya lewat reinstall/clear-data). Ini satu-satunya
+      // escape hatch, sekaligus yang diandalkan mitigasi fail-closed init().
+      expect(
+        find.text(l10n.applockForgotDialogTitle),
+        findsOneWidget,
+        reason:
+            'dialog "Lupa PIN?" WAJIB benar-benar terender di wiring '
+            'produksi — gate berada di ATAS Navigator app, jadi gate '
+            'HARUS menyediakan Navigator-nya sendiri',
+      );
+
+      await tester.tap(find.text(l10n.applockForgotConfirm));
+      await tester.pumpAndSettle();
+
+      verify(() => repo.disableLock()).called(1);
+      verify(() => authBloc.add(const SignOutRequested())).called(1);
+    },
+  );
+
+  testWidgets(
+    'wiring produksi: biometrik tersedia → tombol sidik jari SUNGGUH terender '
+    '(bukan ErrorWidget karena Overlay hilang)',
+    (tester) async {
+      when(
+        () => repo.authenticateBiometric(any()),
+      ).thenAnswer((_) async => false);
+      when(() => repo.isBiometricAvailable()).thenAnswer((_) async => true);
+      await pumpRouterWiring(tester, enabled: true, biometric: true);
+
+      // `IconButton(tooltip: ...)` butuh Overlay ancestor. Tanpa Navigator
+      // milik gate, `debugCheckHasOverlay` di build() gagal → subtree
+      // IconButton diganti ErrorWidget (kotak merah / tombol hilang) di debug,
+      // dan long-press melempar di release. Efeknya: user biometrik kehilangan
+      // tombol retry-nya.
+      expect(
+        find.byIcon(Icons.fingerprint),
+        findsOneWidget,
+        reason:
+            'tombol retry biometrik WAJIB terender di wiring produksi — '
+            'tooltip-nya menuntut Overlay yang hanya ada bila gate '
+            'menyediakan Navigator sendiri',
+      );
+      expect(
+        find.byType(ErrorWidget),
+        findsNothing,
+        reason: 'tak boleh ada ErrorWidget menggantikan subtree manapun',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'AppLockLocked → semantics child DIKECUALIKAN (screen reader tak boleh '
+    'membacakan konten finansial di balik lock)',
+    (tester) async {
+      // dispose() eksplisit di akhir badan test, BUKAN addTearDown:
+      // _endOfTestVerifications berjalan SEBELUM tearDown, jadi handle yang
+      // baru dilepas di tearDown tetap dianggap bocor dan test gagal.
+      final handle = tester.ensureSemantics();
+
+      await pumpRouterWiring(
+        tester,
+        enabled: true,
+        childLabel: 'SALDO_RP_9_JUTA',
+      );
+      expect(find.byType(LockScreen), findsOneWidget); // sanity: mulai Locked
+
+      // Hit-test sudah aman (Material bertipe canvas menyerap tap), TAPI
+      // semantics menembus: Stack tak mengecualikan semantics child, jadi
+      // TalkBack/VoiceOver tetap membacakan saldo & transaksi di balik lock
+      // screen — kebocoran privasi yang tak terlihat mata.
+      expect(
+        find.bySemanticsLabel('SALDO_RP_9_JUTA'),
+        findsNothing,
+        reason:
+            'konten finansial di balik lock WAJIB tak terjangkau screen '
+            'reader saat state Locked',
+      );
+
+      handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'AppLockLocked → tombol Back sistem DITELAN (tak mem-pop rute di bawah '
+    'lock)',
+    (tester) async {
+      await pumpRouterWiring(tester, enabled: true);
+      router.push('/detail');
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), '/detail'); // prasyarat
+      expect(find.byType(LockScreen), findsOneWidget);
+
+      final handled = await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      // Tanpa didPopRoute di gate, Back menembus ke GoRouter dan mem-pop
+      // /detail → / DI BALIK lock screen: user terkunci tapi tetap bisa
+      // menavigasi app secara buta. PopScope di Navigator milik gate TIDAK
+      // menutup ini (Navigator itu di luar rantai dispatch Back) — sudah
+      // dibuktikan lewat probe.
+      expect(
+        handled,
+        isTrue,
+        reason:
+            'Back WAJIB dianggap tertangani saat locked — bila false, '
+            'Android malah menutup aplikasi',
+      );
+      expect(
+        router.state.uri.toString(),
+        '/detail',
+        reason: 'rute di bawah lock TIDAK boleh ikut ter-pop',
+      );
+      expect(find.byType(LockScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AppLockDisabled → tombol Back sistem TETAP diteruskan (gate tak boleh '
+    'menelan Back saat tak terkunci)',
+    (tester) async {
+      // Sisi lain koin: gate yang menelan Back tanpa syarat akan mematikan
+      // navigasi Back seluruh aplikasi — regresi jauh lebih parah daripada
+      // Minor yang diperbaiki. Guard `state is AppLockLocked` dikunci di sini.
+      await pumpRouterWiring(tester, enabled: false);
+      router.push('/detail');
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), '/detail'); // prasyarat
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        '/',
+        reason:
+            'saat lock mati, Back WAJIB mem-pop rute seperti biasa — gate '
+            'harus transparan',
+      );
+    },
+  );
 }

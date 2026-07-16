@@ -46,6 +46,25 @@ void main() {
     expect(cfg.ownerUid, 'uid-1');
   });
 
+  test('setPin mereset flag biometrik warisan pemilik lama', () async {
+    // Pemilik lama (A) menyalakan biometrik lalu sign-out tanpa mematikan
+    // lock. Pemilik baru (B) sign-in dan menyalakan lock lewat setPin.
+    await repo.setPin('111111', 'uid-A');
+    await repo.setBiometricEnabled(true);
+    expect((await repo.readConfig()).biometricEnabled, isTrue); // prasyarat
+
+    await repo.setPin('222222', 'uid-B');
+
+    // Tanpa reset, flag 'true' milik A bertahan → lock B langsung
+    // biometrik-aktif tanpa B pernah memilihnya, dan sidik jari A yang
+    // terdaftar di device ikut membukanya. Pemilik baru memilih sendiri.
+    expect(
+      (await repo.readConfig()).biometricEnabled,
+      isFalse,
+      reason: 'setPin WAJIB mereset biometrik — pemilik baru memilih sendiri',
+    );
+  });
+
   test('disableLock menghapus semua key', () async {
     await repo.setPin('123456', 'uid-1');
     await repo.setBiometricEnabled(true);
