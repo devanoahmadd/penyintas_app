@@ -252,6 +252,7 @@
   "dashboard_bento_challenge_sub": "Mingguan",
   "common_coming_soon": "Segera hadir",
   "common_delete": "Hapus",
+  "common_backspace": "Hapus",
   "dashboard_tip_eyebrow": "TIP HARI INI",
   "dashboard_tip_text": "Bawa botol minum — hemat Rp 6.000/hari.",
   "dashboard_tx_empty": "Belum ada transaksi. Catat pengeluaran pertamamu hari ini.",
@@ -407,6 +408,5 @@
   "applock_forgot_confirm": "Keluar",
   "applock_biometric_reason": "Buka Penyintas",
   "applock_verify_to_disable": "Masukkan PIN untuk mematikan kunci",
-  "applock_change_current": "PIN saat ini",
-  "applock_backspace": "Hapus"
+  "applock_change_current": "PIN saat ini"
 }

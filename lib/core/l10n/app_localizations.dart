@@ -376,6 +376,13 @@ class AppLocalizations {
 
   // Common
   String get commonComingSoon => _t('common_coming_soon');
+
+  /// Label semantics tombol backspace keypad numerik (App Lock & onboarding).
+  /// Sengaja TERPISAH dari `common_delete` walau nilainya kebetulan sama:
+  /// "hapus satu digit" ≠ "hapus record" — key i18n memetakan konsep, bukan
+  /// string. Bila `common_delete` kelak dipertajam ("Hapus transaksi"), label
+  /// backspace tak ikut rusak.
+  String get commonBackspace => _t('common_backspace');
   // 'Batal' TIDAK dibuatkan key baru — pakai getter existing `btnCancel`.
   String get commonDelete => _t('common_delete');
 
@@ -548,7 +555,6 @@ class AppLocalizations {
   String get applockBiometricReason => _t('applock_biometric_reason');
   String get applockVerifyToDisable => _t('applock_verify_to_disable');
   String get applockChangeCurrent => _t('applock_change_current');
-  String get applockBackspace => _t('applock_backspace');
 }
 
 class _AppLocalizationsDelegate

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
@@ -16,7 +17,20 @@ int applyOnboardingKey(int current, String key) {
   return n > 999999999 ? current : n;
 }
 
-const _kKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'];
+const _kKeys = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '000',
+  '0',
+  'back',
+];
 
 class OnboardingKeypad extends StatefulWidget {
   const OnboardingKeypad({
@@ -40,9 +54,13 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
 
   @override
   Widget build(BuildContext context) {
-    final surface = widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surface = widget.isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final textColor = widget.isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoft = widget.isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoft = widget.isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
 
     return GridView.count(
       crossAxisCount: 3,
@@ -104,9 +122,10 @@ class _KeyButtonState extends State<_KeyButton>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scale = Tween<double>(begin: 0.94, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleCtrl, curve: Curves.ease),
-    );
+    _scale = Tween<double>(
+      begin: 0.94,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _scaleCtrl, curve: Curves.ease));
   }
 
   @override
@@ -135,26 +154,30 @@ class _KeyButtonState extends State<_KeyButton>
         scale: _scale,
         child: Semantics(
           button: true,
-          label: widget.keyLabel == 'back' ? 'Hapus' : widget.keyLabel,
+          // Lewat l10n (bukan hardcode): label ini DIBACAKAN screen reader,
+          // jadi user EN akan mendengar kata Indonesia yang tak ia pahami.
+          label: widget.keyLabel == 'back'
+              ? context.l10n.commonBackspace
+              : widget.keyLabel,
           child: Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: widget.surface,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          alignment: Alignment.center,
-          child: isBack
-              ? _BackIcon(color: widget.backIconColor)
-              : Text(
-                  widget.keyLabel,
-                  style: AppTextStyles.h3.copyWith(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: widget.keyLabel == '000' ? 16 : 20,
-                    fontWeight: FontWeight.w700,
-                    color: widget.textColor,
-                    height: 1,
+            height: 48,
+            decoration: BoxDecoration(
+              color: widget.surface,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            alignment: Alignment.center,
+            child: isBack
+                ? _BackIcon(color: widget.backIconColor)
+                : Text(
+                    widget.keyLabel,
+                    style: AppTextStyles.h3.copyWith(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: widget.keyLabel == '000' ? 16 : 20,
+                      fontWeight: FontWeight.w700,
+                      color: widget.textColor,
+                      height: 1,
+                    ),
                   ),
-                ),
           ),
         ),
       ),

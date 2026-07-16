@@ -92,7 +92,7 @@ class _Key extends StatelessWidget {
                       Icons.backspace_outlined,
                       color: textColor,
                       size: 22,
-                      semanticLabel: context.l10n.applockBackspace,
+                      semanticLabel: context.l10n.commonBackspace,
                     )
                   : Text(
                       label,

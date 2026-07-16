@@ -18,10 +18,12 @@ class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
 
 void main() {
   late AppLocalizations l10n;
+  late AppLocalizations l10nEn;
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
+    l10nEn = await AppLocalizations.delegate.load(const Locale('en'));
   });
 
   Future<void> pumpKeypad(
@@ -29,11 +31,12 @@ void main() {
     required void Function(String) onDigit,
     VoidCallback? onBackspace,
     bool enabled = true,
+    AppLocalizations? locale,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: [_SyncL10nDelegate(l10n)],
-        locale: const Locale('id'),
+        localizationsDelegates: [_SyncL10nDelegate(locale ?? l10n)],
+        locale: Locale(locale == null ? 'id' : 'en'),
         home: Scaffold(
           body: PinKeypad(
             onDigit: onDigit,
@@ -61,13 +64,29 @@ void main() {
   });
 
   testWidgets(
-    'tombol backspace punya label semantics dari l10n (ikon tanpa teks — tanpa '
-    'ini screen reader tak tahu tombol mana yang menghapus digit salah)',
+    'tombol backspace punya label semantics (ikon tanpa teks — tanpa ini '
+    'screen reader tak tahu tombol mana yang menghapus digit salah)',
     (tester) async {
       final handle = tester.ensureSemantics();
       await pumpKeypad(tester, onDigit: (_) {});
 
-      expect(find.bySemanticsLabel(l10n.applockBackspace), findsOneWidget);
+      expect(find.bySemanticsLabel(l10n.commonBackspace), findsOneWidget);
+
+      handle.dispose();
+    },
+  );
+
+  // Test PENJAGA: locale EN-lah yang membedakan l10n dari hardcode. Di locale
+  // ID nilainya kebetulan sama ('Hapus'), jadi test ID saja TIDAK akan merah
+  // bila label diganti hardcode — sudah dibuktikan lewat uji mutasi.
+  testWidgets(
+    'locale EN: label backspace "Delete", bukan hardcode Bahasa Indonesia',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpKeypad(tester, onDigit: (_) {}, locale: l10nEn);
+
+      expect(find.bySemanticsLabel(l10nEn.commonBackspace), findsOneWidget);
+      expect(find.bySemanticsLabel('Hapus'), findsNothing);
 
       handle.dispose();
     },
