@@ -8,8 +8,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
+import 'package:penyintas_app/features/app_lock/data/datasources/app_lock_secure_store.dart';
+import 'package:penyintas_app/features/app_lock/data/datasources/biometric_datasource.dart';
+import 'package:penyintas_app/features/app_lock/data/repositories/app_lock_repository_impl.dart';
+import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
+import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
@@ -171,6 +178,7 @@ Future<void> init({required AppDatabase db}) async {
   _initReport();
   _initSurvival();
   _initGoal();
+  _initAppLock();
 }
 
 void _registerExternal(AppDatabase db) {
@@ -591,5 +599,37 @@ void _initSurvival() {
   );
   sl.registerLazySingleton<SurvivalRemoteDatasource>(
     () => SurvivalRemoteDatasourceImpl(functions: sl()),
+  );
+}
+
+void _initAppLock() {
+  // External
+  sl.registerLazySingleton(() => const FlutterSecureStorage());
+  sl.registerLazySingleton(() => LocalAuthentication());
+
+  // Datasources
+  sl.registerLazySingleton<AppLockSecureStore>(
+    () => AppLockSecureStoreImpl(sl<FlutterSecureStorage>()),
+  );
+  sl.registerLazySingleton<BiometricDataSource>(
+    () => BiometricDataSourceImpl(sl<LocalAuthentication>()),
+  );
+
+  // Repository — device-local murni, tak menyentuh Firestore.
+  sl.registerLazySingleton<AppLockRepository>(
+    () => AppLockRepositoryImpl(store: sl(), biometric: sl()),
+  );
+
+  // Cubit — SINGLETON app-scoped (bukan factory). AppLockGate (Task 13) dan
+  // halaman Settings (Task 16) WAJIB melihat instance yang SAMA: kalau tidak,
+  // onSettingsChanged() akan menyegarkan cubit lain, bukan cubit yang dipakai
+  // Gate untuk menegakkan lock — celah keamanan senyap. Disuntik uid/clock
+  // agar tetap unit-testable tanpa bergantung langsung pada FirebaseAuth.
+  sl.registerLazySingleton(
+    () => AppLockCubit(
+      repo: sl<AppLockRepository>(),
+      currentUid: () => sl<FirebaseAuth>().currentUser?.uid,
+      uidChanges: sl<FirebaseAuth>().authStateChanges().map((u) => u?.uid),
+    ),
   );
 }
