@@ -376,6 +376,13 @@ class AppLocalizations {
 
   // Common
   String get commonComingSoon => _t('common_coming_soon');
+
+  /// Label semantics tombol backspace keypad numerik (App Lock & onboarding).
+  /// Sengaja TERPISAH dari `common_delete` walau nilainya kebetulan sama:
+  /// "hapus satu digit" ≠ "hapus record" — key i18n memetakan konsep, bukan
+  /// string. Bila `common_delete` kelak dipertajam ("Hapus transaksi"), label
+  /// backspace tak ikut rusak.
+  String get commonBackspace => _t('common_backspace');
   // 'Batal' TIDAK dibuatkan key baru — pakai getter existing `btnCancel`.
   String get commonDelete => _t('common_delete');
 
@@ -524,6 +531,30 @@ class AppLocalizations {
   String get tzReconDismiss => _t('tz_recon_dismiss');
   String tzReconStored(String label) =>
       _t('tz_recon_stored').replaceAll('{label}', label);
+
+  // ── App Lock (C2) ──
+  String get settingsSectionSecurity => _t('settings_section_security');
+  String get applockToggleTitle => _t('applock_toggle_title');
+  String get applockToggleSubtitle => _t('applock_toggle_subtitle');
+  String get applockBiometricTitle => _t('applock_biometric_title');
+  String get applockBiometricSubtitle => _t('applock_biometric_subtitle');
+  String get applockChangePin => _t('applock_change_pin');
+  String get applockSetTitle => _t('applock_set_title');
+  String get applockSetSubtitle => _t('applock_set_subtitle');
+  String get applockConfirmTitle => _t('applock_confirm_title');
+  String get applockConfirmSubtitle => _t('applock_confirm_subtitle');
+  String get applockMismatch => _t('applock_mismatch');
+  String get applockEnterTitle => _t('applock_enter_title');
+  String get applockWrong => _t('applock_wrong');
+  String applockLockedWait(int seconds) =>
+      _t('applock_locked_wait').replaceAll('{seconds}', '$seconds');
+  String get applockForgot => _t('applock_forgot');
+  String get applockForgotDialogTitle => _t('applock_forgot_dialog_title');
+  String get applockForgotDialogBody => _t('applock_forgot_dialog_body');
+  String get applockForgotConfirm => _t('applock_forgot_confirm');
+  String get applockBiometricReason => _t('applock_biometric_reason');
+  String get applockVerifyToDisable => _t('applock_verify_to_disable');
+  String get applockChangeCurrent => _t('applock_change_current');
 }
 
 class _AppLocalizationsDelegate

@@ -10,7 +10,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   firebase_remote_config
   firebase_storage
+  flutter_secure_storage_windows
   flutter_timezone
+  local_auth_windows
   share_plus
   url_launcher_windows
 )

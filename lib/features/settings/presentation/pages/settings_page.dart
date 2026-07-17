@@ -12,6 +12,11 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
+import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubit.dart';
+import 'package:penyintas_app/features/app_lock/presentation/pages/change_pin_page.dart';
+import 'package:penyintas_app/features/app_lock/presentation/pages/set_pin_page.dart';
+import 'package:penyintas_app/features/app_lock/presentation/pages/verify_pin_page.dart';
 import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
@@ -376,6 +381,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ],
+                const SecuritySection(),
                 _SectionHeader(
                   label: context.l10n.settingsSectionExport.toUpperCase(),
                   mutedColor: mutedColor,
@@ -457,6 +463,209 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Section "Keamanan" — App Lock opsional (PIN 6 digit + biometrik).
+///
+/// Punya state & loader sendiri (bukan bagian dari `_SettingsPageState`) agar
+/// bisa diuji tanpa menyeret seluruh dependency SettingsPage (AppDatabase,
+/// SettingsBloc, NotificationBloc). Tetap tinggal di file ini supaya bisa
+/// memakai `_SectionHeader` & `_CardContainer` yang privat di library ini.
+///
+/// Device-local murni: tak pernah menyentuh Firestore/`PreferencesEntity`.
+class SecuritySection extends StatefulWidget {
+  const SecuritySection({super.key});
+
+  @override
+  State<SecuritySection> createState() => _SecuritySectionState();
+}
+
+class _SecuritySectionState extends State<SecuritySection> {
+  bool _lockEnabled = false;
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+  bool _lockLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLock();
+  }
+
+  Future<void> _loadLock() async {
+    final repo = sl<AppLockRepository>();
+    final cfg = await repo.readConfig();
+    final available = await repo.isBiometricAvailable();
+    final uid = sl<FirebaseAuth>().currentUser?.uid;
+    if (!mounted) return;
+    setState(() {
+      // Meniru PERSIS syarat penegakan `_enforced` di AppLockCubit: enabled,
+      // hasPin, DAN config milik uid yang sedang login. Tanpa conjunct uid,
+      // config peninggalan akun lain (sign-out tak memanggil disableLock())
+      // akan tampil ON padahal cubit sudah menganggapnya OFF (`_enforced`
+      // false) — toggle berbohong soal proteksi, dan user baru itu buntu:
+      // mematikannya butuh PIN milik pemilik lama yang tak akan pernah cocok.
+      _lockEnabled =
+          cfg.enabled && cfg.hasPin && uid != null && uid == cfg.ownerUid;
+      _biometricEnabled = cfg.biometricEnabled;
+      _biometricAvailable = available;
+      _lockLoaded = true;
+    });
+  }
+
+  Future<void> _onToggleLock(bool value) async {
+    final uid = sl<FirebaseAuth>().currentUser?.uid;
+    if (uid == null) return;
+    if (value) {
+      final done = await Navigator.of(
+        context,
+      ).push<bool>(MaterialPageRoute(builder: (_) => SetPinPage(uid: uid)));
+      if (done != true) return; // batal di tengah → tak ada yang berubah
+    } else {
+      // Mematikan lock WAJIB lewat verifikasi PIN dulu: tanpa ini siapa pun
+      // yang memegang device saat sesi terbuka bisa melucuti kuncinya.
+      final ok = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (ctx) =>
+              VerifyPinPage(title: ctx.l10n.applockVerifyToDisable),
+        ),
+      );
+      if (ok != true) return;
+      await sl<AppLockRepository>().disableLock();
+    }
+    await _syncCubitThenReload();
+  }
+
+  Future<void> _onToggleBiometric(bool value) async {
+    await sl<AppLockRepository>().setBiometricEnabled(value);
+    await _syncCubitThenReload();
+  }
+
+  Future<void> _onChangePin() async {
+    final uid = sl<FirebaseAuth>().currentUser?.uid;
+    if (uid == null) return;
+    final done = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => ChangePinPage(uid: uid)));
+    if (done != true) return;
+    await _syncCubitThenReload();
+  }
+
+  /// WAJIB dipanggil setelah SETIAP perubahan state lock (setPin, disableLock,
+  /// toggle biometrik).
+  ///
+  /// `AppLockCubit` adalah singleton app-scoped yang meng-cache config-nya
+  /// sendiri. Tanpa `onSettingsChanged()` cache itu basi: lock sudah OFF dari
+  /// sini tapi cubit masih menegakkan → resume >60 detik memunculkan
+  /// LockScreen dengan PIN yang SUDAH TERHAPUS (user terkunci di luar
+  /// aplikasinya sendiri, tanpa cara masuk); atau sebaliknya, lock yang baru
+  /// dinyalakan tak pernah menegakkan grace sampai cold restart.
+  ///
+  /// Cubit disegarkan DULUAN, dan sengaja TIDAK di-guard `mounted`: sinkronisasi
+  /// tetap wajib walau user keburu meninggalkan halaman Settings. Guard
+  /// `mounted` cukup di `_loadLock()` (yang memanggil setState).
+  Future<void> _syncCubitThenReload() async {
+    await sl<AppLockCubit>().onSettingsChanged();
+    await _loadLock();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_lockLoaded) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    // Aksen WAJIB adaptif — AppColors.primary polos gagal kontras di dark mode.
+    final accent = isDark ? AppColors.shoot : AppColors.primary;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _SectionHeader(
+          label: context.l10n.settingsSectionSecurity.toUpperCase(),
+          mutedColor: mutedColor,
+        ),
+        _CardContainer(
+          surfaceColor: surfaceColor,
+          borderColor: borderColor,
+          child: Column(
+            children: [
+              SwitchListTile(
+                value: _lockEnabled,
+                onChanged: _onToggleLock,
+                title: Text(
+                  context.l10n.applockToggleTitle,
+                  style: AppTextStyles.body.copyWith(color: textColor),
+                ),
+                subtitle: Text(
+                  context.l10n.applockToggleSubtitle,
+                  style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
+                ),
+                activeThumbColor: accent,
+                activeTrackColor: accent.withValues(alpha: 0.4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+              ),
+              // Sub-toggle biometrik hanya relevan bila lock aktif DAN device
+              // memang punya biometrik terdaftar.
+              if (_lockEnabled && _biometricAvailable) ...[
+                Divider(height: 1, color: borderColor),
+                SwitchListTile(
+                  value: _biometricEnabled,
+                  onChanged: _onToggleBiometric,
+                  title: Text(
+                    context.l10n.applockBiometricTitle,
+                    style: AppTextStyles.body.copyWith(color: textColor),
+                  ),
+                  subtitle: Text(
+                    context.l10n.applockBiometricSubtitle,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: textSoftColor,
+                    ),
+                  ),
+                  activeThumbColor: accent,
+                  activeTrackColor: accent.withValues(alpha: 0.4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+              ],
+              if (_lockEnabled) ...[
+                Divider(height: 1, color: borderColor),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xs,
+                  ),
+                  title: Text(
+                    context.l10n.applockChangePin,
+                    style: AppTextStyles.body.copyWith(color: textColor),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: mutedColor,
+                  ),
+                  onTap: _onChangePin,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

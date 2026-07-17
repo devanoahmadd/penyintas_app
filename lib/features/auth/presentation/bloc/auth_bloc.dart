@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/auth/domain/entities/user_entity.dart';
@@ -34,6 +35,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.registerFcmToken,
     required this.unregisterFcmToken,
     required this.reloadUser,
+    this.onAccountDeleted,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -59,7 +61,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final UnregisterFcmTokenUseCase unregisterFcmToken;
   final ReloadUserUseCase reloadUser;
 
+  /// Hygiene C2 App Lock (spec §6): dipanggil best-effort setelah akun
+  /// terhapus remote — PIN device-local milik akun mati ikut dibersihkan.
+  final Future<void> Function()? onAccountDeleted;
+
   StreamSubscription<UserEntity?>? _authSubscription;
+
+  // Crashlytics best-effort — wrap agar TAK pernah throw (mis. Firebase belum
+  // init di unit test, atau plugin gagal). Pola sama dgn `settings_bloc.dart`
+  // & `auth_repository_impl.dart`. Tanpa ini, error-path test bisa crash.
+  static void _log(Object e, StackTrace s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s);
+    } catch (_) {}
+  }
 
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
@@ -171,6 +186,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.fold(
       (failure) async => emit(DeleteAccountFailure(failure.message)),
       (_) async {
+        // Hygiene C2 App Lock: akun sudah terhapus remote → PIN device-local
+        // ikut dibersihkan (best-effort; JANGAN blokir alur bila gagal).
+        try {
+          await onAccountDeleted?.call();
+        } catch (e, s) {
+          _log(e, s);
+        }
         // Hapus data lokal Drift
         final wipeResult = await wipeLocalData(const NoParams());
         await wipeResult.fold(
