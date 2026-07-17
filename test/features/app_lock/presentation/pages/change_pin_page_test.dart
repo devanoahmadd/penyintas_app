@@ -8,6 +8,7 @@ import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
 import 'package:penyintas_app/features/app_lock/presentation/pages/change_pin_page.dart';
+import 'package:penyintas_app/features/app_lock/presentation/widgets/pin_keypad.dart';
 
 class _MockRepo extends Mock implements AppLockRepository {}
 
@@ -53,7 +54,7 @@ void main() {
     }
   }
 
-  Future<void> pumpAndEnter(WidgetTester tester, List<String> digits) async {
+  Future<void> pumpAndOpen(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: [_SyncL10nDelegate(l10n)],
@@ -80,6 +81,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('go'));
     await tester.pumpAndSettle();
+  }
+
+  Future<void> pumpAndEnter(WidgetTester tester, List<String> digits) async {
+    await pumpAndOpen(tester);
     await tapDigits(tester, digits);
   }
 
@@ -110,15 +115,80 @@ void main() {
   );
 
   testWidgets(
-    'PIN lama salah tepat blok 5 → recordFailedAttempt + pop(false), tak pernah dorong SetPinPage',
+    'PIN lama salah tepat blok 5 → recordFailedAttempt + countdown tampil di '
+    'tempat (halaman TIDAK menutup diri, tak pernah dorong SetPinPage)',
     (tester) async {
       when(() => repo.verifyPin(any())).thenAnswer((_) async => false);
       when(() => repo.getFailedAttempts()).thenAnswer((_) async => 5);
+      // Meniru app_lock_repository_impl.dart. Dua panggilan PERTAMA belum
+      // lockout: (1) _syncLockout() saat initState halaman dibuka, (2) cek
+      // awal di verifyPinWithLockout saat submit (sebelum attempt ke-5
+      // tercatat). Panggilan BERIKUTNYA (_syncLockout lagi, dipicu outcome
+      // lockedOut setelah recordFailedAttempt mencapai kelipatan 5) sudah
+      // lockout.
+      var callCount = 0;
+      when(() => repo.getLockedUntilMs()).thenAnswer((_) async {
+        callCount++;
+        return callCount <= 2
+            ? 0
+            : DateTime.now().millisecondsSinceEpoch + 30000;
+      });
       await pumpAndEnter(tester, ['0', '0', '0', '0', '0', '0']);
-      expect(popResult, isFalse);
+      await tester.pump();
+
+      expect(popResult, isNull);
+      expect(popped, isFalse);
       verify(() => repo.recordFailedAttempt()).called(1);
       verifyNever(() => repo.setPin(any(), any()));
       expect(find.text(l10n.applockSetTitle), findsNothing);
+
+      final countdownPattern = RegExp(
+        RegExp.escape(l10n.applockLockedWait(999)).replaceAll('999', r'\d+'),
+      );
+      expect(find.textContaining(countdownPattern), findsOneWidget);
+      final keypad = tester.widget<PinKeypad>(find.byType(PinKeypad));
+      expect(keypad.enabled, isFalse);
+    },
+  );
+
+  testWidgets(
+    'masuk ChangePinPage saat lockout SUDAH AKTIF → countdown & keypad '
+    'disabled LANGSUNG tampil TANPA perlu submit PIN dulu',
+    (tester) async {
+      when(
+        () => repo.getLockedUntilMs(),
+      ).thenAnswer((_) async => DateTime.now().millisecondsSinceEpoch + 30000);
+      await pumpAndOpen(tester);
+
+      final countdownPattern = RegExp(
+        RegExp.escape(l10n.applockLockedWait(999)).replaceAll('999', r'\d+'),
+      );
+      expect(find.textContaining(countdownPattern), findsOneWidget);
+      final keypad = tester.widget<PinKeypad>(find.byType(PinKeypad));
+      expect(keypad.enabled, isFalse);
+
+      for (final d in ['1', '1', '1', '1', '1', '1']) {
+        await tester.tap(find.text(d));
+        await tester.pump();
+      }
+      verifyNever(() => repo.verifyPin(any()));
+      expect(popResult, isNull);
+      expect(popped, isFalse);
+    },
+  );
+
+  testWidgets(
+    'kontrol: TIDAK lockout saat masuk → keypad enabled & countdown tak tampil',
+    (tester) async {
+      // setUp() sudah menstub getLockedUntilMs()=>0 (tak lockout).
+      await pumpAndOpen(tester);
+
+      final countdownPattern = RegExp(
+        RegExp.escape(l10n.applockLockedWait(999)).replaceAll('999', r'\d+'),
+      );
+      expect(find.textContaining(countdownPattern), findsNothing);
+      final keypad = tester.widget<PinKeypad>(find.byType(PinKeypad));
+      expect(keypad.enabled, isTrue);
     },
   );
 }

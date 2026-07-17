@@ -35,12 +35,16 @@ class _ChangePinPageState extends State<ChangePinPage>
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final locked = lockedSeconds > 0;
     return PinEntryScaffold(
       title: l.applockChangeCurrent,
-      message: wrong ? l.applockWrong : '',
+      message: locked
+          ? l.applockLockedWait(lockedSeconds)
+          : (wrong ? l.applockWrong : ''),
       filled: pin.length,
       onDigit: onDigit,
       onBackspace: onBackspace,
+      keypadEnabled: !locked,
     );
   }
 }
