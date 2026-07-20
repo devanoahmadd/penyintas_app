@@ -20,6 +20,19 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
   String? _errorText;
   bool _isLoading = false;
 
+  /// Dibaca SEKALI saat mount — state AuthBloc berubah jadi
+  /// DeleteAccountInProgress selama alur, jangan sampai UI ikut berubah.
+  late final bool _hasPasswordProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    // Fail-safe: bila bukan Authenticated, tampilkan form password (perilaku lama).
+    _hasPasswordProvider =
+        authState is! Authenticated || authState.user.hasPasswordProvider;
+  }
+
   @override
   void dispose() {
     _passwordController.dispose();
@@ -27,7 +40,9 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
   }
 
   bool get _active =>
-      _confirmed && _passwordController.text.isNotEmpty && !_isLoading;
+      _confirmed &&
+      !_isLoading &&
+      (!_hasPasswordProvider || _passwordController.text.isNotEmpty);
 
   void _onDelete(BuildContext context) {
     setState(() {
@@ -35,7 +50,9 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
       _errorText = null;
     });
     context.read<AuthBloc>().add(
-          DeleteAccountRequested(password: _passwordController.text),
+          DeleteAccountRequested(
+            password: _hasPasswordProvider ? _passwordController.text : null,
+          ),
         );
   }
 
@@ -130,34 +147,53 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
             const SizedBox(height: AppSpacing.lg),
 
             // ── Acknowledgment checkbox ──────────────────────────────────
-            CheckboxListTile(
-              value: _confirmed,
-              title: Text(
-                l10n.deleteAccountAck,
-                style: AppTextStyles.bodySmall.copyWith(color: textColor),
+            // Material transparan: sheet ini dibuka dengan latar Container
+            // berwarna, sehingga ink splash tile tertutup tanpa pembungkus ini.
+            Material(
+              type: MaterialType.transparency,
+              child: CheckboxListTile(
+                value: _confirmed,
+                title: Text(
+                  l10n.deleteAccountAck,
+                  style: AppTextStyles.bodySmall.copyWith(color: textColor),
+                ),
+                activeColor: AppColors.warn,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (v) => setState(() => _confirmed = v ?? false),
               ),
-              activeColor: AppColors.warn,
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              onChanged: (v) => setState(() => _confirmed = v ?? false),
             ),
             const SizedBox(height: AppSpacing.sm),
 
-            // ── Password label ───────────────────────────────────────────
-            Text(
-              l10n.deleteAccountPasswordLabel,
-              style: AppTextStyles.label.copyWith(color: mutedColor),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-
-            // ── Password field ───────────────────────────────────────────
-            AppTextField(
-              controller: _passwordController,
-              isPassword: true,
-              errorText: _errorText,
-              onChanged: (_) => setState(() {}),
-              textInputAction: TextInputAction.done,
-            ),
+            // ── Konfirmasi identitas: password ATAU Google (#254) ────────
+            if (_hasPasswordProvider) ...[
+              Text(
+                l10n.deleteAccountPasswordLabel,
+                style: AppTextStyles.label.copyWith(color: mutedColor),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              AppTextField(
+                controller: _passwordController,
+                isPassword: true,
+                errorText: _errorText,
+                onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.done,
+              ),
+            ] else ...[
+              Text(
+                l10n.deleteAccountGoogleHint,
+                style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _errorText!,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.warn,
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: AppSpacing.xl),
 
             // ── Delete button ────────────────────────────────────────────

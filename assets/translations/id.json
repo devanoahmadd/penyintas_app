@@ -96,6 +96,7 @@
   "delete_account_password_label": "Password kamu",
   "delete_account_confirm": "Hapus akun",
   "delete_account_wrong_password": "Password salah. Coba lagi ya.",
+  "delete_account_google_hint": "Akun kamu masuk lewat Google. Kamu akan diminta konfirmasi lewat akun Google sebelum akun dihapus.",
   "delete_account_done": "Akun kamu sudah dihapus. Terima kasih sudah mencoba Penyintas.",
   "budget_coming_soon_eyebrow": "SEGERA HADIR",
   "budget_coming_soon_title": "Fitur Anggaran",

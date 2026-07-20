@@ -96,6 +96,7 @@
   "delete_account_password_label": "Your password",
   "delete_account_confirm": "Delete account",
   "delete_account_wrong_password": "Wrong password. Please try again.",
+  "delete_account_google_hint": "You signed in with Google. You'll be asked to confirm with your Google account before deletion.",
   "delete_account_done": "Your account has been deleted. Thank you for trying Penyintas.",
   "budget_coming_soon_eyebrow": "COMING SOON",
   "budget_coming_soon_title": "Budget Feature",

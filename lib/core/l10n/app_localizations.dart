@@ -136,6 +136,7 @@ class AppLocalizations {
   String get deleteAccountPasswordLabel => _t('delete_account_password_label');
   String get deleteAccountConfirm => _t('delete_account_confirm');
   String get deleteAccountWrongPassword => _t('delete_account_wrong_password');
+  String get deleteAccountGoogleHint => _t('delete_account_google_hint');
   String get deleteAccountDone => _t('delete_account_done');
 
   // Budget coming soon
