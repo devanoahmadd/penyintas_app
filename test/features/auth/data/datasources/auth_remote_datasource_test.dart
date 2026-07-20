@@ -356,5 +356,20 @@ void main() {
         throwsA(isA<AuthException>()),
       );
     });
+
+    test('getIdToken melempar exception → AuthException', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => googleService.getIdToken())
+          .thenThrow(Exception('play services'));
+
+      expect(
+        () => datasource.reauthenticateWithGoogle(),
+        throwsA(isA<AuthException>().having(
+          (e) => e.message,
+          'message',
+          contains('Gagal menghubungi Google'),
+        )),
+      );
+    });
   });
 }
