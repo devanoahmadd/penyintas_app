@@ -19,3 +19,12 @@ class FetchSurvivalTips extends SurvivalEvent {
   @override
   List<Object> get props => [language];
 }
+
+/// Reset state saat sesi akun berakhir/berganti (#152) —
+/// mencegah tips user lama terlihat oleh user berikutnya di device yang sama.
+class SurvivalSessionReset extends SurvivalEvent {
+  const SurvivalSessionReset();
+
+  @override
+  List<Object> get props => [];
+}

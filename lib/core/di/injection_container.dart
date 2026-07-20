@@ -577,13 +577,15 @@ void _initPreferences() {
 }
 
 void _initSurvival() {
-  // Singleton — tips ter-cache in-memory selama sesi, persist antar navigasi
+  // Singleton — tips ter-cache in-memory selama sesi, persist antar navigasi.
+  // uidChanges: reset cache saat ganti akun/logout (#152).
   sl.registerLazySingleton(
     () => SurvivalBloc(
       getSurvivalMode: sl(),
       getSurvivalTips: sl(),
       recordActivated: sl(),
       clearActivated: sl(),
+      uidChanges: sl<FirebaseAuth>().authStateChanges().map((u) => u?.uid),
     ),
   );
 

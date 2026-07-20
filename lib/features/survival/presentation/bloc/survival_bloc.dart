@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +19,7 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     required GetSurvivalTipsUseCase getSurvivalTips,
     required RecordSurvivalActivatedUseCase recordActivated,
     required ClearSurvivalActivatedUseCase clearActivated,
+    Stream<String?>? uidChanges,
   })  : _getSurvivalMode = getSurvivalMode,
         _getSurvivalTips = getSurvivalTips,
         _recordActivated = recordActivated,
@@ -24,7 +27,20 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
         super(const SurvivalInitial()) {
     on<LoadSurvivalMode>(_onLoad, transformer: droppable());
     on<FetchSurvivalTips>(_onFetchTips, transformer: droppable());
+    on<SurvivalSessionReset>((event, emit) => emit(const SurvivalInitial()));
+    // distinct() SEBELUM skip(1) — urutan ini penting:
+    //  · skip(1): authStateChanges emit user SAAT INI ke listener baru;
+    //    emisi pertama = sesi berjalan, bukan pergantian akun.
+    //  · distinct() lebih dulu agar token refresh (uid sama berulang) tidak
+    //    lolos sebagai "nilai pertama" dan memicu reset palsu.
+    // isClosed guard: stream bisa menyala setelah bloc ditutup (test/hot
+    // restart) — add() ke bloc tertutup melempar StateError.
+    _uidSub = uidChanges?.distinct().skip(1).listen((_) {
+      if (!isClosed) add(const SurvivalSessionReset());
+    });
   }
+
+  StreamSubscription<String?>? _uidSub;
 
   final GetSurvivalModeUseCase _getSurvivalMode;
   final GetSurvivalTipsUseCase _getSurvivalTips;
@@ -82,5 +98,11 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
       (failure) => emit(SurvivalError(failure.message, entity)),
       (tips) => emit(SurvivalTipsLoaded(entity!.copyWith(tips: tips))),
     );
+  }
+
+  @override
+  Future<void> close() async {
+    await _uidSub?.cancel();
+    return super.close();
   }
 }

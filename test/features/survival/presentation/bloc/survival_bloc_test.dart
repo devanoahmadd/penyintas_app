@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -249,6 +251,72 @@ void main() {
       act: (b) => b.add(const FetchSurvivalTips(language: 'id')),
       expect: () => <SurvivalState>[],
       verify: (_) => verifyNever(() => mockGetTips(any())),
+    );
+  });
+
+  // ── SurvivalSessionReset (#152) ─────────────────────────────────────────
+
+  group('SurvivalSessionReset (#152)', () {
+    late StreamController<String?> uidController;
+
+    setUp(() => uidController = StreamController<String?>.broadcast());
+    tearDown(() => uidController.close());
+
+    // Bloc BARU per test (bukan `bloc` dari setUp global) karena uidChanges
+    // hanya bisa dipasang lewat constructor. blocTest menutup bloc ini sendiri.
+    SurvivalBloc buildWithUidStream() => SurvivalBloc(
+          getSurvivalMode: mockGetMode,
+          getSurvivalTips: mockGetTips,
+          recordActivated: mockRecord,
+          clearActivated: mockClear,
+          uidChanges: uidController.stream,
+        );
+
+    blocTest<SurvivalBloc, SurvivalState>(
+      'emisi pertama (sesi berjalan) TIDAK me-reset state',
+      build: buildWithUidStream,
+      seed: () => const SurvivalActive(_tSurvivalEntity),
+      act: (bloc) async {
+        uidController.add('uid-a');
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => <SurvivalState>[],
+    );
+
+    blocTest<SurvivalBloc, SurvivalState>(
+      'uid sama berulang (token refresh) TIDAK me-reset state',
+      build: buildWithUidStream,
+      seed: () => const SurvivalActive(_tSurvivalEntity),
+      act: (bloc) async {
+        uidController.add('uid-a'); // sesi berjalan — diabaikan (skip 1)
+        uidController.add('uid-a'); // refresh token — disaring distinct()
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => <SurvivalState>[],
+    );
+
+    blocTest<SurvivalBloc, SurvivalState>(
+      'uid berubah (logout) → reset ke SurvivalInitial',
+      build: buildWithUidStream,
+      seed: () => const SurvivalActive(_tSurvivalEntity),
+      act: (bloc) async {
+        uidController.add('uid-a'); // sesi berjalan — diabaikan (skip 1)
+        uidController.add(null); // logout
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [const SurvivalInitial()],
+    );
+
+    blocTest<SurvivalBloc, SurvivalState>(
+      'ganti akun (uid-a → uid-b) → reset ke SurvivalInitial',
+      build: buildWithUidStream,
+      seed: () => const SurvivalActive(_tSurvivalEntity),
+      act: (bloc) async {
+        uidController.add('uid-a');
+        uidController.add('uid-b');
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [const SurvivalInitial()],
     );
   });
 }
