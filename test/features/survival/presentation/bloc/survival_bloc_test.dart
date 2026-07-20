@@ -258,8 +258,12 @@ void main() {
 
   group('SurvivalSessionReset (#152)', () {
     late StreamController<String?> uidController;
+    late Completer<Either<Failure, List<SurvivalTip>>> tipsCompleter;
 
-    setUp(() => uidController = StreamController<String?>.broadcast());
+    setUp(() {
+      uidController = StreamController<String?>.broadcast();
+      tipsCompleter = Completer<Either<Failure, List<SurvivalTip>>>();
+    });
     tearDown(() => uidController.close());
 
     // Bloc BARU per test (bukan `bloc` dari setUp global) karena uidChanges
@@ -317,6 +321,34 @@ void main() {
         await Future<void>.delayed(Duration.zero);
       },
       expect: () => [const SurvivalInitial()],
+    );
+
+    blocTest<SurvivalBloc, SurvivalState>(
+      'fetch tips yang masih berjalan TIDAK menimpa state setelah reset sesi',
+      build: () {
+        // Fetch ditahan lewat Completer: kita yang menentukan kapan selesai,
+        // meniru jawaban jaringan/AI yang datang setelah user logout.
+        when(() => mockGetTips(any()))
+            .thenAnswer((_) => tipsCompleter.future);
+        return buildWithUidStream();
+      },
+      seed: () => const SurvivalActive(_tSurvivalEntity),
+      act: (bloc) async {
+        bloc.add(const FetchSurvivalTips(language: 'id'));
+        await Future<void>.delayed(Duration.zero);
+
+        uidController.add('uid-a'); // sesi berjalan — diabaikan (skip 1)
+        uidController.add(null); // logout saat fetch masih menggantung
+        await Future<void>.delayed(Duration.zero);
+
+        // Jawaban user lama baru tiba — harus dibuang, bukan di-emit.
+        tipsCompleter.complete(const Right(_tTips));
+        await Future<void>.delayed(Duration.zero);
+      },
+      expect: () => [
+        const SurvivalTipsLoading(_tSurvivalEntity),
+        const SurvivalInitial(),
+      ],
     );
   });
 }
