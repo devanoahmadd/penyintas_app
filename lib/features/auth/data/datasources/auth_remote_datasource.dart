@@ -18,6 +18,10 @@ abstract class AuthRemoteDataSource {
   Future<UserModel?> getCurrentUser();
   Stream<UserModel?> get authStateChanges;
   Future<void> reauthenticate({required String password});
+
+  /// Re-auth via Google untuk akun tanpa provider password (#254).
+  /// Return false bila user MEMBATALKAN dialog — bukan error.
+  Future<bool> reauthenticateWithGoogle();
   Future<void> callDeleteAccount();
   Future<void> sendPasswordResetEmail(String email);
   Future<void> sendEmailVerification({String? languageCode});
@@ -206,6 +210,40 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       await user.reauthenticateWithCredential(credential);
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
+    }
+  }
+
+  @override
+  Future<bool> reauthenticateWithGoogle() async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw const AuthException('Sesi tidak ditemukan. Login ulang.');
+    }
+    final String? idToken;
+    try {
+      idToken = await googleSignInService.getIdToken();
+    } catch (e, s) {
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException('Gagal menghubungi Google. Coba lagi ya.');
+    }
+    if (idToken == null) return false; // user membatalkan dialog — bukan error
+    try {
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-mismatch') {
+        throw const AuthException(
+          'Akun Google yang dipilih berbeda dengan akun yang sedang login.',
+        );
+      }
+      throw AuthException(_mapFirebaseCode(e.code));
+    } catch (e, s) {
+      // Non-FirebaseAuthException (mis. PlatformException) — tanpa ini bocor
+      // ke catch generik repository jadi UnknownFailure ('kesalahan yang tidak
+      // diketahui'). Pola sama signInWithGoogle di file yang sama.
+      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      throw const AuthException('Gagal konfirmasi lewat Google. Coba lagi ya.');
     }
   }
 
