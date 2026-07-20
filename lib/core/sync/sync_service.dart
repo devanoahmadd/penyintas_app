@@ -82,6 +82,18 @@ class SyncService {
           await _dispatchFn(item, _firestore);
           await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id)))
               .go();
+        } on ArgumentError catch (e, stack) {
+          // #252: item malformed tidak akan pernah bisa dikirim — purge
+          // langsung + log sekali, jangan retry sampai TTL 7 hari.
+          try {
+            FirebaseCrashlytics.instance.recordError(
+              Exception(
+                  'SyncQueue item malformed, dibuang: ${item.itemId} — ${e.message}'),
+              stack,
+            );
+          } catch (_) {}
+          await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id)))
+              .go();
         } catch (e, stack) {
           try {
             FirebaseCrashlytics.instance.recordError(e, stack);
