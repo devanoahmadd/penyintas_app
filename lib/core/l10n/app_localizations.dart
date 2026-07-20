@@ -65,6 +65,7 @@ class AppLocalizations {
   String get settingsExportCsvTitle => _t('settings_export_csv_title');
   String get settingsExportCsvSubtitle => _t('settings_export_csv_subtitle');
   String get settingsFeedbackLabel => _t('settings_feedback_label');
+  String get settingsFeedbackNoEmailApp => _t('settings_feedback_no_email_app');
   String get settingsExportFailed => _t('settings_export_failed');
   String settingsErrorReminder(String message) =>
       _t('settings_error_reminder').replaceAll('{message}', message);

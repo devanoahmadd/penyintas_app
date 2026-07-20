@@ -53,5 +53,10 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- #111: cek ketersediaan aplikasi email untuk tombol Kirim Feedback -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
+        </intent>
     </queries>
 </manifest>
