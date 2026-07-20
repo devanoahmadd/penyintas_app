@@ -205,6 +205,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       },
     );
+    // #254d: subscription di-cancel di awal handler — hidupkan lagi APA PUN
+    // hasilnya. Cabang gagal: stream emit user saat ini → state pulih
+    // Authenticated (gating DeleteAccountSheet benar saat dibuka ulang).
+    // Cabang sukses: stream emit null → Unauthenticated duplikat (disuppress
+    // Equatable) — tanpa efek samping.
+    add(const AuthCheckRequested());
   }
 
   Future<void> _onGoogleSignInRequested(
