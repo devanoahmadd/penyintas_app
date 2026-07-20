@@ -14,8 +14,8 @@ class DeleteAccountUseCase extends UseCase<void, DeleteAccountParams> {
 }
 
 class DeleteAccountParams extends Equatable {
-  const DeleteAccountParams({required this.password});
-  final String password;
+  const DeleteAccountParams({this.password});
+  final String? password;
 
   @override
   // password dikecualikan dari props agar tidak bocor lewat toString()
