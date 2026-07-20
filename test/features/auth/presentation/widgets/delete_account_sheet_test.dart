@@ -84,12 +84,24 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('akun berpassword → field password tampil (perilaku lama)',
-      (tester) async {
+  testWidgets(
+      'akun berpassword → field password tampil, centang → dispatch '
+      'password terisi (perilaku lama)', (tester) async {
     await pumpSheet(tester, hasPasswordProvider: true);
 
     expect(find.byType(AppTextField), findsOneWidget);
     expect(find.text(l10n.deleteAccountGoogleHint), findsNothing);
+
+    await tester.enterText(find.byType(AppTextField), 'rahasia123');
+    await tester.pump();
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    await tester.tap(find.text(l10n.deleteAccountConfirm));
+    await tester.pump();
+
+    verify(() => bloc.add(any(
+        that: isA<DeleteAccountRequested>()
+            .having((e) => e.password, 'password', 'rahasia123')))).called(1);
   });
 
   testWidgets(
