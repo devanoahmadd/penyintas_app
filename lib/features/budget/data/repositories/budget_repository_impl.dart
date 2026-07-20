@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
@@ -16,13 +17,16 @@ class BudgetRepositoryImpl implements BudgetRepository {
     required BudgetLocalDatasource local,
     required BudgetRemoteDatasource remote,
     required NetworkInfo networkInfo,
+    required FirebaseAuth auth,
   })  : _local = local,
         _remote = remote,
-        _network = networkInfo;
+        _network = networkInfo,
+        _auth = auth;
 
   final BudgetLocalDatasource _local;
   final BudgetRemoteDatasource _remote;
   final NetworkInfo _network;
+  final FirebaseAuth _auth;
 
   @override
   Future<Either<Failure, BudgetSettingsEntity>> getBudgetSettings() async {
@@ -45,12 +49,16 @@ class BudgetRepositoryImpl implements BudgetRepository {
       if (await _network.isConnected) {
         await _remote.saveBudgetSettings(model);
       } else {
-        await _local.addToSyncQueue(
-          itemId: 'budget_settings_current',
-          collectionPath: 'users/{uid}/budget_settings',
-          data: {'docId': 'current', ...model.toFirestore()},
-          operation: SyncOperation.update,
-        );
+        // #252: doc path penuh ter-resolve — pola transaksi/goal.
+        final uid = _auth.currentUser?.uid;
+        if (uid != null) {
+          await _local.addToSyncQueue(
+            itemId: 'budget_settings_current',
+            collectionPath: 'users/$uid/budget_settings/current',
+            data: model.toFirestore(),
+            operation: SyncOperation.update,
+          );
+        }
       }
       return const Right(null);
     } on CacheException catch (e) {
@@ -83,12 +91,15 @@ class BudgetRepositoryImpl implements BudgetRepository {
       if (await _network.isConnected) {
         await _remote.saveBudgetLimit(model);
       } else {
-        await _local.addToSyncQueue(
-          itemId: 'budget_limit_${limit.category}',
-          collectionPath: 'users/{uid}/budget_limits',
-          data: {'docId': limit.category, ...model.toFirestore()},
-          operation: SyncOperation.update,
-        );
+        final uid = _auth.currentUser?.uid;
+        if (uid != null) {
+          await _local.addToSyncQueue(
+            itemId: 'budget_limit_${limit.category}',
+            collectionPath: 'users/$uid/budget_limits/${limit.category}',
+            data: model.toFirestore(),
+            operation: SyncOperation.update,
+          );
+        }
       }
       return Right(savedId);
     } on CacheException catch (e) {
@@ -107,12 +118,15 @@ class BudgetRepositoryImpl implements BudgetRepository {
       if (await _network.isConnected) {
         await _remote.deleteBudgetLimit(categoryName);
       } else {
-        await _local.addToSyncQueue(
-          itemId: 'budget_limit_$categoryName',
-          collectionPath: 'users/{uid}/budget_limits',
-          data: {'docId': categoryName},
-          operation: SyncOperation.delete,
-        );
+        final uid = _auth.currentUser?.uid;
+        if (uid != null) {
+          await _local.addToSyncQueue(
+            itemId: 'budget_limit_$categoryName',
+            collectionPath: 'users/$uid/budget_limits/$categoryName',
+            data: const <String, dynamic>{},
+            operation: SyncOperation.delete,
+          );
+        }
       }
       return const Right(null);
     } on CacheException catch (e) {
