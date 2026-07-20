@@ -179,38 +179,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     await _authSubscription?.cancel(); // prevent auth stream race
     _authSubscription = null;
-    emit(const DeleteAccountInProgress());
-    final result = await deleteAccount(
-      DeleteAccountParams(password: event.password),
-    );
-    await result.fold(
-      (failure) async => emit(DeleteAccountFailure(failure.message)),
-      (_) async {
-        // Hygiene C2 App Lock: akun sudah terhapus remote → PIN device-local
-        // ikut dibersihkan (best-effort; JANGAN blokir alur bila gagal).
-        try {
-          await onAccountDeleted?.call();
-        } catch (e, s) {
-          _log(e, s);
-        }
-        // Hapus data lokal Drift
-        final wipeResult = await wipeLocalData(const NoParams());
-        await wipeResult.fold(
-          (failure) async => emit(DeleteAccountFailure(failure.message)),
-          (_) async {
-            // Account already deleted — even if signOut fails, treat as logged out
-            await signOut(const NoParams());
-            emit(const Unauthenticated());
-          },
-        );
-      },
-    );
-    // #254d: subscription di-cancel di awal handler — hidupkan lagi APA PUN
-    // hasilnya. Cabang gagal: stream emit user saat ini → state pulih
-    // Authenticated (gating DeleteAccountSheet benar saat dibuka ulang).
+    // #254d: subscription di-cancel di atas — hidupkan lagi APA PUN hasilnya
+    // lewat `finally`, sehingga jaminannya struktural: exception tak terduga
+    // dari mana pun di badan handler tidak bisa lagi meninggalkan bloc buta
+    // terhadap perubahan auth-state seumur sesi. Sengaja TANPA `catch` —
+    // exception tetap merambat seperti semula.
+    // Cabang gagal: stream emit user saat ini → state pulih Authenticated
+    // (gating DeleteAccountSheet benar saat dibuka ulang).
     // Cabang sukses: stream emit null → Unauthenticated duplikat (disuppress
     // Equatable) — tanpa efek samping.
-    add(const AuthCheckRequested());
+    try {
+      emit(const DeleteAccountInProgress());
+      final result = await deleteAccount(
+        DeleteAccountParams(password: event.password),
+      );
+      await result.fold(
+        (failure) async => emit(DeleteAccountFailure(failure.message)),
+        (_) async {
+          // Hygiene C2 App Lock: akun sudah terhapus remote → PIN device-local
+          // ikut dibersihkan (best-effort; JANGAN blokir alur bila gagal).
+          try {
+            await onAccountDeleted?.call();
+          } catch (e, s) {
+            _log(e, s);
+          }
+          // Hapus data lokal Drift
+          final wipeResult = await wipeLocalData(const NoParams());
+          await wipeResult.fold(
+            (failure) async => emit(DeleteAccountFailure(failure.message)),
+            (_) async {
+              // Account already deleted — even if signOut fails, treat as logged out
+              await signOut(const NoParams());
+              emit(const Unauthenticated());
+            },
+          );
+        },
+      );
+    } finally {
+      add(const AuthCheckRequested());
+    }
   }
 
   Future<void> _onGoogleSignInRequested(
