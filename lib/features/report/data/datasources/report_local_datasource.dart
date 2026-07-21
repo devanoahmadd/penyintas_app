@@ -48,9 +48,10 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
     final prevTotalSpent = prevRows
         .where((t) => t.type == TransactionType.expense)
         .fold(0, (s, t) => s + t.amount);
-    final comparedToPreviousMonth = prevTotalSpent > 0
+    final hasPreviousMonthData = prevRows.isNotEmpty;
+    final double? comparedToPreviousMonth = prevTotalSpent > 0
         ? (totalSpent - prevTotalSpent) / prevTotalSpent
-        : 0.0;
+        : null;
 
     final weekly = List.generate(5, (i) {
       final week = i + 1;
@@ -70,6 +71,7 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
       topCategory: topCategory,
       weeklyBreakdown: weekly,
       comparedToPreviousMonth: comparedToPreviousMonth,
+      hasPreviousMonthData: hasPreviousMonthData,
     );
   }
 

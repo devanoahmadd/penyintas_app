@@ -50,8 +50,9 @@ final class SignOutRequested extends AuthEvent {
 }
 
 final class DeleteAccountRequested extends AuthEvent {
-  const DeleteAccountRequested({required this.password});
-  final String password;
+  /// password null = akun tanpa provider password → re-auth via Google (#254).
+  const DeleteAccountRequested({this.password});
+  final String? password;
 
   @override
   // password dikecualikan dari props agar tidak bocor lewat toString()

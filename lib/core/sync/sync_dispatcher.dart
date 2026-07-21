@@ -7,12 +7,26 @@ import 'package:penyintas_app/core/sync/firestore_op.dart';
 /// Pure function — tidak bergantung pada Firestore instance.
 /// Testable tanpa mock Firestore.
 FirestoreOp toFirestoreOp(SyncQueueData item) {
+  final path = item.collectionPath;
+  // Guard #252: wajib doc path penuh ter-resolve (users/<uid>/<koleksi>/<docId>).
+  // Placeholder '{uid}', path collection (segmen ganjil), atau segmen kosong =
+  // item salah bentuk — gagal-cepat agar terdeteksi saat development, lalu
+  // di-PURGE oleh SyncService (bukan diam-diam retry sampai TTL 7 hari).
+  final segments = path.split('/');
+  if (path.contains('{') ||
+      segments.length.isOdd ||
+      segments.any((s) => s.isEmpty)) {
+    throw ArgumentError.value(
+      path,
+      'collectionPath',
+      'Bukan doc path penuh ter-resolve',
+    );
+  }
   final data = jsonDecode(item.data) as Map<String, dynamic>;
   return switch (item.operation) {
-    SyncOperation.create => SetOp(path: item.collectionPath, data: data),
-    SyncOperation.update =>
-      SetOp(path: item.collectionPath, data: data, merge: true),
-    SyncOperation.delete => DeleteOp(path: item.collectionPath),
+    SyncOperation.create => SetOp(path: path, data: data),
+    SyncOperation.update => SetOp(path: path, data: data, merge: true),
+    SyncOperation.delete => DeleteOp(path: path),
   };
 }
 

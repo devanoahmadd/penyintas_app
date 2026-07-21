@@ -525,6 +525,44 @@ void main() {
       },
       expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
     );
+
+    blocTest<AuthBloc, AuthState>(
+      'gagal → resubscribe: state pulih ke Authenticated (#254 reopen sheet)',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested()),
+      setUp: () {
+        when(() => mockDeleteAccount(any())).thenAnswer(
+          (_) async => const Left(AuthFailure('Konfirmasi Google dibatalkan.')),
+        );
+        when(() => mockWatchAuthState()).thenAnswer((_) => Stream.value(tUser));
+      },
+      wait: const Duration(milliseconds: 10),
+      expect: () => [
+        const DeleteAccountInProgress(),
+        const DeleteAccountFailure('Konfirmasi Google dibatalkan.'),
+        Authenticated(tUser),
+      ],
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'sukses → watchAuthState di-listen ulang (subscription tidak mati)',
+      build: buildBloc,
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      wait: const Duration(milliseconds: 10),
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
+      verify: (_) {
+        verify(() => mockWatchAuthState()).called(1);
+      },
+    );
   });
 
   group('FCM token lifecycle (auth-driven)', () {

@@ -153,6 +153,39 @@ void main() {
 
       expect(dispatched, ['first', 'second']);
     });
+
+    test(
+        'item malformed (ArgumentError) di-purge langsung, item valid tetap diproses',
+        () async {
+      await insertQueueItem(
+        itemId: 'malformed-1',
+        path: 'users/{uid}/budget_settings',
+      );
+      await insertQueueItem(itemId: 'valid-1');
+      when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
+
+      final dispatched = <String>[];
+      final service = SyncService(
+        db: db,
+        networkInfo: mockNetwork,
+        auth: mockAuth,
+        firestore: mockFirestore,
+        dispatchFn: (item, fs) async {
+          // Meniru guard toFirestoreOp (#252)
+          if (item.collectionPath.contains('{')) {
+            throw ArgumentError.value(
+                item.collectionPath, 'collectionPath', 'malformed');
+          }
+          dispatched.add(item.itemId);
+        },
+      )..start();
+      await Future.delayed(const Duration(milliseconds: 50));
+      service.dispose();
+
+      expect(dispatched, ['valid-1']); // item valid tetap terkirim
+      final remaining = await db.select(db.syncQueue).get();
+      expect(remaining, isEmpty); // malformed di-purge, valid terhapus normal
+    });
   });
 
   group('mutex', () {

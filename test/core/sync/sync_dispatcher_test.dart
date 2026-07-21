@@ -85,5 +85,38 @@ void main() {
 
       expect(() => toFirestoreOp(item), throwsA(isA<FormatException>()));
     });
+
+    test('path mengandung placeholder { → ArgumentError (guard #252)', () {
+      final item = _makeItem(
+        operation: SyncOperation.update,
+        collectionPath: 'users/{uid}/budget_settings',
+      );
+      expect(() => toFirestoreOp(item), throwsArgumentError);
+    });
+
+    test('path collection (segmen ganjil) → ArgumentError (guard #252)', () {
+      final item = _makeItem(
+        operation: SyncOperation.create,
+        collectionPath: 'users/uid-1/transactions',
+      );
+      expect(() => toFirestoreOp(item), throwsArgumentError);
+    });
+
+    test('path dengan segmen kosong (trailing slash) → ArgumentError (guard #252)',
+        () {
+      final item = _makeItem(
+        operation: SyncOperation.update,
+        collectionPath: 'users/uid-1/budget_limits/',
+      );
+      expect(() => toFirestoreOp(item), throwsArgumentError);
+    });
+
+    test('doc path penuh valid → tidak throw', () {
+      final item = _makeItem(
+        operation: SyncOperation.delete,
+        collectionPath: 'users/uid-1/budget_limits/makan',
+      );
+      expect(() => toFirestoreOp(item), returnsNormally);
+    });
   });
 }

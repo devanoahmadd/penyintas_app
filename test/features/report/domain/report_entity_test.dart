@@ -12,6 +12,7 @@ void main() {
     topCategory: 'food',
     weeklyBreakdown: const [],
     comparedToPreviousMonth: 0.1,
+    hasPreviousMonthData: true,
     aiInsights: ['Insight A'],
     savingTip: 'Original tip',
   );

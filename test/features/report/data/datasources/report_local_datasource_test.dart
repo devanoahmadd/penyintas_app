@@ -109,7 +109,8 @@ void main() {
     expect(report.categoryBreakdown, isEmpty);
   });
 
-  test('comparedToPreviousMonth is 0.0 when no previous month data', () async {
+  test('comparedToPreviousMonth is null when no previous month data (#99)',
+      () async {
     await insertTx(
       id: '1',
       amount: 200000,
@@ -120,7 +121,7 @@ void main() {
 
     final report = await datasource.getMonthlyReport(tMonth);
 
-    expect(report.comparedToPreviousMonth, 0.0);
+    expect(report.comparedToPreviousMonth, isNull);
   });
 
   test('weeklyBreakdown has 5 elements with correct sums', () async {
@@ -147,5 +148,68 @@ void main() {
     expect(report.weeklyBreakdown[1].weekNumber, 2);
     expect(report.weeklyBreakdown[1].totalSpent, 30000);
     expect(report.weeklyBreakdown[2].totalSpent, 0);
+  });
+
+  group('comparedToPreviousMonth #99', () {
+    test('bulan pertama sejati (tanpa transaksi bulan lalu) → null + hasPreviousMonthData false',
+        () async {
+      await insertTx(
+        id: '1',
+        amount: 50000,
+        type: TransactionType.expense,
+        category: 'food',
+        date: DateTime(2025, 11, 5),
+      );
+
+      final report = await datasource.getMonthlyReport(tMonth);
+
+      expect(report.comparedToPreviousMonth, isNull);
+      expect(report.hasPreviousMonthData, isFalse);
+    });
+
+    test('bulan lalu hanya income (0 pengeluaran) → null + hasPreviousMonthData true',
+        () async {
+      await insertTx(
+        id: '1',
+        amount: 2000000,
+        type: TransactionType.income,
+        category: 'income',
+        date: DateTime(2025, 10, 25),
+      );
+      await insertTx(
+        id: '2',
+        amount: 50000,
+        type: TransactionType.expense,
+        category: 'food',
+        date: DateTime(2025, 11, 5),
+      );
+
+      final report = await datasource.getMonthlyReport(tMonth);
+
+      expect(report.comparedToPreviousMonth, isNull);
+      expect(report.hasPreviousMonthData, isTrue);
+    });
+
+    test('bulan lalu ada pengeluaran → rasio terhitung', () async {
+      await insertTx(
+        id: '1',
+        amount: 100000,
+        type: TransactionType.expense,
+        category: 'food',
+        date: DateTime(2025, 10, 5),
+      );
+      await insertTx(
+        id: '2',
+        amount: 150000,
+        type: TransactionType.expense,
+        category: 'food',
+        date: DateTime(2025, 11, 5),
+      );
+
+      final report = await datasource.getMonthlyReport(tMonth);
+
+      expect(report.comparedToPreviousMonth, closeTo(0.5, 0.001));
+      expect(report.hasPreviousMonthData, isTrue);
+    });
   });
 }

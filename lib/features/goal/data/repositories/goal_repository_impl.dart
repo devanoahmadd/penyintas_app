@@ -176,7 +176,10 @@ class GoalRepositoryImpl implements GoalRepository {
     required SyncOperation operation,
   }) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    // firestoreId kosong → path jadi bersegmen kosong (`users/$uid/goals/`),
+    // ditolak guard SyncDispatcher.toFirestoreOp dan item di-purge senyap.
+    // Guard sama seperti deleteGoal: lewati enqueue, data tetap aman di lokal.
+    if (uid == null || model.firestoreId.isEmpty) return;
     final path = 'users/$uid/goals/${model.firestoreId}';
     if (await _network.isConnected) {
       try {

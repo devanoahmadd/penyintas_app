@@ -3,14 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/feedback_mailto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
 import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubit.dart';
@@ -451,8 +454,42 @@ class _SettingsPageState extends State<SettingsPage> {
                           size: 16,
                           color: mutedColor,
                         ),
-                        onTap: () {
-                          // placeholder — mailto link
+                        onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final errorText =
+                              context.l10n.settingsFeedbackNoEmailApp;
+                          // Versi app di body email — best-effort; gagal =
+                          // kirim tanpa baris versi. 'Android' hardcoded:
+                          // target rilis saat ini Android-only (iOS belum
+                          // dikonfigurasi — lihat catatan #254 di tracker).
+                          String? versionLine;
+                          try {
+                            final info = await PackageInfo.fromPlatform();
+                            versionLine =
+                                'Versi: ${info.version} (${info.buildNumber}) · Android';
+                          } catch (_) {}
+                          var launched = false;
+                          try {
+                            launched = await launchUrl(
+                              buildFeedbackMailto(versionLine: versionLine),
+                            );
+                          } catch (_) {
+                            launched = false;
+                          }
+                          if (!launched) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  errorText,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                backgroundColor: AppColors.warn,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
                         },
                       ),
                     ],

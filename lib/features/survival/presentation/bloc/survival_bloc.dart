@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +19,7 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     required GetSurvivalTipsUseCase getSurvivalTips,
     required RecordSurvivalActivatedUseCase recordActivated,
     required ClearSurvivalActivatedUseCase clearActivated,
+    Stream<String?>? uidChanges,
   })  : _getSurvivalMode = getSurvivalMode,
         _getSurvivalTips = getSurvivalTips,
         _recordActivated = recordActivated,
@@ -24,7 +27,28 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
         super(const SurvivalInitial()) {
     on<LoadSurvivalMode>(_onLoad, transformer: droppable());
     on<FetchSurvivalTips>(_onFetchTips, transformer: droppable());
+    on<SurvivalSessionReset>(_onSessionReset);
+    // distinct() SEBELUM skip(1) — urutan ini penting:
+    //  · skip(1): authStateChanges emit user SAAT INI ke listener baru;
+    //    emisi pertama = sesi berjalan, bukan pergantian akun.
+    //  · distinct() lebih dulu agar token refresh (uid sama berulang) tidak
+    //    lolos sebagai "nilai pertama" dan memicu reset palsu.
+    // isClosed guard: stream bisa menyala setelah bloc ditutup (test/hot
+    // restart) — add() ke bloc tertutup melempar StateError.
+    _uidSub = uidChanges?.distinct().skip(1).listen((_) {
+      if (!isClosed) add(const SurvivalSessionReset());
+    });
   }
+
+  StreamSubscription<String?>? _uidSub;
+
+  /// Penanda sesi. Naik satu tiap kali sesi di-reset (logout / ganti akun).
+  ///
+  /// Dipakai operasi async panjang (fetch tips) untuk memastikan hasilnya masih
+  /// milik sesi yang sama sebelum di-emit. `transformer: droppable()` TIDAK
+  /// cukup: droppable hanya menyerialkan event bertipe sama, sedangkan
+  /// [SurvivalSessionReset] bertipe lain dan handler-nya jalan concurrent.
+  int _sessionEpoch = 0;
 
   final GetSurvivalModeUseCase _getSurvivalMode;
   final GetSurvivalTipsUseCase _getSurvivalTips;
@@ -59,6 +83,13 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     }
   }
 
+  /// Reset sesi: buang state milik user lama sekaligus batalkan hasil fetch
+  /// yang masih berjalan (lewat kenaikan [_sessionEpoch]).
+  void _onSessionReset(SurvivalSessionReset event, Emitter<SurvivalState> emit) {
+    _sessionEpoch++;
+    emit(const SurvivalInitial());
+  }
+
   Future<void> _onFetchTips(
       FetchSurvivalTips event, Emitter<SurvivalState> emit) async {
     // Tidak re-fetch jika tips sudah tersedia
@@ -72,15 +103,30 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     }
     if (entity == null) return;
 
+    // Rekam sesi saat ini SEBELUM await — hasil fetch hanya boleh di-emit
+    // kalau sesinya belum berganti selama menunggu jawaban jaringan/AI.
+    final epoch = _sessionEpoch;
+
     emit(SurvivalTipsLoading(entity));
     final result = await _getSurvivalTips(SurvivalTipsParams(
       remainingAmount: entity.remainingAmount,
       remainingDays: entity.remainingDays,
       language: event.language,
     ));
+
+    // Sesi sudah di-reset (logout / ganti akun) saat fetch berjalan — buang
+    // hasilnya supaya tips user lama tidak menimpa SurvivalInitial (#152).
+    if (epoch != _sessionEpoch) return;
+
     result.fold(
       (failure) => emit(SurvivalError(failure.message, entity)),
       (tips) => emit(SurvivalTipsLoaded(entity!.copyWith(tips: tips))),
     );
+  }
+
+  @override
+  Future<void> close() async {
+    await _uidSub?.cancel();
+    return super.close();
   }
 }

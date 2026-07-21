@@ -23,7 +23,8 @@ abstract class AuthRepository {
   // null = logged out, non-null = logged in.
   Stream<UserEntity?> get authStateChanges;
 
-  Future<Either<Failure, void>> deleteAccount({required String password});
+  /// password null = akun tanpa provider password → re-auth via Google (#254).
+  Future<Either<Failure, void>> deleteAccount({required String? password});
 
   Future<Either<Failure, void>> sendPasswordResetEmail(String email);
 

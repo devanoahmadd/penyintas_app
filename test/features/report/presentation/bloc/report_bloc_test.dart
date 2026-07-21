@@ -42,6 +42,7 @@ void main() {
       WeeklySpendEntity(weekNumber: 5, totalSpent: 0),
     ],
     comparedToPreviousMonth: 0.0,
+    hasPreviousMonthData: true,
   );
 
   setUp(() {

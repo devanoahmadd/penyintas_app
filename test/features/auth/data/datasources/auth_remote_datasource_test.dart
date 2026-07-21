@@ -19,6 +19,8 @@ class MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class MockGoogleSignInService extends Mock implements GoogleSignInService {}
 
+class FakeAuthCredential extends Fake implements AuthCredential {}
+
 void main() {
   late MockFirebaseAuth auth;
   late FakeFirebaseFirestore firestore;
@@ -27,6 +29,8 @@ void main() {
   late AuthRemoteDataSourceImpl datasource;
   late MockUser user;
   late MockUserCredential credential;
+
+  setUpAll(() => registerFallbackValue(FakeAuthCredential()));
 
   setUp(() {
     auth = MockFirebaseAuth();
@@ -299,5 +303,73 @@ void main() {
         );
       },
     );
+  });
+
+  group('reauthenticateWithGoogle', () {
+    test('user batal (idToken null) → return false tanpa panggil reauth',
+        () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => googleService.getIdToken()).thenAnswer((_) async => null);
+
+      final result = await datasource.reauthenticateWithGoogle();
+
+      expect(result, isFalse);
+      verifyNever(() => user.reauthenticateWithCredential(any()));
+    });
+
+    test('sukses → reauthenticateWithCredential dipanggil, return true',
+        () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => googleService.getIdToken())
+          .thenAnswer((_) async => 'id-token-1');
+      when(() => user.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => credential);
+
+      final result = await datasource.reauthenticateWithGoogle();
+
+      expect(result, isTrue);
+      verify(() => user.reauthenticateWithCredential(any())).called(1);
+    });
+
+    test('user-mismatch → AuthException pesan akun Google berbeda', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => googleService.getIdToken())
+          .thenAnswer((_) async => 'id-token-1');
+      when(() => user.reauthenticateWithCredential(any()))
+          .thenThrow(FirebaseAuthException(code: 'user-mismatch'));
+
+      expect(
+        () => datasource.reauthenticateWithGoogle(),
+        throwsA(isA<AuthException>().having(
+          (e) => e.message,
+          'message',
+          contains('berbeda'),
+        )),
+      );
+    });
+
+    test('belum login → AuthException', () async {
+      when(() => auth.currentUser).thenReturn(null);
+
+      expect(
+        () => datasource.reauthenticateWithGoogle(),
+        throwsA(isA<AuthException>()),
+      );
+    });
+
+    test('getIdToken melempar exception → AuthException', () async {
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => googleService.getIdToken())
+          .thenThrow(Exception('play services'));
+
+      expect(
+        () => datasource.reauthenticateWithGoogle(),
+        throwsA(isA<AuthException>().having(
+          (e) => e.message,
+          'message',
+          contains('Gagal menghubungi Google'),
+        )),
+      );
+    });
   });
 }

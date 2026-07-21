@@ -11,6 +11,7 @@ class ReportEntity extends Equatable {
     required this.topCategory,
     required this.weeklyBreakdown,
     required this.comparedToPreviousMonth,
+    required this.hasPreviousMonthData,
     this.aiInsights,
     this.savingTip,
   });
@@ -23,7 +24,13 @@ class ReportEntity extends Equatable {
   final double dailyAverageSpend;
   final String? topCategory;
   final List<WeeklySpendEntity> weeklyBreakdown;
-  final double comparedToPreviousMonth;
+
+  /// null = tidak ada dasar perbandingan (pengeluaran bulan lalu = 0).
+  final double? comparedToPreviousMonth;
+
+  /// Ada transaksi apa pun di bulan sebelumnya — pembeda "bulan pertama"
+  /// vs "bulan lalu tanpa pengeluaran" (#99).
+  final bool hasPreviousMonthData;
   final List<String>? aiInsights;
   final String? savingTip;
 
@@ -41,6 +48,7 @@ class ReportEntity extends Equatable {
         topCategory,
         weeklyBreakdown,
         comparedToPreviousMonth,
+        hasPreviousMonthData,
         aiInsights,
         savingTip,
       ];
@@ -61,6 +69,7 @@ class ReportEntity extends Equatable {
         topCategory: topCategory,
         weeklyBreakdown: weeklyBreakdown,
         comparedToPreviousMonth: comparedToPreviousMonth,
+        hasPreviousMonthData: hasPreviousMonthData,
         aiInsights: aiInsights ?? this.aiInsights,
         savingTip: identical(savingTip, _sentinel)
             ? this.savingTip

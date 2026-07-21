@@ -77,9 +77,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteAccount({required String password}) async {
+  Future<Either<Failure, void>> deleteAccount({required String? password}) async {
     try {
-      await remoteDataSource.reauthenticate(password: password);
+      if (password != null) {
+        await remoteDataSource.reauthenticate(password: password);
+      } else {
+        final ok = await remoteDataSource.reauthenticateWithGoogle();
+        if (!ok) {
+          // User membatalkan dialog Google — pesan tenang, tanpa menakuti.
+          return const Left(AuthFailure('Konfirmasi Google dibatalkan.'));
+        }
+      }
       await remoteDataSource.callDeleteAccount();
       return const Right(null);
     } on AuthException catch (e) {

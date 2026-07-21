@@ -65,6 +65,7 @@ class AppLocalizations {
   String get settingsExportCsvTitle => _t('settings_export_csv_title');
   String get settingsExportCsvSubtitle => _t('settings_export_csv_subtitle');
   String get settingsFeedbackLabel => _t('settings_feedback_label');
+  String get settingsFeedbackNoEmailApp => _t('settings_feedback_no_email_app');
   String get settingsExportFailed => _t('settings_export_failed');
   String settingsErrorReminder(String message) =>
       _t('settings_error_reminder').replaceAll('{message}', message);
@@ -136,6 +137,7 @@ class AppLocalizations {
   String get deleteAccountPasswordLabel => _t('delete_account_password_label');
   String get deleteAccountConfirm => _t('delete_account_confirm');
   String get deleteAccountWrongPassword => _t('delete_account_wrong_password');
+  String get deleteAccountGoogleHint => _t('delete_account_google_hint');
   String get deleteAccountDone => _t('delete_account_done');
 
   // Budget coming soon

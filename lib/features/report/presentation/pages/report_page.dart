@@ -11,6 +11,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/report/domain/entities/report_entity.dart';
 import 'package:penyintas_app/features/report/presentation/bloc/report_bloc.dart';
 import 'package:penyintas_app/features/report/presentation/bloc/report_event.dart';
 import 'package:penyintas_app/features/report/presentation/bloc/report_state.dart';
@@ -19,6 +20,20 @@ import 'package:penyintas_app/features/report/presentation/widgets/insight_card.
 import 'package:penyintas_app/features/report/presentation/widgets/month_selector.dart';
 import 'package:penyintas_app/features/report/presentation/widgets/weekly_bar_chart.dart';
 import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
+
+/// Label perbandingan bulan (#99) — top-level agar bisa diuji tanpa widget.
+/// String hardcoded Indonesia — konsisten halaman; sapu l10n = D-sprint 2.
+String comparedLabelText(ReportEntity report) {
+  final pct = report.comparedToPreviousMonth;
+  if (pct == null) {
+    if (report.hasPreviousMonthData) return 'Bulan lalu tanpa pengeluaran';
+    final monthIsEmpty = report.totalSpent == 0 && report.totalIncome == 0;
+    return monthIsEmpty ? 'Belum ada catatan bulan ini' : 'Bulan pertama';
+  }
+  if (pct == 0.0) return 'Sama dengan bulan lalu';
+  final formatted = '${(pct * 100).toStringAsFixed(1)}% dari bulan lalu';
+  return pct > 0 ? '+$formatted' : formatted;
+}
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -133,12 +148,7 @@ class _ReportContent extends StatelessWidget {
 
     final netIsPositive = report.netBalance >= 0;
     final netColor = netIsPositive ? AppColors.success : AppColors.warn;
-    final comparedPct = report.comparedToPreviousMonth;
-    final comparedText = comparedPct == 0.0
-        ? 'Bulan pertama'
-        : comparedPct > 0
-            ? '+${(comparedPct * 100).toStringAsFixed(1)}% dari bulan lalu'
-            : '${(comparedPct * 100).toStringAsFixed(1)}% dari bulan lalu';
+    final comparedText = comparedLabelText(report);
 
     final monthLabel =
         DateFormat('MMMM yyyy', 'id').format(report.month).toUpperCase();
