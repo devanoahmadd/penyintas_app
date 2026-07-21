@@ -32,8 +32,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
   Future<Either<Failure, BudgetSettingsEntity>> getBudgetSettings() async {
     try {
       final settings = await _local.getBudgetSettings();
-      if (settings == null)
+      if (settings == null) {
         return const Left(CacheFailure('Pengaturan anggaran belum diisi.'));
+      }
       return Right(settings);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));

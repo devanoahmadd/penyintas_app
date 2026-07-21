@@ -59,8 +59,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         locale: _clampLang(prefs.language), // M2: clamp boundary {id,en}
       ),
     );
-    if (saved == null)
+    if (saved == null) {
       await _persistTheme(state); // seed baris theme bila belum ada
+    }
   }
 
   Future<void> _onChangeTheme(

@@ -41,8 +41,9 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
     _checking = true;
     try {
       final device = (await _getDeviceTz()).trim();
-      if (device.isEmpty || device == _snoozedTz)
+      if (device.isEmpty || device == _snoozedTz) {
         return; // F-D5: hormati snooze
+      }
       final prefs = await _repo.read();
       if (device == prefs.timezone) return; // selaras → diam
       final deviceLabel = _tz.labelForIana(device) ?? device;
@@ -74,8 +75,9 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
     final country = p.currentCountry;
     if (city != null && city.isNotEmpty && country.isNotEmpty) {
       final m = _tz.cityToTz(city, country);
-      if (m != null && m.iana == p.timezone)
+      if (m != null && m.iana == p.timezone) {
         return city; // kota cocok zona → akurat
+      }
     }
     return _tz.labelForIana(p.timezone) ??
         p.timezone; // selain itu → label dari zona

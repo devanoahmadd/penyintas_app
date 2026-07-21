@@ -58,8 +58,9 @@ class BudgetOverviewEntity extends Equatable {
   /// Status pace operasional: aman / hati-hati / bahaya.
   /// null jika belum ada data pace atau remainingDays == 0 (edge case bulan pendek).
   BudgetStatus? get paceStatus {
-    if (remainingDays <= 0)
+    if (remainingDays <= 0) {
       return null; // siklus berakhir hari ini — pace tak bermakna
+    }
     final projected = projectedOperationalDays;
     if (projected == null) return null;
     if (projected >= remainingDays) return BudgetStatus.safe;

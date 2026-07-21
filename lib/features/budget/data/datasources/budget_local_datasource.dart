@@ -29,8 +29,9 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
     final row = await (_db.select(
       _db.appSettings,
     )..where((t) => t.id.equals(1))).getSingleOrNull();
-    if (row == null || row.monthlyIncome == 0 || !row.onboardingCompleted)
+    if (row == null || row.monthlyIncome == 0 || !row.onboardingCompleted) {
       return null;
+    }
     return BudgetSettingsEntity(
       monthlyIncome: row.monthlyIncome,
       paymentDate: row.paymentDate,
