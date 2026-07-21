@@ -38,8 +38,9 @@ void main() {
   });
 
   test('returns Right(report) when repo succeeds', () async {
-    when(() => mockRepo.getMonthlyReport(tMonth))
-        .thenAnswer((_) async => Right(tReport));
+    when(
+      () => mockRepo.getMonthlyReport(tMonth),
+    ).thenAnswer((_) async => Right(tReport));
 
     final result = await useCase(tMonth);
 
@@ -48,8 +49,9 @@ void main() {
   });
 
   test('returns Left(Failure) when repo fails', () async {
-    when(() => mockRepo.getMonthlyReport(tMonth))
-        .thenAnswer((_) async => const Left(CacheFailure('error')));
+    when(
+      () => mockRepo.getMonthlyReport(tMonth),
+    ).thenAnswer((_) async => const Left(CacheFailure('error')));
 
     final result = await useCase(tMonth);
 
@@ -58,8 +60,9 @@ void main() {
 
   test('forwards month param to repo', () async {
     final specificMonth = DateTime(2024, 3);
-    when(() => mockRepo.getMonthlyReport(specificMonth))
-        .thenAnswer((_) async => Right(tReport));
+    when(
+      () => mockRepo.getMonthlyReport(specificMonth),
+    ).thenAnswer((_) async => Right(tReport));
 
     await useCase(specificMonth);
 

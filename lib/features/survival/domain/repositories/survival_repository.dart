@@ -6,7 +6,8 @@ import 'package:penyintas_app/features/survival/domain/entities/survival_tip_ent
 
 abstract class SurvivalRepository {
   Future<Either<Failure, SurvivalModeEntity>> getSurvivalMode(
-      DashboardEntity dashboard);
+    DashboardEntity dashboard,
+  );
 
   Future<Either<Failure, List<SurvivalTip>>> getSurvivalTips({
     required int remainingAmount,

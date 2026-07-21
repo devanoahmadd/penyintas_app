@@ -22,9 +22,9 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
   ProfileEditCubit({
     required PreferencesRepository repo,
     required TimezoneResolver tz,
-  })  : _repo = repo,
-        _tz = tz,
-        super(const ProfileEditState()) {
+  }) : _repo = repo,
+       _tz = tz,
+       super(const ProfileEditState()) {
     _load();
   }
 
@@ -35,12 +35,14 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
     try {
       final p = await _repo.read();
       if (!isClosed) {
-        emit(state.copyWith(
-          loading: false,
-          draft: p,
-          loaded: p,
-          currentLocationResolved: true,
-        ));
+        emit(
+          state.copyWith(
+            loading: false,
+            draft: p,
+            loaded: p,
+            currentLocationResolved: true,
+          ),
+        );
       }
     } catch (_) {
       // H1: JANGAN fallback ke defaults. Draft null → halaman tampil error+Retry,
@@ -62,10 +64,9 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
   }
 
   /// Clamp nama ≤80 (A7 M2).
-  void setName(String v) =>
-      _patch((d) => d.copyWith(
-            displayName: v.length > 80 ? v.substring(0, 80) : v,
-          ));
+  void setName(String v) => _patch(
+    (d) => d.copyWith(displayName: v.length > 80 ? v.substring(0, 80) : v),
+  );
 
   void setStatus(String v) => _patch((d) => d.copyWith(status: v));
 
@@ -73,30 +74,36 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
     final d = state.draft;
     if (d == null) return;
     // H2: kota direset → timezone basi s/d kota/tz baru dipilih.
-    emit(state.copyWith(
-      draft: _clearCurrentCity(d, currentCountry: c),
-      currentLocationResolved: false,
-    ));
+    emit(
+      state.copyWith(
+        draft: _clearCurrentCity(d, currentCountry: c),
+        currentLocationResolved: false,
+      ),
+    );
   }
 
   void setCurrentCity(String city) {
     final d = state.draft;
     if (d == null) return;
     final iana = _tz.cityToTz(city, d.currentCountry)?.iana ?? d.timezone;
-    emit(state.copyWith(
-      draft: d.copyWith(currentCity: city, timezone: iana),
-      currentLocationResolved: true, // H2: tz kini cocok dgn kota terpilih
-    ));
+    emit(
+      state.copyWith(
+        draft: d.copyWith(currentCity: city, timezone: iana),
+        currentLocationResolved: true, // H2: tz kini cocok dgn kota terpilih
+      ),
+    );
   }
 
   /// H2: escape-hatch B-2 (negara tanpa kota di dataset) → set tz eksplisit → resolved.
   void setTimezone(String iana) {
     final d = state.draft;
     if (d == null) return;
-    emit(state.copyWith(
-      draft: d.copyWith(timezone: iana),
-      currentLocationResolved: true,
-    ));
+    emit(
+      state.copyWith(
+        draft: d.copyWith(timezone: iana),
+        currentLocationResolved: true,
+      ),
+    );
   }
 
   void togglePerantau(bool v) {
@@ -106,9 +113,15 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
       emit(state.copyWith(draft: d.copyWith(isPerantau: true)));
     } else {
       // OFF → home = current (invariant A10); homeCity = null (reset eksplisit)
-      emit(state.copyWith(
-        draft: _clearHomeCity(d, isPerantau: false, homeCountry: d.currentCountry),
-      ));
+      emit(
+        state.copyWith(
+          draft: _clearHomeCity(
+            d,
+            isPerantau: false,
+            homeCountry: d.currentCountry,
+          ),
+        ),
+      );
     }
   }
 
@@ -140,12 +153,14 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
       (f) => emit(state.copyWith(saving: false, error: f.message)),
       // M3: re-baseline draft & loaded → isDirty=false pasca-simpan.
       // Membuat canPop=true → pop sukses tidak deadlock.
-      (_) => emit(state.copyWith(
-            saving: false,
-            saved: true,
-            draft: persisted,
-            loaded: persisted,
-          )),
+      (_) => emit(
+        state.copyWith(
+          saving: false,
+          saved: true,
+          draft: persisted,
+          loaded: persisted,
+        ),
+      ),
     );
   }
 
@@ -153,41 +168,39 @@ class ProfileEditCubit extends Cubit<ProfileEditState> {
   PreferencesEntity _clearCurrentCity(
     PreferencesEntity d, {
     required String currentCountry,
-  }) =>
-      PreferencesEntity(
-        timezone: d.timezone, // dipertahankan s/d kota baru dipilih
-        baseCurrency: d.baseCurrency,
-        homeCurrency: d.homeCurrency,
-        language: d.language,
-        displayName: d.displayName,
-        status: d.status,
-        currentCountry: currentCountry,
-        currentCity: null, // reset eksplisit
-        homeCountry: d.homeCountry,
-        homeCity: d.homeCity,
-        isPerantau: d.isPerantau,
-        profileCompleted: d.profileCompleted,
-        schemaVersion: d.schemaVersion,
-      );
+  }) => PreferencesEntity(
+    timezone: d.timezone, // dipertahankan s/d kota baru dipilih
+    baseCurrency: d.baseCurrency,
+    homeCurrency: d.homeCurrency,
+    language: d.language,
+    displayName: d.displayName,
+    status: d.status,
+    currentCountry: currentCountry,
+    currentCity: null, // reset eksplisit
+    homeCountry: d.homeCountry,
+    homeCity: d.homeCity,
+    isPerantau: d.isPerantau,
+    profileCompleted: d.profileCompleted,
+    schemaVersion: d.schemaVersion,
+  );
 
   PreferencesEntity _clearHomeCity(
     PreferencesEntity d, {
     bool? isPerantau,
     String? homeCountry,
-  }) =>
-      PreferencesEntity(
-        timezone: d.timezone,
-        baseCurrency: d.baseCurrency,
-        homeCurrency: d.homeCurrency,
-        language: d.language,
-        displayName: d.displayName,
-        status: d.status,
-        currentCountry: d.currentCountry,
-        currentCity: d.currentCity,
-        homeCountry: homeCountry ?? d.homeCountry,
-        homeCity: null, // reset eksplisit
-        isPerantau: isPerantau ?? d.isPerantau,
-        profileCompleted: d.profileCompleted,
-        schemaVersion: d.schemaVersion,
-      );
+  }) => PreferencesEntity(
+    timezone: d.timezone,
+    baseCurrency: d.baseCurrency,
+    homeCurrency: d.homeCurrency,
+    language: d.language,
+    displayName: d.displayName,
+    status: d.status,
+    currentCountry: d.currentCountry,
+    currentCity: d.currentCity,
+    homeCountry: homeCountry ?? d.homeCountry,
+    homeCity: null, // reset eksplisit
+    isPerantau: isPerantau ?? d.isPerantau,
+    profileCompleted: d.profileCompleted,
+    schemaVersion: d.schemaVersion,
+  );
 }

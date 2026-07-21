@@ -9,9 +9,9 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
   ReportBloc({
     required GetMonthlyReportUseCase getMonthlyReport,
     required GetAiInsightUseCase getAiInsight,
-  })  : _getMonthlyReport = getMonthlyReport,
-        _getAiInsight = getAiInsight,
-        super(const ReportInitial()) {
+  }) : _getMonthlyReport = getMonthlyReport,
+       _getAiInsight = getAiInsight,
+       super(const ReportInitial()) {
     on<LoadReport>(_onLoad, transformer: droppable());
     on<LoadAiInsight>(_onLoadInsight, transformer: droppable());
     on<PreviousMonth>(_onPrevious);
@@ -21,19 +21,13 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
   final GetMonthlyReportUseCase _getMonthlyReport;
   final GetAiInsightUseCase _getAiInsight;
 
-  Future<void> _onLoad(
-    LoadReport event,
-    Emitter<ReportState> emit,
-  ) async {
+  Future<void> _onLoad(LoadReport event, Emitter<ReportState> emit) async {
     emit(const ReportLoading());
     final result = await _getMonthlyReport(event.month);
-    result.fold(
-      (failure) => emit(ReportError(failure.message)),
-      (report) {
-        emit(ReportLoaded(report: report, selectedMonth: event.month));
-        add(const LoadAiInsight());
-      },
-    );
+    result.fold((failure) => emit(ReportError(failure.message)), (report) {
+      emit(ReportLoaded(report: report, selectedMonth: event.month));
+      add(const LoadAiInsight());
+    });
   }
 
   Future<void> _onLoadInsight(
@@ -46,28 +40,24 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
     final result = await _getAiInsight(current.report);
     result.fold(
       (_) => emit(current.copyWith(isLoadingInsight: false)),
-      (tuple) => emit(current.copyWith(
-        report: current.report.copyWith(
-          aiInsights: tuple.$1,
-          savingTip: tuple.$2,
+      (tuple) => emit(
+        current.copyWith(
+          report: current.report.copyWith(
+            aiInsights: tuple.$1,
+            savingTip: tuple.$2,
+          ),
+          isLoadingInsight: false,
         ),
-        isLoadingInsight: false,
-      )),
+      ),
     );
   }
 
-  void _onPrevious(
-    PreviousMonth event,
-    Emitter<ReportState> emit,
-  ) {
+  void _onPrevious(PreviousMonth event, Emitter<ReportState> emit) {
     final month = _selectedMonth;
     add(LoadReport(DateTime(month.year, month.month - 1)));
   }
 
-  void _onNext(
-    NextMonth event,
-    Emitter<ReportState> emit,
-  ) {
+  void _onNext(NextMonth event, Emitter<ReportState> emit) {
     final month = _selectedMonth;
     final next = DateTime(month.year, month.month + 1);
     if (next.isAfter(DateTime.now())) return;

@@ -18,10 +18,10 @@ class BudgetRepositoryImpl implements BudgetRepository {
     required BudgetRemoteDatasource remote,
     required NetworkInfo networkInfo,
     required FirebaseAuth auth,
-  })  : _local = local,
-        _remote = remote,
-        _network = networkInfo,
-        _auth = auth;
+  }) : _local = local,
+       _remote = remote,
+       _network = networkInfo,
+       _auth = auth;
 
   final BudgetLocalDatasource _local;
   final BudgetRemoteDatasource _remote;
@@ -32,7 +32,8 @@ class BudgetRepositoryImpl implements BudgetRepository {
   Future<Either<Failure, BudgetSettingsEntity>> getBudgetSettings() async {
     try {
       final settings = await _local.getBudgetSettings();
-      if (settings == null) return const Left(CacheFailure('Pengaturan anggaran belum diisi.'));
+      if (settings == null)
+        return const Left(CacheFailure('Pengaturan anggaran belum diisi.'));
       return Right(settings);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
@@ -42,7 +43,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveBudgetSettings(BudgetSettingsEntity settings) async {
+  Future<Either<Failure, void>> saveBudgetSettings(
+    BudgetSettingsEntity settings,
+  ) async {
     try {
       await _local.saveBudgetSettings(settings);
       final model = BudgetSettingsModel.fromEntity(settings);
@@ -112,7 +115,10 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteBudgetLimit(int id, String categoryName) async {
+  Future<Either<Failure, void>> deleteBudgetLimit(
+    int id,
+    String categoryName,
+  ) async {
     try {
       await _local.deleteBudgetLimit(id);
       if (await _network.isConnected) {

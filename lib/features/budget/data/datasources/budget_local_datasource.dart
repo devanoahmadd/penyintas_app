@@ -26,10 +26,11 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
 
   @override
   Future<BudgetSettingsEntity?> getBudgetSettings() async {
-    final row = await (_db.select(_db.appSettings)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-    if (row == null || row.monthlyIncome == 0 || !row.onboardingCompleted) return null;
+    final row = await (_db.select(
+      _db.appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
+    if (row == null || row.monthlyIncome == 0 || !row.onboardingCompleted)
+      return null;
     return BudgetSettingsEntity(
       monthlyIncome: row.monthlyIncome,
       paymentDate: row.paymentDate,
@@ -45,28 +46,33 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
 
   @override
   Future<void> saveBudgetSettings(BudgetSettingsEntity settings) async {
-    final existing = await (_db.select(_db.appSettings)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
-    await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
-          id: const Value(1),
-          // Vestigial pasca-cutover (C2): dipertahankan agar kolom NOT NULL tak ter-clobber;
-          // TAK ada yang membacanya lagi — language canonical hidup di `preferences`.
-          locale: Value(existing?.locale ?? 'id'),
-          themeMode: Value(existing?.themeMode ?? 'system'),
-          onboardingCompleted: const Value(true),
-          monthlyIncome: Value(settings.monthlyIncome),
-          paymentDate: Value(settings.paymentDate),
-          fixedExpenses: Value(settings.fixedExpenses),
-          rentExpense: Value(settings.rentExpense),
-          utilitiesExpense: Value(settings.utilitiesExpense),
-          internetExpense: Value(settings.internetExpense),
-          phoneExpense: Value(settings.phoneExpense),
-          otherFixedExpense: Value(settings.otherFixedExpense),
-          emergencyFundPct: Value(settings.emergencyFundPct),
-          onboardingCreatedAt:
-              Value(existing?.onboardingCreatedAt ?? settings.createdAt),
-        ));
+    final existing = await (_db.select(
+      _db.appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
+    await _db
+        .into(_db.appSettings)
+        .insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(1),
+            // Vestigial pasca-cutover (C2): dipertahankan agar kolom NOT NULL tak ter-clobber;
+            // TAK ada yang membacanya lagi — language canonical hidup di `preferences`.
+            locale: Value(existing?.locale ?? 'id'),
+            themeMode: Value(existing?.themeMode ?? 'system'),
+            onboardingCompleted: const Value(true),
+            monthlyIncome: Value(settings.monthlyIncome),
+            paymentDate: Value(settings.paymentDate),
+            fixedExpenses: Value(settings.fixedExpenses),
+            rentExpense: Value(settings.rentExpense),
+            utilitiesExpense: Value(settings.utilitiesExpense),
+            internetExpense: Value(settings.internetExpense),
+            phoneExpense: Value(settings.phoneExpense),
+            otherFixedExpense: Value(settings.otherFixedExpense),
+            emergencyFundPct: Value(settings.emergencyFundPct),
+            onboardingCreatedAt: Value(
+              existing?.onboardingCreatedAt ?? settings.createdAt,
+            ),
+          ),
+        );
   }
 
   @override
@@ -77,16 +83,16 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
 
   @override
   Future<int> saveBudgetLimit(BudgetLimitEntity limit) async {
-    final existing = await (_db.select(_db.budgetLimits)
-          ..where((t) => t.category.equals(limit.category)))
-        .getSingleOrNull();
+    final existing = await (_db.select(
+      _db.budgetLimits,
+    )..where((t) => t.category.equals(limit.category))).getSingleOrNull();
     if (existing != null) {
       final model = BudgetLimitModel.fromEntity(
         limit.copyWith(id: existing.id),
       );
-      await (_db.update(_db.budgetLimits)
-            ..where((t) => t.id.equals(existing.id)))
-          .write(model.toCompanion());
+      await (_db.update(
+        _db.budgetLimits,
+      )..where((t) => t.id.equals(existing.id))).write(model.toCompanion());
       return existing.id;
     } else {
       final model = BudgetLimitModel.fromEntity(limit);
@@ -106,12 +112,16 @@ class BudgetLocalDatasourceImpl implements BudgetLocalDatasource {
     required Map<String, dynamic> data,
     required SyncOperation operation,
   }) async {
-    await _db.into(_db.syncQueue).insert(SyncQueueCompanion(
-          itemId: Value(itemId),
-          collectionPath: Value(collectionPath),
-          data: Value(jsonEncode(data)),
-          operation: Value(operation),
-          createdAt: Value(DateTime.now()),
-        ));
+    await _db
+        .into(_db.syncQueue)
+        .insert(
+          SyncQueueCompanion(
+            itemId: Value(itemId),
+            collectionPath: Value(collectionPath),
+            data: Value(jsonEncode(data)),
+            operation: Value(operation),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
   }
 }

@@ -33,20 +33,20 @@ class FakeSurvivalTipsParams extends Fake implements SurvivalTipsParams {}
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 DashboardEntity _makeEntity({required BudgetStatus status}) => DashboardEntity(
-      dailyBudget: 50000,
-      spentToday: 0,
-      remainingToday: 50000,
-      totalMonthlyBudget: 1000000,
-      totalSpentThisMonth: status == BudgetStatus.danger ? 870000 : 300000,
-      totalRemaining: status == BudgetStatus.danger ? 80000 : 700000,
-      daysToLive: status == BudgetStatus.danger ? 2 : 14,
-      remainingDays: 10,
-      avgDailySpend: 30000,
-      status: status,
-      lastUpdated: DateTime(2026, 5, 21),
-      todayTransactions: const [],
-      emergencyFundMonthly: 50000,
-    );
+  dailyBudget: 50000,
+  spentToday: 0,
+  remainingToday: 50000,
+  totalMonthlyBudget: 1000000,
+  totalSpentThisMonth: status == BudgetStatus.danger ? 870000 : 300000,
+  totalRemaining: status == BudgetStatus.danger ? 80000 : 700000,
+  daysToLive: status == BudgetStatus.danger ? 2 : 14,
+  remainingDays: 10,
+  avgDailySpend: 30000,
+  status: status,
+  lastUpdated: DateTime(2026, 5, 21),
+  todayTransactions: const [],
+  emergencyFundMonthly: 50000,
+);
 
 const _tSurvivalEntity = SurvivalModeEntity(
   isActive: true,
@@ -114,8 +114,9 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'emits SurvivalInactive saat budget status bukan danger',
       build: () {
-        when(() => mockGetMode(any()))
-            .thenAnswer((_) async => const Right(_tInactiveEntity));
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => const Right(_tInactiveEntity));
         return bloc;
       },
       act: (b) =>
@@ -126,8 +127,9 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'emits SurvivalActive saat danger dan activatedAt null — panggil recordActivated',
       build: () {
-        when(() => mockGetMode(any()))
-            .thenAnswer((_) async => const Right(_tSurvivalEntity));
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => const Right(_tSurvivalEntity));
         return bloc;
       },
       act: (b) =>
@@ -142,8 +144,9 @@ void main() {
         final entityWithTs = _tSurvivalEntity.copyWith(
           activatedAt: DateTime(2026, 5, 20),
         );
-        when(() => mockGetMode(any()))
-            .thenAnswer((_) async => Right(entityWithTs));
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => Right(entityWithTs));
         return bloc;
       },
       act: (b) =>
@@ -157,8 +160,9 @@ void main() {
         final inactiveWithTs = _tInactiveEntity.copyWith(
           activatedAt: DateTime(2026, 5, 20),
         );
-        when(() => mockGetMode(any()))
-            .thenAnswer((_) async => Right(inactiveWithTs));
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => Right(inactiveWithTs));
         return bloc;
       },
       act: (b) =>
@@ -171,10 +175,12 @@ void main() {
       'mempertahankan tips yang sudah di-cache saat dashboard refresh dengan data baru',
       build: () {
         // Simulasi dashboard refresh: saldo berkurang (70000 dari sebelumnya 80000)
-        final refreshedEntity =
-            _tSurvivalEntity.copyWith(remainingAmount: 70000);
-        when(() => mockGetMode(any()))
-            .thenAnswer((_) async => Right(refreshedEntity));
+        final refreshedEntity = _tSurvivalEntity.copyWith(
+          remainingAmount: 70000,
+        );
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => Right(refreshedEntity));
         return bloc;
       },
       seed: () => SurvivalTipsLoaded(_tSurvivalEntity.copyWith(tips: _tTips)),
@@ -191,8 +197,9 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'emits SurvivalError saat getSurvivalMode gagal',
       build: () {
-        when(() => mockGetMode(any())).thenAnswer(
-            (_) async => Left(CacheFailure('Gagal memuat.')));
+        when(
+          () => mockGetMode(any()),
+        ).thenAnswer((_) async => Left(CacheFailure('Gagal memuat.')));
         return bloc;
       },
       act: (b) =>
@@ -207,8 +214,9 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'emits TipsLoading → TipsLoaded saat fetch berhasil',
       build: () {
-        when(() => mockGetTips(any()))
-            .thenAnswer((_) async => const Right(_tTips));
+        when(
+          () => mockGetTips(any()),
+        ).thenAnswer((_) async => const Right(_tTips));
         return bloc;
       },
       seed: () => const SurvivalActive(_tSurvivalEntity),
@@ -222,8 +230,7 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'tidak re-fetch jika state sudah SurvivalTipsLoaded',
       build: () => bloc,
-      seed: () =>
-          SurvivalTipsLoaded(_tSurvivalEntity.copyWith(tips: _tTips)),
+      seed: () => SurvivalTipsLoaded(_tSurvivalEntity.copyWith(tips: _tTips)),
       act: (b) => b.add(const FetchSurvivalTips(language: 'id')),
       expect: () => <SurvivalState>[],
       verify: (_) => verifyNever(() => mockGetTips(any())),
@@ -232,8 +239,9 @@ void main() {
     blocTest<SurvivalBloc, SurvivalState>(
       'emits SurvivalError dengan entity saat fetch gagal',
       build: () {
-        when(() => mockGetTips(any())).thenAnswer(
-            (_) async => Left(ServerFailure('Gagal mengambil tips.')));
+        when(
+          () => mockGetTips(any()),
+        ).thenAnswer((_) async => Left(ServerFailure('Gagal mengambil tips.')));
         return bloc;
       },
       seed: () => const SurvivalActive(_tSurvivalEntity),
@@ -269,12 +277,12 @@ void main() {
     // Bloc BARU per test (bukan `bloc` dari setUp global) karena uidChanges
     // hanya bisa dipasang lewat constructor. blocTest menutup bloc ini sendiri.
     SurvivalBloc buildWithUidStream() => SurvivalBloc(
-          getSurvivalMode: mockGetMode,
-          getSurvivalTips: mockGetTips,
-          recordActivated: mockRecord,
-          clearActivated: mockClear,
-          uidChanges: uidController.stream,
-        );
+      getSurvivalMode: mockGetMode,
+      getSurvivalTips: mockGetTips,
+      recordActivated: mockRecord,
+      clearActivated: mockClear,
+      uidChanges: uidController.stream,
+    );
 
     blocTest<SurvivalBloc, SurvivalState>(
       'emisi pertama (sesi berjalan) TIDAK me-reset state',
@@ -328,8 +336,7 @@ void main() {
       build: () {
         // Fetch ditahan lewat Completer: kita yang menentukan kapan selesai,
         // meniru jawaban jaringan/AI yang datang setelah user logout.
-        when(() => mockGetTips(any()))
-            .thenAnswer((_) => tipsCompleter.future);
+        when(() => mockGetTips(any())).thenAnswer((_) => tipsCompleter.future);
         return buildWithUidStream();
       },
       seed: () => const SurvivalActive(_tSurvivalEntity),

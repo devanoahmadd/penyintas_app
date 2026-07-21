@@ -12,32 +12,34 @@ class SurvivalRepositoryImpl implements SurvivalRepository {
   const SurvivalRepositoryImpl({
     required SurvivalLocalDatasource local,
     required SurvivalRemoteDatasource remote,
-  })  : _local = local,
-        _remote = remote;
+  }) : _local = local,
+       _remote = remote;
 
   final SurvivalLocalDatasource _local;
   final SurvivalRemoteDatasource _remote;
 
   @override
   Future<Either<Failure, SurvivalModeEntity>> getSurvivalMode(
-      DashboardEntity dashboard) async {
+    DashboardEntity dashboard,
+  ) async {
     try {
       final activatedAt = await _local.getSurvivalActivatedAt();
       final isActive = dashboard.status == BudgetStatus.danger;
       final suggestedDaily = dashboard.remainingDays > 0
           ? dashboard.totalRemaining ~/ dashboard.remainingDays
           : 0;
-      return Right(SurvivalModeEntity(
-        isActive: isActive,
-        remainingAmount: dashboard.totalRemaining,
-        remainingDays: dashboard.remainingDays,
-        suggestedDailyBudget: suggestedDaily,
-        tips: const [],
-        activatedAt: activatedAt,
-      ));
+      return Right(
+        SurvivalModeEntity(
+          isActive: isActive,
+          remainingAmount: dashboard.totalRemaining,
+          remainingDays: dashboard.remainingDays,
+          suggestedDailyBudget: suggestedDaily,
+          tips: const [],
+          activatedAt: activatedAt,
+        ),
+      );
     } catch (e, s) {
-      FirebaseCrashlytics.instance
-          .recordError(e, s, reason: 'getSurvivalMode');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getSurvivalMode');
       return Left(CacheFailure('Gagal memuat status survival mode.'));
     }
   }
@@ -56,8 +58,7 @@ class SurvivalRepositoryImpl implements SurvivalRepository {
       );
       return Right(tips);
     } catch (e, s) {
-      FirebaseCrashlytics.instance
-          .recordError(e, s, reason: 'getSurvivalTips');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getSurvivalTips');
       return Left(ServerFailure('Gagal mengambil tips hemat. Coba lagi.'));
     }
   }
@@ -68,8 +69,11 @@ class SurvivalRepositoryImpl implements SurvivalRepository {
       await _local.setSurvivalActivatedAt(DateTime.now());
       return const Right(null);
     } catch (e, s) {
-      FirebaseCrashlytics.instance
-          .recordError(e, s, reason: 'recordSurvivalActivated');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'recordSurvivalActivated',
+      );
       return Left(CacheFailure('Gagal menyimpan timestamp aktivasi.'));
     }
   }
@@ -80,8 +84,11 @@ class SurvivalRepositoryImpl implements SurvivalRepository {
       await _local.clearSurvivalActivatedAt();
       return const Right(null);
     } catch (e, s) {
-      FirebaseCrashlytics.instance
-          .recordError(e, s, reason: 'clearSurvivalActivated');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'clearSurvivalActivated',
+      );
       return Left(CacheFailure('Gagal menghapus catatan aktivasi.'));
     }
   }

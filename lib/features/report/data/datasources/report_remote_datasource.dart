@@ -14,9 +14,9 @@ class ReportRemoteDatasourceImpl implements ReportRemoteDatasource {
     required FirebaseFunctions functions,
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
-  })  : _functions = functions,
-        _firestore = firestore,
-        _auth = auth;
+  }) : _functions = functions,
+       _firestore = firestore,
+       _auth = auth;
 
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;

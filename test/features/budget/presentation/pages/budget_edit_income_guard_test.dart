@@ -26,8 +26,9 @@ void main() {
   });
 
   group('budget-edit income helper (#251 A1b)', () {
-    testWidgets('income kosong → helper error muncul; terisi → hilang',
-        (tester) async {
+    testWidgets('income kosong → helper error muncul; terisi → hilang', (
+      tester,
+    ) async {
       final bloc = _MockBudgetSettingsBloc();
       whenListen(
         bloc,
@@ -35,12 +36,14 @@ void main() {
         initialState: const BudgetSettingsLoading(),
       );
 
-      await tester.pumpWidget(MaterialApp(
-        home: BlocProvider<BudgetSettingsBloc>.value(
-          value: bloc,
-          child: const BudgetEditSettingsPage(),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BudgetSettingsBloc>.value(
+            value: bloc,
+            child: const BudgetEditSettingsPage(),
+          ),
         ),
-      ));
+      );
       await tester.pump();
 
       expect(find.text('Penghasilan harus diisi dulu, ya.'), findsOneWidget);

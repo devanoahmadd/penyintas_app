@@ -4,7 +4,9 @@ import 'package:penyintas_app/features/transaction/domain/entities/transaction_e
 
 abstract class TransactionRepository {
   Future<Either<Failure, void>> addTransaction(TransactionEntity transaction);
-  Future<Either<Failure, void>> updateTransaction(TransactionEntity transaction);
+  Future<Either<Failure, void>> updateTransaction(
+    TransactionEntity transaction,
+  );
   Future<Either<Failure, void>> deleteTransaction(String id);
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
     required DateTime from,

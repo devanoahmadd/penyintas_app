@@ -9,13 +9,24 @@ import 'package:penyintas_app/features/preferences/domain/repositories/preferenc
 import 'package:penyintas_app/core/utils/timezone_resolver.dart';
 
 class _MockRepo extends Mock implements PreferencesRepository {}
+
 class _FakePrefs extends Fake implements PreferencesEntity {}
 
 void main() {
   late _MockRepo repo;
   final tz = TimezoneResolver(const [
-    TimezoneCity(city: 'Jakarta', country: 'ID', iana: 'Asia/Jakarta', gmt: '+07:00'),
-    TimezoneCity(city: 'Moscow', country: 'RU', iana: 'Europe/Moscow', gmt: '+03:00'),
+    TimezoneCity(
+      city: 'Jakarta',
+      country: 'ID',
+      iana: 'Asia/Jakarta',
+      gmt: '+07:00',
+    ),
+    TimezoneCity(
+      city: 'Moscow',
+      country: 'RU',
+      iana: 'Europe/Moscow',
+      gmt: '+03:00',
+    ),
   ]);
 
   setUpAll(() => registerFallbackValue(_FakePrefs()));
@@ -25,8 +36,7 @@ void main() {
     // agar semua test deterministik (bukan null-deref yang tertelan try/catch).
     // Temuan 5: blocTest yang meng-assert daftar emisi eksak pakai `build(autoPrefill:
     // false)` → TAK bergantung pada "kebetulan dedup" (prefill emit 'id' == default).
-    when(() => repo.read())
-        .thenAnswer((_) async => PreferencesEntity.defaults);
+    when(() => repo.read()).thenAnswer((_) async => PreferencesEntity.defaults);
   });
 
   ProfileSetupCubit build({bool autoPrefill = true}) =>
@@ -58,14 +68,18 @@ void main() {
 
   test('toggle OFF → home=current (invariant A10)', () {
     final c = build()..setCurrentCountry('RU');
-    c..togglePerantau(true)..setHomeCountry('ID')..togglePerantau(false);
+    c
+      ..togglePerantau(true)
+      ..setHomeCountry('ID')
+      ..togglePerantau(false);
     expect(c.state.isPerantau, false);
     expect(c.state.homeCountry, 'RU'); // = current
   });
 
   test('prefill bahasa dari preferences tersimpan (B-5)', () async {
     when(() => repo.read()).thenAnswer(
-        (_) async => PreferencesEntity.defaults.copyWith(language: 'en'));
+      (_) async => PreferencesEntity.defaults.copyWith(language: 'en'),
+    );
     final c = build(); // autoPrefill default → prefill() jalan
     await Future<void>.delayed(Duration.zero); // tunggu prefill()
     expect(c.state.language, 'en');
@@ -76,12 +90,15 @@ void main() {
     build: () {
       when(() => repo.save(any())).thenAnswer((_) async => const Right(unit));
       // Temuan 5: autoPrefill:false → emisi deterministik (tanpa prefill async race)
-      return build(autoPrefill: false)..setCurrentCountry('RU')..setCurrentCity('Moscow');
+      return build(autoPrefill: false)
+        ..setCurrentCountry('RU')
+        ..setCurrentCity('Moscow');
     },
     act: (c) => c.save(),
     verify: (_) {
       final captured =
-          verify(() => repo.save(captureAny())).captured.single as PreferencesEntity;
+          verify(() => repo.save(captureAny())).captured.single
+              as PreferencesEntity;
       expect(captured.profileCompleted, true);
       expect(captured.timezone, 'Europe/Moscow');
       expect(captured.baseCurrency, 'IDR');
@@ -95,7 +112,9 @@ void main() {
     'save() sukses → state.saved true',
     build: () {
       when(() => repo.save(any())).thenAnswer((_) async => const Right(unit));
-      return build(autoPrefill: false); // Temuan 5: emisi eksak tanpa prefill race
+      return build(
+        autoPrefill: false,
+      ); // Temuan 5: emisi eksak tanpa prefill race
     },
     act: (c) => c.save(),
     expect: () => [
@@ -110,8 +129,8 @@ void main() {
       return const Right(unit);
     });
     final c = build();
-    final f1 = c.save();      // saving=true (emit sinkron)
-    final f2 = c.save();      // state.saving==true → no-op
+    final f1 = c.save(); // saving=true (emit sinkron)
+    final f2 = c.save(); // state.saving==true → no-op
     await Future.wait([f1, f2]);
     verify(() => repo.save(any())).called(1);
   });

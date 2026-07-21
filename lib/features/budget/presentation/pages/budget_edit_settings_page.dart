@@ -21,12 +21,10 @@ class BudgetEditSettingsPage extends StatefulWidget {
   const BudgetEditSettingsPage({super.key});
 
   @override
-  State<BudgetEditSettingsPage> createState() =>
-      _BudgetEditSettingsPageState();
+  State<BudgetEditSettingsPage> createState() => _BudgetEditSettingsPageState();
 }
 
-class _BudgetEditSettingsPageState
-    extends State<BudgetEditSettingsPage> {
+class _BudgetEditSettingsPageState extends State<BudgetEditSettingsPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _incomeCtrl;
   late TextEditingController _rentCtrl;
@@ -81,19 +79,18 @@ class _BudgetEditSettingsPageState
       int.tryParse(ctrl.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
 
   BudgetSettingsEntity _buildEntity() => BudgetSettingsEntity(
-        monthlyIncome: _parseField(_incomeCtrl),
-        paymentDate: _paymentDate,
-        emergencyFundPct: _emergencyPct,
-        createdAt: _original?.createdAt ?? DateTime.now(),
-        rentExpense: _parseField(_rentCtrl),
-        utilitiesExpense: _parseField(_utilitiesCtrl),
-        internetExpense: _parseField(_internetCtrl),
-        phoneExpense: _parseField(_phoneCtrl),
-        otherFixedExpense: _parseField(_otherCtrl),
-      );
+    monthlyIncome: _parseField(_incomeCtrl),
+    paymentDate: _paymentDate,
+    emergencyFundPct: _emergencyPct,
+    createdAt: _original?.createdAt ?? DateTime.now(),
+    rentExpense: _parseField(_rentCtrl),
+    utilitiesExpense: _parseField(_utilitiesCtrl),
+    internetExpense: _parseField(_internetCtrl),
+    phoneExpense: _parseField(_phoneCtrl),
+    otherFixedExpense: _parseField(_otherCtrl),
+  );
 
-  bool get _hasChanges =>
-      _original != null && _buildEntity() != _original;
+  bool get _hasChanges => _original != null && _buildEntity() != _original;
 
   int get _totalFixed =>
       _parseField(_rentCtrl) +
@@ -105,8 +102,7 @@ class _BudgetEditSettingsPageState
   int get _dailyPreview {
     final income = _parseField(_incomeCtrl);
     final emergency = (income * _emergencyPct).round();
-    final spendable =
-        (income - _totalFixed - emergency).clamp(0, income);
+    final spendable = (income - _totalFixed - emergency).clamp(0, income);
     if (spendable <= 0) return 0;
     // Pakai hari nyata dalam siklus (bukan hardcode 30)
     final cycleDays = daysInCycle(_paymentDate);
@@ -120,21 +116,16 @@ class _BudgetEditSettingsPageState
     bool isDark = false,
     String? errorText,
   }) {
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
-    final textColor =
-        isDark ? AppColors.textDark : AppColors.textLight;
-    final hintColor =
-        isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final fillColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final hintColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final fillColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            style: AppTextStyles.label.copyWith(color: textColor)),
+        Text(label, style: AppTextStyles.label.copyWith(color: textColor)),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
@@ -161,10 +152,8 @@ class _BudgetEditSettingsPageState
               borderSide: BorderSide(color: borderColor, width: 1),
             ),
             focusedBorder: const OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.all(Radius.circular(12)),
-              borderSide:
-                  BorderSide(color: AppColors.primary, width: 2),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
             ),
           ),
           onChanged: (_) => setState(() {}),
@@ -218,9 +207,9 @@ class _BudgetEditSettingsPageState
         // (fix finding #6 — conditional reload di budget_overview_page).
         if (state is BudgetSettingsSaved) Navigator.of(context).pop(true);
         if (state is BudgetSettingsError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
         }
       },
       builder: (context, state) {
@@ -248,20 +237,21 @@ class _BudgetEditSettingsPageState
                   isDark: isDark,
                   title: 'PENDAPATAN',
                   children: [
-                    _moneyField(_incomeCtrl, 'Penghasilan bulanan',
-                        isDark: isDark,
-                        errorText: _parseField(_incomeCtrl) <= 0
-                            ? 'Penghasilan harus diisi dulu, ya.'
-                            : null),
+                    _moneyField(
+                      _incomeCtrl,
+                      'Penghasilan bulanan',
+                      isDark: isDark,
+                      errorText: _parseField(_incomeCtrl) <= 0
+                          ? 'Penghasilan harus diisi dulu, ya.'
+                          : null,
+                    ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text('Tanggal gajian',
-                        style: AppTextStyles.label),
+                    Text('Tanggal gajian', style: AppTextStyles.label),
                     const SizedBox(height: AppSpacing.sm),
                     _PaymentDateGrid(
                       selected: _paymentDate,
                       isDark: isDark,
-                      onSelected: (d) =>
-                          setState(() => _paymentDate = d),
+                      onSelected: (d) => setState(() => _paymentDate = d),
                     ),
                   ],
                 ),
@@ -272,32 +262,31 @@ class _BudgetEditSettingsPageState
                   isDark: isDark,
                   title: 'PENGELUARAN TETAP',
                   children: [
-                    _moneyField(_rentCtrl, 'Kos / kontrakan',
-                        isDark: isDark),
+                    _moneyField(_rentCtrl, 'Kos / kontrakan', isDark: isDark),
                     const SizedBox(height: AppSpacing.md),
-                    _moneyField(_utilitiesCtrl, 'Listrik & air',
-                        isDark: isDark),
+                    _moneyField(
+                      _utilitiesCtrl,
+                      'Listrik & air',
+                      isDark: isDark,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    _moneyField(_internetCtrl, 'Internet',
-                        isDark: isDark),
+                    _moneyField(_internetCtrl, 'Internet', isDark: isDark),
                     const SizedBox(height: AppSpacing.md),
-                    _moneyField(_phoneCtrl, 'Telepon',
-                        isDark: isDark),
+                    _moneyField(_phoneCtrl, 'Telepon', isDark: isDark),
                     const SizedBox(height: AppSpacing.md),
-                    _moneyField(_otherCtrl, 'Lainnya',
-                        isDark: isDark),
+                    _moneyField(_otherCtrl, 'Lainnya', isDark: isDark),
                     const SizedBox(height: AppSpacing.md),
                     // Total line
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total tetap',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: muted)),
+                        Text(
+                          'Total tetap',
+                          style: AppTextStyles.bodySmall.copyWith(color: muted),
+                        ),
                         Text(
                           formatRupiah(_totalFixed),
-                          style: AppTextStyles.numericSm
-                              .copyWith(color: muted),
+                          style: AppTextStyles.numericSm.copyWith(color: muted),
                         ),
                       ],
                     ),
@@ -311,19 +300,17 @@ class _BudgetEditSettingsPageState
                   title: 'DANA DARURAT',
                   children: [
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           '${(_emergencyPct * 100).toStringAsFixed(0)}%',
                           style: AppTextStyles.numericMd,
                         ),
                         Text(
-                          formatRupiah((_parseField(_incomeCtrl) *
-                                  _emergencyPct)
-                              .round()),
-                          style: AppTextStyles.body
-                              .copyWith(color: muted),
+                          formatRupiah(
+                            (_parseField(_incomeCtrl) * _emergencyPct).round(),
+                          ),
+                          style: AppTextStyles.body.copyWith(color: muted),
                         ),
                       ],
                     ),
@@ -333,21 +320,18 @@ class _BudgetEditSettingsPageState
                       max: 0.25,
                       divisions: 4,
                       activeColor: AppColors.primary,
-                      onChanged: (v) =>
-                          setState(() => _emergencyPct = v),
+                      onChanged: (v) => setState(() => _emergencyPct = v),
                     ),
                     Text(
                       'Direkomendasikan 10–20% dari penghasilan.',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: muted),
+                      style: AppTextStyles.bodySmall.copyWith(color: muted),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
                 // ── Preview card ─────────────────────────────────────────
-                _PreviewCard(
-                    dailyBudget: _dailyPreview, isDark: isDark),
+                _PreviewCard(dailyBudget: _dailyPreview, isDark: isDark),
                 const SizedBox(height: AppSpacing.lg),
 
                 // ── Kelola Kategori ───────────────────────────────────────
@@ -358,7 +342,9 @@ class _BudgetEditSettingsPageState
                   subtitle: Text(
                     'Tambah atau hapus kategori kustom',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                      color: isDark
+                          ? AppColors.mutedDark
+                          : AppColors.mutedLight,
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right),
@@ -366,9 +352,9 @@ class _BudgetEditSettingsPageState
                     await context.push('/budget/categories');
                     if (context.mounted) {
                       // force: kategori bisa berubah — refresh eksplisit.
-                      context
-                          .read<BudgetLimitsBloc>()
-                          .add(const LoadBudgetLimits(force: true));
+                      context.read<BudgetLimitsBloc>().add(
+                        const LoadBudgetLimits(force: true),
+                      );
                     }
                   },
                 ),
@@ -382,9 +368,9 @@ class _BudgetEditSettingsPageState
                     income: _parseField(_incomeCtrl),
                     hasChanges: _hasChanges,
                   ),
-                  onPressed: () => context
-                      .read<BudgetSettingsBloc>()
-                      .add(SaveBudgetSettings(_buildEntity())),
+                  onPressed: () => context.read<BudgetSettingsBloc>().add(
+                    SaveBudgetSettings(_buildEntity()),
+                  ),
                 ),
               ],
             ),
@@ -426,10 +412,9 @@ class _PaymentDateGrid extends StatelessWidget {
               color: isSelected
                   ? AppColors.primary
                   : isDark
-                      ? AppColors.surfaceDark
-                      : AppColors.surfaceLight,
-              borderRadius:
-                  BorderRadius.circular(AppRadius.sm),
+                  ? AppColors.surfaceDark
+                  : AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               border: isSelected
                   ? null
                   : Border.all(
@@ -474,8 +459,7 @@ class _PreviewCard extends StatelessWidget {
         children: [
           Text('ANGGARAN HARIAN', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.sm),
-          Text(formatRupiah(dailyBudget),
-              style: AppTextStyles.numericLg),
+          Text(formatRupiah(dailyBudget), style: AppTextStyles.numericLg),
           const SizedBox(height: 2),
           Text(
             'per hari yang bisa kamu gunakan',

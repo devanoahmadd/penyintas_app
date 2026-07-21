@@ -51,14 +51,15 @@ void main() {
     mockAddTransaction = MockAddTransactionUseCase();
     mockGetCategories = MockGetCategoriesUseCase();
     // Default: return both categories
-    when(() => mockGetCategories(any()))
-        .thenAnswer((_) async => const Right([_expenseCat, _incomeCat]));
+    when(
+      () => mockGetCategories(any()),
+    ).thenAnswer((_) async => const Right([_expenseCat, _incomeCat]));
   });
 
   AddTransactionBloc buildBloc() => AddTransactionBloc(
-        addTransaction: mockAddTransaction,
-        getCategories: mockGetCategories,
-      );
+    addTransaction: mockAddTransaction,
+    getCategories: mockGetCategories,
+  );
 
   group('AmountChanged', () {
     blocTest<AddTransactionBloc, AddTransactionState>(
@@ -66,8 +67,11 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const AmountChanged(75000)),
       expect: () => [
-        isA<AddTransactionInProgress>()
-            .having((s) => s.amount, 'amount', 75000),
+        isA<AddTransactionInProgress>().having(
+          (s) => s.amount,
+          'amount',
+          75000,
+        ),
       ],
     );
   });
@@ -78,8 +82,11 @@ void main() {
       build: buildBloc,
       act: (bloc) => bloc.add(const CategorySelected('transport')),
       expect: () => [
-        isA<AddTransactionInProgress>()
-            .having((s) => s.selectedCategory, 'selectedCategory', 'transport'),
+        isA<AddTransactionInProgress>().having(
+          (s) => s.selectedCategory,
+          'selectedCategory',
+          'transport',
+        ),
       ],
     );
   });
@@ -152,8 +159,9 @@ void main() {
         date: DateTime.fromMillisecondsSinceEpoch(0),
       ),
       setUp: () {
-        when(() => mockAddTransaction(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       act: (bloc) => bloc.add(const SubmitTransaction()),
       expect: () => [
@@ -173,14 +181,12 @@ void main() {
         date: DateTime.fromMillisecondsSinceEpoch(0),
       ),
       setUp: () {
-        when(() => mockAddTransaction(any()))
-            .thenAnswer((_) async => const Left(CacheFailure()));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure()));
       },
       act: (bloc) => bloc.add(const SubmitTransaction()),
-      expect: () => [
-        isA<AddTransactionLoading>(),
-        isA<AddTransactionError>(),
-      ],
+      expect: () => [isA<AddTransactionLoading>(), isA<AddTransactionError>()],
     );
   });
 }

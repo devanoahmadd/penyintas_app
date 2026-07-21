@@ -35,8 +35,9 @@ void main() {
   );
 
   test('berhasil create custom category', () async {
-    when(() => repo.createCategory(tCustom))
-        .thenAnswer((_) async => Right(tCustom.copyWith(id: 1)));
+    when(
+      () => repo.createCategory(tCustom),
+    ).thenAnswer((_) async => Right(tCustom.copyWith(id: 1)));
     final result = await usecase(tCustom);
     expect(result.isRight(), true);
     verify(() => repo.createCategory(tCustom)).called(1);
@@ -54,8 +55,9 @@ void main() {
   });
 
   test('repository error → Left(failure)', () async {
-    when(() => repo.createCategory(tCustom))
-        .thenAnswer((_) async => const Left(CacheFailure('DB error')));
+    when(
+      () => repo.createCategory(tCustom),
+    ).thenAnswer((_) async => const Left(CacheFailure('DB error')));
     final result = await usecase(tCustom);
     expect(result.isLeft(), true);
   });

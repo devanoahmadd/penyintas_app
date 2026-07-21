@@ -17,53 +17,64 @@ void main() {
   });
 
   group('deleteAccount', () {
-    test('password terisi → reauthenticate(password) lalu callDeleteAccount',
-        () async {
-      when(() => remote.reauthenticate(password: any(named: 'password')))
-          .thenAnswer((_) async {});
-      when(() => remote.callDeleteAccount()).thenAnswer((_) async {});
+    test(
+      'password terisi → reauthenticate(password) lalu callDeleteAccount',
+      () async {
+        when(
+          () => remote.reauthenticate(password: any(named: 'password')),
+        ).thenAnswer((_) async {});
+        when(() => remote.callDeleteAccount()).thenAnswer((_) async {});
 
-      final result = await repository.deleteAccount(password: 'rahasia1');
+        final result = await repository.deleteAccount(password: 'rahasia1');
 
-      expect(result.isRight(), isTrue);
-      verify(() => remote.reauthenticate(password: 'rahasia1')).called(1);
-      verify(() => remote.callDeleteAccount()).called(1);
-      verifyNever(() => remote.reauthenticateWithGoogle());
-    });
+        expect(result.isRight(), isTrue);
+        verify(() => remote.reauthenticate(password: 'rahasia1')).called(1);
+        verify(() => remote.callDeleteAccount()).called(1);
+        verifyNever(() => remote.reauthenticateWithGoogle());
+      },
+    );
 
-    test('password null → reauthenticateWithGoogle lalu callDeleteAccount',
-        () async {
-      when(() => remote.reauthenticateWithGoogle())
-          .thenAnswer((_) async => true);
-      when(() => remote.callDeleteAccount()).thenAnswer((_) async {});
+    test(
+      'password null → reauthenticateWithGoogle lalu callDeleteAccount',
+      () async {
+        when(
+          () => remote.reauthenticateWithGoogle(),
+        ).thenAnswer((_) async => true);
+        when(() => remote.callDeleteAccount()).thenAnswer((_) async {});
 
-      final result = await repository.deleteAccount(password: null);
+        final result = await repository.deleteAccount(password: null);
 
-      expect(result.isRight(), isTrue);
-      verify(() => remote.reauthenticateWithGoogle()).called(1);
-      verify(() => remote.callDeleteAccount()).called(1);
-      verifyNever(
-          () => remote.reauthenticate(password: any(named: 'password')));
-    });
+        expect(result.isRight(), isTrue);
+        verify(() => remote.reauthenticateWithGoogle()).called(1);
+        verify(() => remote.callDeleteAccount()).called(1);
+        verifyNever(
+          () => remote.reauthenticate(password: any(named: 'password')),
+        );
+      },
+    );
 
-    test('jalur Google dibatalkan → Left AuthFailure, akun TIDAK dihapus',
-        () async {
-      when(() => remote.reauthenticateWithGoogle())
-          .thenAnswer((_) async => false);
+    test(
+      'jalur Google dibatalkan → Left AuthFailure, akun TIDAK dihapus',
+      () async {
+        when(
+          () => remote.reauthenticateWithGoogle(),
+        ).thenAnswer((_) async => false);
 
-      final result = await repository.deleteAccount(password: null);
+        final result = await repository.deleteAccount(password: null);
 
-      expect(result.isLeft(), isTrue);
-      result.fold(
-        (failure) => expect(failure, isA<AuthFailure>()),
-        (_) => fail('seharusnya Left'),
-      );
-      verifyNever(() => remote.callDeleteAccount());
-    });
+        expect(result.isLeft(), isTrue);
+        result.fold(
+          (failure) => expect(failure, isA<AuthFailure>()),
+          (_) => fail('seharusnya Left'),
+        );
+        verifyNever(() => remote.callDeleteAccount());
+      },
+    );
 
     test('AuthException dari reauth → Left AuthFailure', () async {
-      when(() => remote.reauthenticateWithGoogle())
-          .thenThrow(const AuthException('Sesi tidak ditemukan. Login ulang.'));
+      when(
+        () => remote.reauthenticateWithGoogle(),
+      ).thenThrow(const AuthException('Sesi tidak ditemukan. Login ulang.'));
 
       final result = await repository.deleteAccount(password: null);
 

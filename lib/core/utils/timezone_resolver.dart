@@ -34,12 +34,14 @@ class TimezoneResolver {
     final raw = await rootBundle.loadString('assets/data/timezone_cities.json');
     final json = jsonDecode(raw) as Map<String, dynamic>;
     final cities = (json['cities'] as List)
-        .map((e) => TimezoneCity(
-              city: e['city'] as String,
-              country: e['country'] as String,
-              iana: e['iana'] as String,
-              gmt: e['gmt'] as String,
-            ))
+        .map(
+          (e) => TimezoneCity(
+            city: e['city'] as String,
+            country: e['country'] as String,
+            iana: e['iana'] as String,
+            gmt: e['gmt'] as String,
+          ),
+        )
         .toList();
     return TimezoneResolver(cities);
   }

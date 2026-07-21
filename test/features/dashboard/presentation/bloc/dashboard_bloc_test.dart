@@ -40,16 +40,16 @@ void main() {
     mockGetDashboard = MockGetDashboardUseCase();
   });
 
-  DashboardBloc buildBloc() =>
-      DashboardBloc(getDashboard: mockGetDashboard);
+  DashboardBloc buildBloc() => DashboardBloc(getDashboard: mockGetDashboard);
 
   group('LoadDashboard', () {
     blocTest<DashboardBloc, DashboardState>(
       'emits Loading then Loaded on success',
       build: buildBloc,
       setUp: () {
-        when(() => mockGetDashboard(any()))
-            .thenAnswer((_) => Stream.value(Right(makeEntity())));
+        when(
+          () => mockGetDashboard(any()),
+        ).thenAnswer((_) => Stream.value(Right(makeEntity())));
       },
       act: (bloc) => bloc.add(const LoadDashboard()),
       expect: () => [
@@ -64,32 +64,38 @@ void main() {
       'emits Loading then Error on failure',
       build: buildBloc,
       setUp: () {
-        when(() => mockGetDashboard(any()))
-            .thenAnswer((_) => Stream.value(const Left(CacheFailure())));
+        when(
+          () => mockGetDashboard(any()),
+        ).thenAnswer((_) => Stream.value(const Left(CacheFailure())));
       },
       act: (bloc) => bloc.add(const LoadDashboard()),
-      expect: () => [
-        isA<DashboardLoading>(),
-        isA<DashboardError>(),
-      ],
+      expect: () => [isA<DashboardLoading>(), isA<DashboardError>()],
     );
 
     blocTest<DashboardBloc, DashboardState>(
       'emits multiple Loaded states on stream updates with different data',
       build: buildBloc,
       setUp: () {
-        when(() => mockGetDashboard(any())).thenAnswer((_) => Stream.fromIterable([
-              Right(makeEntity(daysToLive: 18)),
-              Right(makeEntity(daysToLive: 10)),
-            ]));
+        when(() => mockGetDashboard(any())).thenAnswer(
+          (_) => Stream.fromIterable([
+            Right(makeEntity(daysToLive: 18)),
+            Right(makeEntity(daysToLive: 10)),
+          ]),
+        );
       },
       act: (bloc) => bloc.add(const LoadDashboard()),
       expect: () => [
         isA<DashboardLoading>(),
-        isA<DashboardLoaded>()
-            .having((s) => s.entity.daysToLive, 'first daysToLive', 18),
-        isA<DashboardLoaded>()
-            .having((s) => s.entity.daysToLive, 'second daysToLive', 10),
+        isA<DashboardLoaded>().having(
+          (s) => s.entity.daysToLive,
+          'first daysToLive',
+          18,
+        ),
+        isA<DashboardLoaded>().having(
+          (s) => s.entity.daysToLive,
+          'second daysToLive',
+          10,
+        ),
       ],
     );
   });
@@ -100,13 +106,17 @@ void main() {
       build: buildBloc,
       seed: () => DashboardLoaded(makeEntity(daysToLive: 18)),
       setUp: () {
-        when(() => mockGetDashboard(any()))
-            .thenAnswer((_) => Stream.value(Right(makeEntity(daysToLive: 15))));
+        when(
+          () => mockGetDashboard(any()),
+        ).thenAnswer((_) => Stream.value(Right(makeEntity(daysToLive: 15))));
       },
       act: (bloc) => bloc.add(const DashboardRefreshed()),
       expect: () => [
-        isA<DashboardLoaded>()
-            .having((s) => s.entity.daysToLive, 'refreshed daysToLive', 15),
+        isA<DashboardLoaded>().having(
+          (s) => s.entity.daysToLive,
+          'refreshed daysToLive',
+          15,
+        ),
       ],
     );
   });

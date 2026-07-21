@@ -48,24 +48,24 @@ class _LoginPageState extends State<LoginPage>
       parent: _anim,
       curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
     );
-    _slideHeader = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _anim,
-      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
-    ));
+    _slideHeader = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _anim,
+            curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+          ),
+        );
     _fadeBody = CurvedAnimation(
       parent: _anim,
       curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
     );
-    _slideBody = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _anim,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-    ));
+    _slideBody = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _anim,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+          ),
+        );
     _anim.forward();
   }
 
@@ -99,10 +99,12 @@ class _LoginPageState extends State<LoginPage>
 
   void _submit(BuildContext context) {
     if (!_validate(context)) return;
-    context.read<AuthBloc>().add(SignInRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ));
+    context.read<AuthBloc>().add(
+      SignInRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      ),
+    );
   }
 
   void _onForgotPassword(BuildContext context) {
@@ -111,9 +113,10 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _showForgotPasswordSheet(
-      BuildContext context, AuthBloc bloc) async {
-    final emailCtrl =
-        TextEditingController(text: _emailController.text.trim());
+    BuildContext context,
+    AuthBloc bloc,
+  ) async {
+    final emailCtrl = TextEditingController(text: _emailController.text.trim());
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -133,8 +136,7 @@ class _LoginPageState extends State<LoginPage>
     return SnackBar(
       content: Row(
         children: [
-          Icon(Icons.warning_rounded,
-              color: AppColors.warn, size: 18),
+          Icon(Icons.warning_rounded, color: AppColors.warn, size: 18),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -146,12 +148,15 @@ class _LoginPageState extends State<LoginPage>
           ),
         ],
       ),
-      backgroundColor:
-          isDark ? AppColors.cardDark : AppColors.cardLight,
+      backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 4),
       margin: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         side: BorderSide(
@@ -165,14 +170,12 @@ class _LoginPageState extends State<LoginPage>
     return SnackBar(
       content: Row(
         children: [
-          const Icon(Icons.check_circle_outline,
-              color: Colors.white, size: 18),
+          const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style:
-                  AppTextStyles.bodySmall.copyWith(color: Colors.white),
+              style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
             ),
           ),
         ],
@@ -181,7 +184,11 @@ class _LoginPageState extends State<LoginPage>
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 4),
       margin: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
@@ -193,10 +200,10 @@ class _LoginPageState extends State<LoginPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
-    final mutedColor =
-        isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (_, state) =>
@@ -209,8 +216,7 @@ class _LoginPageState extends State<LoginPage>
         } else if (state is PasswordResetEmailSent) {
           ScaffoldMessenger.of(ctx)
             ..hideCurrentSnackBar()
-            ..showSnackBar(
-                _buildSuccessSnackBar(ctx.l10n.authResetEmailSent));
+            ..showSnackBar(_buildSuccessSnackBar(ctx.l10n.authResetEmailSent));
         }
       },
       buildWhen: (_, state) =>
@@ -260,8 +266,9 @@ class _LoginPageState extends State<LoginPage>
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   l10n.authLoginSubtitle,
-                                  style: AppTextStyles.body
-                                      .copyWith(color: textSoftColor),
+                                  style: AppTextStyles.body.copyWith(
+                                    color: textSoftColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -287,8 +294,9 @@ class _LoginPageState extends State<LoginPage>
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
                                   onChanged: (value) {
-                                    final valid =
-                                        _emailRegex.hasMatch(value.trim());
+                                    final valid = _emailRegex.hasMatch(
+                                      value.trim(),
+                                    );
                                     if (valid != _emailValid) {
                                       setState(() => _emailValid = valid);
                                     }
@@ -372,14 +380,15 @@ class _LoginPageState extends State<LoginPage>
                           const SizedBox(height: AppSpacing.lg),
                           GoogleAuthButton(
                             isLoading: isLoading,
-                            onPressed: () => context
-                                .read<AuthBloc>()
-                                .add(const GoogleSignInRequested()),
+                            onPressed: () => context.read<AuthBloc>().add(
+                              const GoogleSignInRequested(),
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.xl),
                           Semantics(
                             button: true,
-                            label: '${l10n.authNoAccount} ${l10n.authSignUpLink}',
+                            label:
+                                '${l10n.authNoAccount} ${l10n.authSignUpLink}',
                             child: TextButton(
                               onPressed: isLoading
                                   ? null
@@ -387,14 +396,16 @@ class _LoginPageState extends State<LoginPage>
                               style: TextButton.styleFrom(
                                 minimumSize: const Size.fromHeight(44),
                                 padding: const EdgeInsets.symmetric(
-                                    vertical: AppSpacing.sm),
+                                  vertical: AppSpacing.sm,
+                                ),
                               ),
                               child: RichText(
                                 textAlign: TextAlign.center,
                                 text: TextSpan(
                                   text: l10n.authNoAccount,
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: textSoftColor),
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: textSoftColor,
+                                  ),
                                   children: [
                                     TextSpan(
                                       text: l10n.authSignUpLink,
@@ -425,10 +436,7 @@ class _LoginPageState extends State<LoginPage>
 // ── Sheet lupa kata sandi ──────────────────────────────────────────────────
 
 class _ForgotPasswordSheet extends StatefulWidget {
-  const _ForgotPasswordSheet({
-    required this.emailCtrl,
-    required this.onSend,
-  });
+  const _ForgotPasswordSheet({required this.emailCtrl, required this.onSend});
 
   final TextEditingController emailCtrl;
   final void Function(String email) onSend;
@@ -454,13 +462,12 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.surfaceDark : AppColors.bgLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl,
@@ -484,7 +491,9 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: (isDark ? AppColors.borderDark : AppColors.borderLight),
+                  color: (isDark
+                      ? AppColors.borderDark
+                      : AppColors.borderLight),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
               ),
@@ -513,7 +522,10 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
               onSubmitted: (_) => _send(),
             ),
             const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(label: context.l10n.authResetPasswordCta, onPressed: _send),
+            PrimaryButton(
+              label: context.l10n.authResetPasswordCta,
+              onPressed: _send,
+            ),
           ],
         ),
       ),

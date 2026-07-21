@@ -35,8 +35,9 @@ void main() {
   );
 
   test('berhasil update custom category', () async {
-    when(() => repo.updateCategory(tCustom))
-        .thenAnswer((_) async => const Right(null));
+    when(
+      () => repo.updateCategory(tCustom),
+    ).thenAnswer((_) async => const Right(null));
     final result = await usecase(tCustom);
     expect(result.isRight(), true);
     verify(() => repo.updateCategory(tCustom)).called(1);
@@ -53,15 +54,17 @@ void main() {
     verifyNever(() => repo.updateCategory(any()));
   });
 
-  test('gagal update category dengan labelOverride kosong — return ValidationFailure',
-      () async {
-    final emptyLabel = tCustom.copyWith(labelOverride: '   ');
-    final result = await usecase(emptyLabel);
-    expect(result.isLeft(), true);
-    result.fold(
-      (f) => expect(f, isA<ValidationFailure>()),
-      (_) => fail('should fail'),
-    );
-    verifyNever(() => repo.updateCategory(any()));
-  });
+  test(
+    'gagal update category dengan labelOverride kosong — return ValidationFailure',
+    () async {
+      final emptyLabel = tCustom.copyWith(labelOverride: '   ');
+      final result = await usecase(emptyLabel);
+      expect(result.isLeft(), true);
+      result.fold(
+        (f) => expect(f, isA<ValidationFailure>()),
+        (_) => fail('should fail'),
+      );
+      verifyNever(() => repo.updateCategory(any()));
+    },
+  );
 }

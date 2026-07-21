@@ -17,14 +17,18 @@ void main() {
     useCase = SyncUserSettingsUseCase(mockRepo);
   });
 
-  test('should call repository.syncFromRemote and return Right(unit)', () async {
-    when(() => mockRepo.syncFromRemote())
-        .thenAnswer((_) async => const Right(unit));
+  test(
+    'should call repository.syncFromRemote and return Right(unit)',
+    () async {
+      when(
+        () => mockRepo.syncFromRemote(),
+      ).thenAnswer((_) async => const Right(unit));
 
-    final result = await useCase(const NoParams());
+      final result = await useCase(const NoParams());
 
-    expect(result, const Right(unit));
-    verify(() => mockRepo.syncFromRemote()).called(1);
-    verifyNoMoreInteractions(mockRepo);
-  });
+      expect(result, const Right(unit));
+      verify(() => mockRepo.syncFromRemote()).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    },
+  );
 }

@@ -4,12 +4,12 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
 
 Widget _pump({required bool isDark, double grow = 1.0}) => MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: GrowShoot(grow: grow, size: 108, isDark: isDark),
-        ),
-      ),
-    );
+  home: Scaffold(
+    body: Center(
+      child: GrowShoot(grow: grow, size: 108, isDark: isDark),
+    ),
+  ),
+);
 
 void main() {
   testWidgets('dark mode: background menggunakan cardDark', (tester) async {

@@ -85,7 +85,11 @@ class _AppTextFieldState extends State<AppTextField> {
 
     const checkIcon = Padding(
       padding: EdgeInsets.only(right: 12),
-      child: Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+      child: Icon(
+        Icons.check_circle_outline,
+        color: AppColors.success,
+        size: 20,
+      ),
     );
 
     if (widget.isPassword && widget.isValid) {
@@ -161,8 +165,10 @@ class _AppTextFieldState extends State<AppTextField> {
             hintStyle: AppTextStyles.body.copyWith(color: hintColor),
             errorText: widget.errorText,
             helperText: widget.errorText == null ? widget.helperText : null,
-            errorStyle: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.warn, height: 1.3),
+            errorStyle: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.warn,
+              height: 1.3,
+            ),
             helperStyle: AppTextStyles.bodySmall.copyWith(height: 1.3),
             prefixIcon: widget.prefixIcon,
             suffixIconConstraints: const BoxConstraints(minHeight: 48),

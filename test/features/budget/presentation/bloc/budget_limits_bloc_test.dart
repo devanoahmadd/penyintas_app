@@ -23,13 +23,22 @@ import 'package:penyintas_app/features/transaction/domain/repositories/transacti
 import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
 
 class MockGetBudgetSettings extends Mock implements GetBudgetSettingsUseCase {}
+
 class MockGetBudgetLimits extends Mock implements GetBudgetLimitsUseCase {}
+
 class MockSaveBudgetLimit extends Mock implements SaveBudgetLimitUseCase {}
+
 class MockDeleteBudgetLimit extends Mock implements DeleteBudgetLimitUseCase {}
+
 class MockTransactionRepository extends Mock implements TransactionRepository {}
-class MockGetLimitableCategories extends Mock implements GetLimitableCategoriesUseCase {}
+
+class MockGetLimitableCategories extends Mock
+    implements GetLimitableCategoriesUseCase {}
+
 class FakeBudgetLimitEntity extends Fake implements BudgetLimitEntity {}
+
 class FakeDeleteLimitParams extends Fake implements DeleteLimitParams {}
+
 class FakeNoParams extends Fake implements NoParams {}
 
 final _tSettings = BudgetSettingsEntity(
@@ -111,14 +120,20 @@ void main() {
     mockGetLimitableCategories = MockGetLimitableCategories();
     txChangeController = StreamController<void>.broadcast();
 
-    when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-        .thenAnswer((_) async => const Right(<TransactionEntity>[]));
+    when(
+      () => mockTxRepo.getTransactions(
+        from: any(named: 'from'),
+        to: any(named: 'to'),
+      ),
+    ).thenAnswer((_) async => const Right(<TransactionEntity>[]));
     // Stream pemicu reaktif — bloc subscribe di constructor, jadi wajib di-stub.
-    when(() => mockTxRepo.watchTransactionChanges())
-        .thenAnswer((_) => txChangeController.stream);
+    when(
+      () => mockTxRepo.watchTransactionChanges(),
+    ).thenAnswer((_) => txChangeController.stream);
     // Default: kembalikan daftar kosong → overview tanpa categoryItems
-    when(() => mockGetLimitableCategories(any()))
-        .thenAnswer((_) async => const Right(<CategoryEntity>[]));
+    when(
+      () => mockGetLimitableCategories(any()),
+    ).thenAnswer((_) async => const Right(<CategoryEntity>[]));
 
     bloc = BudgetLimitsBloc(
       getBudgetSettings: mockGetSettings,
@@ -140,24 +155,24 @@ void main() {
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
       'emits Loading → Loaded saat berhasil',
       build: () {
-        when(() => mockGetSettings(any()))
-            .thenAnswer((_) async => Right(_tSettings));
-        when(() => mockGetLimits(any()))
-            .thenAnswer((_) async => Right([_tLimit]));
+        when(
+          () => mockGetSettings(any()),
+        ).thenAnswer((_) async => Right(_tSettings));
+        when(
+          () => mockGetLimits(any()),
+        ).thenAnswer((_) async => Right([_tLimit]));
         return bloc;
       },
       act: (b) => b.add(const LoadBudgetLimits()),
-      expect: () => [
-        const BudgetLimitsLoading(),
-        isA<BudgetLimitsLoaded>(),
-      ],
+      expect: () => [const BudgetLimitsLoading(), isA<BudgetLimitsLoaded>()],
     );
 
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
       'emits Loading → Error saat settings gagal',
       build: () {
-        when(() => mockGetSettings(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('Gagal.')));
+        when(
+          () => mockGetSettings(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('Gagal.')));
         return bloc;
       },
       act: (b) => b.add(const LoadBudgetLimits()),
@@ -173,11 +188,16 @@ void main() {
       'update state limits setelah save berhasil',
       build: () {
         when(() => mockSave(any())).thenAnswer((_) async => const Right(1));
-        when(() => mockGetLimits(any())).thenAnswer((_) async => Right([_tLimit]));
-        when(() => mockGetSettings(any())).thenAnswer((_) async => Right(_tSettings));
+        when(
+          () => mockGetLimits(any()),
+        ).thenAnswer((_) async => Right([_tLimit]));
+        when(
+          () => mockGetSettings(any()),
+        ).thenAnswer((_) async => Right(_tSettings));
         return bloc;
       },
-      seed: () => BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
       act: (b) => b.add(SaveBudgetLimit(_tLimit)),
       expect: () => [isA<BudgetLimitsLoaded>()],
     );
@@ -187,13 +207,17 @@ void main() {
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
       'remove limit dari state setelah delete berhasil',
       build: () {
-        when(() => mockDelete(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDelete(any()),
+        ).thenAnswer((_) async => const Right(null));
         // _onDelete sekarang memanggil _getSettings untuk recompute overview
-        when(() => mockGetSettings(any()))
-            .thenAnswer((_) async => Right(_tSettings));
+        when(
+          () => mockGetSettings(any()),
+        ).thenAnswer((_) async => Right(_tSettings));
         return bloc;
       },
-      seed: () => BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
       act: (b) => b.add(const DeleteBudgetLimit(id: 1, categoryName: 'food')),
       expect: () => [
         isA<BudgetLimitsLoaded>().having((s) => s.limits, 'limits', isEmpty),
@@ -203,12 +227,16 @@ void main() {
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
       'emits Error jika settings gagal setelah delete berhasil',
       build: () {
-        when(() => mockDelete(any())).thenAnswer((_) async => const Right(null));
-        when(() => mockGetSettings(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('Gagal.')));
+        when(
+          () => mockDelete(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockGetSettings(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('Gagal.')));
         return bloc;
       },
-      seed: () => BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
+      seed: () =>
+          BudgetLimitsLoaded(limits: [_tLimit], overview: _emptyOverview()),
       act: (b) => b.add(const DeleteBudgetLimit(id: 1, categoryName: 'food')),
       expect: () => [const BudgetLimitsError('Gagal.')],
     );
@@ -217,24 +245,30 @@ void main() {
   group('force-refresh & reaktif transaksi (fix: catatan mengisi limit)', () {
     // Stub bersama untuk recompute yang menghasilkan spent food = 90.000.
     void stubRecomputeWithFoodTx() {
-      when(() => mockGetSettings(any()))
-          .thenAnswer((_) async => Right(_tSettings));
-      when(() => mockGetLimits(any()))
-          .thenAnswer((_) async => Right([_tLimit]));
-      when(() => mockGetLimitableCategories(any()))
-          .thenAnswer((_) async => Right([_foodCat]));
-      when(() => mockTxRepo.getTransactions(
-              from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([_txFood90k]));
+      when(
+        () => mockGetSettings(any()),
+      ).thenAnswer((_) async => Right(_tSettings));
+      when(
+        () => mockGetLimits(any()),
+      ).thenAnswer((_) async => Right([_tLimit]));
+      when(
+        () => mockGetLimitableCategories(any()),
+      ).thenAnswer((_) async => Right([_foodCat]));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([_txFood90k]));
     }
 
     Matcher loadedWithFoodSpent(int amount) => isA<BudgetLimitsLoaded>().having(
-          (s) => s.overview.categoryItems
-              .firstWhere((i) => i.category.slug == 'food')
-              .spentAmount,
-          'spent food',
-          amount,
-        );
+      (s) => s.overview.categoryItems
+          .firstWhere((i) => i.category.slug == 'food')
+          .spentAmount,
+      'spent food',
+      amount,
+    );
 
     blocTest<BudgetLimitsBloc, BudgetLimitsState>(
       'force:true saat Loaded → recompute TANPA emit Loading (anti-flicker), spent terisi',

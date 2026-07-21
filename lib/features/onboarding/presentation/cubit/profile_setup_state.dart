@@ -67,7 +67,18 @@ class ProfileSetupState extends Equatable {
 
   @override
   List<Object?> get props => [
-        subStep, language, displayName, status, currentCountry, currentCity,
-        timezone, isPerantau, homeCountry, homeCity, saving, saved, error,
-      ];
+    subStep,
+    language,
+    displayName,
+    status,
+    currentCountry,
+    currentCity,
+    timezone,
+    isPerantau,
+    homeCountry,
+    homeCity,
+    saving,
+    saved,
+    error,
+  ];
 }

@@ -14,5 +14,10 @@ class DailyBudgetResult extends Equatable {
   final int remainingDays;
 
   @override
-  List<Object> get props => [dailyBudget, totalAvailable, emergencyFund, remainingDays];
+  List<Object> get props => [
+    dailyBudget,
+    totalAvailable,
+    emergencyFund,
+    remainingDays,
+  ];
 }

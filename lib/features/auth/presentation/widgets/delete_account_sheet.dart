@@ -50,10 +50,10 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
       _errorText = null;
     });
     context.read<AuthBloc>().add(
-          DeleteAccountRequested(
-            password: _hasPasswordProvider ? _passwordController.text : null,
-          ),
-        );
+      DeleteAccountRequested(
+        password: _hasPasswordProvider ? _passwordController.text : null,
+      ),
+    );
   }
 
   @override
@@ -63,7 +63,8 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
-    final bottomPad = MediaQuery.of(context).viewInsets.bottom +
+    final bottomPad =
+        MediaQuery.of(context).viewInsets.bottom +
         MediaQuery.of(context).padding.bottom +
         AppSpacing.xl;
     final l10n = AppLocalizations.of(context);
@@ -84,9 +85,7 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
               SnackBar(
                 content: Text(
                   l10n.deleteAccountDone,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
                 ),
                 backgroundColor: AppColors.primary,
                 behavior: SnackBarBehavior.floating,
@@ -201,9 +200,7 @@ class _DeleteAccountSheetState extends State<DeleteAccountSheet> {
               width: double.infinity,
               height: 48,
               child: Material(
-                color: _active
-                    ? AppColors.warn
-                    : AppColors.warn.withAlpha(100),
+                color: _active ? AppColors.warn : AppColors.warn.withAlpha(100),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: InkWell(
                   onTap: _active ? () => _onDelete(context) : null,

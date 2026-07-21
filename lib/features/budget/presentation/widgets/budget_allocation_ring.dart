@@ -29,84 +29,84 @@ class BudgetAllocationRing extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          // ── Section title ───────────────────────────────────────────────
-          Text('ALOKASI PENDAPATAN', style: AppTextStyles.caption),
-          const SizedBox(height: AppSpacing.lg),
+        // ── Section title ───────────────────────────────────────────────
+        Text('ALOKASI PENDAPATAN', style: AppTextStyles.caption),
+        const SizedBox(height: AppSpacing.lg),
 
-          // ── Donut + center overlay ──────────────────────────────────────
-          SizedBox(
-            height: 200,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 2,
-                    centerSpaceRadius: 60,
-                    sections: [
-                      PieChartSectionData(
-                        value: spendable,
-                        color: AppColors.primary,
-                        title: '',
-                        radius: 30,
-                      ),
-                      PieChartSectionData(
-                        value: fixed,
-                        color: AppColors.warn,
-                        title: '',
-                        radius: 30,
-                      ),
-                      PieChartSectionData(
-                        value: emergency,
-                        color: AppColors.caution,
-                        title: '',
-                        radius: 30,
-                      ),
-                    ],
-                  ),
-                ),
-                // Center total overlay
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      formatRupiahCompact(overview.monthlyIncome),
-                      style: AppTextStyles.numericMd.copyWith(
-                        color: textMain,
-                        height: 1.1,
-                      ),
+        // ── Donut + center overlay ──────────────────────────────────────
+        SizedBox(
+          height: 200,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 60,
+                  sections: [
+                    PieChartSectionData(
+                      value: spendable,
+                      color: AppColors.primary,
+                      title: '',
+                      radius: 30,
                     ),
-                    Text(
-                      '/bulan',
-                      style: AppTextStyles.caption.copyWith(
-                        color: muted,
-                        letterSpacing: 0,
-                      ),
+                    PieChartSectionData(
+                      value: fixed,
+                      color: AppColors.warn,
+                      title: '',
+                      radius: 30,
+                    ),
+                    PieChartSectionData(
+                      value: emergency,
+                      color: AppColors.caution,
+                      title: '',
+                      radius: 30,
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Center total overlay
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formatRupiahCompact(overview.monthlyIncome),
+                    style: AppTextStyles.numericMd.copyWith(
+                      color: textMain,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    '/bulan',
+                    style: AppTextStyles.caption.copyWith(
+                      color: muted,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
+        ),
 
-          const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.md),
 
-          // ── Legend ──────────────────────────────────────────────────────
-          _LegendRow(
-            color: AppColors.primary,
-            label: 'Operasional',
-            amount: overview.totalSpendable,
-          ),
-          _LegendRow(
-            color: AppColors.warn,
-            label: 'Tetap',
-            amount: overview.totalFixedExpenses,
-          ),
-          _LegendRow(
-            color: AppColors.caution,
-            label: 'Dana Darurat',
-            amount: overview.emergencyFundMonthly,
-          ),
+        // ── Legend ──────────────────────────────────────────────────────
+        _LegendRow(
+          color: AppColors.primary,
+          label: 'Operasional',
+          amount: overview.totalSpendable,
+        ),
+        _LegendRow(
+          color: AppColors.warn,
+          label: 'Tetap',
+          amount: overview.totalFixedExpenses,
+        ),
+        _LegendRow(
+          color: AppColors.caution,
+          label: 'Dana Darurat',
+          amount: overview.emergencyFundMonthly,
+        ),
       ],
     );
   }

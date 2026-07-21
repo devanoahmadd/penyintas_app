@@ -29,10 +29,10 @@ class _SlideData {
   });
 
   final String label;
-  final String valueText;   // pre-formatted (formatRupiah / "$n")
-  final String? unitText;   // "hari" for DTL, null for others
+  final String valueText; // pre-formatted (formatRupiah / "$n")
+  final String? unitText; // "hari" for DTL, null for others
   final String subtitle;
-  final double progress;    // 0.0–1.0
+  final double progress; // 0.0–1.0
   final Color backgroundColor;
   final BudgetStatus status;
   final VoidCallback? onTap;
@@ -44,10 +44,10 @@ class _SlideData {
 // ── Module-level helpers ──────────────────────────────────────────────────────
 
 Color _statusColor(BudgetStatus status) => switch (status) {
-      BudgetStatus.safe => AppColors.primary,
-      BudgetStatus.caution => AppColors.caution,
-      BudgetStatus.danger => AppColors.warn,
-    };
+  BudgetStatus.safe => AppColors.primary,
+  BudgetStatus.caution => AppColors.caution,
+  BudgetStatus.danger => AppColors.warn,
+};
 
 BudgetStatus _pctToStatus(double pct) {
   if (pct <= 0.50) return BudgetStatus.safe;
@@ -60,14 +60,25 @@ String _safeUntilDate(int daysToLive, int remainingDays) {
   final safeDays = daysToLive.clamp(0, remainingDays);
   final date = DateTime.now().add(Duration(days: safeDays));
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
   ];
   final suffix = daysToLive > remainingDays ? ' (est.)' : '';
   return '${date.day} ${months[date.month - 1]}$suffix';
 }
 
-String _deltaLabel(AppLocalizations l10n, BudgetStatus status) => switch (status) {
+String _deltaLabel(AppLocalizations l10n, BudgetStatus status) =>
+    switch (status) {
       BudgetStatus.safe => l10n.dashboardDeltaOnTrack,
       BudgetStatus.caution => l10n.dashboardDeltaNearing,
       BudgetStatus.danger => l10n.dashboardDeltaExceeded,
@@ -143,15 +154,16 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
 
     // Spending
     final spendPct = entity.totalMonthlyBudget > 0
-        ? (entity.totalSpentThisMonth / entity.totalMonthlyBudget)
-            .clamp(0.0, 1.0)
+        ? (entity.totalSpentThisMonth / entity.totalMonthlyBudget).clamp(
+            0.0,
+            1.0,
+          )
         : 0.0;
     final spendStatus = _pctToStatus(spendPct);
     final spendPctInt = (spendPct * 100).round();
 
     // Emergency
-    final emergTotal =
-        entity.totalMonthlyBudget + entity.emergencyFundMonthly;
+    final emergTotal = entity.totalMonthlyBudget + entity.emergencyFundMonthly;
     final emergPct = emergTotal > 0
         ? (entity.emergencyFundMonthly / emergTotal).clamp(0.0, 1.0)
         : 0.0;
@@ -164,8 +176,10 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         : 0.0;
     final budgetStatus = _pctToStatus(budgetPct);
     final budgetRemaining = budget != null
-        ? (budget.totalLimitSet - budget.totalSpentInLimited)
-            .clamp(0, budget.totalLimitSet)
+        ? (budget.totalLimitSet - budget.totalSpentInLimited).clamp(
+            0,
+            budget.totalLimitSet,
+          )
         : 0;
 
     return [
@@ -200,8 +214,8 @@ class _FinancialSliderWidgetState extends State<FinancialSliderWidget> {
         subtitle: budget == null
             ? 'Memuat...'
             : budget.totalLimitSet == 0
-                ? 'Belum ada batas kategori'
-                : '${(budgetPct * 100).round()}% terpakai siklus ini',
+            ? 'Belum ada batas kategori'
+            : '${(budgetPct * 100).round()}% terpakai siklus ini',
         progress: budgetPct,
         backgroundColor: (budget == null || budget.totalLimitSet == 0)
             ? AppColors.primaryDeep
@@ -450,7 +464,9 @@ class _FinancialSlideCard extends StatelessWidget {
                         if (data.unitText != null) ...[
                           const SizedBox(width: AppSpacing.sm),
                           Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
                             child: Text(
                               data.unitText!,
                               style: AppTextStyles.h3.copyWith(
@@ -497,10 +513,10 @@ class _FinancialSlideCard extends StatelessWidget {
   Widget _buildBlob() {
     // Each card places its blob in a different corner for visual differentiation
     final (top, right, bottom, left, size) = switch (index) {
-      0 => (-55.0, -35.0, null, null, 160.0),  // DTL: top-right
-      1 => (null, -32.0, -50.0, null, 148.0),  // Spending: bottom-right
-      2 => (null, null, -50.0, -35.0, 142.0),  // Budget: bottom-left
-      _ => (-52.0, null, null, -32.0, 150.0),  // Emergency: top-left
+      0 => (-55.0, -35.0, null, null, 160.0), // DTL: top-right
+      1 => (null, -32.0, -50.0, null, 148.0), // Spending: bottom-right
+      2 => (null, null, -50.0, -35.0, 142.0), // Budget: bottom-left
+      _ => (-52.0, null, null, -32.0, 150.0), // Emergency: top-left
     };
     return Positioned(
       top: top,
@@ -513,10 +529,7 @@ class _FinancialSlideCard extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.11),
-              Colors.transparent,
-            ],
+            colors: [Colors.white.withValues(alpha: 0.11), Colors.transparent],
           ),
         ),
       ),
@@ -526,10 +539,24 @@ class _FinancialSlideCard extends StatelessWidget {
   Widget _buildLogoWm() {
     // Each card has a unique logo crop position, size, and opacity
     final (top, right, bottom, left, size, opacity) = switch (index) {
-      0 => (-10.0, -18.0, null, null, 130.0, 0.08),  // DTL: top-right crop, 8%
-      1 => (null, null, -20.0, -16.0, 132.0, 0.09),  // Spending: bottom-left crop, 9%
-      2 => (-12.0, null, null, -20.0, 128.0, 0.08),  // Budget: top-left crop, 8%
-      _ => (null, -30.0, -28.0, null, 175.0, 0.07),  // Emergency: bottom-right XL, 7%
+      0 => (-10.0, -18.0, null, null, 130.0, 0.08), // DTL: top-right crop, 8%
+      1 => (
+        null,
+        null,
+        -20.0,
+        -16.0,
+        132.0,
+        0.09,
+      ), // Spending: bottom-left crop, 9%
+      2 => (-12.0, null, null, -20.0, 128.0, 0.08), // Budget: top-left crop, 8%
+      _ => (
+        null,
+        -30.0,
+        -28.0,
+        null,
+        175.0,
+        0.07,
+      ), // Emergency: bottom-right XL, 7%
     };
     return Positioned(
       top: top,

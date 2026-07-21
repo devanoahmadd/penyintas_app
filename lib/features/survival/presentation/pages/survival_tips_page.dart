@@ -82,11 +82,10 @@ class _SurvivalTipsPageState extends State<SurvivalTipsPage> {
                 entity: state.entity,
                 isDark: isDark,
                 onRetry: () => context.read<SurvivalBloc>().add(
-                      FetchSurvivalTips(
-                        language:
-                            Localizations.localeOf(context).languageCode,
-                      ),
-                    ),
+                  FetchSurvivalTips(
+                    language: Localizations.localeOf(context).languageCode,
+                  ),
+                ),
               );
             }
             // SurvivalInitial / SurvivalInactive — mode darurat tidak aktif
@@ -131,22 +130,17 @@ class _TipsBody extends StatelessWidget {
           _EmptyTipsState(isDark: isDark)
         else
           ...entity.tips.asMap().entries.map(
-                (e) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: _TipCard(
-                    tip: e.value,
-                    index: e.key + 1,
-                    isDark: isDark,
-                  ),
-                ),
-              ),
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _TipCard(tip: e.value, index: e.key + 1, isDark: isDark),
+            ),
+          ),
       ],
     );
   }
 
   List<Widget> _skeletonCards(bool isDark) {
-    final skeletonColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final skeletonColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
@@ -240,9 +234,14 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final amountStr = formatCurrency(entity.remainingAmount, CurrencyConfig.idr);
-    final suggestedStr =
-        formatCurrencyCompact(entity.suggestedDailyBudget, CurrencyConfig.idr);
+    final amountStr = formatCurrency(
+      entity.remainingAmount,
+      CurrencyConfig.idr,
+    );
+    final suggestedStr = formatCurrencyCompact(
+      entity.suggestedDailyBudget,
+      CurrencyConfig.idr,
+    );
 
     return Container(
       width: double.infinity,
@@ -270,7 +269,10 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            l10n.survivalBudgetDaysSuggested(entity.remainingDays, suggestedStr),
+            l10n.survivalBudgetDaysSuggested(
+              entity.remainingDays,
+              suggestedStr,
+            ),
             style: AppTextStyles.bodySmall.copyWith(
               color: Colors.white.withAlpha(220),
             ),
@@ -301,8 +303,10 @@ class _TipCard extends StatelessWidget {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final savingStr =
-        formatCurrencyCompact(tip.estimatedSaving, CurrencyConfig.idr);
+    final savingStr = formatCurrencyCompact(
+      tip.estimatedSaving,
+      CurrencyConfig.idr,
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -446,10 +450,7 @@ class _ErrorBody extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.lg),
-              TextButton(
-                onPressed: onRetry,
-                child: Text(l10n.retry),
-              ),
+              TextButton(onPressed: onRetry, child: Text(l10n.retry)),
             ],
           ),
         ),

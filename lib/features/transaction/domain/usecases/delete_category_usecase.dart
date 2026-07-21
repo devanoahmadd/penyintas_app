@@ -20,7 +20,9 @@ class DeleteCategoryUseCase implements UseCase<void, DeleteCategoryParams> {
   @override
   Future<Either<Failure, void>> call(DeleteCategoryParams params) async {
     if (params.isBuiltIn) {
-      return const Left(ValidationFailure('Tidak bisa menghapus kategori bawaan.'));
+      return const Left(
+        ValidationFailure('Tidak bisa menghapus kategori bawaan.'),
+      );
     }
     return _repo.deleteCategory(params.slug);
   }

@@ -59,7 +59,10 @@ void main() {
 
     test('path is preserved in SetOp', () {
       const path = 'users/uid123/transactions/abc';
-      final item = _makeItem(operation: SyncOperation.create, collectionPath: path);
+      final item = _makeItem(
+        operation: SyncOperation.create,
+        collectionPath: path,
+      );
       final op = toFirestoreOp(item) as SetOp;
 
       expect(op.path, path);
@@ -67,7 +70,10 @@ void main() {
 
     test('path is preserved in DeleteOp', () {
       const path = 'users/uid123/transactions/xyz';
-      final item = _makeItem(operation: SyncOperation.delete, collectionPath: path);
+      final item = _makeItem(
+        operation: SyncOperation.delete,
+        collectionPath: path,
+      );
       final op = toFirestoreOp(item) as DeleteOp;
 
       expect(op.path, path);
@@ -102,14 +108,16 @@ void main() {
       expect(() => toFirestoreOp(item), throwsArgumentError);
     });
 
-    test('path dengan segmen kosong (trailing slash) → ArgumentError (guard #252)',
-        () {
-      final item = _makeItem(
-        operation: SyncOperation.update,
-        collectionPath: 'users/uid-1/budget_limits/',
-      );
-      expect(() => toFirestoreOp(item), throwsArgumentError);
-    });
+    test(
+      'path dengan segmen kosong (trailing slash) → ArgumentError (guard #252)',
+      () {
+        final item = _makeItem(
+          operation: SyncOperation.update,
+          collectionPath: 'users/uid-1/budget_limits/',
+        );
+        expect(() => toFirestoreOp(item), throwsArgumentError);
+      },
+    );
 
     test('doc path penuh valid → tidak throw', () {
       final item = _makeItem(

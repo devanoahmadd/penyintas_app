@@ -89,9 +89,10 @@ class _SplashPageState extends State<SplashPage>
     try {
       final rc = FirebaseRemoteConfig.instance;
       await rc.setDefaults(const {'splash_duration_ms': 2500});
-      await rc
-          .fetchAndActivate()
-          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      await rc.fetchAndActivate().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
       final value = rc.getInt('splash_duration_ms');
       if (value >= 1500 && value <= 8000) durationMs = value;
     } catch (_) {
@@ -123,10 +124,12 @@ class _SplashPageState extends State<SplashPage>
 
     // Warna teks di atas latar bg splash
     final onBg = isDark ? AppColors.textDark : Colors.white;
-    final onBgMuted =
-        isDark ? AppColors.mutedDark : Colors.white.withValues(alpha: 0.85);
-    final onBgDim =
-        isDark ? AppColors.mutedDark : Colors.white.withValues(alpha: 0.5);
+    final onBgMuted = isDark
+        ? AppColors.mutedDark
+        : Colors.white.withValues(alpha: 0.85);
+    final onBgDim = isDark
+        ? AppColors.mutedDark
+        : Colors.white.withValues(alpha: 0.5);
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {

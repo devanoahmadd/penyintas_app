@@ -43,31 +43,30 @@ final class AddTransactionInProgress extends AddTransactionState {
     DateTime? date,
     List<CategoryEntity>? availableCategories,
     Object? selectedGoalId = _kSentinel,
-  }) =>
-      AddTransactionInProgress(
-        amount: amount ?? this.amount,
-        selectedCategory: clearSelectedCategory
-            ? null
-            : (selectedCategory ?? this.selectedCategory),
-        type: type ?? this.type,
-        note: note ?? this.note,
-        date: date ?? this.date,
-        availableCategories: availableCategories ?? this.availableCategories,
-        selectedGoalId: identical(selectedGoalId, _kSentinel)
-            ? this.selectedGoalId
-            : selectedGoalId as int?,
-      );
+  }) => AddTransactionInProgress(
+    amount: amount ?? this.amount,
+    selectedCategory: clearSelectedCategory
+        ? null
+        : (selectedCategory ?? this.selectedCategory),
+    type: type ?? this.type,
+    note: note ?? this.note,
+    date: date ?? this.date,
+    availableCategories: availableCategories ?? this.availableCategories,
+    selectedGoalId: identical(selectedGoalId, _kSentinel)
+        ? this.selectedGoalId
+        : selectedGoalId as int?,
+  );
 
   @override
   List<Object?> get props => [
-        amount,
-        selectedCategory,
-        type,
-        note,
-        date,
-        availableCategories,
-        selectedGoalId,
-      ];
+    amount,
+    selectedCategory,
+    type,
+    note,
+    date,
+    availableCategories,
+    selectedGoalId,
+  ];
 }
 
 const _kSentinel = Object();

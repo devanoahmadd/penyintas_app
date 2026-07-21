@@ -13,16 +13,15 @@ void main() {
     int savedAmount = 0,
     DateTime? targetDate,
     bool isCompleted = false,
-  }) =>
-      GoalEntity(
-        id: id,
-        title: title,
-        targetAmount: targetAmount,
-        savedAmount: savedAmount,
-        targetDate: targetDate ?? baseDate,
-        isCompleted: isCompleted,
-        createdAt: createdAt,
-      );
+  }) => GoalEntity(
+    id: id,
+    title: title,
+    targetAmount: targetAmount,
+    savedAmount: savedAmount,
+    targetDate: targetDate ?? baseDate,
+    isCompleted: isCompleted,
+    createdAt: createdAt,
+  );
 
   group('GoalEntity.progressPercent', () {
     test('returns 0 when savedAmount is 0', () {
@@ -52,10 +51,13 @@ void main() {
   });
 
   group('GoalEntity.isOverdue', () {
-    test('returns false when not completed and targetDate is in the future', () {
-      final goal = makeGoal(isCompleted: false, targetDate: baseDate);
-      expect(goal.isOverdue, false);
-    });
+    test(
+      'returns false when not completed and targetDate is in the future',
+      () {
+        final goal = makeGoal(isCompleted: false, targetDate: baseDate);
+        expect(goal.isOverdue, false);
+      },
+    );
 
     test('returns true when not completed and targetDate is in the past', () {
       final goal = makeGoal(isCompleted: false, targetDate: pastDate);
@@ -63,8 +65,7 @@ void main() {
     });
 
     test('returns false when completed even if targetDate is past', () {
-      final goal =
-          makeGoal(isCompleted: true, targetDate: pastDate);
+      final goal = makeGoal(isCompleted: true, targetDate: pastDate);
       expect(goal.isOverdue, false);
     });
   });

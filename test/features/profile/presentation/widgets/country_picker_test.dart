@@ -12,13 +12,11 @@ Finder findListItemText(String text) =>
     find.byWidgetPredicate((w) => w is Text && w.data == text);
 
 Widget buildInScaffold(Widget child) => MaterialApp(
-      home: MediaQuery(
-        data: const MediaQueryData(size: Size(400, 800)),
-        child: Scaffold(
-          body: SizedBox(width: 400, height: 800, child: child),
-        ),
-      ),
-    );
+  home: MediaQuery(
+    data: const MediaQueryData(size: Size(400, 800)),
+    child: Scaffold(body: SizedBox(width: 400, height: 800, child: child)),
+  ),
+);
 
 void main() {
   group('CountryPicker — search field', () {
@@ -31,8 +29,9 @@ void main() {
   });
 
   group('CountryPicker — search filter', () {
-    testWidgets('search memfilter — Singapura muncul, Indonesia hilang',
-        (t) async {
+    testWidgets('search memfilter — Singapura muncul, Indonesia hilang', (
+      t,
+    ) async {
       await t.pumpWidget(buildInScaffold(const CountryPicker()));
       await t.pumpAndSettle();
 
@@ -67,8 +66,7 @@ void main() {
       await t.pumpWidget(buildInScaffold(const CountryPicker()));
       await t.pumpAndSettle();
 
-      await t.enterText(
-          find.byKey(const Key('country_search')), 'XYZXYZXYZ');
+      await t.enterText(find.byKey(const Key('country_search')), 'XYZXYZXYZ');
       await t.pumpAndSettle();
 
       expect(find.textContaining('tidak ditemukan'), findsOneWidget);
@@ -89,8 +87,10 @@ void main() {
           .map((w) => w.data ?? '')
           .join();
 
-      final hasFlag =
-          RegExp(r'[\u{1F1E6}-\u{1F1FF}]', unicode: true).hasMatch(allText);
+      final hasFlag = RegExp(
+        r'[\u{1F1E6}-\u{1F1FF}]',
+        unicode: true,
+      ).hasMatch(allText);
       expect(hasFlag, isFalse);
     });
   });
@@ -119,8 +119,9 @@ void main() {
       'US': 'Amerika Serikat',
     };
 
-    testWidgets('semua 19 negara timezone dataset tersedia via search',
-        (t) async {
+    testWidgets('semua 19 negara timezone dataset tersedia via search', (
+      t,
+    ) async {
       await t.pumpWidget(buildInScaffold(const CountryPicker()));
       await t.pumpAndSettle();
 
@@ -141,37 +142,39 @@ void main() {
   });
 
   group('CountryPicker — hasil pop', () {
-    testWidgets('tap negara via filter → Navigator.pop kode alpha-2',
-        (t) async {
+    testWidgets('tap negara via filter → Navigator.pop kode alpha-2', (
+      t,
+    ) async {
       dynamic popResult;
 
-      await t.pumpWidget(MaterialApp(
-        home: MediaQuery(
-          data: const MediaQueryData(size: Size(400, 800)),
-          child: Builder(
-            builder: (ctx) => ElevatedButton(
-              onPressed: () async {
-                popResult = await Navigator.of(ctx).push<dynamic>(
-                  MaterialPageRoute(
-                    builder: (_) => MediaQuery(
-                      data: const MediaQueryData(size: Size(400, 800)),
-                      child: const Scaffold(body: CountryPicker()),
+      await t.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(400, 800)),
+            child: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  popResult = await Navigator.of(ctx).push<dynamic>(
+                    MaterialPageRoute(
+                      builder: (_) => MediaQuery(
+                        data: const MediaQueryData(size: Size(400, 800)),
+                        child: const Scaffold(body: CountryPicker()),
+                      ),
                     ),
-                  ),
-                );
-              },
-              child: const Text('Buka'),
+                  );
+                },
+                child: const Text('Buka'),
+              ),
             ),
           ),
         ),
-      ));
+      );
 
       await t.tap(find.text('Buka'));
       await t.pumpAndSettle();
 
       // Filter ke Singapura agar hanya 1 item kota muncul
-      await t.enterText(
-          find.byKey(const Key('country_search')), 'Singapura');
+      await t.enterText(find.byKey(const Key('country_search')), 'Singapura');
       await t.pumpAndSettle();
 
       await t.tap(findListItemText('Singapura'));

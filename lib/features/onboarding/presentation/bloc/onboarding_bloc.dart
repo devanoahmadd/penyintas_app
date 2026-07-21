@@ -20,11 +20,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     required CalculateDailyBudgetUseCase calculateDailyBudget,
     required AnalyticsService analyticsService,
     required PushUserSettingsUseCase pushUserSettings,
-  })  : _saveBudgetSettings = saveBudgetSettings,
-        _calculateDailyBudget = calculateDailyBudget,
-        _analyticsService = analyticsService,
-        _pushUserSettings = pushUserSettings,
-        super(const OnboardingInitial()) {
+  }) : _saveBudgetSettings = saveBudgetSettings,
+       _calculateDailyBudget = calculateDailyBudget,
+       _analyticsService = analyticsService,
+       _pushUserSettings = pushUserSettings,
+       super(const OnboardingInitial()) {
     on<OnboardingSubmitted>(_onSubmitted);
   }
 
@@ -46,12 +46,14 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       return d > 0 ? d : daysInCycle(event.paymentDate);
     }();
 
-    final calcResult = await _calculateDailyBudget(CalcParams(
-      income: event.income,
-      fixedExpenses: event.fixedExpenses,
-      emergencyPct: event.emergencyFundPct,
-      remainingDays: days,
-    ));
+    final calcResult = await _calculateDailyBudget(
+      CalcParams(
+        income: event.income,
+        fixedExpenses: event.fixedExpenses,
+        emergencyPct: event.emergencyFundPct,
+        remainingDays: days,
+      ),
+    );
 
     // #251: jika kalkulasi gagal (mis. income <= 0), JANGAN tulis app_settings.
     // budget_local_datasource menulis onboardingCompleted=true unconditional —
@@ -83,9 +85,9 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         (result) async {
           _analyticsService.logOnboardingCompleted();
           // #211: await remote flag; failure is non-fatal (local data is source of truth)
-          await _pushUserSettings(const NoParams())
-              .then((res) => res.fold((_) {}, (_) {}))
-              .catchError((_) {});
+          await _pushUserSettings(
+            const NoParams(),
+          ).then((res) => res.fold((_) {}, (_) {})).catchError((_) {});
           emit(OnboardingSuccess(dailyBudget: result.dailyBudget));
         },
       ),

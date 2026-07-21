@@ -12,8 +12,10 @@ import 'package:penyintas_app/features/transaction/presentation/bloc/category_bl
 class ManageCategoriesPage extends StatelessWidget {
   const ManageCategoriesPage({super.key});
 
-  Future<void> _openAddSheet(BuildContext context,
-      {CategoryEntity? existing}) async {
+  Future<void> _openAddSheet(
+    BuildContext context, {
+    CategoryEntity? existing,
+  }) async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -26,7 +28,9 @@ class ManageCategoriesPage extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, CategoryEntity category) async {
+    BuildContext context,
+    CategoryEntity category,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final label = CategoryMetadata.resolveLabel(category, l10n);
@@ -105,9 +109,9 @@ class ManageCategoriesPage extends StatelessWidget {
               CategorySuccessType.updated => l10n.categorySuccessUpdated,
               CategorySuccessType.deleted => l10n.categorySuccessDeleted,
             };
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(msg)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(msg)));
           } else if (state is CategoryError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -131,15 +135,14 @@ class ManageCategoriesPage extends StatelessWidget {
                   children: [
                     Text(
                       state.message,
-                      style: AppTextStyles.body
-                          .copyWith(color: AppColors.warn),
+                      style: AppTextStyles.body.copyWith(color: AppColors.warn),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     TextButton(
-                      onPressed: () => context
-                          .read<CategoryBloc>()
-                          .add(const LoadCategories()),
+                      onPressed: () => context.read<CategoryBloc>().add(
+                        const LoadCategories(),
+                      ),
                       child: const Text('Coba lagi'),
                     ),
                   ],
@@ -152,13 +155,9 @@ class ManageCategoriesPage extends StatelessWidget {
               ? state.categories
               : (state as CategoryActionLoading).categories;
 
-          final builtIn = categories
-              .where((c) => c.isBuiltIn)
-              .toList()
+          final builtIn = categories.where((c) => c.isBuiltIn).toList()
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-          final custom = categories
-              .where((c) => !c.isBuiltIn)
-              .toList()
+          final custom = categories.where((c) => !c.isBuiltIn).toList()
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
           return Stack(
@@ -185,8 +184,7 @@ class ManageCategoriesPage extends StatelessWidget {
                     ),
                 ],
               ),
-              if (state is CategoryActionLoading)
-                const _LoadingOverlay(),
+              if (state is CategoryActionLoading) const _LoadingOverlay(),
             ],
           );
         },
@@ -204,7 +202,10 @@ class _SectionHeader extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
       child: Text(
         title,
@@ -224,13 +225,16 @@ class _BuiltInItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (icon, _) =
-        CategoryMetadata.of(category.slug, iconSlug: category.iconSlug);
+    final (icon, _) = CategoryMetadata.of(
+      category.slug,
+      iconSlug: category.iconSlug,
+    );
     final label = CategoryMetadata.resolveLabel(category, l10n);
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg, vertical: AppSpacing.xs,
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
@@ -272,14 +276,17 @@ class _CustomItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (icon, _) =
-        CategoryMetadata.of(category.slug, iconSlug: category.iconSlug);
+    final (icon, _) = CategoryMetadata.of(
+      category.slug,
+      iconSlug: category.iconSlug,
+    );
     final label = category.labelOverride ?? category.slug;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg, vertical: AppSpacing.xs,
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
@@ -311,7 +318,11 @@ class _CustomItem extends StatelessWidget {
               height: 48,
               child: IconButton(
                 tooltip: 'Hapus kategori',
-                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.warn),
+                icon: Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: AppColors.warn,
+                ),
                 onPressed: onDelete,
               ),
             ),
@@ -333,7 +344,8 @@ class _EmptyCustomState extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg, vertical: AppSpacing.xl,
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
       ),
       child: Column(
         children: [

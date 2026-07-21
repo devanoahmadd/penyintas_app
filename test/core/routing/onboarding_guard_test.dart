@@ -8,6 +8,7 @@ import 'package:penyintas_app/features/preferences/domain/entities/preferences_e
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
 
 class _MockOnbDs extends Mock implements OnboardingLocalDataSource {}
+
 class _MockPrefsRepo extends Mock implements PreferencesRepository {}
 
 void main() {

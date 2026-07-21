@@ -121,9 +121,11 @@ class _CountryPickerState extends State<CountryPicker> {
         _filtered = List.of(_allCountries);
       } else {
         _filtered = _allCountries
-            .where((e) =>
-                e.value.toLowerCase().contains(query) ||
-                e.key.toLowerCase().contains(query))
+            .where(
+              (e) =>
+                  e.value.toLowerCase().contains(query) ||
+                  e.key.toLowerCase().contains(query),
+            )
             .toList();
       }
     });
@@ -138,8 +140,9 @@ class _CountryPickerState extends State<CountryPicker> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg =
-        isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final sheetBg = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
@@ -212,13 +215,12 @@ class _CountryPickerState extends State<CountryPicker> {
                 style: AppTextStyles.body.copyWith(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Cari negara...',
-                  hintStyle:
-                      AppTextStyles.bodySmall.copyWith(color: mutedColor),
-                  prefixIcon:
-                      Icon(Icons.search, color: mutedColor, size: 20),
+                  hintStyle: AppTextStyles.bodySmall.copyWith(
+                    color: mutedColor,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: mutedColor, size: 20),
                   filled: true,
-                  fillColor:
-                      isDark ? AppColors.cardDark : AppColors.cardLight,
+                  fillColor: isDark ? AppColors.cardDark : AppColors.cardLight,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.md,
@@ -234,7 +236,9 @@ class _CountryPickerState extends State<CountryPicker> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: const BorderSide(
-                        color: AppColors.primary, width: 1.5),
+                      color: AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -251,8 +255,7 @@ class _CountryPickerState extends State<CountryPicker> {
                         padding: const EdgeInsets.all(AppSpacing.xl),
                         child: Text(
                           'Negara tidak ditemukan.',
-                          style:
-                              AppTextStyles.body.copyWith(color: mutedColor),
+                          style: AppTextStyles.body.copyWith(color: mutedColor),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -260,8 +263,7 @@ class _CountryPickerState extends State<CountryPicker> {
                   : ListView.builder(
                       itemCount: _filtered.length,
                       itemExtent: 56, // Hit target ≥ 48dp
-                      padding:
-                          const EdgeInsets.only(bottom: AppSpacing.xxxl),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
                       itemBuilder: (ctx, i) {
                         final entry = _filtered[i];
                         return _CountryRow(
@@ -270,8 +272,7 @@ class _CountryPickerState extends State<CountryPicker> {
                           textColor: textColor,
                           textSoft: textSoft,
                           borderColor: borderColor,
-                          onTap: () =>
-                              Navigator.of(context).pop(entry.key),
+                          onTap: () => Navigator.of(context).pop(entry.key),
                         );
                       },
                     ),

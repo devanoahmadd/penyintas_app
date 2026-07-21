@@ -14,7 +14,10 @@ class GetBudgetOverviewUseCase {
     final emergencyFundMonthly = (s.monthlyIncome * s.emergencyFundPct).round();
     final totalFixedExpenses = s.fixedExpenses;
     final totalSpendable =
-        (s.monthlyIncome - totalFixedExpenses - emergencyFundMonthly).clamp(0, s.monthlyIncome);
+        (s.monthlyIncome - totalFixedExpenses - emergencyFundMonthly).clamp(
+          0,
+          s.monthlyIncome,
+        );
 
     final daysElapsed = params.daysElapsed;
     final remainingDays = params.remainingDays;
@@ -25,7 +28,9 @@ class GetBudgetOverviewUseCase {
           .where((l) => l.category == cat.slug && l.isEnabled)
           .firstOrNull;
       final spent = params.currentPeriodTransactions
-          .where((t) => t.category == cat.slug && t.type == TransactionType.expense)
+          .where(
+            (t) => t.category == cat.slug && t.type == TransactionType.expense,
+          )
           .fold(0, (sum, t) => sum + t.amount);
 
       if (limit == null) {
@@ -37,23 +42,25 @@ class GetBudgetOverviewUseCase {
       final status = pct <= 0.5
           ? BudgetStatus.safe
           : pct <= 0.8
-              ? BudgetStatus.caution
-              : BudgetStatus.danger;
+          ? BudgetStatus.caution
+          : BudgetStatus.danger;
 
       int? projectedDaysLeft;
       BudgetStatus? catPaceStatus;
       if (daysElapsed > 0 && spent > 0 && remainingDays > 0) {
         final dailyBurn = spent / daysElapsed;
-        final catRemaining =
-            (limit.limitAmount - spent).clamp(0, limit.limitAmount);
+        final catRemaining = (limit.limitAmount - spent).clamp(
+          0,
+          limit.limitAmount,
+        );
         projectedDaysLeft = catRemaining > 0
             ? (catRemaining / dailyBurn).floor()
             : 0;
         catPaceStatus = projectedDaysLeft >= remainingDays
             ? BudgetStatus.safe
             : projectedDaysLeft >= (remainingDays * 0.5).ceil()
-                ? BudgetStatus.caution
-                : BudgetStatus.danger;
+            ? BudgetStatus.caution
+            : BudgetStatus.danger;
       }
 
       return CategoryBudgetItem(
@@ -69,8 +76,14 @@ class GetBudgetOverviewUseCase {
     }).toList();
 
     final withLimit = categoryItems.where((i) => i.hasLimit).toList();
-    final totalLimitSet = withLimit.fold(0, (sum, i) => sum + (i.limitAmount ?? 0));
-    final totalSpentInLimited = withLimit.fold(0, (sum, i) => sum + i.spentAmount);
+    final totalLimitSet = withLimit.fold(
+      0,
+      (sum, i) => sum + (i.limitAmount ?? 0),
+    );
+    final totalSpentInLimited = withLimit.fold(
+      0,
+      (sum, i) => sum + i.spentAmount,
+    );
 
     BudgetStatus overallStatus;
     if (withLimit.isEmpty) {
@@ -120,7 +133,11 @@ class OverviewParams extends Equatable {
 
   @override
   List<Object> get props => [
-        settings, limits, currentPeriodTransactions,
-        remainingDays, daysElapsed, limitableCategories,
-      ];
+    settings,
+    limits,
+    currentPeriodTransactions,
+    remainingDays,
+    daysElapsed,
+    limitableCategories,
+  ];
 }

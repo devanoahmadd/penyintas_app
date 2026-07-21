@@ -14,8 +14,8 @@ class PreferencesRemoteDatasourceImpl implements PreferencesRemoteDatasource {
   PreferencesRemoteDatasourceImpl({
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
-  })  : _auth = auth,
-        _firestore = firestore;
+  }) : _auth = auth,
+       _firestore = firestore;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -27,8 +27,10 @@ class PreferencesRemoteDatasourceImpl implements PreferencesRemoteDatasource {
   }
 
   DocumentReference<Map<String, dynamic>> get _doc => _firestore
-      .collection('users').doc(_uid)
-      .collection('preferences').doc('current');
+      .collection('users')
+      .doc(_uid)
+      .collection('preferences')
+      .doc('current');
 
   // Menyerap kegagalan Crashlytics saat test (tak ada Firebase app di unit test
   // environment). Pola konsisten dengan auth_remote_datasource.dart.

@@ -11,7 +11,7 @@ abstract class SurvivalRemoteDatasource {
 
 class SurvivalRemoteDatasourceImpl implements SurvivalRemoteDatasource {
   const SurvivalRemoteDatasourceImpl({required FirebaseFunctions functions})
-      : _functions = functions;
+    : _functions = functions;
 
   final FirebaseFunctions _functions;
 
@@ -33,11 +33,13 @@ class SurvivalRemoteDatasourceImpl implements SurvivalRemoteDatasource {
     }
     final tipsData = rawTips.cast<Map<String, dynamic>>();
     return tipsData
-        .map((t) => SurvivalTip(
-              title: t['title'] as String,
-              description: t['description'] as String,
-              estimatedSaving: (t['estimatedSaving'] as num).toInt(),
-            ))
+        .map(
+          (t) => SurvivalTip(
+            title: t['title'] as String,
+            description: t['description'] as String,
+            estimatedSaving: (t['estimatedSaving'] as num).toInt(),
+          ),
+        )
         .toList();
   }
 }

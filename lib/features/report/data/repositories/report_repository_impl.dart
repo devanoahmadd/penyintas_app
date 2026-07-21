@@ -12,18 +12,16 @@ class ReportRepositoryImpl implements ReportRepository {
     required ReportLocalDatasource local,
     required ReportRemoteDatasource remote,
     required AppDatabase db,
-  })  : _local = local,
-        _remote = remote,
-        _db = db;
+  }) : _local = local,
+       _remote = remote,
+       _db = db;
 
   final ReportLocalDatasource _local;
   final ReportRemoteDatasource _remote;
   final AppDatabase _db;
 
   @override
-  Future<Either<Failure, ReportEntity>> getMonthlyReport(
-    DateTime month,
-  ) async {
+  Future<Either<Failure, ReportEntity>> getMonthlyReport(DateTime month) async {
     try {
       return Right(await _local.getMonthlyReport(month));
     } catch (e, s) {
@@ -39,9 +37,9 @@ class ReportRepositoryImpl implements ReportRepository {
     ReportEntity report,
   ) async {
     try {
-      final settings = await (_db.select(_db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
+      final settings = await (_db.select(
+        _db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingleOrNull();
       if (settings == null) {
         return Left(CacheFailure('Pengaturan tidak ditemukan.'));
       }
@@ -52,8 +50,9 @@ class ReportRepositoryImpl implements ReportRepository {
           'month': monthKey,
           'totalSpent': report.totalSpent,
           'totalIncome': report.totalIncome,
-          'categoryBreakdown':
-              report.categoryBreakdown.map((k, v) => MapEntry(k, v)),
+          'categoryBreakdown': report.categoryBreakdown.map(
+            (k, v) => MapEntry(k, v),
+          ),
         },
         settingsData: {
           'monthlyIncome': settings.monthlyIncome,

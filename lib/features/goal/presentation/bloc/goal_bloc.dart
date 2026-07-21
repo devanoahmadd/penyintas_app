@@ -24,13 +24,13 @@ class GoalBloc extends Bloc<GoalEvent, GoalState> {
     required UnlinkTransactionUseCase unlinkTransaction,
     required CompleteGoalUseCase completeGoal,
     required DeleteGoalUseCase deleteGoal,
-  })  : _loadGoals = loadGoals,
-        _createGoal = createGoal,
-        _linkTransaction = linkTransaction,
-        _unlinkTransaction = unlinkTransaction,
-        _completeGoal = completeGoal,
-        _deleteGoal = deleteGoal,
-        super(const GoalInitial()) {
+  }) : _loadGoals = loadGoals,
+       _createGoal = createGoal,
+       _linkTransaction = linkTransaction,
+       _unlinkTransaction = unlinkTransaction,
+       _completeGoal = completeGoal,
+       _deleteGoal = deleteGoal,
+       super(const GoalInitial()) {
     on<LoadGoals>(_onLoad, transformer: droppable());
     on<CreateGoal>(_onCreate, transformer: sequential());
     on<LinkTransaction>(_onLink, transformer: sequential());
@@ -61,44 +61,45 @@ class GoalBloc extends Bloc<GoalEvent, GoalState> {
 
     emit(const GoalLoading());
     final result = await _loadGoals(const NoParams());
-    result.fold(
-      (f) => emit(GoalError(f.message)),
-      (goals) {
-        if (prevGoals.isEmpty) {
-          emit(GoalLoaded(goals: goals));
-          return;
-        }
-        int? milestoneGoalId;
-        double? milestoneThreshold;
-        for (final goal in goals) {
-          final prev = prevProgress[goal.id] ?? 0.0;
-          final next = goal.progressPercent;
-          for (final t in _milestoneThresholds) {
-            if (prev < t && next >= t) {
-              milestoneGoalId = goal.id;
-              milestoneThreshold = t;
-              break;
-            }
+    result.fold((f) => emit(GoalError(f.message)), (goals) {
+      if (prevGoals.isEmpty) {
+        emit(GoalLoaded(goals: goals));
+        return;
+      }
+      int? milestoneGoalId;
+      double? milestoneThreshold;
+      for (final goal in goals) {
+        final prev = prevProgress[goal.id] ?? 0.0;
+        final next = goal.progressPercent;
+        for (final t in _milestoneThresholds) {
+          if (prev < t && next >= t) {
+            milestoneGoalId = goal.id;
+            milestoneThreshold = t;
+            break;
           }
-          if (milestoneGoalId != null) break;
         }
-        emit(GoalLoaded(
+        if (milestoneGoalId != null) break;
+      }
+      emit(
+        GoalLoaded(
           goals: goals,
           milestoneGoalId: milestoneGoalId,
           milestoneThreshold: milestoneThreshold,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   Future<void> _onCreate(CreateGoal event, Emitter<GoalState> emit) async {
     final current = _currentGoals;
     emit(GoalActionLoading(current));
-    final result = await _createGoal(CreateGoalParams(
-      title: event.title,
-      targetAmount: event.targetAmount,
-      targetDate: event.targetDate,
-    ));
+    final result = await _createGoal(
+      CreateGoalParams(
+        title: event.title,
+        targetAmount: event.targetAmount,
+        targetDate: event.targetDate,
+      ),
+    );
     if (result.isLeft()) {
       result.fold((f) => emit(GoalError(f.message)), (_) {});
       return;
@@ -113,48 +114,48 @@ class GoalBloc extends Bloc<GoalEvent, GoalState> {
   Future<void> _onLink(LinkTransaction event, Emitter<GoalState> emit) async {
     final current = _currentGoals;
     // Catat progress sebelum link untuk deteksi milestone
-    final prevProgress = {
-      for (final g in current) g.id: g.progressPercent,
-    };
+    final prevProgress = {for (final g in current) g.id: g.progressPercent};
 
     emit(GoalActionLoading(current));
     final result = await _linkTransaction(
-        LinkTransactionParams(txId: event.txId, goalId: event.goalId));
+      LinkTransactionParams(txId: event.txId, goalId: event.goalId),
+    );
     if (result.isLeft()) {
       result.fold((f) => emit(GoalError(f.message)), (_) {});
       return;
     }
 
     final reload = await _loadGoals(const NoParams());
-    reload.fold(
-      (f) => emit(GoalError(f.message)),
-      (goals) {
-        // Cek apakah ada goal yang crossing milestone threshold
-        int? milestoneGoalId;
-        double? milestoneThreshold;
-        for (final goal in goals) {
-          if (goal.id != event.goalId) continue;
-          final prev = prevProgress[goal.id] ?? 0.0;
-          final next = goal.progressPercent;
-          for (final t in _milestoneThresholds) {
-            if (prev < t && next >= t) {
-              milestoneGoalId = goal.id;
-              milestoneThreshold = t;
-              break;
-            }
+    reload.fold((f) => emit(GoalError(f.message)), (goals) {
+      // Cek apakah ada goal yang crossing milestone threshold
+      int? milestoneGoalId;
+      double? milestoneThreshold;
+      for (final goal in goals) {
+        if (goal.id != event.goalId) continue;
+        final prev = prevProgress[goal.id] ?? 0.0;
+        final next = goal.progressPercent;
+        for (final t in _milestoneThresholds) {
+          if (prev < t && next >= t) {
+            milestoneGoalId = goal.id;
+            milestoneThreshold = t;
+            break;
           }
         }
-        emit(GoalLoaded(
+      }
+      emit(
+        GoalLoaded(
           goals: goals,
           milestoneGoalId: milestoneGoalId,
           milestoneThreshold: milestoneThreshold,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   Future<void> _onUnlink(
-      UnlinkTransaction event, Emitter<GoalState> emit) async {
+    UnlinkTransaction event,
+    Emitter<GoalState> emit,
+  ) async {
     final current = _currentGoals;
     emit(GoalActionLoading(current));
     final result = await _unlinkTransaction(event.txId);
@@ -200,7 +201,9 @@ class GoalBloc extends Bloc<GoalEvent, GoalState> {
   }
 
   void _onMilestoneAcknowledged(
-      MilestoneAcknowledged event, Emitter<GoalState> emit) {
+    MilestoneAcknowledged event,
+    Emitter<GoalState> emit,
+  ) {
     if (state is GoalLoaded) {
       emit((state as GoalLoaded).clearMilestone());
     }

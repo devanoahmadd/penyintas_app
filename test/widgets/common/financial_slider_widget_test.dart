@@ -48,42 +48,40 @@ class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
 GoRouter _router(
   DashboardEntity entity, {
   BudgetOverviewEntity? budgetOverview,
-}) =>
-    GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => Scaffold(
-            body: FinancialSliderWidget(
-              entity: entity,
-              budgetOverview: budgetOverview,
-            ),
-          ),
+}) => GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (_, _) => Scaffold(
+        body: FinancialSliderWidget(
+          entity: entity,
+          budgetOverview: budgetOverview,
         ),
-        GoRoute(path: '/dtl', builder: (_, _) => const SizedBox()),
-        GoRoute(path: '/emergency', builder: (_, _) => const SizedBox()),
-        GoRoute(path: '/transactions', builder: (_, _) => const SizedBox()),
-        GoRoute(path: '/budget', builder: (_, _) => const SizedBox()),
-      ],
-    );
+      ),
+    ),
+    GoRoute(path: '/dtl', builder: (_, _) => const SizedBox()),
+    GoRoute(path: '/emergency', builder: (_, _) => const SizedBox()),
+    GoRoute(path: '/transactions', builder: (_, _) => const SizedBox()),
+    GoRoute(path: '/budget', builder: (_, _) => const SizedBox()),
+  ],
+);
 
 BudgetOverviewEntity _budgetOverview({
   int totalLimitSet = 500000,
   int totalSpentInLimited = 200000,
-}) =>
-    BudgetOverviewEntity(
-      monthlyIncome: 3000000,
-      totalFixedExpenses: 1000000,
-      emergencyFundMonthly: 200000,
-      totalSpendable: 1800000,
-      categoryItems: const [],
-      totalLimitSet: totalLimitSet,
-      totalSpentInLimited: totalSpentInLimited,
-      overallStatus: BudgetStatus.safe,
-      remainingDays: 15,
-      daysElapsed: 5,
-    );
+}) => BudgetOverviewEntity(
+  monthlyIncome: 3000000,
+  totalFixedExpenses: 1000000,
+  emergencyFundMonthly: 200000,
+  totalSpendable: 1800000,
+  categoryItems: const [],
+  totalLimitSet: totalLimitSet,
+  totalSpentInLimited: totalSpentInLimited,
+  overallStatus: BudgetStatus.safe,
+  remainingDays: 15,
+  daysElapsed: 5,
+);
 
 void main() {
   late AppLocalizations l10n;
@@ -96,19 +94,18 @@ void main() {
     DashboardEntity entity, {
     BudgetOverviewEntity? budgetOverview,
     ThemeData? theme,
-  }) =>
-      MaterialApp.router(
-        locale: const Locale('id'),
-        supportedLocales: const [Locale('id'), Locale('en')],
-        theme: theme,
-        localizationsDelegates: [
-          _SyncL10nDelegate(l10n),
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        routerConfig: _router(entity, budgetOverview: budgetOverview),
-      );
+  }) => MaterialApp.router(
+    locale: const Locale('id'),
+    supportedLocales: const [Locale('id'), Locale('en')],
+    theme: theme,
+    localizationsDelegates: [
+      _SyncL10nDelegate(l10n),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    routerConfig: _router(entity, budgetOverview: budgetOverview),
+  );
 
   Widget harness(DashboardEntity entity, {ThemeData? theme}) =>
       buildWidget(entity, theme: theme);
@@ -195,7 +192,9 @@ void main() {
 
       // Slide 1 (Spending) starts as the right peek — its label is right of center.
       final screenCenterX = 400.0; // physicalSize.width / 2
-      final initialCenter = tester.getCenter(find.text('PENGELUARAN BULAN INI'));
+      final initialCenter = tester.getCenter(
+        find.text('PENGELUARAN BULAN INI'),
+      );
       expect(initialCenter.dx, greaterThan(screenCenterX));
 
       // Advance past the 4s auto-play interval and the 440ms animation.
@@ -240,7 +239,9 @@ void main() {
       expect(find.text('HARI TERSISA'), findsOneWidget);
     });
 
-    testWidgets('FinancialSliderWidget shows budget data state', (tester) async {
+    testWidgets('FinancialSliderWidget shows budget data state', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -258,17 +259,9 @@ void main() {
       await tester.pump();
 
       // Navigate to budget slide (index 2) by swiping twice
-      await tester.fling(
-        find.byType(PageView),
-        const Offset(-400, 0),
-        800,
-      );
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 800);
       await tester.pumpAndSettle();
-      await tester.fling(
-        find.byType(PageView),
-        const Offset(-400, 0),
-        800,
-      );
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 800);
       await tester.pumpAndSettle();
 
       // Budget slide should show remaining amount (500000 - 200000 = 300000)

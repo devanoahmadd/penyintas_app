@@ -13,13 +13,13 @@ class BudgetLimitModel extends BudgetLimitEntity {
   });
 
   factory BudgetLimitModel.fromRow(BudgetLimit row) => BudgetLimitModel(
-        id: row.id,
-        category: row.category,
-        limitAmount: row.limitAmount,
-        cycleType: row.cycleType, // BudgetCycleConverter sudah handle konversi
-        isEnabled: row.isEnabled,
-        updatedAt: row.updatedAt,
-      );
+    id: row.id,
+    category: row.category,
+    limitAmount: row.limitAmount,
+    cycleType: row.cycleType, // BudgetCycleConverter sudah handle konversi
+    isEnabled: row.isEnabled,
+    updatedAt: row.updatedAt,
+  );
 
   factory BudgetLimitModel.fromEntity(BudgetLimitEntity entity) =>
       BudgetLimitModel(
@@ -32,19 +32,19 @@ class BudgetLimitModel extends BudgetLimitEntity {
       );
 
   BudgetLimitsCompanion toCompanion() => BudgetLimitsCompanion(
-        id: id == 0 ? const Value.absent() : Value(id),
-        category: Value(category),
-        limitAmount: Value(limitAmount),
-        cycleType: Value(cycleType), // Value<BudgetCycle> — converter handle
-        isEnabled: Value(isEnabled),
-        updatedAt: Value(updatedAt),
-      );
+    id: id == 0 ? const Value.absent() : Value(id),
+    category: Value(category),
+    limitAmount: Value(limitAmount),
+    cycleType: Value(cycleType), // Value<BudgetCycle> — converter handle
+    isEnabled: Value(isEnabled),
+    updatedAt: Value(updatedAt),
+  );
 
   Map<String, dynamic> toFirestore() => {
-        'category': category,
-        'limitAmount': limitAmount,
-        'cycleType': cycleType.name, // serialisasi sebagai string untuk Firestore
-        'isEnabled': isEnabled,
-        'updatedAt': updatedAt.millisecondsSinceEpoch,
-      };
+    'category': category,
+    'limitAmount': limitAmount,
+    'cycleType': cycleType.name, // serialisasi sebagai string untuk Firestore
+    'isEnabled': isEnabled,
+    'updatedAt': updatedAt.millisecondsSinceEpoch,
+  };
 }

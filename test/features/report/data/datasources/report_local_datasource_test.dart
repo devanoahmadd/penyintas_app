@@ -24,15 +24,19 @@ void main() {
     required String category,
     required DateTime date,
   }) async {
-    await db.into(db.transactions).insert(TransactionsCompanion.insert(
-          txId: id,
-          amount: amount,
-          category: category,
-          type: type.name,
-          date: date,
-          createdAt: date,
-          updatedAt: date,
-        ));
+    await db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            txId: id,
+            amount: amount,
+            category: category,
+            type: type.name,
+            date: date,
+            createdAt: date,
+            updatedAt: date,
+          ),
+        );
   }
 
   test('totalSpent equals sum of all expense transactions', () async {
@@ -109,20 +113,22 @@ void main() {
     expect(report.categoryBreakdown, isEmpty);
   });
 
-  test('comparedToPreviousMonth is null when no previous month data (#99)',
-      () async {
-    await insertTx(
-      id: '1',
-      amount: 200000,
-      type: TransactionType.expense,
-      category: 'food',
-      date: DateTime(2025, 11, 10),
-    );
+  test(
+    'comparedToPreviousMonth is null when no previous month data (#99)',
+    () async {
+      await insertTx(
+        id: '1',
+        amount: 200000,
+        type: TransactionType.expense,
+        category: 'food',
+        date: DateTime(2025, 11, 10),
+      );
 
-    final report = await datasource.getMonthlyReport(tMonth);
+      final report = await datasource.getMonthlyReport(tMonth);
 
-    expect(report.comparedToPreviousMonth, isNull);
-  });
+      expect(report.comparedToPreviousMonth, isNull);
+    },
+  );
 
   test('weeklyBreakdown has 5 elements with correct sums', () async {
     await insertTx(
@@ -151,44 +157,48 @@ void main() {
   });
 
   group('comparedToPreviousMonth #99', () {
-    test('bulan pertama sejati (tanpa transaksi bulan lalu) → null + hasPreviousMonthData false',
-        () async {
-      await insertTx(
-        id: '1',
-        amount: 50000,
-        type: TransactionType.expense,
-        category: 'food',
-        date: DateTime(2025, 11, 5),
-      );
+    test(
+      'bulan pertama sejati (tanpa transaksi bulan lalu) → null + hasPreviousMonthData false',
+      () async {
+        await insertTx(
+          id: '1',
+          amount: 50000,
+          type: TransactionType.expense,
+          category: 'food',
+          date: DateTime(2025, 11, 5),
+        );
 
-      final report = await datasource.getMonthlyReport(tMonth);
+        final report = await datasource.getMonthlyReport(tMonth);
 
-      expect(report.comparedToPreviousMonth, isNull);
-      expect(report.hasPreviousMonthData, isFalse);
-    });
+        expect(report.comparedToPreviousMonth, isNull);
+        expect(report.hasPreviousMonthData, isFalse);
+      },
+    );
 
-    test('bulan lalu hanya income (0 pengeluaran) → null + hasPreviousMonthData true',
-        () async {
-      await insertTx(
-        id: '1',
-        amount: 2000000,
-        type: TransactionType.income,
-        category: 'income',
-        date: DateTime(2025, 10, 25),
-      );
-      await insertTx(
-        id: '2',
-        amount: 50000,
-        type: TransactionType.expense,
-        category: 'food',
-        date: DateTime(2025, 11, 5),
-      );
+    test(
+      'bulan lalu hanya income (0 pengeluaran) → null + hasPreviousMonthData true',
+      () async {
+        await insertTx(
+          id: '1',
+          amount: 2000000,
+          type: TransactionType.income,
+          category: 'income',
+          date: DateTime(2025, 10, 25),
+        );
+        await insertTx(
+          id: '2',
+          amount: 50000,
+          type: TransactionType.expense,
+          category: 'food',
+          date: DateTime(2025, 11, 5),
+        );
 
-      final report = await datasource.getMonthlyReport(tMonth);
+        final report = await datasource.getMonthlyReport(tMonth);
 
-      expect(report.comparedToPreviousMonth, isNull);
-      expect(report.hasPreviousMonthData, isTrue);
-    });
+        expect(report.comparedToPreviousMonth, isNull);
+        expect(report.hasPreviousMonthData, isTrue);
+      },
+    );
 
     test('bulan lalu ada pengeluaran → rasio terhitung', () async {
       await insertTx(

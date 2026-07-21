@@ -9,11 +9,7 @@ import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 
 class GoalCard extends StatelessWidget {
-  const GoalCard({
-    super.key,
-    required this.goal,
-    required this.onTap,
-  });
+  const GoalCard({super.key, required this.goal, required this.onTap});
 
   final GoalEntity goal;
   final VoidCallback onTap;
@@ -26,12 +22,15 @@ class GoalCard extends StatelessWidget {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
-    final savedFmt =
-        formatCurrencyCompact(goal.savedAmount, CurrencyConfig.idr);
-    final targetFmt =
-        formatCurrencyCompact(goal.targetAmount, CurrencyConfig.idr);
-    final dateStr =
-        DateFormat('d MMM yyyy', 'id_ID').format(goal.targetDate);
+    final savedFmt = formatCurrencyCompact(
+      goal.savedAmount,
+      CurrencyConfig.idr,
+    );
+    final targetFmt = formatCurrencyCompact(
+      goal.targetAmount,
+      CurrencyConfig.idr,
+    );
+    final dateStr = DateFormat('d MMM yyyy', 'id_ID').format(goal.targetDate);
 
     return GestureDetector(
       onTap: onTap,
@@ -122,16 +121,10 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (goal.isCompleted) {
-      return _Chip(
-        label: context.l10n.goalCompleted,
-        color: AppColors.success,
-      );
+      return _Chip(label: context.l10n.goalCompleted, color: AppColors.success);
     }
     if (goal.isOverdue) {
-      return _Chip(
-        label: context.l10n.goalOverdue,
-        color: AppColors.warn,
-      );
+      return _Chip(label: context.l10n.goalOverdue, color: AppColors.warn);
     }
     return const SizedBox.shrink();
   }
@@ -178,7 +171,9 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm, vertical: 3),
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.pill),

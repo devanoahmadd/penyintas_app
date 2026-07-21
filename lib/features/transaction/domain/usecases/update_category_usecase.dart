@@ -11,9 +11,12 @@ class UpdateCategoryUseCase implements UseCase<void, CategoryEntity> {
   @override
   Future<Either<Failure, void>> call(CategoryEntity category) async {
     if (category.isBuiltIn) {
-      return const Left(ValidationFailure('Tidak bisa mengubah kategori bawaan.'));
+      return const Left(
+        ValidationFailure('Tidak bisa mengubah kategori bawaan.'),
+      );
     }
-    if (category.labelOverride == null || category.labelOverride!.trim().isEmpty) {
+    if (category.labelOverride == null ||
+        category.labelOverride!.trim().isEmpty) {
       return const Left(ValidationFailure('Nama kategori tidak boleh kosong.'));
     }
     return _repo.updateCategory(category);

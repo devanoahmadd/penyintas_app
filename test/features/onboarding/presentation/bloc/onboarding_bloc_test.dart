@@ -26,6 +26,7 @@ class MockPushUserSettingsUseCase extends Mock
 
 // Fallbacks
 class FakeBudgetSettingsEntity extends Fake implements BudgetSettingsEntity {}
+
 class FakeCalcParams extends Fake implements CalcParams {}
 
 void main() {
@@ -76,11 +77,11 @@ void main() {
   });
 
   OnboardingBloc buildBloc() => OnboardingBloc(
-        saveBudgetSettings: mockSave,
-        calculateDailyBudget: mockCalc,
-        analyticsService: mockAnalytics,
-        pushUserSettings: mockPush,
-      );
+    saveBudgetSettings: mockSave,
+    calculateDailyBudget: mockCalc,
+    analyticsService: mockAnalytics,
+    pushUserSettings: mockPush,
+  );
 
   // ── OnboardingSubmitted — sukses ──────────────────────────────────────
   group('OnboardingSubmitted — sukses', () {
@@ -88,12 +89,11 @@ void main() {
       'emit [Calculating, Success] saat save & calc berhasil',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
@@ -109,12 +109,11 @@ void main() {
       'panggil pushUserSettings setelah save sukses (#211)',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       verify: (_) {
@@ -126,12 +125,11 @@ void main() {
       'dailyBudget di Success state = nilai dari use case',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
@@ -144,16 +142,16 @@ void main() {
       'pushUserSettings throw exception → BLoC tetap emit Success (#224)',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
         // Simulasi network error saat push ke Firestore (async throw agar
         // .catchError di BLoC bisa menelannya)
-        when(() => mockPush(any()))
-            .thenAnswer((_) async => throw Exception('network timeout'));
+        when(
+          () => mockPush(any()),
+        ).thenAnswer((_) async => throw Exception('network timeout'));
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
@@ -169,11 +167,10 @@ void main() {
       'emit [Calculating, Error] saat save gagal',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any())).thenAnswer(
-          (_) async => const Left(CacheFailure('Gagal menyimpan.')),
-        );
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(
+          () => mockSave(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('Gagal menyimpan.')));
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
@@ -187,8 +184,7 @@ void main() {
       build: buildBloc,
       setUp: () {
         var callCount = 0;
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
         when(() => mockSave(any())).thenAnswer((_) async {
           callCount++;
           if (callCount == 1) {
@@ -196,8 +192,9 @@ void main() {
           }
           return const Right(null);
         });
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
       },
       act: (bloc) async {
         bloc.add(tSubmitEvent);
@@ -220,19 +217,20 @@ void main() {
       'pakai daysInCycle() bukan 0 ketika hari ini = paymentDate',
       build: buildBloc,
       setUp: () {
-        when(() => mockCalc(any()))
-            .thenAnswer((_) async => Right(tCalcResult));
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockAnalytics.logOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(() => mockCalc(any())).thenAnswer((_) async => Right(tCalcResult));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAnalytics.logOnboardingCompleted(),
+        ).thenAnswer((_) async {});
       },
-      act: (bloc) => bloc.add(OnboardingSubmitted(
-        income: tIncome,
-        paymentDate: DateTime.now().day, // remainingDaysInCycle() → 0
-        expenses: tExpenses,
-        emergencyFundPct: tEmergencyPct,
-      )),
+      act: (bloc) => bloc.add(
+        OnboardingSubmitted(
+          income: tIncome,
+          paymentDate: DateTime.now().day, // remainingDaysInCycle() → 0
+          expenses: tExpenses,
+          emergencyFundPct: tEmergencyPct,
+        ),
+      ),
       // Cukup verifikasi calc dipanggil dengan remainingDays > 0
       verify: (_) {
         final captured = verify(() => mockCalc(captureAny())).captured;
@@ -249,12 +247,10 @@ void main() {
       build: buildBloc,
       setUp: () {
         when(() => mockCalc(any())).thenAnswer(
-          (_) async => const Left(
-            ValidationFailure('Income harus lebih dari 0.'),
-          ),
+          (_) async =>
+              const Left(ValidationFailure('Income harus lebih dari 0.')),
         );
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
       },
       act: (bloc) => bloc.add(tSubmitEvent),
       expect: () => [
@@ -275,15 +271,16 @@ void main() {
               const Left(ValidationFailure('Income harus lebih dari 0.')),
         );
         // save di-stub sukses; kalau dipanggil, verifyNever di bawah gagal.
-        when(() => mockSave(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
       },
-      act: (bloc) => bloc.add(const OnboardingSubmitted(
-        income: 0,
-        paymentDate: 25,
-        expenses: tExpenses,
-        emergencyFundPct: 0.10,
-      )),
+      act: (bloc) => bloc.add(
+        const OnboardingSubmitted(
+          income: 0,
+          paymentDate: 25,
+          expenses: tExpenses,
+          emergencyFundPct: 0.10,
+        ),
+      ),
       expect: () => [
         const OnboardingCalculating(),
         const OnboardingError(message: 'Income harus lebih dari 0.'),
@@ -300,7 +297,13 @@ void main() {
       const event = OnboardingSubmitted(
         income: tIncome,
         paymentDate: tPaymentDate,
-        expenses: {'kos': 400000, 'listrik': 100000, 'internet': 50000, 'pulsa': 50000, 'lain': 0},
+        expenses: {
+          'kos': 400000,
+          'listrik': 100000,
+          'internet': 50000,
+          'pulsa': 50000,
+          'lain': 0,
+        },
         emergencyFundPct: tEmergencyPct,
       );
       expect(event.fixedExpenses, 600000);
@@ -310,7 +313,13 @@ void main() {
       const event = OnboardingSubmitted(
         income: tIncome,
         paymentDate: tPaymentDate,
-        expenses: {'kos': 0, 'listrik': 0, 'internet': 0, 'pulsa': 0, 'lain': 0},
+        expenses: {
+          'kos': 0,
+          'listrik': 0,
+          'internet': 0,
+          'pulsa': 0,
+          'lain': 0,
+        },
         emergencyFundPct: tEmergencyPct,
       );
       expect(event.fixedExpenses, 0);

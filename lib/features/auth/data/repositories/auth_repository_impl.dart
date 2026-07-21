@@ -16,13 +16,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final user =
-          await remoteDataSource.signIn(email: email, password: password);
+      final user = await remoteDataSource.signIn(
+        email: email,
+        password: password,
+      );
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -45,7 +49,9 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -58,7 +64,9 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -71,13 +79,17 @@ class AuthRepositoryImpl implements AuthRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
 
   @override
-  Future<Either<Failure, void>> deleteAccount({required String? password}) async {
+  Future<Either<Failure, void>> deleteAccount({
+    required String? password,
+  }) async {
     try {
       if (password != null) {
         await remoteDataSource.reauthenticate(password: password);
@@ -93,7 +105,9 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -106,24 +120,29 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
 
   @override
-  Stream<UserEntity?> get authStateChanges =>
-      remoteDataSource.authStateChanges;
+  Stream<UserEntity?> get authStateChanges => remoteDataSource.authStateChanges;
 
   @override
-  Future<Either<Failure, void>> sendEmailVerification({String? languageCode}) async {
+  Future<Either<Failure, void>> sendEmailVerification({
+    String? languageCode,
+  }) async {
     try {
       await remoteDataSource.sendEmailVerification(languageCode: languageCode);
       return const Right(null);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -134,7 +153,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await remoteDataSource.reloadCurrentUser();
       return Right(user);
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }
@@ -147,7 +168,9 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       return const Left(UnknownFailure());
     }
   }

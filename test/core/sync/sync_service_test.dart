@@ -10,8 +10,11 @@ import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/sync/sync_service.dart';
 
 class MockNetworkInfo extends Mock implements NetworkInfo {}
+
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
 class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
+
 class MockFirebaseUser extends Mock implements User {}
 
 AppDatabase openTestDb() => AppDatabase(NativeDatabase.memory());
@@ -45,34 +48,39 @@ void main() {
     when(() => mockAuth.currentUser).thenReturn(mockUser);
     when(() => mockUser.uid).thenReturn('uid-test');
     when(() => mockNetwork.isConnected).thenAnswer((_) async => false);
-    when(() => mockNetwork.onConnectivityChanged)
-        .thenAnswer((_) => const Stream.empty());
-    when(() => mockAuth.authStateChanges())
-        .thenAnswer((_) => const Stream.empty());
+    when(
+      () => mockNetwork.onConnectivityChanged,
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => mockAuth.authStateChanges(),
+    ).thenAnswer((_) => const Stream.empty());
   });
 
   tearDown(() => db.close());
 
   SyncService buildService() => SyncService(
-        db: db,
-        networkInfo: mockNetwork,
-        auth: mockAuth,
-        firestore: mockFirestore,
-        dispatchFn: fakeDispatch,
-      );
+    db: db,
+    networkInfo: mockNetwork,
+    auth: mockAuth,
+    firestore: mockFirestore,
+    dispatchFn: fakeDispatch,
+  );
 
   Future<void> insertQueueItem({
     String itemId = 'item-1',
     String path = 'users/uid-test/transactions/item-1',
     SyncOperation op = SyncOperation.create,
-  }) =>
-      db.into(db.syncQueue).insert(SyncQueueCompanion.insert(
-            itemId: itemId,
-            collectionPath: path,
-            data: '{"id":"$itemId"}',
-            operation: op,
-            createdAt: DateTime.now(),
-          ));
+  }) => db
+      .into(db.syncQueue)
+      .insert(
+        SyncQueueCompanion.insert(
+          itemId: itemId,
+          collectionPath: path,
+          data: '{"id":"$itemId"}',
+          operation: op,
+          createdAt: DateTime.now(),
+        ),
+      );
 
   group('_processQueue', () {
     test('dispatch berhasil → item dihapus dari queue', () async {
@@ -118,26 +126,37 @@ void main() {
 
     test('beberapa item diproses sesuai urutan createdAt', () async {
       final dispatched = <String>[];
-      Future<void> orderedDispatch(SyncQueueData item, FirebaseFirestore _) async {
+      Future<void> orderedDispatch(
+        SyncQueueData item,
+        FirebaseFirestore _,
+      ) async {
         dispatched.add(item.itemId);
       }
 
       final t1 = DateTime.now().subtract(const Duration(minutes: 1));
       final t2 = DateTime.now();
-      await db.into(db.syncQueue).insert(SyncQueueCompanion.insert(
-            itemId: 'second',
-            collectionPath: 'p/second',
-            data: '{}',
-            operation: SyncOperation.create,
-            createdAt: t2,
-          ));
-      await db.into(db.syncQueue).insert(SyncQueueCompanion.insert(
-            itemId: 'first',
-            collectionPath: 'p/first',
-            data: '{}',
-            operation: SyncOperation.create,
-            createdAt: t1,
-          ));
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              itemId: 'second',
+              collectionPath: 'p/second',
+              data: '{}',
+              operation: SyncOperation.create,
+              createdAt: t2,
+            ),
+          );
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              itemId: 'first',
+              collectionPath: 'p/first',
+              data: '{}',
+              operation: SyncOperation.create,
+              createdAt: t1,
+            ),
+          );
 
       when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
 
@@ -155,37 +174,41 @@ void main() {
     });
 
     test(
-        'item malformed (ArgumentError) di-purge langsung, item valid tetap diproses',
-        () async {
-      await insertQueueItem(
-        itemId: 'malformed-1',
-        path: 'users/{uid}/budget_settings',
-      );
-      await insertQueueItem(itemId: 'valid-1');
-      when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
+      'item malformed (ArgumentError) di-purge langsung, item valid tetap diproses',
+      () async {
+        await insertQueueItem(
+          itemId: 'malformed-1',
+          path: 'users/{uid}/budget_settings',
+        );
+        await insertQueueItem(itemId: 'valid-1');
+        when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
 
-      final dispatched = <String>[];
-      final service = SyncService(
-        db: db,
-        networkInfo: mockNetwork,
-        auth: mockAuth,
-        firestore: mockFirestore,
-        dispatchFn: (item, fs) async {
-          // Meniru guard toFirestoreOp (#252)
-          if (item.collectionPath.contains('{')) {
-            throw ArgumentError.value(
-                item.collectionPath, 'collectionPath', 'malformed');
-          }
-          dispatched.add(item.itemId);
-        },
-      )..start();
-      await Future.delayed(const Duration(milliseconds: 50));
-      service.dispose();
+        final dispatched = <String>[];
+        final service = SyncService(
+          db: db,
+          networkInfo: mockNetwork,
+          auth: mockAuth,
+          firestore: mockFirestore,
+          dispatchFn: (item, fs) async {
+            // Meniru guard toFirestoreOp (#252)
+            if (item.collectionPath.contains('{')) {
+              throw ArgumentError.value(
+                item.collectionPath,
+                'collectionPath',
+                'malformed',
+              );
+            }
+            dispatched.add(item.itemId);
+          },
+        )..start();
+        await Future.delayed(const Duration(milliseconds: 50));
+        service.dispose();
 
-      expect(dispatched, ['valid-1']); // item valid tetap terkirim
-      final remaining = await db.select(db.syncQueue).get();
-      expect(remaining, isEmpty); // malformed di-purge, valid terhapus normal
-    });
+        expect(dispatched, ['valid-1']); // item valid tetap terkirim
+        final remaining = await db.select(db.syncQueue).get();
+        expect(remaining, isEmpty); // malformed di-purge, valid terhapus normal
+      },
+    );
   });
 
   group('mutex', () {

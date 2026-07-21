@@ -16,11 +16,11 @@ class SyncService {
     required FirebaseFirestore firestore,
     // Injectable untuk testing — default ke SyncDispatcher.dispatch
     Future<void> Function(SyncQueueData, FirebaseFirestore)? dispatchFn,
-  })  : _db = db,
-        _networkInfo = networkInfo,
-        _auth = auth,
-        _firestore = firestore,
-        _dispatchFn = dispatchFn ?? SyncDispatcher.dispatch;
+  }) : _db = db,
+       _networkInfo = networkInfo,
+       _auth = auth,
+       _firestore = firestore,
+       _dispatchFn = dispatchFn ?? SyncDispatcher.dispatch;
 
   final AppDatabase _db;
   final NetworkInfo _networkInfo;
@@ -60,9 +60,9 @@ class SyncService {
 
       // #28: hapus item yang lebih dari 7 hari — tidak bisa dispatch, log sebagai abandoned
       final cutoff = DateTime.now().subtract(const Duration(days: 7));
-      final expired = await (_db.select(_db.syncQueue)
-            ..where((t) => t.createdAt.isSmallerThanValue(cutoff)))
-          .get();
+      final expired = await (_db.select(
+        _db.syncQueue,
+      )..where((t) => t.createdAt.isSmallerThanValue(cutoff))).get();
       for (final item in expired) {
         try {
           FirebaseCrashlytics.instance.recordError(
@@ -70,30 +70,35 @@ class SyncService {
             StackTrace.current,
           );
         } catch (_) {}
-        await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id))).go();
+        await (_db.delete(
+          _db.syncQueue,
+        )..where((t) => t.id.equals(item.id))).go();
       }
 
-      final items = await (_db.select(_db.syncQueue)
-            ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
-          .get();
+      final items = await (_db.select(
+        _db.syncQueue,
+      )..orderBy([(t) => OrderingTerm(expression: t.createdAt)])).get();
 
       for (final item in items) {
         try {
           await _dispatchFn(item, _firestore);
-          await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id)))
-              .go();
+          await (_db.delete(
+            _db.syncQueue,
+          )..where((t) => t.id.equals(item.id))).go();
         } on ArgumentError catch (e, stack) {
           // #252: item malformed tidak akan pernah bisa dikirim — purge
           // langsung + log sekali, jangan retry sampai TTL 7 hari.
           try {
             FirebaseCrashlytics.instance.recordError(
               Exception(
-                  'SyncQueue item malformed, dibuang: ${item.itemId} — ${e.message}'),
+                'SyncQueue item malformed, dibuang: ${item.itemId} — ${e.message}',
+              ),
               stack,
             );
           } catch (_) {}
-          await (_db.delete(_db.syncQueue)..where((t) => t.id.equals(item.id)))
-              .go();
+          await (_db.delete(
+            _db.syncQueue,
+          )..where((t) => t.id.equals(item.id))).go();
         } catch (e, stack) {
           try {
             FirebaseCrashlytics.instance.recordError(e, stack);

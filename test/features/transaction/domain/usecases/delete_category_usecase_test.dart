@@ -21,15 +21,20 @@ void main() {
   });
 
   test('berhasil delete custom category', () async {
-    when(() => repo.deleteCategory('gym'))
-        .thenAnswer((_) async => const Right(null));
-    final result = await usecase(const DeleteCategoryParams(slug: 'gym', isBuiltIn: false));
+    when(
+      () => repo.deleteCategory('gym'),
+    ).thenAnswer((_) async => const Right(null));
+    final result = await usecase(
+      const DeleteCategoryParams(slug: 'gym', isBuiltIn: false),
+    );
     expect(result.isRight(), true);
     verify(() => repo.deleteCategory('gym')).called(1);
   });
 
   test('gagal delete built-in category — return ValidationFailure', () async {
-    final result = await usecase(const DeleteCategoryParams(slug: 'food', isBuiltIn: true));
+    final result = await usecase(
+      const DeleteCategoryParams(slug: 'food', isBuiltIn: true),
+    );
     expect(result.isLeft(), true);
     result.fold(
       (f) => expect(f, isA<ValidationFailure>()),

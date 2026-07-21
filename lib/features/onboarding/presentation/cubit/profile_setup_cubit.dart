@@ -12,10 +12,11 @@ class ProfileSetupCubit extends Cubit<ProfileSetupState> {
     required PreferencesRepository repo,
     required TimezoneResolver tz,
     String? initialName,
-    bool autoPrefill = true, // Temuan 5: seam determinisme test (produksi = true)
-  })  : _repo = repo,
-        _tz = tz,
-        super(ProfileSetupState(displayName: initialName)) {
+    bool autoPrefill =
+        true, // Temuan 5: seam determinisme test (produksi = true)
+  }) : _repo = repo,
+       _tz = tz,
+       super(ProfileSetupState(displayName: initialName)) {
     if (autoPrefill) prefill();
   }
 
@@ -35,7 +36,9 @@ class ProfileSetupCubit extends Cubit<ProfileSetupState> {
     try {
       final p = await _repo.read();
       if (!isClosed) emit(state.copyWith(language: p.language));
-    } catch (_) {/* biarkan default 'id' */}
+    } catch (_) {
+      /* biarkan default 'id' */
+    }
   }
 
   void setLanguage(String v) => emit(state.copyWith(language: v));
@@ -52,7 +55,8 @@ class ProfileSetupCubit extends Cubit<ProfileSetupState> {
       emit(state.copyWith(currentCountry: c, clearCurrentCity: true));
 
   void setCurrentCity(String city) {
-    final iana = _tz.cityToTz(city, state.currentCountry)?.iana ?? state.timezone;
+    final iana =
+        _tz.cityToTz(city, state.currentCountry)?.iana ?? state.timezone;
     emit(state.copyWith(currentCity: city, timezone: iana));
   }
 
@@ -63,11 +67,13 @@ class ProfileSetupCubit extends Cubit<ProfileSetupState> {
       emit(state.copyWith(isPerantau: true));
     } else {
       // OFF → home = current (invariant A10)
-      emit(state.copyWith(
-        isPerantau: false,
-        homeCountry: state.currentCountry,
-        clearHomeCity: true,
-      ));
+      emit(
+        state.copyWith(
+          isPerantau: false,
+          homeCountry: state.currentCountry,
+          clearHomeCity: true,
+        ),
+      );
     }
   }
 

@@ -28,25 +28,24 @@ class SurvivalModeEntity extends Equatable {
     int? suggestedDailyBudget,
     List<SurvivalTip>? tips,
     Object? activatedAt = _kSentinel,
-  }) =>
-      SurvivalModeEntity(
-        isActive: isActive ?? this.isActive,
-        remainingAmount: remainingAmount ?? this.remainingAmount,
-        remainingDays: remainingDays ?? this.remainingDays,
-        suggestedDailyBudget: suggestedDailyBudget ?? this.suggestedDailyBudget,
-        tips: tips ?? this.tips,
-        activatedAt: identical(activatedAt, _kSentinel)
-            ? this.activatedAt
-            : activatedAt as DateTime?,
-      );
+  }) => SurvivalModeEntity(
+    isActive: isActive ?? this.isActive,
+    remainingAmount: remainingAmount ?? this.remainingAmount,
+    remainingDays: remainingDays ?? this.remainingDays,
+    suggestedDailyBudget: suggestedDailyBudget ?? this.suggestedDailyBudget,
+    tips: tips ?? this.tips,
+    activatedAt: identical(activatedAt, _kSentinel)
+        ? this.activatedAt
+        : activatedAt as DateTime?,
+  );
 
   @override
   List<Object?> get props => [
-        isActive,
-        remainingAmount,
-        remainingDays,
-        suggestedDailyBudget,
-        tips,
-        activatedAt,
-      ];
+    isActive,
+    remainingAmount,
+    remainingDays,
+    suggestedDailyBudget,
+    tips,
+    activatedAt,
+  ];
 }

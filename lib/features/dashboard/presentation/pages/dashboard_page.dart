@@ -177,13 +177,9 @@ class _DashboardBody extends StatelessWidget {
               child: _DashboardHeader(hasNotification: false),
             ),
             // F5/D3: banner rekonsiliasi zona waktu (non-blocking, selalu konfirmasi)
-            const SliverToBoxAdapter(
-              child: _TimezoneReconciliationBanner(),
-            ),
+            const SliverToBoxAdapter(child: _TimezoneReconciliationBanner()),
             // B4: banner soft verifikasi email — hilang sendiri saat verified
-            const SliverToBoxAdapter(
-              child: EmailVerificationBanner(),
-            ),
+            const SliverToBoxAdapter(child: EmailVerificationBanner()),
             // Financial slider — no horizontal padding so peek bleeds to edges
             SliverToBoxAdapter(
               child: BlocBuilder<BudgetLimitsBloc, BudgetLimitsState>(
@@ -585,7 +581,10 @@ class _TxnRow extends StatelessWidget {
 
     final h = transaction.date.hour.toString().padLeft(2, '0');
     final m = transaction.date.minute.toString().padLeft(2, '0');
-    final catLabel = CategoryMetadata.resolveLabelFromSlug(transaction.category, l10n);
+    final catLabel = CategoryMetadata.resolveLabelFromSlug(
+      transaction.category,
+      l10n,
+    );
 
     return Column(
       children: [
@@ -663,7 +662,6 @@ class _TxnRow extends StatelessWidget {
       ],
     );
   }
-
 }
 
 // ── Section header ────────────────────────────────────────────────────────
@@ -1123,7 +1121,10 @@ class _TimezoneReconciliationBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TimezoneReconciliationCubit, TimezoneReconciliationState>(
+    return BlocBuilder<
+      TimezoneReconciliationCubit,
+      TimezoneReconciliationState
+    >(
       builder: (context, state) {
         final prompt = state.prompt;
 
@@ -1165,7 +1166,10 @@ class _BannerContent extends StatelessWidget {
     // BoxDecoration — tak perlu ClipRRect & tak memicu crash paint() seperti dulu.
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        0,
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -1218,9 +1222,8 @@ class _BannerContent extends StatelessWidget {
                       label: l10n.tzReconDismiss,
                       isPrimary: false,
                       isDark: isDark,
-                      onTap: () => context
-                          .read<TimezoneReconciliationCubit>()
-                          .dismiss(),
+                      onTap: () =>
+                          context.read<TimezoneReconciliationCubit>().dismiss(),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _BannerButton(
@@ -1228,9 +1231,8 @@ class _BannerContent extends StatelessWidget {
                       label: l10n.tzReconConfirm,
                       isPrimary: true,
                       isDark: isDark,
-                      onTap: () => context
-                          .read<TimezoneReconciliationCubit>()
-                          .confirm(),
+                      onTap: () =>
+                          context.read<TimezoneReconciliationCubit>().confirm(),
                     ),
                   ],
                 ),
@@ -1287,10 +1289,7 @@ class _BannerButton extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: AppTextStyles.label.copyWith(
-              color: fgColor,
-              fontSize: 13,
-            ),
+            style: AppTextStyles.label.copyWith(color: fgColor, fontSize: 13),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,

@@ -32,10 +32,7 @@ class MonthSelector extends StatelessWidget {
           color: textColor,
           iconSize: 24,
         ),
-        Text(
-          label,
-          style: AppTextStyles.label.copyWith(color: textColor),
-        ),
+        Text(label, style: AppTextStyles.label.copyWith(color: textColor)),
         IconButton(
           onPressed: isCurrentMonth ? null : onNext,
           icon: Icon(

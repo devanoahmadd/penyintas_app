@@ -75,7 +75,8 @@ class _GoalListPageState extends State<GoalListPage> {
                   return const SliverFillRemaining(
                     child: Center(
                       child: CircularProgressIndicator(
-                          color: AppColors.primary),
+                        color: AppColors.primary,
+                      ),
                     ),
                   );
                 }
@@ -93,9 +94,7 @@ class _GoalListPageState extends State<GoalListPage> {
                 final goals = _goalsFromState(state);
 
                 if (goals.isEmpty) {
-                  return SliverFillRemaining(
-                    child: _EmptyBody(isDark: isDark),
-                  );
+                  return SliverFillRemaining(child: _EmptyBody(isDark: isDark));
                 }
 
                 return SliverPadding(
@@ -167,10 +166,7 @@ class _ErrorBody extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.lg),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(context.l10n.retry),
-            ),
+            OutlinedButton(onPressed: onRetry, child: Text(context.l10n.retry)),
           ],
         ),
       ),
@@ -194,11 +190,7 @@ class _EmptyBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.flag_outlined,
-              size: 48,
-              color: mutedColor,
-            ),
+            Icon(Icons.flag_outlined, size: 48, color: mutedColor),
             const SizedBox(height: AppSpacing.lg),
             Text(
               context.l10n.goalsEmpty,

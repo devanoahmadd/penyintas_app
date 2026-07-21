@@ -35,15 +35,17 @@ void main() {
       verify(() => remote.registerToken(tUid, tToken)).called(1);
     });
 
-    test('token null → no-op Right(null), registerToken TIDAK dipanggil',
-        () async {
-      when(() => remote.getFcmToken()).thenAnswer((_) async => null);
+    test(
+      'token null → no-op Right(null), registerToken TIDAK dipanggil',
+      () async {
+        when(() => remote.getFcmToken()).thenAnswer((_) async => null);
 
-      final result = await repo.registerToken(tUid);
+        final result = await repo.registerToken(tUid);
 
-      expect(result, const Right<Failure, void>(null));
-      verifyNever(() => remote.registerToken(any(), any()));
-    });
+        expect(result, const Right<Failure, void>(null));
+        verifyNever(() => remote.registerToken(any(), any()));
+      },
+    );
   });
 
   group('unregisterToken', () {
@@ -60,17 +62,18 @@ void main() {
     });
 
     test(
-        'token null → deleteToken TETAP dipanggil, unregisterToken(datasource) TIDAK dipanggil',
-        () async {
-      when(() => remote.getFcmToken()).thenAnswer((_) async => null);
-      when(() => remote.deleteToken()).thenAnswer((_) async {});
+      'token null → deleteToken TETAP dipanggil, unregisterToken(datasource) TIDAK dipanggil',
+      () async {
+        when(() => remote.getFcmToken()).thenAnswer((_) async => null);
+        when(() => remote.deleteToken()).thenAnswer((_) async {});
 
-      final result = await repo.unregisterToken(tUid);
+        final result = await repo.unregisterToken(tUid);
 
-      expect(result, const Right<Failure, void>(null));
-      verify(() => remote.deleteToken()).called(1);
-      verifyNever(() => remote.unregisterToken(any(), any()));
-    });
+        expect(result, const Right<Failure, void>(null));
+        verify(() => remote.deleteToken()).called(1);
+        verifyNever(() => remote.unregisterToken(any(), any()));
+      },
+    );
   });
 
   group('getPushEnabled', () {
@@ -85,7 +88,9 @@ void main() {
 
   group('setPushEnabled', () {
     test('error → Left(ServerFailure)', () async {
-      when(() => remote.setPushEnabled(tUid, true)).thenThrow(Exception('boom'));
+      when(
+        () => remote.setPushEnabled(tUid, true),
+      ).thenThrow(Exception('boom'));
       final result = await repo.setPushEnabled(tUid, true);
       expect(result.isLeft(), isTrue);
       result.fold(

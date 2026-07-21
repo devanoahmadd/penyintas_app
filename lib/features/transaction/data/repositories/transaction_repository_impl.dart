@@ -16,10 +16,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required TransactionRemoteDataSource remoteDataSource,
     required NetworkInfo networkInfo,
     required FirebaseAuth auth,
-  })  : _local = localDataSource,
-        _remote = remoteDataSource,
-        _networkInfo = networkInfo,
-        _auth = auth;
+  }) : _local = localDataSource,
+       _remote = remoteDataSource,
+       _networkInfo = networkInfo,
+       _auth = auth;
 
   final TransactionLocalDataSource _local;
   final TransactionRemoteDataSource _remote;
@@ -34,7 +34,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<Either<Failure, void>> addTransaction(
-      TransactionEntity transaction) async {
+    TransactionEntity transaction,
+  ) async {
     try {
       final model = TransactionModel.fromEntity(transaction);
       await _local.saveTransaction(model);
@@ -76,7 +77,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<Either<Failure, void>> updateTransaction(
-      TransactionEntity transaction) async {
+    TransactionEntity transaction,
+  ) async {
     try {
       final model = TransactionModel.fromEntity(transaction);
       await _local.updateTransaction(model);
@@ -162,8 +164,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     try {
       var models = await _local.getTransactionsByDateRange(from, to);
       if (categoryFilter != null) {
-        models =
-            models.where((m) => m.category == categoryFilter).toList();
+        models = models.where((m) => m.category == categoryFilter).toList();
       }
       return Right(models.map((m) => m.toEntity()).toList());
     } catch (e, stack) {
@@ -175,11 +176,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Stream<Either<Failure, List<TransactionEntity>>> watchTodayTransactions() {
     return _local.watchTodayTransactions().map(
-          (models) =>
-              Right<Failure, List<TransactionEntity>>(
-                models.map((m) => m.toEntity()).toList(),
-              ),
-        );
+      (models) => Right<Failure, List<TransactionEntity>>(
+        models.map((m) => m.toEntity()).toList(),
+      ),
+    );
   }
 
   @override

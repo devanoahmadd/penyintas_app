@@ -28,7 +28,9 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   @override
-  Future<Either<Failure, CategoryEntity>> createCategory(CategoryEntity category) async {
+  Future<Either<Failure, CategoryEntity>> createCategory(
+    CategoryEntity category,
+  ) async {
     try {
       return Right(await _local.createCategory(category));
     } on CacheException catch (e) {

@@ -13,9 +13,9 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
     required AppDatabase db,
     required UserSettingsRemoteDatasource remote,
     Duration syncTimeout = const Duration(seconds: 3),
-  })  : _db = db,
-        _remote = remote,
-        _syncTimeout = syncTimeout;
+  }) : _db = db,
+       _remote = remote,
+       _syncTimeout = syncTimeout;
 
   final AppDatabase _db;
   final UserSettingsRemoteDatasource _remote;
@@ -41,8 +41,9 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
   @override
   Future<Either<Failure, Unit>> syncFromRemote() async {
     try {
-      final remoteModel =
-          await _remote.fetchUserSettings().timeout(_syncTimeout);
+      final remoteModel = await _remote.fetchUserSettings().timeout(
+        _syncTimeout,
+      );
       if (remoteModel != null) {
         await _writeIdentity(remoteModel);
       } else {
@@ -73,9 +74,9 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
   }
 
   Future<UserSettingsModel> _readIdentity() async {
-    final row = await (_db.select(_db.appSettings)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     return UserSettingsModel(
       onboardingCompleted: row?.onboardingCompleted ?? false,
     );
@@ -86,9 +87,13 @@ class UserSettingsRepositoryImpl implements UserSettingsRepository {
     // Race condition: budget sync bisa menulis onboardingCompleted=true bersamaan;
     // jika _writeIdentity menulis false belakangan, state jadi corrupted.
     if (!s.onboardingCompleted) return;
-    await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
-          id: const Value(1),
-          onboardingCompleted: const Value(true),
-        ));
+    await _db
+        .into(_db.appSettings)
+        .insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(1),
+            onboardingCompleted: const Value(true),
+          ),
+        );
   }
 }

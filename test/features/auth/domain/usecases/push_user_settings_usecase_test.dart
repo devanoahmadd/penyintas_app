@@ -18,8 +18,9 @@ void main() {
   });
 
   test('should call repository.pushToRemote and return Right(unit)', () async {
-    when(() => mockRepo.pushToRemote())
-        .thenAnswer((_) async => const Right(unit));
+    when(
+      () => mockRepo.pushToRemote(),
+    ).thenAnswer((_) async => const Right(unit));
 
     final result = await useCase(const NoParams());
 

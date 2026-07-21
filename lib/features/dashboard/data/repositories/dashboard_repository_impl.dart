@@ -15,9 +15,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
     required TransactionRepository transactionRepository,
     required BudgetRepository budgetRepository,
     required CalculateDaysToLiveUseCase calculateDtl,
-  })  : _transactions = transactionRepository,
-        _budget = budgetRepository,
-        _calcDtl = calculateDtl;
+  }) : _transactions = transactionRepository,
+       _budget = budgetRepository,
+       _calcDtl = calculateDtl;
 
   final TransactionRepository _transactions;
   final BudgetRepository _budget;
@@ -38,7 +38,10 @@ class DashboardRepositoryImpl implements DashboardRepository {
   Stream<Either<Failure, DashboardEntity>> watchDashboard() async* {
     await for (final todayResult in _transactions.watchTodayTransactions()) {
       try {
-        final todayTxns = todayResult.fold((l) => <TransactionEntity>[], (r) => r);
+        final todayTxns = todayResult.fold(
+          (l) => <TransactionEntity>[],
+          (r) => r,
+        );
 
         _cachedSettings ??= (await _budget.getBudgetSettings()).fold(
           (_) => null,
@@ -47,7 +50,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
         final settings = _cachedSettings;
 
         if (settings == null) {
-          yield const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.'));
+          yield const Left(
+            CacheFailure('Pengaturan anggaran tidak ditemukan.'),
+          );
           continue;
         }
 
@@ -64,18 +69,26 @@ class DashboardRepositoryImpl implements DashboardRepository {
           _transactions.getTransactions(from: sevenDaysAgo, to: now),
         ]);
 
-        final monthTxns = monthResult.fold((l) => <TransactionEntity>[], (r) => r);
-        final last7Txns = last7Result.fold((l) => <TransactionEntity>[], (r) => r);
+        final monthTxns = monthResult.fold(
+          (l) => <TransactionEntity>[],
+          (r) => r,
+        );
+        final last7Txns = last7Result.fold(
+          (l) => <TransactionEntity>[],
+          (r) => r,
+        );
 
         // Teruskan `now` yang sama ke _compute agar remainingDaysInCycle
         // konsisten dengan cycleBegin/cycleFinish (fix finding #2).
-        yield Right<Failure, DashboardEntity>(_compute(
-          settings: settings,
-          now: now,
-          todayTxns: todayTxns,
-          monthTxns: monthTxns,
-          last7Txns: last7Txns,
-        ));
+        yield Right<Failure, DashboardEntity>(
+          _compute(
+            settings: settings,
+            now: now,
+            todayTxns: todayTxns,
+            monthTxns: monthTxns,
+            last7Txns: last7Txns,
+          ),
+        );
       } catch (e, stack) {
         _logError(e, stack);
         yield const Left(UnknownFailure());
@@ -92,10 +105,12 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }) {
     final remainingDays = remainingDaysInCycle(settings.paymentDate, now: now);
     // #38: fallback ke panjang siklus penuh berikutnya, bukan hardcode 30
-    final effectiveDays = remainingDays > 0 ? remainingDays : daysInCycle(settings.paymentDate);
+    final effectiveDays = remainingDays > 0
+        ? remainingDays
+        : daysInCycle(settings.paymentDate);
 
-    final emergencyFund =
-        (settings.monthlyIncome * settings.emergencyFundPct).round();
+    final emergencyFund = (settings.monthlyIncome * settings.emergencyFundPct)
+        .round();
     final totalMonthlyBudget =
         settings.monthlyIncome - settings.fixedExpenses - emergencyFund;
     final safeMonthlyBudget = totalMonthlyBudget < 0 ? 0 : totalMonthlyBudget;
@@ -108,9 +123,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
     // #25: exclude kategori fixed — sudah diwakili oleh settings.fixedExpenses di formula budget
     final totalSpentThisMonth = monthTxns
-        .where((t) =>
-            t.type == TransactionType.expense &&
-            t.category != 'fixed')
+        .where(
+          (t) => t.type == TransactionType.expense && t.category != 'fixed',
+        )
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
@@ -122,11 +137,13 @@ class DashboardRepositoryImpl implements DashboardRepository {
         ? (dailyBudget > 0 ? dailyBudget.toDouble() : 0.0)
         : last7Expense / 7.0;
 
-    final daysToLive = _calcDtl(CalcDtlParams(
-      totalRemaining: totalRemaining,
-      avgDailySpend: avgDailySpend,
-      remainingDays: effectiveDays,
-    ));
+    final daysToLive = _calcDtl(
+      CalcDtlParams(
+        totalRemaining: totalRemaining,
+        avgDailySpend: avgDailySpend,
+        remainingDays: effectiveDays,
+      ),
+    );
 
     final ratio = safeMonthlyBudget > 0
         ? totalRemaining / safeMonthlyBudget
@@ -134,8 +151,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
     final status = ratio > 0.30
         ? BudgetStatus.safe
         : ratio >= 0.15
-            ? BudgetStatus.caution
-            : BudgetStatus.danger;
+        ? BudgetStatus.caution
+        : BudgetStatus.danger;
 
     // #61: fallback ke 3 transaksi terakhir (last7) jika tidak ada transaksi hari ini
     final recentTxns = todayTxns.isNotEmpty

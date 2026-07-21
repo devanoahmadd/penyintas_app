@@ -57,14 +57,16 @@ class InsightCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.lightbulb_outline,
-                      size: 16, color: AppColors.primary),
+                  const Icon(
+                    Icons.lightbulb_outline,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       savingTip!,
-                      style:
-                          AppTextStyles.bodySmall.copyWith(color: textColor),
+                      style: AppTextStyles.bodySmall.copyWith(color: textColor),
                     ),
                   ),
                 ],

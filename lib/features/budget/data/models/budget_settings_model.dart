@@ -55,15 +55,15 @@ class BudgetSettingsModel extends BudgetSettingsEntity {
   }
 
   Map<String, dynamic> toFirestore() => {
-        'monthlyIncome': monthlyIncome,
-        'paymentDate': paymentDate,
-        'fixedExpenses': fixedExpenses, // backward compat bagi reader lama
-        'emergencyFundPct': emergencyFundPct,
-        'createdAt': Timestamp.fromDate(createdAt),
-        'rentExpense': rentExpense,
-        'utilitiesExpense': utilitiesExpense,
-        'internetExpense': internetExpense,
-        'phoneExpense': phoneExpense,
-        'otherFixedExpense': otherFixedExpense,
-      };
+    'monthlyIncome': monthlyIncome,
+    'paymentDate': paymentDate,
+    'fixedExpenses': fixedExpenses, // backward compat bagi reader lama
+    'emergencyFundPct': emergencyFundPct,
+    'createdAt': Timestamp.fromDate(createdAt),
+    'rentExpense': rentExpense,
+    'utilitiesExpense': utilitiesExpense,
+    'internetExpense': internetExpense,
+    'phoneExpense': phoneExpense,
+    'otherFixedExpense': otherFixedExpense,
+  };
 }

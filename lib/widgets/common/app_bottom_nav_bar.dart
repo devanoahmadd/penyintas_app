@@ -14,37 +14,32 @@ const double _kGlowSize = _kFabDiam + 36; // 96 dp
 const double _kTabIconSize = 22.0;
 
 // ── Tab definitions ────────────────────────────────────────────────────────
-typedef _Tab = ({
-  int id,
-  String label,
-  IconData icon,
-  IconData activeIcon,
-});
+typedef _Tab = ({int id, String label, IconData icon, IconData activeIcon});
 
 const List<_Tab> _kTabs = [
   (
     id: 0,
     label: 'Beranda',
     icon: Icons.home_outlined,
-    activeIcon: Icons.home_rounded
+    activeIcon: Icons.home_rounded,
   ),
   (
     id: 1,
     label: 'Transaksi',
     icon: Icons.history_outlined,
-    activeIcon: Icons.history_rounded
+    activeIcon: Icons.history_rounded,
   ),
   (
     id: 3,
     label: 'Budget',
     icon: Icons.donut_large_outlined,
-    activeIcon: Icons.donut_large_rounded
+    activeIcon: Icons.donut_large_rounded,
   ),
   (
     id: 4,
     label: 'Saya',
     icon: Icons.person_outline,
-    activeIcon: Icons.person_rounded
+    activeIcon: Icons.person_rounded,
   ),
 ];
 
@@ -89,8 +84,10 @@ class _AppBottomNavBarState extends State<AppBottomNavBar>
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
-    _sparkleCurve =
-        CurvedAnimation(parent: _sparkleCtrl, curve: Curves.easeInOut);
+    _sparkleCurve = CurvedAnimation(
+      parent: _sparkleCtrl,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -240,10 +237,7 @@ class _AppBottomNavBarState extends State<AppBottomNavBar>
 // ── Notch painter ──────────────────────────────────────────────────────────
 
 class _NavNotchPainter extends CustomPainter {
-  const _NavNotchPainter({
-    required this.fillColor,
-    required this.strokeColor,
-  });
+  const _NavNotchPainter({required this.fillColor, required this.strokeColor});
 
   final Color fillColor;
   final Color strokeColor;
@@ -251,13 +245,19 @@ class _NavNotchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final path = _buildPath(size);
-    canvas.drawPath(path, Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill);
-    canvas.drawPath(path, Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = fillColor
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = strokeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
   }
 
   @override
@@ -367,11 +367,7 @@ class _PenyFab extends StatelessWidget {
               center: Alignment(-0.36, -0.44),
               radius: 1.0,
               stops: [0.0, 0.45, 1.0],
-              colors: [
-                Color(0xFFA8E6B6),
-                Color(0xFF16A34A),
-                Color(0xFF0A5A2D),
-              ],
+              colors: [Color(0xFFA8E6B6), Color(0xFF16A34A), Color(0xFF0A5A2D)],
             ),
             border: Border.all(color: scaffoldBg, width: _kRingGap),
             boxShadow: [

@@ -26,14 +26,15 @@ class GoalDetailPage extends StatelessWidget {
     // Resolve live goal from bloc — falls back to constructor snapshot if not loaded
     final goalState = context.watch<GoalBloc>().state;
     final current = goalState is GoalLoaded
-        ? goalState.goals.firstWhere((g) => g.id == goal.id,
-            orElse: () => goal)
+        ? goalState.goals.firstWhere((g) => g.id == goal.id, orElse: () => goal)
         : goal;
 
     final savedFmt = formatCurrency(current.savedAmount, CurrencyConfig.idr);
     final targetFmt = formatCurrency(current.targetAmount, CurrencyConfig.idr);
-    final dateStr =
-        DateFormat('d MMMM yyyy', 'id_ID').format(current.targetDate);
+    final dateStr = DateFormat(
+      'd MMMM yyyy',
+      'id_ID',
+    ).format(current.targetDate);
     final pct = (current.progressPercent * 100).toStringAsFixed(0);
 
     return BlocListener<GoalBloc, GoalState>(
@@ -116,7 +117,8 @@ class GoalDetailPage extends StatelessWidget {
                         value: current.progressPercent,
                         backgroundColor: borderColor,
                         valueColor: AlwaysStoppedAnimation(
-                            _progressColor(current.progressPercent)),
+                          _progressColor(current.progressPercent),
+                        ),
                         minHeight: 12,
                       ),
                     ),
@@ -147,13 +149,13 @@ class GoalDetailPage extends StatelessWidget {
                       value: current.isCompleted
                           ? context.l10n.goalCompleted
                           : current.isOverdue
-                              ? context.l10n.goalOverdue
-                              : context.l10n.goalDetailStatusActive,
+                          ? context.l10n.goalOverdue
+                          : context.l10n.goalDetailStatusActive,
                       valueColor: current.isCompleted
                           ? AppColors.success
                           : current.isOverdue
-                              ? AppColors.warn
-                              : null,
+                          ? AppColors.warn
+                          : null,
                       icon: Icons.info_outline,
                       textColor: textColor,
                       mutedColor: mutedColor,
@@ -230,10 +232,7 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: mutedColor),
         const SizedBox(width: AppSpacing.md),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
-        ),
+        Text(label, style: AppTextStyles.bodySmall.copyWith(color: mutedColor)),
         const Spacer(),
         Text(
           value,

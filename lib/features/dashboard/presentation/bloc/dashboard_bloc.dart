@@ -20,8 +20,8 @@ const _kAndroidWidgetProvider = 'PenyintasWidgetProvider';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   DashboardBloc({required GetDashboardUseCase getDashboard})
-      : _getDashboard = getDashboard,
-        super(const DashboardInitial()) {
+    : _getDashboard = getDashboard,
+      super(const DashboardInitial()) {
     // restartable: event LoadDashboard baru batalkan stream lama
     on<LoadDashboard>(_onLoad, transformer: restartable());
     // droppable: abaikan DashboardRefreshed saat stream masih aktif
@@ -34,33 +34,34 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   (int, int, BudgetStatus)? _lastWidgetData;
 
   Future<void> _onLoad(
-      LoadDashboard event, Emitter<DashboardState> emit) async {
+    LoadDashboard event,
+    Emitter<DashboardState> emit,
+  ) async {
     emit(const DashboardLoading());
     await _streamDashboard(emit);
   }
 
   Future<void> _onRefresh(
-      DashboardRefreshed event, Emitter<DashboardState> emit) async {
+    DashboardRefreshed event,
+    Emitter<DashboardState> emit,
+  ) async {
     await _streamDashboard(emit);
   }
 
-  Future<void> _streamDashboard(Emitter<DashboardState> emit) =>
-      emit.forEach(
-        _getDashboard(const NoParams()),
-        onData: (result) => result.fold(
-          (failure) => DashboardError(failure.message),
-          (entity) {
-            _pushToWidget(entity);
-            return DashboardLoaded(entity);
-          },
-        ),
-        onError: (e, s) {
-          try {
-            FirebaseCrashlytics.instance.recordError(e, s);
-          } catch (_) {}
-          return const DashboardError('Terjadi kesalahan.');
-        },
-      );
+  Future<void> _streamDashboard(Emitter<DashboardState> emit) => emit.forEach(
+    _getDashboard(const NoParams()),
+    onData: (result) =>
+        result.fold((failure) => DashboardError(failure.message), (entity) {
+          _pushToWidget(entity);
+          return DashboardLoaded(entity);
+        }),
+    onError: (e, s) {
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
+      return const DashboardError('Terjadi kesalahan.');
+    },
+  );
 
   void _pushToWidget(DashboardEntity entity) {
     final key = (entity.daysToLive, entity.dailyBudget, entity.status);
@@ -69,12 +70,16 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     // Parallel saves, then updateWidget; commit guard only after full success.
     // best-effort: failures must not propagate into the BLoC event handler.
     Future.wait([
-      HomeWidget.saveWidgetData<int>(_kWidgetDaysToLive, entity.daysToLive),
-      HomeWidget.saveWidgetData<String>(_kWidgetBudgetFormatted, formatted),
-      HomeWidget.saveWidgetData<String>(_kWidgetBudgetStatus, entity.status.name),
-    ])
-        .then<void>((_) =>
-            HomeWidget.updateWidget(androidName: _kAndroidWidgetProvider))
+          HomeWidget.saveWidgetData<int>(_kWidgetDaysToLive, entity.daysToLive),
+          HomeWidget.saveWidgetData<String>(_kWidgetBudgetFormatted, formatted),
+          HomeWidget.saveWidgetData<String>(
+            _kWidgetBudgetStatus,
+            entity.status.name,
+          ),
+        ])
+        .then<void>(
+          (_) => HomeWidget.updateWidget(androidName: _kAndroidWidgetProvider),
+        )
         .then<void>((_) {
           _lastWidgetData = key;
         })

@@ -5,7 +5,9 @@ import 'package:penyintas_app/features/budget/domain/entities/budget_settings_en
 
 abstract class BudgetRepository {
   Future<Either<Failure, BudgetSettingsEntity>> getBudgetSettings();
-  Future<Either<Failure, void>> saveBudgetSettings(BudgetSettingsEntity settings);
+  Future<Either<Failure, void>> saveBudgetSettings(
+    BudgetSettingsEntity settings,
+  );
   Future<Either<Failure, List<BudgetLimitEntity>>> getBudgetLimits();
   Future<Either<Failure, int>> saveBudgetLimit(BudgetLimitEntity limit);
   Future<Either<Failure, void>> deleteBudgetLimit(int id, String categoryName);

@@ -306,19 +306,26 @@ class _OnboardingPageState extends State<OnboardingPage>
       builder: (ctx) => AlertDialog(
         backgroundColor: cardBg,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text(l.onboardingResetDialogTitle,
-            style: AppTextStyles.h3.copyWith(color: textColor)),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: Text(
+          l.onboardingResetDialogTitle,
+          style: AppTextStyles.h3.copyWith(color: textColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l.onboardingResetDialogCancel,
-                style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+            child: Text(
+              l.onboardingResetDialogCancel,
+              style: AppTextStyles.label.copyWith(color: AppColors.primary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l.onboardingResetDialogConfirm,
-                style: AppTextStyles.label.copyWith(color: AppColors.warn)),
+            child: Text(
+              l.onboardingResetDialogConfirm,
+              style: AppTextStyles.label.copyWith(color: AppColors.warn),
+            ),
           ),
         ],
       ),
@@ -392,8 +399,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return BlocListener<OnboardingDraftCubit, OnboardingDraftState>(
-      listenWhen: (_, s) =>
-          s is OnboardingDraftLoaded && s.partial != null,
+      listenWhen: (_, s) => s is OnboardingDraftLoaded && s.partial != null,
       listener: (listenerContext, state) async {
         final partial = (state as OnboardingDraftLoaded).partial!;
         if (!mounted) return;
@@ -403,8 +409,9 @@ class _OnboardingPageState extends State<OnboardingPage>
               Theme.of(listenerContext).brightness == Brightness.dark;
           final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
           final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-          final textSoft =
-              isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+          final textSoft = isDark
+              ? AppColors.textSoftDark
+              : AppColors.textSoftLight;
           final l = AppLocalizations.of(listenerContext);
           final resume = await showDialog<bool>(
             context: listenerContext,
@@ -412,9 +419,12 @@ class _OnboardingPageState extends State<OnboardingPage>
             builder: (ctx) => AlertDialog(
               backgroundColor: cardBg,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.lg)),
-              title: Text(l.onboardingResumeDialogTitle,
-                  style: AppTextStyles.h3.copyWith(color: textColor)),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              title: Text(
+                l.onboardingResumeDialogTitle,
+                style: AppTextStyles.h3.copyWith(color: textColor),
+              ),
               content: Text(
                 l.onboardingResumeDialogBody(ageInDays),
                 style: AppTextStyles.bodySmall.copyWith(color: textSoft),
@@ -422,14 +432,19 @@ class _OnboardingPageState extends State<OnboardingPage>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(l.onboardingResumeRestart,
-                      style: AppTextStyles.label.copyWith(color: textSoft)),
+                  child: Text(
+                    l.onboardingResumeRestart,
+                    style: AppTextStyles.label.copyWith(color: textSoft),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(l.onboardingResumeContinue,
-                      style: AppTextStyles.label
-                          .copyWith(color: AppColors.primary)),
+                  child: Text(
+                    l.onboardingResumeContinue,
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -467,93 +482,99 @@ class _OnboardingPageState extends State<OnboardingPage>
           backgroundColor: bg,
           body: SafeArea(
             child: BlocConsumer<OnboardingBloc, OnboardingState>(
-            listenWhen: (_, c) =>
-                c is OnboardingSuccess || c is OnboardingError,
-            listener: (context, state) {
-              if (state is OnboardingSuccess) {
-                // #206: persist use-case result before navigating
-                _savedDailyBudget = state.dailyBudget;
-                // #200/#243: clear draft on success; fire-and-forget, telan kegagalan.
-                unawaited(context.read<OnboardingDraftCubit>().clearDraft());
-                context.read<NotificationBloc>().add(const RequestPermission());
-                resetOnboardingCache();
-                context.go('/dashboard');
-              } else if (state is OnboardingError) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        state.message,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                      backgroundColor: AppColors.warn,
-                      behavior: SnackBarBehavior.floating,
-                      action: SnackBarAction(
-                        label: l.retry,
-                        textColor: Colors.white,
-                        // #207: retry triggers full re-submit, not just state restore
-                        onPressed: _submitAll,
-                      ),
-                    ),
+              listenWhen: (_, c) =>
+                  c is OnboardingSuccess || c is OnboardingError,
+              listener: (context, state) {
+                if (state is OnboardingSuccess) {
+                  // #206: persist use-case result before navigating
+                  _savedDailyBudget = state.dailyBudget;
+                  // #200/#243: clear draft on success; fire-and-forget, telan kegagalan.
+                  unawaited(context.read<OnboardingDraftCubit>().clearDraft());
+                  context.read<NotificationBloc>().add(
+                    const RequestPermission(),
                   );
-              }
-            },
-            builder: (context, state) {
-              final isSubmitting = state is OnboardingCalculating;
-              final calc = _calc;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_step < 3) _buildHeader(isDark, l),
-                  if (_resumeMode)
-                    Semantics(
-                      liveRegion: true,
-                      container: true,
-                      child: Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withAlpha(26),
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.md),
+                  resetOnboardingCache();
+                  context.go('/dashboard');
+                } else if (state is OnboardingError) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          state.message,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                l.onboardingResumeBanner,
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: AppColors.primary),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _resetToFresh,
-                              child: Text(
-                                l.onboardingResumeRestart,
-                                style: AppTextStyles.label.copyWith(
-                                  color: AppColors.primary,
-                                  fontSize: 12,
+                        backgroundColor: AppColors.warn,
+                        behavior: SnackBarBehavior.floating,
+                        action: SnackBarAction(
+                          label: l.retry,
+                          textColor: Colors.white,
+                          // #207: retry triggers full re-submit, not just state restore
+                          onPressed: _submitAll,
+                        ),
+                      ),
+                    );
+                }
+              },
+              builder: (context, state) {
+                final isSubmitting = state is OnboardingCalculating;
+                final calc = _calc;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_step < 3) _buildHeader(isDark, l),
+                    if (_resumeMode)
+                      Semantics(
+                        liveRegion: true,
+                        container: true,
+                        child: Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(26),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  l.onboardingResumeBanner,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                              TextButton(
+                                onPressed: _resetToFresh,
+                                child: Text(
+                                  l.onboardingResumeRestart,
+                                  style: AppTextStyles.label.copyWith(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                    Expanded(
+                      child: _buildContent(isDark, l, calc, isSubmitting),
                     ),
-                  Expanded(child: _buildContent(isDark, l, calc, isSubmitting)),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   // ── Header ────────────────────────────────────────────────────────
@@ -561,7 +582,12 @@ class _OnboardingPageState extends State<OnboardingPage>
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xs,
+        AppSpacing.xl,
+        0,
+      ),
       child: SizedBox(
         height: 44,
         child: Row(
@@ -863,7 +889,12 @@ class _OnboardingPageState extends State<OnboardingPage>
             // child 0: eyebrow + title
             _stagger(
               Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md2, AppSpacing.xl, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md2,
+                  AppSpacing.xl,
+                  0,
+                ),
                 child: Column(
                   children: [
                     Text(
@@ -903,7 +934,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md2, AppSpacing.xl, 0),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.md2,
+                        AppSpacing.xl,
+                        0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: List.generate(_kExpRows.length, (i) {
@@ -928,7 +964,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 200),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            AppSpacing.sm,
+                            AppSpacing.xl,
+                            0,
+                          ),
                           child: WeatherSceneWidget(
                             state: _weatherState,
                             isDark: isDark,
@@ -945,7 +986,12 @@ class _OnboardingPageState extends State<OnboardingPage>
             // child 2: total card + overflow warning (#202)
             _stagger(
               Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -994,7 +1040,12 @@ class _OnboardingPageState extends State<OnboardingPage>
               duration: const Duration(milliseconds: 200),
               child: _activeRow == null
                   ? Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.lg2),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.sm,
+                        AppSpacing.xl,
+                        AppSpacing.lg2,
+                      ),
                       child: _CtaBtn(
                         label: l.btnNext,
                         height: 58,
@@ -1072,7 +1123,12 @@ class _OnboardingPageState extends State<OnboardingPage>
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1195,7 +1251,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                 // 2: feedback + pct row
                 _stagger(
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(2, AppSpacing.lg2, 2, AppSpacing.sm),
+                    padding: const EdgeInsets.fromLTRB(
+                      2,
+                      AppSpacing.lg2,
+                      2,
+                      AppSpacing.sm,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1268,7 +1329,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                           final on = _pct == p;
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.only(right: AppSpacing.sm),
+                              padding: const EdgeInsets.only(
+                                right: AppSpacing.sm,
+                              ),
                               child: _PctChipWidget(
                                 // #201: use l10n key instead of hardcoded 'Lewati'
                                 label: p == 0
@@ -1306,7 +1369,12 @@ class _OnboardingPageState extends State<OnboardingPage>
         ),
         // CTA
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.lg2),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            0,
+            AppSpacing.xl,
+            AppSpacing.lg2,
+          ),
           child: _CtaBtn(
             label: l.onboardingCtaStart,
             height: 58,
@@ -1335,7 +1403,12 @@ class _OnboardingPageState extends State<OnboardingPage>
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xl,
+              AppSpacing.xl,
+              0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1464,7 +1537,12 @@ class _OnboardingPageState extends State<OnboardingPage>
         // #210: back/edit link — hidden while submitting
         if (!isSubmitting)
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xs,
+              AppSpacing.xl,
+              0,
+            ),
             child: Center(
               child: GestureDetector(
                 onTap: _back,
@@ -1485,7 +1563,12 @@ class _OnboardingPageState extends State<OnboardingPage>
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.lg2),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xs,
+            AppSpacing.xl,
+            AppSpacing.lg2,
+          ),
           child: _CtaBtn(
             label: l.onboardingCtaEnter,
             height: 58,
@@ -1572,8 +1655,19 @@ class _DockedPanel extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.md),
-      child: Column(children: [keypad, const SizedBox(height: AppSpacing.sm2), cta]),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.md,
+      ),
+      child: Column(
+        children: [
+          keypad,
+          const SizedBox(height: AppSpacing.sm2),
+          cta,
+        ],
+      ),
     );
   }
 }
@@ -1678,7 +1772,10 @@ class _PresetChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 13,
+            vertical: AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
             color: active ? AppColors.primary : surfaceAlt,
             border: Border.all(
@@ -1809,7 +1906,10 @@ class _ExpRowWidget extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.md,
+          ),
           decoration: BoxDecoration(
             color: active ? surface : Colors.transparent,
             border: isFirst
@@ -1894,7 +1994,10 @@ class _TotalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl2, vertical: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl2,
+        vertical: AppSpacing.lg,
+      ),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(AppRadius.lg), // B2
@@ -1984,13 +2087,21 @@ class _SheetKeypad extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl2, AppSpacing.md2, AppSpacing.xl2, AppSpacing.xl),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl2,
+        AppSpacing.md2,
+        AppSpacing.xl2,
+        AppSpacing.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // mini total
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md2, vertical: AppSpacing.sm2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md2,
+              vertical: AppSpacing.sm2,
+            ),
             decoration: BoxDecoration(
               color: AppColors.primary,
               borderRadius: BorderRadius.circular(13),
@@ -2354,7 +2465,9 @@ class _OSliderState extends State<_OSlider> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.bgDark.withAlpha(isDark ? 110 : 71),
+                            color: AppColors.bgDark.withAlpha(
+                              isDark ? 110 : 71,
+                            ),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -2606,7 +2719,9 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ), // B2
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md2),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md2,
+                    ),
                   ),
                   child: Text(
                     AppLocalizations.of(context).btnCancel,
@@ -2627,7 +2742,9 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ), // B2
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md2),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md2,
+                    ),
                   ),
                   child: Text(
                     _selected != null

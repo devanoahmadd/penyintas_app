@@ -12,8 +12,11 @@ import 'package:penyintas_app/features/transaction/domain/usecases/update_catego
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 class MockGetCategoriesUseCase extends Mock implements GetCategoriesUseCase {}
+
 class MockCreateCategoryUseCase extends Mock implements CreateCategoryUseCase {}
+
 class MockUpdateCategoryUseCase extends Mock implements UpdateCategoryUseCase {}
+
 class MockDeleteCategoryUseCase extends Mock implements DeleteCategoryUseCase {}
 
 CategoryEntity _makeBuiltIn({String slug = 'food', int sortOrder = 10}) =>
@@ -32,29 +35,27 @@ CategoryEntity _makeCustom({
   String slug = 'custom_a',
   String label = 'Kustom A',
   int sortOrder = 100,
-}) =>
-    CategoryEntity(
-      id: id,
-      slug: slug,
-      labelOverride: label,
-      isBuiltIn: false,
-      isLimitable: true,
-      type: 'expense',
-      sortOrder: sortOrder,
-    );
+}) => CategoryEntity(
+  id: id,
+  slug: slug,
+  labelOverride: label,
+  isBuiltIn: false,
+  isLimitable: true,
+  type: 'expense',
+  sortOrder: sortOrder,
+);
 
 CategoryBloc _makeBloc({
   required MockGetCategoriesUseCase getCategories,
   required MockCreateCategoryUseCase createCategory,
   required MockUpdateCategoryUseCase updateCategory,
   required MockDeleteCategoryUseCase deleteCategory,
-}) =>
-    CategoryBloc(
-      getCategories: getCategories,
-      createCategory: createCategory,
-      updateCategory: updateCategory,
-      deleteCategory: deleteCategory,
-    );
+}) => CategoryBloc(
+  getCategories: getCategories,
+  createCategory: createCategory,
+  updateCategory: updateCategory,
+  deleteCategory: deleteCategory,
+);
 
 void main() {
   late MockGetCategoriesUseCase mockGet;
@@ -70,7 +71,9 @@ void main() {
 
     registerFallbackValue(const NoParams());
     registerFallbackValue(_makeCustom());
-    registerFallbackValue(const DeleteCategoryParams(slug: 'x', isBuiltIn: false));
+    registerFallbackValue(
+      const DeleteCategoryParams(slug: 'x', isBuiltIn: false),
+    );
   });
 
   group('LoadCategories', () {
@@ -88,17 +91,15 @@ void main() {
         );
       },
       act: (bloc) => bloc.add(const LoadCategories()),
-      expect: () => [
-        const CategoryLoading(),
-        CategoryLoaded(categories: cats),
-      ],
+      expect: () => [const CategoryLoading(), CategoryLoaded(categories: cats)],
     );
 
     blocTest<CategoryBloc, CategoryState>(
       'emits [CategoryLoading, CategoryError] on failure',
       build: () {
-        when(() => mockGet(any())).thenAnswer(
-            (_) async => const Left(CacheFailure('DB error')));
+        when(
+          () => mockGet(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('DB error')));
         return _makeBloc(
           getCategories: mockGet,
           createCategory: mockCreate,
@@ -107,10 +108,7 @@ void main() {
         );
       },
       act: (bloc) => bloc.add(const LoadCategories()),
-      expect: () => [
-        const CategoryLoading(),
-        const CategoryError('DB error'),
-      ],
+      expect: () => [const CategoryLoading(), const CategoryError('DB error')],
     );
   });
 
@@ -147,7 +145,9 @@ void main() {
       'emits [CategoryActionLoading, CategoryError] on duplicate slug',
       setUp: () {
         when(() => mockCreate(any())).thenAnswer(
-          (_) async => const Left(CacheFailure('Kategori dengan nama serupa sudah ada.')),
+          (_) async => const Left(
+            CacheFailure('Kategori dengan nama serupa sudah ada.'),
+          ),
         );
       },
       build: () => _makeBloc(
@@ -173,10 +173,12 @@ void main() {
     blocTest<CategoryBloc, CategoryState>(
       'emits [CategoryActionLoading, CategoryLoaded(updated)] on success',
       setUp: () {
-        when(() => mockUpdate(any())).thenAnswer(
-            (_) async => const Right<Failure, void>(null));
-        when(() => mockGet(any()))
-            .thenAnswer((_) async => Right([existing, newCustom]));
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right<Failure, void>(null));
+        when(
+          () => mockGet(any()),
+        ).thenAnswer((_) async => Right([existing, newCustom]));
       },
       build: () => _makeBloc(
         getCategories: mockGet,
@@ -203,10 +205,10 @@ void main() {
     blocTest<CategoryBloc, CategoryState>(
       'emits [CategoryActionLoading, CategoryLoaded(deleted)] on success',
       setUp: () {
-        when(() => mockDelete(any())).thenAnswer(
-            (_) async => const Right<Failure, void>(null));
-        when(() => mockGet(any()))
-            .thenAnswer((_) async => Right([builtIn]));
+        when(
+          () => mockDelete(any()),
+        ).thenAnswer((_) async => const Right<Failure, void>(null));
+        when(() => mockGet(any())).thenAnswer((_) async => Right([builtIn]));
       },
       build: () => _makeBloc(
         getCategories: mockGet,
@@ -228,9 +230,9 @@ void main() {
     blocTest<CategoryBloc, CategoryState>(
       'emits [CategoryActionLoading, CategoryError] on delete failure',
       setUp: () {
-        when(() => mockDelete(any())).thenAnswer(
-          (_) async => const Left(CacheFailure('Gagal menghapus.')),
-        );
+        when(
+          () => mockDelete(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('Gagal menghapus.')));
       },
       build: () => _makeBloc(
         getCategories: mockGet,

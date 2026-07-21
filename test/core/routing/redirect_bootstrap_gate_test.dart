@@ -10,10 +10,12 @@ import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/routing/onboarding_status.dart';
 
 class _MockCoordinator extends Mock implements BootstrapCoordinator {}
+
 class _MockGuard extends Mock implements OnboardingGuard {}
 
 void main() {
-  final sl = GetIt.instance; // sama dgn `sl` injection_container — app & test berbagi
+  final sl =
+      GetIt.instance; // sama dgn `sl` injection_container — app & test berbagi
   late _MockCoordinator coordinator;
   late _MockGuard guard;
   final order = <String>[];
@@ -22,7 +24,8 @@ void main() {
     order.clear();
     coordinator = _MockCoordinator();
     guard = _MockGuard();
-    var seeded = false; // bootstrap memulihkan profil dari cloud (simulasi reinstall)
+    var seeded =
+        false; // bootstrap memulihkan profil dari cloud (simulasi reinstall)
     when(() => coordinator.ensure()).thenAnswer((_) async {
       order.add('ensure');
       seeded = true; // ensure() men-seed profileCompleted=true (remote-true)
@@ -37,14 +40,26 @@ void main() {
   });
   tearDown(() => sl.reset());
 
-  test('redirectForAuthedUser: ensure() SEBELUM guard → BUKAN /profile-setup (Temuan 1)', () async {
-    final result = await redirectForAuthedUser('/dashboard');
-    // Urutan: ensure() harus selesai sebelum guard memutuskan. Kalau `await ensure()`
-    // dihapus, guard jalan saat seeded=false → needsProfile → '/profile-setup' → GAGAL.
-    expect(order, ['ensure', 'status'],
-        reason: 'bootstrap harus SELESAI sebelum guard memutuskan');
-    expect(result, isNot('/profile-setup'),
-        reason: 'profil dipulihkan ensure() → fresh-login tak memantul ke profile-setup');
-    expect(result, anyOf(isNull, '/dashboard')); // status done @ /dashboard → null
-  });
+  test(
+    'redirectForAuthedUser: ensure() SEBELUM guard → BUKAN /profile-setup (Temuan 1)',
+    () async {
+      final result = await redirectForAuthedUser('/dashboard');
+      // Urutan: ensure() harus selesai sebelum guard memutuskan. Kalau `await ensure()`
+      // dihapus, guard jalan saat seeded=false → needsProfile → '/profile-setup' → GAGAL.
+      expect(order, [
+        'ensure',
+        'status',
+      ], reason: 'bootstrap harus SELESAI sebelum guard memutuskan');
+      expect(
+        result,
+        isNot('/profile-setup'),
+        reason:
+            'profil dipulihkan ensure() → fresh-login tak memantul ke profile-setup',
+      );
+      expect(
+        result,
+        anyOf(isNull, '/dashboard'),
+      ); // status done @ /dashboard → null
+    },
+  );
 }

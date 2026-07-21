@@ -22,10 +22,12 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
     final rows = await _queryRange(start, end);
     final prevRows = await _queryRange(prevStart, prevEnd);
 
-    final expenses =
-        rows.where((t) => t.type == TransactionType.expense).toList();
-    final incomeRows =
-        rows.where((t) => t.type == TransactionType.income).toList();
+    final expenses = rows
+        .where((t) => t.type == TransactionType.expense)
+        .toList();
+    final incomeRows = rows
+        .where((t) => t.type == TransactionType.income)
+        .toList();
 
     final totalSpent = expenses.fold(0, (s, t) => s + t.amount);
     final totalIncome = incomeRows.fold(0, (s, t) => s + t.amount);
@@ -42,8 +44,7 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
     final now = DateTime.now();
     final isCurrentMonth = month.year == now.year && month.month == now.month;
     final elapsedDays = isCurrentMonth ? now.day : end.day;
-    final dailyAverageSpend =
-        elapsedDays > 0 ? totalSpent / elapsedDays : 0.0;
+    final dailyAverageSpend = elapsedDays > 0 ? totalSpent / elapsedDays : 0.0;
 
     final prevTotalSpent = prevRows
         .where((t) => t.type == TransactionType.expense)
@@ -75,17 +76,14 @@ class ReportLocalDatasourceImpl implements ReportLocalDatasource {
     );
   }
 
-  Future<List<TransactionModel>> _queryRange(
-    DateTime from,
-    DateTime to,
-  ) async {
-    final rows = await (_db.select(_db.transactions)
-          ..where(
-            (t) =>
-                t.date.isBiggerOrEqualValue(from) &
-                t.date.isSmallerOrEqualValue(to),
-          ))
-        .get();
+  Future<List<TransactionModel>> _queryRange(DateTime from, DateTime to) async {
+    final rows =
+        await (_db.select(_db.transactions)..where(
+              (t) =>
+                  t.date.isBiggerOrEqualValue(from) &
+                  t.date.isSmallerOrEqualValue(to),
+            ))
+            .get();
     return rows.map(TransactionModel.fromDrift).toList();
   }
 }

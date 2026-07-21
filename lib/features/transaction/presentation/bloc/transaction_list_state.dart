@@ -44,34 +44,34 @@ final class TransactionListLoaded extends TransactionListState {
     int? Function()? minAmount,
     int? Function()? maxAmount,
     String? Function()? deleteError,
-  }) =>
-      TransactionListLoaded(
-        transactions: transactions ?? this.transactions,
-        filtered: filtered ?? this.filtered,
-        totalSpent: totalSpent ?? this.totalSpent,
-        typeFilter: typeFilter != null ? typeFilter() : this.typeFilter,
-        categoryFilter:
-            categoryFilter != null ? categoryFilter() : this.categoryFilter,
-        minAmount: minAmount != null ? minAmount() : this.minAmount,
-        maxAmount: maxAmount != null ? maxAmount() : this.maxAmount,
-        deleteError: deleteError != null ? deleteError() : this.deleteError,
-        from: from,
-        to: to,
-      );
+  }) => TransactionListLoaded(
+    transactions: transactions ?? this.transactions,
+    filtered: filtered ?? this.filtered,
+    totalSpent: totalSpent ?? this.totalSpent,
+    typeFilter: typeFilter != null ? typeFilter() : this.typeFilter,
+    categoryFilter: categoryFilter != null
+        ? categoryFilter()
+        : this.categoryFilter,
+    minAmount: minAmount != null ? minAmount() : this.minAmount,
+    maxAmount: maxAmount != null ? maxAmount() : this.maxAmount,
+    deleteError: deleteError != null ? deleteError() : this.deleteError,
+    from: from,
+    to: to,
+  );
 
   @override
   List<Object?> get props => [
-        transactions,
-        filtered,
-        totalSpent,
-        typeFilter,
-        categoryFilter,
-        minAmount,
-        maxAmount,
-        from,
-        to,
-        deleteError,
-      ];
+    transactions,
+    filtered,
+    totalSpent,
+    typeFilter,
+    categoryFilter,
+    minAmount,
+    maxAmount,
+    from,
+    to,
+    deleteError,
+  ];
 }
 
 final class TransactionListError extends TransactionListState {

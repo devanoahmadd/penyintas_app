@@ -21,13 +21,17 @@ class AppTheme {
       onPrimaryContainer: isDark ? AppColors.shoot : AppColors.primaryDeep,
       secondary: AppColors.primaryBright,
       onSecondary: Colors.white,
-      secondaryContainer: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      secondaryContainer: isDark
+          ? AppColors.surfaceDark
+          : AppColors.surfaceLight,
       onSecondaryContainer: isDark ? AppColors.textDark : AppColors.textLight,
       error: AppColors.warn,
       onError: Colors.white,
       surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       onSurface: isDark ? AppColors.textDark : AppColors.textLight,
-      surfaceContainerHighest: isDark ? AppColors.borderDark : AppColors.borderLight,
+      surfaceContainerHighest: isDark
+          ? AppColors.borderDark
+          : AppColors.borderLight,
       onSurfaceVariant: isDark ? AppColors.mutedDark : AppColors.mutedLight,
       outline: isDark ? AppColors.borderDark : AppColors.borderLight,
       outlineVariant: isDark ? AppColors.borderDark : AppColors.borderLight,

@@ -14,8 +14,7 @@ class OnboardingProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inactiveColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final inactiveColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Row(
       children: List.generate(totalSteps, (i) {

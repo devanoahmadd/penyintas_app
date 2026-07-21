@@ -71,7 +71,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   void _openNumpad() {
     final bloc = context.read<AddTransactionBloc>();
-    final amount = widget.initial?.amount ??
+    final amount =
+        widget.initial?.amount ??
         (bloc.state is AddTransactionInProgress
             ? (bloc.state as AddTransactionInProgress).amount
             : 0);
@@ -132,7 +133,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl,
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,16 +149,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         child: _NominalCard(isDark: isDark),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-                      _SectionLabel(context.l10n.txSectionCategory, isDark: isDark),
+                      _SectionLabel(
+                        context.l10n.txSectionCategory,
+                        isDark: isDark,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       _CategoryGrid(isDark: isDark),
                       const SizedBox(height: AppSpacing.xl),
                       _SectionLabel(context.l10n.txSectionNote, isDark: isDark),
                       const SizedBox(height: AppSpacing.sm),
-                      _NoteField(
-                        controller: _noteController,
-                        isDark: isDark,
-                      ),
+                      _NoteField(controller: _noteController, isDark: isDark),
                       const SizedBox(height: AppSpacing.xl),
                       _SectionLabel(context.l10n.txSectionDate, isDark: isDark),
                       const SizedBox(height: AppSpacing.sm),
@@ -163,7 +167,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       if (widget.activeGoals.isNotEmpty)
                         BlocBuilder<AddTransactionBloc, AddTransactionState>(
                           builder: (context, state) {
-                            final isIncome = state is AddTransactionInProgress &&
+                            final isIncome =
+                                state is AddTransactionInProgress &&
                                 state.type == TransactionType.income;
                             if (!isIncome) return const SizedBox.shrink();
                             return Column(
@@ -229,7 +234,9 @@ class _NumpadSheetState extends State<_NumpadSheet> {
         }
       }
     });
-    context.read<AddTransactionBloc>().add(AmountChanged(int.tryParse(_raw) ?? 0));
+    context.read<AddTransactionBloc>().add(
+      AmountChanged(int.tryParse(_raw) ?? 0),
+    );
   }
 
   @override
@@ -285,7 +292,10 @@ class _NumpadSheetState extends State<_NumpadSheet> {
           // Tombol Selesai
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              0,
             ),
             child: SizedBox(
               width: double.infinity,
@@ -341,12 +351,16 @@ class _SheetHeader extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
       child: Row(
         children: [
@@ -404,8 +418,9 @@ class _TypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     return BlocBuilder<AddTransactionBloc, AddTransactionState>(
       builder: (context, state) {
@@ -430,9 +445,9 @@ class _TypeToggle extends StatelessWidget {
                   onTap: () {
                     if (isExpense) {
                       HapticFeedback.selectionClick();
-                      context
-                          .read<AddTransactionBloc>()
-                          .add(const TypeToggled());
+                      context.read<AddTransactionBloc>().add(
+                        const TypeToggled(),
+                      );
                     }
                   },
                 ),
@@ -447,9 +462,9 @@ class _TypeToggle extends StatelessWidget {
                   onTap: () {
                     if (!isExpense) {
                       HapticFeedback.selectionClick();
-                      context
-                          .read<AddTransactionBloc>()
-                          .add(const TypeToggled());
+                      context.read<AddTransactionBloc>().add(
+                        const TypeToggled(),
+                      );
                     }
                   },
                 ),
@@ -538,11 +553,7 @@ class _NominalCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   // Edit affordance
-                  Icon(
-                    Icons.edit_outlined,
-                    size: 14,
-                    color: mutedColor,
-                  ),
+                  Icon(Icons.edit_outlined, size: 14, color: mutedColor),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -616,14 +627,16 @@ class _CategoryGrid extends StatelessWidget {
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           children: cats
-              .map((cat) => _CategoryCell(
-                    category: cat,
-                    isSelected: cat.slug == selectedSlug,
-                    isDark: isDark,
-                    onTap: () => context
-                        .read<AddTransactionBloc>()
-                        .add(CategorySelected(cat.slug)),
-                  ))
+              .map(
+                (cat) => _CategoryCell(
+                  category: cat,
+                  isSelected: cat.slug == selectedSlug,
+                  isDark: isDark,
+                  onTap: () => context.read<AddTransactionBloc>().add(
+                    CategorySelected(cat.slug),
+                  ),
+                ),
+              )
               .toList(),
         );
       },
@@ -666,11 +679,7 @@ class _CategoryCell extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: isSelected ? Colors.white : textColor,
-            ),
+            Icon(icon, size: 22, color: isSelected ? Colors.white : textColor),
             const SizedBox(height: 4),
             Text(
               label.toUpperCase(),
@@ -732,8 +741,7 @@ class _NoteField extends StatelessWidget {
           vertical: AppSpacing.md,
         ),
       ),
-      onChanged: (v) =>
-          context.read<AddTransactionBloc>().add(NoteChanged(v)),
+      onChanged: (v) => context.read<AddTransactionBloc>().add(NoteChanged(v)),
     );
   }
 }
@@ -756,8 +764,9 @@ class _DateField extends StatelessWidget {
             '${DateFormat('d MMM yyyy', 'id_ID').format(date)} · ${DateFormat('HH:mm').format(date)}';
 
         final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-        final borderColor =
-            isDark ? AppColors.borderDark : AppColors.borderLight;
+        final borderColor = isDark
+            ? AppColors.borderDark
+            : AppColors.borderLight;
         final textColor = isDark ? AppColors.textDark : AppColors.textLight;
         final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
@@ -787,14 +796,16 @@ class _DateField extends StatelessWidget {
             if (!context.mounted) return;
 
             context.read<AddTransactionBloc>().add(
-                  DateChanged(DateTime(
-                    picked.year,
-                    picked.month,
-                    picked.day,
-                    time?.hour ?? date.hour,
-                    time?.minute ?? date.minute,
-                  )),
-                );
+              DateChanged(
+                DateTime(
+                  picked.year,
+                  picked.month,
+                  picked.day,
+                  time?.hour ?? date.hour,
+                  time?.minute ?? date.minute,
+                ),
+              ),
+            );
           },
           child: Container(
             padding: const EdgeInsets.symmetric(
@@ -808,8 +819,11 @@ class _DateField extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_month_outlined,
-                    size: 18, color: mutedColor),
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 18,
+                  color: mutedColor,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   label,
@@ -847,17 +861,21 @@ class _Numpad extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         children: _rows
-            .map((row) => Row(
-                  children: row
-                      .map((key) => Expanded(
-                            child: _NumpadKey(
-                              label: key,
-                              onTap: () => onDigit(key),
-                              isDark: isDark,
-                            ),
-                          ))
-                      .toList(),
-                ))
+            .map(
+              (row) => Row(
+                children: row
+                    .map(
+                      (key) => Expanded(
+                        child: _NumpadKey(
+                          label: key,
+                          onTap: () => onDigit(key),
+                          isDark: isDark,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
             .toList(),
       ),
     );
@@ -959,14 +977,18 @@ class _GoalPicker extends StatelessWidget {
                     value: g.id,
                     child: Row(
                       children: [
-                        const Icon(Icons.flag_outlined,
-                            size: 16, color: AppColors.primary),
+                        const Icon(
+                          Icons.flag_outlined,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             g.title,
-                            style:
-                                AppTextStyles.body.copyWith(color: textColor),
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -998,22 +1020,26 @@ class _SubmitButton extends StatelessWidget {
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0,
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            0,
           ),
           child: SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
               onPressed: isValid && !isLoading
-                  ? () => context
-                      .read<AddTransactionBloc>()
-                      .add(const SubmitTransaction())
+                  ? () => context.read<AddTransactionBloc>().add(
+                      const SubmitTransaction(),
+                    )
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor:
-                    AppColors.primary.withValues(alpha: 0.4),
+                disabledBackgroundColor: AppColors.primary.withValues(
+                  alpha: 0.4,
+                ),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.lg),

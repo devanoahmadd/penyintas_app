@@ -6,6 +6,8 @@ class ScheduleDailyReminderUseCase {
   const ScheduleDailyReminderUseCase(this._repo);
   final NotificationRepository _repo;
 
-  Future<Either<Failure, void>> call({required int hour, required int minute}) =>
-      _repo.scheduleDailyReminder(hour: hour, minute: minute);
+  Future<Either<Failure, void>> call({
+    required int hour,
+    required int minute,
+  }) => _repo.scheduleDailyReminder(hour: hour, minute: minute);
 }

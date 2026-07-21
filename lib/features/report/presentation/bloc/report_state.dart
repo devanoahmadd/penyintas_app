@@ -30,10 +30,7 @@ class ReportLoaded extends ReportState {
   @override
   List<Object?> get props => [report, selectedMonth, isLoadingInsight];
 
-  ReportLoaded copyWith({
-    ReportEntity? report,
-    bool? isLoadingInsight,
-  }) =>
+  ReportLoaded copyWith({ReportEntity? report, bool? isLoadingInsight}) =>
       ReportLoaded(
         report: report ?? this.report,
         selectedMonth: selectedMonth,

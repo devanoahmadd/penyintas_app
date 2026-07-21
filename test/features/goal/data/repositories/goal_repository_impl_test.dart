@@ -134,41 +134,38 @@ void main() {
       },
     );
 
-    test(
-      'firestoreId kosong → tidak enqueue (cegah purge senyap)',
-      () async {
-        final tEmptyIdModel = GoalModel(
-          firestoreId: '',
-          title: 'Pulang kampung',
-          targetAmount: 1500000,
-          targetDate: DateTime(2026, 12, 31),
-          isCompleted: false,
-          createdAt: DateTime(2026, 7, 5),
-          updatedAt: DateTime(2026, 7, 5),
-        );
-        when(
-          () => local.createGoal(
-            title: any(named: 'title'),
-            targetAmount: any(named: 'targetAmount'),
-            targetDate: any(named: 'targetDate'),
-          ),
-        ).thenAnswer((_) async => tEmptyIdModel);
-        when(() => network.isConnected).thenAnswer((_) async => false);
+    test('firestoreId kosong → tidak enqueue (cegah purge senyap)', () async {
+      final tEmptyIdModel = GoalModel(
+        firestoreId: '',
+        title: 'Pulang kampung',
+        targetAmount: 1500000,
+        targetDate: DateTime(2026, 12, 31),
+        isCompleted: false,
+        createdAt: DateTime(2026, 7, 5),
+        updatedAt: DateTime(2026, 7, 5),
+      );
+      when(
+        () => local.createGoal(
+          title: any(named: 'title'),
+          targetAmount: any(named: 'targetAmount'),
+          targetDate: any(named: 'targetDate'),
+        ),
+      ).thenAnswer((_) async => tEmptyIdModel);
+      when(() => network.isConnected).thenAnswer((_) async => false);
 
-        final result = await callCreate();
+      final result = await callCreate();
 
-        expect(result.isRight(), isTrue);
-        verifyNever(() => remote.saveGoal(any()));
-        verifyNever(
-          () => local.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          ),
-        );
-      },
-    );
+      expect(result.isRight(), isTrue);
+      verifyNever(() => remote.saveGoal(any()));
+      verifyNever(
+        () => local.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      );
+    });
 
     test('online tapi remote gagal → fallback queue, tetap Right', () async {
       when(() => network.isConnected).thenAnswer((_) async => true);

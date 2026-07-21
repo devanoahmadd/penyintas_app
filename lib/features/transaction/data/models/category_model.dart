@@ -15,14 +15,14 @@ class CategoryModel extends CategoryEntity {
   });
 
   factory CategoryModel.fromRow(Category row) => CategoryModel(
-        id: row.id,
-        slug: row.slug,
-        labelKey: row.labelKey,
-        labelOverride: row.labelOverride,
-        isBuiltIn: row.isBuiltIn,
-        isLimitable: row.isLimitable,
-        type: row.type,
-        sortOrder: row.sortOrder,
-        iconSlug: row.iconSlug,
-      );
+    id: row.id,
+    slug: row.slug,
+    labelKey: row.labelKey,
+    labelOverride: row.labelOverride,
+    isBuiltIn: row.isBuiltIn,
+    isLimitable: row.isLimitable,
+    type: row.type,
+    sortOrder: row.sortOrder,
+    iconSlug: row.iconSlug,
+  );
 }

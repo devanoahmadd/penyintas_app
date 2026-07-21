@@ -42,9 +42,7 @@ class PrimaryButton extends StatelessWidget {
         width: width,
         height: 48, // hit target minimum Android 48dp
         child: Material(
-          color: _active
-              ? AppColors.primary
-              : AppColors.primary.withAlpha(100),
+          color: _active ? AppColors.primary : AppColors.primary.withAlpha(100),
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: InkWell(
             onTap: _active ? onPressed : null,
@@ -63,8 +61,9 @@ class PrimaryButton extends StatelessWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : _ButtonContent(
@@ -93,14 +92,8 @@ class _ButtonContent extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icon != null) ...[
-          icon!,
-          const SizedBox(width: AppSpacing.sm),
-        ],
-        Text(
-          label,
-          style: AppTextStyles.label.copyWith(color: Colors.white),
-        ),
+        if (icon != null) ...[icon!, const SizedBox(width: AppSpacing.sm)],
+        Text(label, style: AppTextStyles.label.copyWith(color: Colors.white)),
       ],
     );
   }

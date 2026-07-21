@@ -52,14 +52,14 @@ class BudgetOverviewEntity extends Equatable {
 
   /// Estimasi berapa hari lagi saldo operasional bertahan dengan pace sekarang.
   /// null jika belum cukup data (burn rate = 0).
-  int? get projectedOperationalDays => dailyBurnRate > 0
-      ? (operationalRemaining / dailyBurnRate).floor()
-      : null;
+  int? get projectedOperationalDays =>
+      dailyBurnRate > 0 ? (operationalRemaining / dailyBurnRate).floor() : null;
 
   /// Status pace operasional: aman / hati-hati / bahaya.
   /// null jika belum ada data pace atau remainingDays == 0 (edge case bulan pendek).
   BudgetStatus? get paceStatus {
-    if (remainingDays <= 0) return null; // siklus berakhir hari ini — pace tak bermakna
+    if (remainingDays <= 0)
+      return null; // siklus berakhir hari ini — pace tak bermakna
     final projected = projectedOperationalDays;
     if (projected == null) return null;
     if (projected >= remainingDays) return BudgetStatus.safe;
@@ -69,10 +69,17 @@ class BudgetOverviewEntity extends Equatable {
 
   @override
   List<Object> get props => [
-        monthlyIncome, totalFixedExpenses, emergencyFundMonthly,
-        totalSpendable, categoryItems, totalLimitSet,
-        totalSpentInLimited, overallStatus, remainingDays, daysElapsed,
-      ];
+    monthlyIncome,
+    totalFixedExpenses,
+    emergencyFundMonthly,
+    totalSpendable,
+    categoryItems,
+    totalLimitSet,
+    totalSpentInLimited,
+    overallStatus,
+    remainingDays,
+    daysElapsed,
+  ];
 }
 
 class CategoryBudgetItem extends Equatable {
@@ -109,6 +116,12 @@ class CategoryBudgetItem extends Equatable {
   // keduanya adalah turunan time-sensitive dari daysElapsed yang berubah
   // setiap hari, dan akan memicu state rebuild meski pengeluaran tidak berubah.
   // Spending equality (category, limitAmount, spentAmount, dll.) sudah cukup.
-  List<Object?> get props =>
-      [category, limitAmount, cycleType, spentAmount, usagePct, status];
+  List<Object?> get props => [
+    category,
+    limitAmount,
+    cycleType,
+    spentAmount,
+    usagePct,
+    status,
+  ];
 }

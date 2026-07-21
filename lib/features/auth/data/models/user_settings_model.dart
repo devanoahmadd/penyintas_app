@@ -12,7 +12,7 @@ class UserSettingsModel {
   }
 
   Map<String, dynamic> toFirestore() => {
-        'onboardingCompleted': onboardingCompleted,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+    'onboardingCompleted': onboardingCompleted,
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
 }

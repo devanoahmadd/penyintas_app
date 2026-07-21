@@ -248,17 +248,25 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
   }
 
   List<Widget> _buildStars(
-      double w, double h, double moonOp, double rawAmbient) {
+    double w,
+    double h,
+    double moonOp,
+    double rawAmbient,
+  ) {
     const positions = [
-      (0.20, 0.13), (0.38, 0.08), (0.56, 0.20),
-      (0.26, 0.08), (0.10, 0.22), (0.72, 0.14),
+      (0.20, 0.13),
+      (0.38, 0.08),
+      (0.56, 0.20),
+      (0.26, 0.08),
+      (0.10, 0.22),
+      (0.72, 0.14),
     ];
     final count = moonOp > 0.5 ? 6 : 3; // clear=6, cloudy=3
     return List.generate(count, (i) {
       final (xFrac, yFrac) = positions[i];
-      final twinkle = 0.40 +
-          0.55 *
-              (math.sin(rawAmbient * 2 * math.pi + i * 1.047) * 0.5 + 0.5);
+      final twinkle =
+          0.40 +
+          0.55 * (math.sin(rawAmbient * 2 * math.pi + i * 1.047) * 0.5 + 0.5);
       return Positioned(
         left: w * xFrac,
         top: h * yFrac,
@@ -311,7 +319,7 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
         final skyTop = Color.lerp(from.skyTop, to.skyTop, t)!;
         final skyBot = Color.lerp(from.skyBot, to.skyBot, t)!;
         final hillFar = Color.lerp(from.hillFar, to.hillFar, t)!;
-        final hillBack  = Color.lerp(from.hillBack,  to.hillBack,  t)!;
+        final hillBack = Color.lerp(from.hillBack, to.hillBack, t)!;
         final hillNear = Color.lerp(from.hillNear, to.hillNear, t)!;
         final sunOp = _lerp(from.sunOpacity, to.sunOpacity, t);
         final cloudOp = _lerp(from.cloudOpacity, to.cloudOpacity, t);
@@ -580,10 +588,14 @@ class _WeatherSceneState extends State<WeatherSceneWidget>
                                   width: 1.5,
                                   height: 12,
                                   decoration: BoxDecoration(
-                                    color: (widget.isDark
-                                            ? AppWeatherPalette.rainNightColor
-                                            : const Color(0xFFA0C8E0))
-                                        .withAlpha(widget.isDark ? 200 : 180),
+                                    color:
+                                        (widget.isDark
+                                                ? AppWeatherPalette
+                                                      .rainNightColor
+                                                : const Color(0xFFA0C8E0))
+                                            .withAlpha(
+                                              widget.isDark ? 200 : 180,
+                                            ),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                 ),
@@ -781,13 +793,13 @@ class _SunWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 26,
-        height: 26,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFFFFD54F),
-        ),
-      );
+    width: 26,
+    height: 26,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      color: Color(0xFFFFD54F),
+    ),
+  );
 }
 
 class _MoonWidget extends StatelessWidget {

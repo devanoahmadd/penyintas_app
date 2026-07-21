@@ -2,10 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/features/onboarding/domain/entities/partial_onboarding_state.dart';
 
 void main() {
-  PartialOnboardingState withSavedAt(DateTime savedAt) => PartialOnboardingState(
+  PartialOnboardingState withSavedAt(DateTime savedAt) =>
+      PartialOnboardingState(
         step: 0,
         income: 1000000,
-        expenses: const {'kos': 0, 'listrik': 0, 'internet': 0, 'pulsa': 0, 'lain': 0},
+        expenses: const {
+          'kos': 0,
+          'listrik': 0,
+          'internet': 0,
+          'pulsa': 0,
+          'lain': 0,
+        },
         pct: 10,
         payday: 1,
         savedAt: savedAt,

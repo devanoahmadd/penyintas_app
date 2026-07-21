@@ -7,7 +7,9 @@ abstract class CategoryRepository {
   Future<Either<Failure, List<CategoryEntity>>> getLimitableCategories();
 
   // Fase 3C — CRUD untuk custom categories
-  Future<Either<Failure, CategoryEntity>> createCategory(CategoryEntity category);
+  Future<Either<Failure, CategoryEntity>> createCategory(
+    CategoryEntity category,
+  );
   Future<Either<Failure, void>> updateCategory(CategoryEntity category);
 
   /// Hapus kategori + cascade hapus budget_limits dengan slug yang sama.

@@ -18,15 +18,30 @@ import 'package:penyintas_app/features/notification/presentation/bloc/notificati
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
 
-class MockRequestPermissionUseCase extends Mock implements RequestPermissionUseCase {}
-class MockRegisterFcmTokenUseCase extends Mock implements RegisterFcmTokenUseCase {}
-class MockSetPushPreferenceUseCase extends Mock implements SetPushPreferenceUseCase {}
-class MockScheduleDailyReminderUseCase extends Mock implements ScheduleDailyReminderUseCase {}
-class MockCancelDailyReminderUseCase extends Mock implements CancelDailyReminderUseCase {}
+class MockRequestPermissionUseCase extends Mock
+    implements RequestPermissionUseCase {}
+
+class MockRegisterFcmTokenUseCase extends Mock
+    implements RegisterFcmTokenUseCase {}
+
+class MockSetPushPreferenceUseCase extends Mock
+    implements SetPushPreferenceUseCase {}
+
+class MockScheduleDailyReminderUseCase extends Mock
+    implements ScheduleDailyReminderUseCase {}
+
+class MockCancelDailyReminderUseCase extends Mock
+    implements CancelDailyReminderUseCase {}
+
 class MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
+
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
 class MockUser extends Mock implements User {}
-class MockNotificationLocalDatasource extends Mock implements NotificationLocalDatasource {}
+
+class MockNotificationLocalDatasource extends Mock
+    implements NotificationLocalDatasource {}
+
 class MockRemoteMessage extends Mock implements RemoteMessage {}
 
 void main() {
@@ -56,30 +71,33 @@ void main() {
     testDb = AppDatabase(NativeDatabase.memory());
 
     when(() => mockAuth.currentUser).thenReturn(null);
-    when(() => mockRegisterToken(any())).thenAnswer((_) async => const Right(null));
+    when(
+      () => mockRegisterToken(any()),
+    ).thenAnswer((_) async => const Right(null));
   });
 
   tearDown(() async => testDb.close());
 
   NotificationBloc buildBloc() => NotificationBloc(
-        requestPermission: mockRequestPermission,
-        registerToken: mockRegisterToken,
-        setPushPreference: mockSetPushPreference,
-        scheduleDailyReminder: mockScheduleDailyReminder,
-        cancelDailyReminder: mockCancelDailyReminder,
-        messaging: mockMessaging,
-        auth: mockAuth,
-        local: mockLocal,
-        launchHolder: launchHolder,
-        db: testDb,
-      );
+    requestPermission: mockRequestPermission,
+    registerToken: mockRegisterToken,
+    setPushPreference: mockSetPushPreference,
+    scheduleDailyReminder: mockScheduleDailyReminder,
+    cancelDailyReminder: mockCancelDailyReminder,
+    messaging: mockMessaging,
+    auth: mockAuth,
+    local: mockLocal,
+    launchHolder: launchHolder,
+    db: testDb,
+  );
 
   group('RequestPermission', () {
     blocTest<NotificationBloc, NotificationState>(
       'granted → NotificationPermissionGranted',
       build: buildBloc,
-      setUp: () => when(() => mockRequestPermission())
-          .thenAnswer((_) async => const Right(true)),
+      setUp: () => when(
+        () => mockRequestPermission(),
+      ).thenAnswer((_) async => const Right(true)),
       act: (bloc) => bloc.add(const RequestPermission()),
       expect: () => [const NotificationPermissionGranted()],
     );
@@ -91,8 +109,9 @@ void main() {
         final user = MockUser();
         when(() => user.uid).thenReturn(tUid);
         when(() => mockAuth.currentUser).thenReturn(user);
-        when(() => mockRequestPermission())
-            .thenAnswer((_) async => const Right(true));
+        when(
+          () => mockRequestPermission(),
+        ).thenAnswer((_) async => const Right(true));
       },
       act: (bloc) => bloc.add(const RequestPermission()),
       wait: const Duration(milliseconds: 400), // lewati delay iOS 300ms
@@ -102,8 +121,9 @@ void main() {
     blocTest<NotificationBloc, NotificationState>(
       'denied → NotificationPermissionDenied',
       build: buildBloc,
-      setUp: () => when(() => mockRequestPermission())
-          .thenAnswer((_) async => const Right(false)),
+      setUp: () => when(
+        () => mockRequestPermission(),
+      ).thenAnswer((_) async => const Right(false)),
       act: (bloc) => bloc.add(const RequestPermission()),
       expect: () => [const NotificationPermissionDenied()],
     );
@@ -141,8 +161,9 @@ void main() {
         final user = MockUser();
         when(() => user.uid).thenReturn(tUid);
         when(() => mockAuth.currentUser).thenReturn(user);
-        when(() => mockSetPushPreference(tUid, false))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockSetPushPreference(tUid, false),
+        ).thenAnswer((_) async => const Right(null));
       },
       act: (bloc) => bloc.add(const SetPushPreference(false)),
       verify: (_) => verify(() => mockSetPushPreference(tUid, false)).called(1),
@@ -171,7 +192,9 @@ void main() {
       setUp: () {
         final msg = MockRemoteMessage();
         when(() => msg.data).thenReturn({'route': '/budget'});
-        when(() => mockMessaging.getInitialMessage()).thenAnswer((_) async => msg);
+        when(
+          () => mockMessaging.getInitialMessage(),
+        ).thenAnswer((_) async => msg);
       },
       act: (bloc) => bloc.add(const CheckInitialMessage()),
       expect: () => [], // tidak ada state — hanya side-effect ke holder
@@ -181,8 +204,9 @@ void main() {
     blocTest<NotificationBloc, NotificationState>(
       'getInitialMessage null → holder tetap kosong',
       build: buildBloc,
-      setUp: () => when(() => mockMessaging.getInitialMessage())
-          .thenAnswer((_) async => null),
+      setUp: () => when(
+        () => mockMessaging.getInitialMessage(),
+      ).thenAnswer((_) async => null),
       act: (bloc) => bloc.add(const CheckInitialMessage()),
       expect: () => [],
       verify: (_) => expect(launchHolder.takePendingRoute(), isNull),
@@ -208,8 +232,9 @@ void main() {
     blocTest<NotificationBloc, NotificationState>(
       'sukses → NotificationScheduled',
       build: buildBloc,
-      setUp: () => when(() => mockScheduleDailyReminder(hour: 20, minute: 0))
-          .thenAnswer((_) async => const Right<Failure, void>(null)),
+      setUp: () => when(
+        () => mockScheduleDailyReminder(hour: 20, minute: 0),
+      ).thenAnswer((_) async => const Right<Failure, void>(null)),
       act: (bloc) => bloc.add(const ScheduleDailyReminder(hour: 20, minute: 0)),
       expect: () => [const NotificationScheduled(hour: 20, minute: 0)],
     );

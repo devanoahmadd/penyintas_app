@@ -34,14 +34,18 @@ void main() {
     updatedAt: DateTime(2026, 5, 8),
   );
 
-  test('should call repository.addTransaction and return Right(null)', () async {
-    when(() => mockRepo.addTransaction(any()))
-        .thenAnswer((_) async => const Right(null));
+  test(
+    'should call repository.addTransaction and return Right(null)',
+    () async {
+      when(
+        () => mockRepo.addTransaction(any()),
+      ).thenAnswer((_) async => const Right(null));
 
-    final result = await useCase(tEntity);
+      final result = await useCase(tEntity);
 
-    expect(result, const Right<dynamic, void>(null));
-    verify(() => mockRepo.addTransaction(tEntity)).called(1);
-    verifyNoMoreInteractions(mockRepo);
-  });
+      expect(result, const Right<dynamic, void>(null));
+      verify(() => mockRepo.addTransaction(tEntity)).called(1);
+      verifyNoMoreInteractions(mockRepo);
+    },
+  );
 }

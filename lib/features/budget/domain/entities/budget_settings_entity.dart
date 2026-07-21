@@ -27,18 +27,22 @@ class BudgetSettingsEntity extends Equatable {
 
   /// Total pengeluaran tetap — jumlah dari 5 breakdown kategori.
   int get fixedExpenses =>
-      rentExpense + utilitiesExpense + internetExpense + phoneExpense + otherFixedExpense;
+      rentExpense +
+      utilitiesExpense +
+      internetExpense +
+      phoneExpense +
+      otherFixedExpense;
 
   @override
   List<Object> get props => [
-        monthlyIncome,
-        paymentDate,
-        emergencyFundPct,
-        createdAt,
-        rentExpense,
-        utilitiesExpense,
-        internetExpense,
-        phoneExpense,
-        otherFixedExpense,
-      ];
+    monthlyIncome,
+    paymentDate,
+    emergencyFundPct,
+    createdAt,
+    rentExpense,
+    utilitiesExpense,
+    internetExpense,
+    phoneExpense,
+    otherFixedExpense,
+  ];
 }

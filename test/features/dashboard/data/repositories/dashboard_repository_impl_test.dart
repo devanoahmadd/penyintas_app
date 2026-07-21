@@ -58,10 +58,15 @@ void main() {
       calculateDtl: const CalculateDaysToLiveUseCase(),
     );
 
-    when(() => mockBudget.getBudgetSettings())
-        .thenAnswer((_) async => Right(settings));
-    when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-        .thenAnswer((_) async => const Right([]));
+    when(
+      () => mockBudget.getBudgetSettings(),
+    ).thenAnswer((_) async => Right(settings));
+    when(
+      () => mockTxRepo.getTransactions(
+        from: any(named: 'from'),
+        to: any(named: 'to'),
+      ),
+    ).thenAnswer((_) async => const Right([]));
   });
 
   group('_compute — totalSpentThisMonth', () {
@@ -69,31 +74,52 @@ void main() {
       final fixedTxn = makeTxn(id: 'f1', amount: 400000, category: 'fixed');
       final foodTxn = makeTxn(id: 'f2', amount: 50000, category: 'food');
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([fixedTxn, foodTxn]));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([fixedTxn, foodTxn]));
 
       final result = await repo.watchDashboard().first;
 
       final entity = result.getOrElse(() => throw Exception('Expected Right'));
-      expect(entity.totalSpentThisMonth, 50000,
-          reason: 'fixed-category txn must be excluded from totalSpentThisMonth');
+      expect(
+        entity.totalSpentThisMonth,
+        50000,
+        reason: 'fixed-category txn must be excluded from totalSpentThisMonth',
+      );
     });
 
-    test('income-type transactions do not affect totalSpentThisMonth', () async {
-      final incomeTxn = makeTxn(id: 'i1', amount: 500000, category: 'income', type: TransactionType.income);
-      final foodTxn = makeTxn(id: 'f1', amount: 30000, category: 'food');
+    test(
+      'income-type transactions do not affect totalSpentThisMonth',
+      () async {
+        final incomeTxn = makeTxn(
+          id: 'i1',
+          amount: 500000,
+          category: 'income',
+          type: TransactionType.income,
+        );
+        final foodTxn = makeTxn(id: 'f1', amount: 30000, category: 'food');
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([incomeTxn, foodTxn]));
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async => Right([incomeTxn, foodTxn]));
 
-      final result = await repo.watchDashboard().first;
-      final entity = result.getOrElse(() => throw Exception());
-      expect(entity.totalSpentThisMonth, 30000);
-    });
+        final result = await repo.watchDashboard().first;
+        final entity = result.getOrElse(() => throw Exception());
+        expect(entity.totalSpentThisMonth, 30000);
+      },
+    );
   });
 
   group('_compute — totalRemaining', () {
@@ -101,46 +127,65 @@ void main() {
       // safeMonthlyBudget = 2_200_000; spend 3_000_000 → remaining should be 0
       final bigSpend = makeTxn(id: 'b1', amount: 3000000, category: 'food');
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([bigSpend]));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([bigSpend]));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
-      expect(entity.totalRemaining, 0,
-          reason: 'totalRemaining must not go negative in entity');
+      expect(
+        entity.totalRemaining,
+        0,
+        reason: 'totalRemaining must not go negative in entity',
+      );
     });
   });
 
   group('_compute — negative safeMonthlyBudget', () {
-    test('clamps safeMonthlyBudget to 0 when fixedExpenses exceed income', () async {
-      final overSettings = BudgetSettingsEntity(
-        monthlyIncome: 500000,
-        paymentDate: 1,
-        otherFixedExpense: 600000,
-        emergencyFundPct: 0.10,
-        createdAt: DateTime(2026, 5, 1),
-      );
-      when(() => mockBudget.getBudgetSettings())
-          .thenAnswer((_) async => Right(overSettings));
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
+    test(
+      'clamps safeMonthlyBudget to 0 when fixedExpenses exceed income',
+      () async {
+        final overSettings = BudgetSettingsEntity(
+          monthlyIncome: 500000,
+          paymentDate: 1,
+          otherFixedExpense: 600000,
+          emergencyFundPct: 0.10,
+          createdAt: DateTime(2026, 5, 1),
+        );
+        when(
+          () => mockBudget.getBudgetSettings(),
+        ).thenAnswer((_) async => Right(overSettings));
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
 
-      final result = await repo.watchDashboard().first;
-      final entity = result.getOrElse(() => throw Exception());
-      expect(entity.totalMonthlyBudget, 0);
-      expect(entity.dailyBudget, 0);
-    });
+        final result = await repo.watchDashboard().first;
+        final entity = result.getOrElse(() => throw Exception());
+        expect(entity.totalMonthlyBudget, 0);
+        expect(entity.dailyBudget, 0);
+      },
+    );
   });
 
   group('_compute — spentToday', () {
     test('sums only expense-type today transactions', () async {
       final expense = makeTxn(id: 'e1', amount: 25000, category: 'food');
-      final income = makeTxn(id: 'i1', amount: 100000, category: 'income', type: TransactionType.income);
+      final income = makeTxn(
+        id: 'i1',
+        amount: 100000,
+        category: 'income',
+        type: TransactionType.income,
+      );
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(Right([expense, income])));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(Right([expense, income])));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -150,8 +195,9 @@ void main() {
     test('todayTransactions list is passed through to entity', () async {
       final txn = makeTxn(id: 'x1', amount: 15000, category: 'food');
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(Right([txn])));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(Right([txn])));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -171,10 +217,15 @@ void main() {
         ),
       );
 
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right(txns));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right(txns));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -182,8 +233,9 @@ void main() {
     });
 
     test('falls back to dailyBudget when no last-7-day transactions', () async {
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
       // getTransactions returns [] by default from setUp
 
       final result = await repo.watchDashboard().first;
@@ -195,8 +247,9 @@ void main() {
   group('_compute — BudgetStatus', () {
     test('status is safe when remaining > 30% of budget', () async {
       // No spending → remaining = safeMonthlyBudget = 2_200_000 → 100% → safe
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -206,10 +259,15 @@ void main() {
     test('status is caution when remaining 15–30% of budget', () async {
       // safeMonthly = 2_200_000; spend 1_595_001 → remaining = 604_999 ≈ 27.5% → caution
       final spend = makeTxn(id: 'c1', amount: 1595001, category: 'food');
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([spend]));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([spend]));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -219,10 +277,15 @@ void main() {
     test('status is danger when remaining < 15% of budget', () async {
       // safeMonthly = 2_200_000; spend 1_871_001 → remaining = 328_999 ≈ 14.9% → danger
       final spend = makeTxn(id: 'd1', amount: 1871001, category: 'food');
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
-      when(() => mockTxRepo.getTransactions(from: any(named: 'from'), to: any(named: 'to')))
-          .thenAnswer((_) async => Right([spend]));
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([spend]));
 
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
@@ -232,10 +295,13 @@ void main() {
 
   group('watchDashboard — error handling', () {
     test('yields CacheFailure when settings fetch fails', () async {
-      when(() => mockBudget.getBudgetSettings())
-          .thenAnswer((_) async => const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.')));
-      when(() => mockTxRepo.watchTodayTransactions())
-          .thenAnswer((_) => Stream.value(const Right([])));
+      when(() => mockBudget.getBudgetSettings()).thenAnswer(
+        (_) async =>
+            const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.')),
+      );
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
 
       final result = await repo.watchDashboard().first;
       expect(result.isLeft(), isTrue);

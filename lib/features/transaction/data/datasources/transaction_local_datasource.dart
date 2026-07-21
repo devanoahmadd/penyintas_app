@@ -10,7 +10,9 @@ abstract class TransactionLocalDataSource {
   Future<void> deleteTransaction(String txId);
   Future<List<TransactionModel>> getTodayTransactions();
   Future<List<TransactionModel>> getTransactionsByDateRange(
-      DateTime from, DateTime to);
+    DateTime from,
+    DateTime to,
+  );
   Stream<List<TransactionModel>> watchTodayTransactions();
 
   /// Sinyal perubahan tabel transaksi (insert/update/delete) — tanpa
@@ -32,12 +34,14 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
   final AppDatabase _db;
 
   @override
-  Future<void> saveTransaction(TransactionModel model) =>
-      _db.into(_db.transactions).insertOnConflictUpdate(model.toDriftCompanion());
+  Future<void> saveTransaction(TransactionModel model) => _db
+      .into(_db.transactions)
+      .insertOnConflictUpdate(model.toDriftCompanion());
 
   @override
-  Future<void> updateTransaction(TransactionModel model) =>
-      _db.into(_db.transactions).insertOnConflictUpdate(model.toDriftCompanion());
+  Future<void> updateTransaction(TransactionModel model) => _db
+      .into(_db.transactions)
+      .insertOnConflictUpdate(model.toDriftCompanion());
 
   @override
   Future<void> deleteTransaction(String txId) =>
@@ -48,24 +52,38 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
-    final rows = await (_db.select(_db.transactions)
-          ..where((t) =>
-              t.date.isBiggerOrEqualValue(start) &
-              t.date.isSmallerOrEqualValue(end))
-          ..orderBy([(t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (_db.select(_db.transactions)
+              ..where(
+                (t) =>
+                    t.date.isBiggerOrEqualValue(start) &
+                    t.date.isSmallerOrEqualValue(end),
+              )
+              ..orderBy([
+                (t) =>
+                    OrderingTerm(expression: t.date, mode: OrderingMode.desc),
+              ]))
+            .get();
     return rows.map(TransactionModel.fromDrift).toList();
   }
 
   @override
   Future<List<TransactionModel>> getTransactionsByDateRange(
-      DateTime from, DateTime to) async {
-    final rows = await (_db.select(_db.transactions)
-          ..where((t) =>
-              t.date.isBiggerOrEqualValue(from) &
-              t.date.isSmallerOrEqualValue(to))
-          ..orderBy([(t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc)]))
-        .get();
+    DateTime from,
+    DateTime to,
+  ) async {
+    final rows =
+        await (_db.select(_db.transactions)
+              ..where(
+                (t) =>
+                    t.date.isBiggerOrEqualValue(from) &
+                    t.date.isSmallerOrEqualValue(to),
+              )
+              ..orderBy([
+                (t) =>
+                    OrderingTerm(expression: t.date, mode: OrderingMode.desc),
+              ]))
+            .get();
     return rows.map(TransactionModel.fromDrift).toList();
   }
 
@@ -75,18 +93,22 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
     final start = DateTime(now.year, now.month, now.day);
     final end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
     return (_db.select(_db.transactions)
-          ..where((t) =>
-              t.date.isBiggerOrEqualValue(start) &
-              t.date.isSmallerOrEqualValue(end))
-          ..orderBy([(t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc)]))
+          ..where(
+            (t) =>
+                t.date.isBiggerOrEqualValue(start) &
+                t.date.isSmallerOrEqualValue(end),
+          )
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc),
+          ]))
         .watch()
         .map((rows) => rows.map(TransactionModel.fromDrift).toList());
   }
 
   @override
-  Stream<void> watchTransactionChanges() =>
-      _db.tableUpdates(TableUpdateQuery.onTable(_db.transactions))
-          .map<void>((_) {});
+  Stream<void> watchTransactionChanges() => _db
+      .tableUpdates(TableUpdateQuery.onTable(_db.transactions))
+      .map<void>((_) {});
 
   @override
   Future<void> markSynced(String txId) =>
@@ -99,9 +121,9 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
 
   @override
   Future<List<TransactionModel>> getUnsyncedTransactions() async {
-    final rows = await (_db.select(_db.transactions)
-          ..where((t) => t.isSynced.equals(false)))
-        .get();
+    final rows = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.isSynced.equals(false))).get();
     return rows.map(TransactionModel.fromDrift).toList();
   }
 
@@ -111,12 +133,15 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
     required String collectionPath,
     required Map<String, dynamic> data,
     required SyncOperation operation,
-  }) =>
-      _db.into(_db.syncQueue).insert(SyncQueueCompanion(
-            itemId: Value(itemId),
-            collectionPath: Value(collectionPath),
-            data: Value(jsonEncode(data)),
-            operation: Value(operation),
-            createdAt: Value(DateTime.now()),
-          ));
+  }) => _db
+      .into(_db.syncQueue)
+      .insert(
+        SyncQueueCompanion(
+          itemId: Value(itemId),
+          collectionPath: Value(collectionPath),
+          data: Value(jsonEncode(data)),
+          operation: Value(operation),
+          createdAt: Value(DateTime.now()),
+        ),
+      );
 }

@@ -9,13 +9,14 @@ import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settin
 part 'budget_settings_event.dart';
 part 'budget_settings_state.dart';
 
-class BudgetSettingsBloc extends Bloc<BudgetSettingsEvent, BudgetSettingsState> {
+class BudgetSettingsBloc
+    extends Bloc<BudgetSettingsEvent, BudgetSettingsState> {
   BudgetSettingsBloc({
     required GetBudgetSettingsUseCase getBudgetSettings,
     required SaveBudgetSettingsUseCase saveBudgetSettings,
-  })  : _get = getBudgetSettings,
-        _save = saveBudgetSettings,
-        super(const BudgetSettingsInitial()) {
+  }) : _get = getBudgetSettings,
+       _save = saveBudgetSettings,
+       super(const BudgetSettingsInitial()) {
     on<LoadBudgetSettings>(_onLoad, transformer: droppable());
     on<SaveBudgetSettings>(_onSave, transformer: sequential());
   }

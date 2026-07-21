@@ -31,9 +31,18 @@ class TransactionEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id, amount, category, type, note, date,
-        isFixed, isSynced, createdAt, updatedAt, goalId,
-      ];
+    id,
+    amount,
+    category,
+    type,
+    note,
+    date,
+    isFixed,
+    isSynced,
+    createdAt,
+    updatedAt,
+    goalId,
+  ];
 }
 
 enum TransactionType { expense, income }

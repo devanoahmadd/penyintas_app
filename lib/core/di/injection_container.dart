@@ -432,7 +432,11 @@ void _initBudget() {
 
   sl.registerLazySingleton<BudgetRepository>(
     () => BudgetRepositoryImpl(
-        local: sl(), remote: sl(), networkInfo: sl(), auth: sl()),
+      local: sl(),
+      remote: sl(),
+      networkInfo: sl(),
+      auth: sl(),
+    ),
   );
   sl.registerLazySingleton<BudgetLocalDatasource>(
     () => BudgetLocalDatasourceImpl(sl()),

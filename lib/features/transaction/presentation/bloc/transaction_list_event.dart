@@ -33,11 +33,7 @@ final class DeleteTransactionRequested extends TransactionListEvent {
 }
 
 final class FilterSheetApplied extends TransactionListEvent {
-  const FilterSheetApplied({
-    this.categories,
-    this.minAmount,
-    this.maxAmount,
-  });
+  const FilterSheetApplied({this.categories, this.minAmount, this.maxAmount});
   final Set<String>? categories; // null = all categories
   final int? minAmount;
   final int? maxAmount;

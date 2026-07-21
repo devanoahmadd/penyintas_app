@@ -34,11 +34,15 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> seedLocal({required bool completed, int income = 0}) async {
-    await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
-          id: const Value(1),
-          onboardingCompleted: Value(completed),
-          monthlyIncome: Value(income),
-        ));
+    await db
+        .into(db.appSettings)
+        .insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(1),
+            onboardingCompleted: Value(completed),
+            monthlyIncome: Value(income),
+          ),
+        );
   }
 
   group('wipeLocalData', () {
@@ -54,34 +58,40 @@ void main() {
 
   group('syncFromRemote', () {
     test('remote ada → tulis flag ke lokal, return Right(unit)', () async {
-      when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
-          const UserSettingsModel(onboardingCompleted: true));
+      when(() => remote.fetchUserSettings()).thenAnswer(
+        (_) async => const UserSettingsModel(onboardingCompleted: true),
+      );
 
       final result = await repo.syncFromRemote();
 
       expect(result, const Right(unit));
-      final row = await (db.select(db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
+      final row = await (db.select(
+        db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingleOrNull();
       expect(row!.onboardingCompleted, true);
       verifyNever(() => remote.saveUserSettings(any()));
     });
 
     test('syncFromRemote tidak mereset kolom finansial lokal', () async {
-      await db.into(db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
-            id: const Value(1),
-            onboardingCompleted: const Value(false),
-            monthlyIncome: const Value(2000000),
-            rentExpense: const Value(450000),
-          ));
-      when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
-          const UserSettingsModel(onboardingCompleted: true));
+      await db
+          .into(db.appSettings)
+          .insertOnConflictUpdate(
+            AppSettingsCompanion(
+              id: const Value(1),
+              onboardingCompleted: const Value(false),
+              monthlyIncome: const Value(2000000),
+              rentExpense: const Value(450000),
+            ),
+          );
+      when(() => remote.fetchUserSettings()).thenAnswer(
+        (_) async => const UserSettingsModel(onboardingCompleted: true),
+      );
 
       await repo.syncFromRemote();
 
-      final row = await (db.select(db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
+      final row = await (db.select(
+        db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingleOrNull();
       expect(row!.onboardingCompleted, true);
       expect(row.monthlyIncome, 2000000); // tidak ter-reset
       expect(row.rentExpense, 450000);
@@ -95,9 +105,9 @@ void main() {
       final result = await repo.syncFromRemote();
 
       expect(result, const Right(unit));
-      final captured = verify(() => remote.saveUserSettings(captureAny()))
-          .captured
-          .single as UserSettingsModel;
+      final captured =
+          verify(() => remote.saveUserSettings(captureAny())).captured.single
+              as UserSettingsModel;
       expect(captured.onboardingCompleted, true);
     });
 
@@ -111,21 +121,25 @@ void main() {
       verifyNever(() => remote.saveUserSettings(any()));
     });
 
-    test('remote ada dengan false → ratchet: tidak overwrite lokal (false diabaikan)', () async {
-      // Seed local dengan onboardingCompleted=true (misal: dari budget sync)
-      await seedLocal(completed: true, income: 5000000);
-      when(() => remote.fetchUserSettings()).thenAnswer((_) async =>
-          const UserSettingsModel(onboardingCompleted: false));
+    test(
+      'remote ada dengan false → ratchet: tidak overwrite lokal (false diabaikan)',
+      () async {
+        // Seed local dengan onboardingCompleted=true (misal: dari budget sync)
+        await seedLocal(completed: true, income: 5000000);
+        when(() => remote.fetchUserSettings()).thenAnswer(
+          (_) async => const UserSettingsModel(onboardingCompleted: false),
+        );
 
-      await repo.syncFromRemote();
+        await repo.syncFromRemote();
 
-      // _writeIdentity tidak boleh menulis false ke lokal — ratchet one-way
-      final row = await (db.select(db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
-      expect(row!.onboardingCompleted, true); // tetap true
-      expect(row.monthlyIncome, 5000000); // tidak ter-reset
-    });
+        // _writeIdentity tidak boleh menulis false ke lokal — ratchet one-way
+        final row = await (db.select(
+          db.appSettings,
+        )..where((t) => t.id.equals(1))).getSingleOrNull();
+        expect(row!.onboardingCompleted, true); // tetap true
+        expect(row.monthlyIncome, 5000000); // tidak ter-reset
+      },
+    );
 
     test('remote timeout → Right(unit) (non-blocking)', () async {
       when(() => remote.fetchUserSettings()).thenAnswer((_) async {
@@ -155,9 +169,9 @@ void main() {
       final result = await repo.pushToRemote();
 
       expect(result, const Right(unit));
-      final captured = verify(() => remote.saveUserSettings(captureAny()))
-          .captured
-          .single as UserSettingsModel;
+      final captured =
+          verify(() => remote.saveUserSettings(captureAny())).captured.single
+              as UserSettingsModel;
       expect(captured.onboardingCompleted, true);
     });
   });

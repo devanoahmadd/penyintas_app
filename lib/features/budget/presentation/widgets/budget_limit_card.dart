@@ -33,17 +33,17 @@ class BudgetLimitCard extends StatelessWidget {
 
   // Map BudgetStatus → progress-bar color
   Color _barColor(BudgetStatus? status) => switch (status) {
-        BudgetStatus.danger => AppColors.warn,
-        BudgetStatus.caution => AppColors.caution,
-        _ => AppColors.primary,
-      };
+    BudgetStatus.danger => AppColors.warn,
+    BudgetStatus.caution => AppColors.caution,
+    _ => AppColors.primary,
+  };
 
   // Map BudgetStatus → percent label color
   Color _pctColor(BudgetStatus? status, bool isDark) => switch (status) {
-        BudgetStatus.danger => AppColors.warn,
-        BudgetStatus.caution => AppColors.caution,
-        _ => isDark ? AppColors.shoot : AppColors.primary,
-      };
+    BudgetStatus.danger => AppColors.warn,
+    BudgetStatus.caution => AppColors.caution,
+    _ => isDark ? AppColors.shoot : AppColors.primary,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -167,8 +167,7 @@ class BudgetLimitCard extends StatelessWidget {
                           ],
                           Text(
                             cycleLabel,
-                            style:
-                                AppTextStyles.caption.copyWith(color: muted),
+                            style: AppTextStyles.caption.copyWith(color: muted),
                           ),
                         ],
                       ),

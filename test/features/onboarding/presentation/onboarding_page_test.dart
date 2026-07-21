@@ -14,8 +14,7 @@ import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_b
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 
-class MockOnboardingBloc
-    extends MockBloc<OnboardingEvent, OnboardingState>
+class MockOnboardingBloc extends MockBloc<OnboardingEvent, OnboardingState>
     implements OnboardingBloc {}
 
 class MockNotificationBloc
@@ -35,115 +34,116 @@ class _TestLocalizationsDelegate
 
   @override
   Future<AppLocalizations> load(Locale locale) => SynchronousFuture(
-        AppLocalizations(locale, const {
-          // General
-          'btn_next': 'Lanjut',
-          'btn_back': 'Kembali',
-          'btn_save': 'Simpan',
-          'btn_cancel': 'Batal',
-          'loading': 'Memuat...',
-          'retry': 'Coba lagi',
-          'category_other': 'Lainnya',
-          // Onboarding — existing
-          'onboarding_income_title': 'Berapa kiriman bulananmu?',
-          'onboarding_income_label': 'Nominal per bulan',
-          'onboarding_income_hint': 'Masukkan nominal dalam Rupiah',
-          'onboarding_fixed_title': 'Pengeluaran tetap tiap bulan',
-          'onboarding_fixed_hint': 'Kos, listrik, internet, dan lainnya',
-          'onboarding_date_title': 'Kapan kiriman biasanya masuk?',
-          'onboarding_eyebrow_income': 'PEMASUKAN',
-          'onboarding_eyebrow_fixed': 'PENGELUARAN TETAP',
-          'onboarding_error_invalid_amount': 'Masukkan jumlah kiriman yang valid.',
-          'onboarding_error_amount_too_large': 'Jumlah terlalu besar.',
-          'onboarding_error_select_date': 'Pilih tanggal kiriman terlebih dahulu.',
-          'onboarding_error_empty_expenses': 'Isi paling tidak satu pengeluaran tetap.',
-          'onboarding_error_expenses_exceed_income':
-              'Total pengeluaran melebihi pemasukan. Cek lagi ya.',
-          'onboarding_expense_rent': 'Kos / Sewa',
-          'onboarding_expense_rent_hint': 'Bulanan, kontan',
-          'onboarding_expense_utilities': 'Listrik & Air',
-          'onboarding_expense_utilities_hint': 'Token / tagihan',
-          'onboarding_expense_internet': 'Internet / Wi-Fi',
-          'onboarding_expense_internet_hint': 'Paket bulanan',
-          'onboarding_expense_phone': 'Pulsa & Data',
-          'onboarding_expense_phone_hint': 'Opsional',
-          'onboarding_expense_other_hint': 'Cicilan, langganan',
-          'onboarding_error_fixed_exceeds_income':
-              'Pengeluaran tetap melebihi pemasukanmu.',
-          'onboarding_emergency_target_label': 'Target dana darurat',
-          'onboarding_emergency_per_month': 'Dana darurat per bulan ({pct}%)',
-          'onboarding_slider_min': '5%',
-          'onboarding_slider_max': '25%',
-          'onboarding_emergency_title': 'Dana darurat',
-          'onboarding_eyebrow_emergency': 'DANA DARURAT',
-          'onboarding_emergency_subtitle': 'Sisihkan untuk hari tak terduga.',
-          'onboarding_emergency_question': 'Sisihkan berapa tiap bulan?',
-          'onboarding_emergency_skip': 'Lewati dulu',
-          // Date picker sheet
-          'onboarding_date_picker_title': 'Pilih tanggal',
-          'onboarding_date_picker_subtitle': 'Tanggal masuk kiriman/gaji',
-          'onboarding_date_picker_note': '* Tanggal tidak tersedia bulan ini',
-          'onboarding_date_picker_none': 'Pilih tanggal dulu',
-          'onboarding_date_picker_use': 'Gunakan tanggal {date}',
-          'onboarding_date_picker_use_approx': 'Gunakan ~tanggal {date}',
-          'onboarding_daily_budget_label': 'ANGGARAN HARIANMU',
-          'onboarding_daily_budget_suffix': '/hari',
-          'onboarding_daily_budget_days_left': 'untuk {days} hari ke depan',
-          'onboarding_daily_budget_monthly_left': '{amount} tersisa bulan ini',
-          'onboarding_income_subtitle': '',
-          'onboarding_fixed_expense_warning': '',
-          // Onboarding redesign — C+ stagger
-          'onboarding_eyebrow_step1': 'RUAS 1 · PEMASUKAN',
-          'onboarding_eyebrow_step2': 'RUAS 2 · PENGELUARAN TETAP',
-          'onboarding_eyebrow_step3': 'RUAS 3 · DANA DARURAT',
-          'onboarding_title_income': 'Pemasukan bulananmu',
-          'onboarding_title_fixed': 'Kebutuhan tetapmu',
-          'onboarding_title_darurat': 'Sisihkan, biar lentur',
-          'onboarding_done_eyebrow': 'SIAP BERTAHAN',
-          'onboarding_done_title': 'Kamu siap bertahan',
-          'onboarding_done_sub': 'Lentur, tak patah. Mulai catat pengeluaran hari ini.',
-          'onboarding_payday_label': 'Biasanya masuk tanggal',
-          'onboarding_skip_later': 'Lanjut nanti',
-          'onboarding_resume_dialog_title': 'Lanjutkan setup?',
-          'onboarding_resume_dialog_body':
-              'Kamu punya data dari {days} hari lalu. Lanjut dari sana atau mulai ulang?',
-          'onboarding_resume_continue': 'Lanjut dari sana',
-          'onboarding_resume_restart': 'Mulai ulang',
-          'onboarding_resume_banner': 'Melanjutkan dari sesi sebelumnya',
-          'onboarding_reset_dialog_title': 'Mulai ulang setup?',
-          'onboarding_reset_dialog_cancel': 'Batal',
-          'onboarding_reset_dialog_confirm': 'Ya, mulai ulang',
-          'onboarding_chip_other_date': 'Lain',
-          'onboarding_cta_start': 'Mulai Bertahan',
-          'onboarding_cta_enter': 'Masuk ke Beranda',
-          'onboarding_sheet_done': 'Selesai',
-          'onboarding_total_label': 'TOTAL TETAP / BULAN',
-          'onboarding_total_pct': '≈ {pct}% dari pemasukan',
-          'onboarding_sheet_total_label': 'TOTAL TETAP · {pct}%',
-          'onboarding_daily_sub_no_emergency': 'tanpa dana darurat',
-          'onboarding_daily_sub_saving': 'nabung {amount}/bln',
-          'onboarding_pct_label_low': 'Santai',
-          'onboarding_pct_note_low': 'Langkah kecil yang ringan untuk memulai.',
-          'onboarding_pct_label_mid': 'Seimbang',
-          'onboarding_pct_note_mid': 'Rekomendasi kami — aman tanpa terlalu ketat.',
-          'onboarding_pct_label_high': 'Rajin',
-          'onboarding_pct_note_high': 'Dana darurat penuh lebih cepat.',
-          'onboarding_pct_label_max': 'Ekstrem',
-          'onboarding_pct_note_max': 'Pertahanan terkuat.',
-          'onboarding_pct_note_skip': 'Tanpa dana darurat dulu.',
-          'onboarding_stat_daily': 'ANGGARAN HARIAN',
-          'onboarding_stat_emergency': 'DANA DARURAT',
-          'onboarding_stat_income': 'PEMASUKAN',
-          'onboarding_stat_fixed': 'PENGELUARAN TETAP',
-        }),
-      );
+    AppLocalizations(locale, const {
+      // General
+      'btn_next': 'Lanjut',
+      'btn_back': 'Kembali',
+      'btn_save': 'Simpan',
+      'btn_cancel': 'Batal',
+      'loading': 'Memuat...',
+      'retry': 'Coba lagi',
+      'category_other': 'Lainnya',
+      // Onboarding — existing
+      'onboarding_income_title': 'Berapa kiriman bulananmu?',
+      'onboarding_income_label': 'Nominal per bulan',
+      'onboarding_income_hint': 'Masukkan nominal dalam Rupiah',
+      'onboarding_fixed_title': 'Pengeluaran tetap tiap bulan',
+      'onboarding_fixed_hint': 'Kos, listrik, internet, dan lainnya',
+      'onboarding_date_title': 'Kapan kiriman biasanya masuk?',
+      'onboarding_eyebrow_income': 'PEMASUKAN',
+      'onboarding_eyebrow_fixed': 'PENGELUARAN TETAP',
+      'onboarding_error_invalid_amount': 'Masukkan jumlah kiriman yang valid.',
+      'onboarding_error_amount_too_large': 'Jumlah terlalu besar.',
+      'onboarding_error_select_date': 'Pilih tanggal kiriman terlebih dahulu.',
+      'onboarding_error_empty_expenses':
+          'Isi paling tidak satu pengeluaran tetap.',
+      'onboarding_error_expenses_exceed_income':
+          'Total pengeluaran melebihi pemasukan. Cek lagi ya.',
+      'onboarding_expense_rent': 'Kos / Sewa',
+      'onboarding_expense_rent_hint': 'Bulanan, kontan',
+      'onboarding_expense_utilities': 'Listrik & Air',
+      'onboarding_expense_utilities_hint': 'Token / tagihan',
+      'onboarding_expense_internet': 'Internet / Wi-Fi',
+      'onboarding_expense_internet_hint': 'Paket bulanan',
+      'onboarding_expense_phone': 'Pulsa & Data',
+      'onboarding_expense_phone_hint': 'Opsional',
+      'onboarding_expense_other_hint': 'Cicilan, langganan',
+      'onboarding_error_fixed_exceeds_income':
+          'Pengeluaran tetap melebihi pemasukanmu.',
+      'onboarding_emergency_target_label': 'Target dana darurat',
+      'onboarding_emergency_per_month': 'Dana darurat per bulan ({pct}%)',
+      'onboarding_slider_min': '5%',
+      'onboarding_slider_max': '25%',
+      'onboarding_emergency_title': 'Dana darurat',
+      'onboarding_eyebrow_emergency': 'DANA DARURAT',
+      'onboarding_emergency_subtitle': 'Sisihkan untuk hari tak terduga.',
+      'onboarding_emergency_question': 'Sisihkan berapa tiap bulan?',
+      'onboarding_emergency_skip': 'Lewati dulu',
+      // Date picker sheet
+      'onboarding_date_picker_title': 'Pilih tanggal',
+      'onboarding_date_picker_subtitle': 'Tanggal masuk kiriman/gaji',
+      'onboarding_date_picker_note': '* Tanggal tidak tersedia bulan ini',
+      'onboarding_date_picker_none': 'Pilih tanggal dulu',
+      'onboarding_date_picker_use': 'Gunakan tanggal {date}',
+      'onboarding_date_picker_use_approx': 'Gunakan ~tanggal {date}',
+      'onboarding_daily_budget_label': 'ANGGARAN HARIANMU',
+      'onboarding_daily_budget_suffix': '/hari',
+      'onboarding_daily_budget_days_left': 'untuk {days} hari ke depan',
+      'onboarding_daily_budget_monthly_left': '{amount} tersisa bulan ini',
+      'onboarding_income_subtitle': '',
+      'onboarding_fixed_expense_warning': '',
+      // Onboarding redesign — C+ stagger
+      'onboarding_eyebrow_step1': 'RUAS 1 · PEMASUKAN',
+      'onboarding_eyebrow_step2': 'RUAS 2 · PENGELUARAN TETAP',
+      'onboarding_eyebrow_step3': 'RUAS 3 · DANA DARURAT',
+      'onboarding_title_income': 'Pemasukan bulananmu',
+      'onboarding_title_fixed': 'Kebutuhan tetapmu',
+      'onboarding_title_darurat': 'Sisihkan, biar lentur',
+      'onboarding_done_eyebrow': 'SIAP BERTAHAN',
+      'onboarding_done_title': 'Kamu siap bertahan',
+      'onboarding_done_sub':
+          'Lentur, tak patah. Mulai catat pengeluaran hari ini.',
+      'onboarding_payday_label': 'Biasanya masuk tanggal',
+      'onboarding_skip_later': 'Lanjut nanti',
+      'onboarding_resume_dialog_title': 'Lanjutkan setup?',
+      'onboarding_resume_dialog_body':
+          'Kamu punya data dari {days} hari lalu. Lanjut dari sana atau mulai ulang?',
+      'onboarding_resume_continue': 'Lanjut dari sana',
+      'onboarding_resume_restart': 'Mulai ulang',
+      'onboarding_resume_banner': 'Melanjutkan dari sesi sebelumnya',
+      'onboarding_reset_dialog_title': 'Mulai ulang setup?',
+      'onboarding_reset_dialog_cancel': 'Batal',
+      'onboarding_reset_dialog_confirm': 'Ya, mulai ulang',
+      'onboarding_chip_other_date': 'Lain',
+      'onboarding_cta_start': 'Mulai Bertahan',
+      'onboarding_cta_enter': 'Masuk ke Beranda',
+      'onboarding_sheet_done': 'Selesai',
+      'onboarding_total_label': 'TOTAL TETAP / BULAN',
+      'onboarding_total_pct': '≈ {pct}% dari pemasukan',
+      'onboarding_sheet_total_label': 'TOTAL TETAP · {pct}%',
+      'onboarding_daily_sub_no_emergency': 'tanpa dana darurat',
+      'onboarding_daily_sub_saving': 'nabung {amount}/bln',
+      'onboarding_pct_label_low': 'Santai',
+      'onboarding_pct_note_low': 'Langkah kecil yang ringan untuk memulai.',
+      'onboarding_pct_label_mid': 'Seimbang',
+      'onboarding_pct_note_mid': 'Rekomendasi kami — aman tanpa terlalu ketat.',
+      'onboarding_pct_label_high': 'Rajin',
+      'onboarding_pct_note_high': 'Dana darurat penuh lebih cepat.',
+      'onboarding_pct_label_max': 'Ekstrem',
+      'onboarding_pct_note_max': 'Pertahanan terkuat.',
+      'onboarding_pct_note_skip': 'Tanpa dana darurat dulu.',
+      'onboarding_stat_daily': 'ANGGARAN HARIAN',
+      'onboarding_stat_emergency': 'DANA DARURAT',
+      'onboarding_stat_income': 'PEMASUKAN',
+      'onboarding_stat_fixed': 'PENGELUARAN TETAP',
+    }),
+  );
 
   @override
   bool shouldReload(_TestLocalizationsDelegate old) => false;
 }
 
 // ── Test harness ──────────────────────────────────────────────────────────
-
 
 Widget _buildHarness({
   required OnboardingBloc onboardingBloc,
@@ -155,7 +155,8 @@ Widget _buildHarness({
       BlocProvider<OnboardingBloc>.value(value: onboardingBloc),
       BlocProvider<NotificationBloc>.value(value: notificationBloc),
       BlocProvider<OnboardingDraftCubit>.value(
-          value: draftCubit ?? MockOnboardingDraftCubit()),
+        value: draftCubit ?? MockOnboardingDraftCubit(),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -170,7 +171,6 @@ Widget _buildHarness({
   );
 }
 
-
 // ── Main ──────────────────────────────────────────────────────────────────
 
 void main() {
@@ -179,12 +179,14 @@ void main() {
   late MockOnboardingDraftCubit mockDraftCubit;
 
   setUpAll(() {
-    registerFallbackValue(const OnboardingSubmitted(
-      income: 0,
-      paymentDate: 1,
-      expenses: {},
-      emergencyFundPct: 0.0,
-    ));
+    registerFallbackValue(
+      const OnboardingSubmitted(
+        income: 0,
+        paymentDate: 1,
+        expenses: {},
+        emergencyFundPct: 0.0,
+      ),
+    );
   });
 
   setUp(() {
@@ -208,15 +210,23 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
-      expect(find.text('RUAS 1 · PEMASUKAN', skipOffstage: false), findsOneWidget);
-      expect(find.text('Pemasukan bulananmu', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('RUAS 1 · PEMASUKAN', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Pemasukan bulananmu', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     testWidgets('menampilkan 4 chip preset pemasukan', (tester) async {
@@ -225,11 +235,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       expect(find.text('Rp 800rb', skipOffstage: false), findsOneWidget);
@@ -238,43 +250,51 @@ void main() {
       expect(find.text('Rp 5jt', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('menampilkan tombol "Lanjut nanti" di header step 0',
-        (tester) async {
+    testWidgets('menampilkan tombol "Lanjut nanti" di header step 0', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       expect(find.text('Lanjut nanti', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('tap "Lanjut nanti" menyimpan state dan keluar (tanpa dialog)',
-        (tester) async {
+    testWidgets('tap "Lanjut nanti" menyimpan state dan keluar (tanpa dialog)', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      when(() => mockDraftCubit.saveDraft(
-            step: any(named: 'step'),
-            income: any(named: 'income'),
-            expenses: any(named: 'expenses'),
-            pct: any(named: 'pct'),
-            payday: any(named: 'payday'),
-          )).thenAnswer((_) async {});
+      when(
+        () => mockDraftCubit.saveDraft(
+          step: any(named: 'step'),
+          income: any(named: 'income'),
+          expenses: any(named: 'expenses'),
+          pct: any(named: 'pct'),
+          payday: any(named: 'payday'),
+        ),
+      ).thenAnswer((_) async {});
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       // Tap "Lanjut nanti" — seharusnya tidak membuka dialog
@@ -291,11 +311,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       await tester.tap(find.text('Rp 5jt', skipOffstage: false));
@@ -311,11 +333,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       // Default income = 0. Tap preset chip 'Rp 3jt' → income = 3000000.
@@ -326,17 +350,21 @@ void main() {
       expect(find.text('3.000.000', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('date picker terbuka tanpa tanggal pre-selected', (tester) async {
+    testWidgets('date picker terbuka tanpa tanggal pre-selected', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       await tester.tap(find.text('Lain', skipOffstage: false));
@@ -346,33 +374,38 @@ void main() {
       expect(find.text('Pilih tanggal dulu'), findsOneWidget);
     });
 
-    testWidgets('chip "Lain" membuka date picker sheet (grid off-screen — verify sheet opens)', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'chip "Lain" membuka date picker sheet (grid off-screen — verify sheet opens)',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildHarness(
+            onboardingBloc: mockBloc,
+            notificationBloc: mockNotifBloc,
+            draftCubit: mockDraftCubit,
+          ),
+        );
+        await tester.pump();
 
-      // Buka date picker
-      await tester.tap(find.text('Lain', skipOffstage: false));
-      await tester.pump(const Duration(milliseconds: 300));
+        // Buka date picker
+        await tester.tap(find.text('Lain', skipOffstage: false));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Sheet terbuka dan menampilkan tombol konfirmasi (disabled karena belum pilih tanggal)
-      expect(find.text('Pilih tanggal dulu'), findsOneWidget);
+        // Sheet terbuka dan menampilkan tombol konfirmasi (disabled karena belum pilih tanggal)
+        expect(find.text('Pilih tanggal dulu'), findsOneWidget);
 
-      // Tutup sheet via Batal
-      await tester.tap(find.text('Batal'));
-      await tester.pump(const Duration(milliseconds: 300));
+        // Tutup sheet via Batal
+        await tester.tap(find.text('Batal'));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Chip kembali menampilkan 'Lain' karena tidak ada tanggal dipilih
-      expect(find.text('Lain', skipOffstage: false), findsOneWidget);
-    });
+        // Chip kembali menampilkan 'Lain' karena tidak ada tanggal dipilih
+        expect(find.text('Lain', skipOffstage: false), findsOneWidget);
+      },
+    );
 
     testWidgets('CTA "Lanjut" disabled saat income = 0', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
@@ -380,11 +413,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       // Income awal = 2.500.000 → hapus semua digit via back key (7 kali)
@@ -418,11 +453,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       // Enable CTA by setting income > 0 via preset chip
@@ -433,23 +470,31 @@ void main() {
       // a repeating animation that prevents pumpAndSettle from ever settling.
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('RUAS 2 · PENGELUARAN TETAP', skipOffstage: false),
-          findsOneWidget);
-      expect(find.text('Kebutuhan tetapmu', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('RUAS 2 · PENGELUARAN TETAP', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Kebutuhan tetapmu', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('step 1 menampilkan back arrow, bukan "Lanjut nanti"',
-        (tester) async {
+    testWidgets('step 1 menampilkan back arrow, bukan "Lanjut nanti"', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
 
       // Enable CTA by setting income > 0 via preset chip
@@ -471,11 +516,13 @@ void main() {
   // ── Ruas 2 — pengeluaran tetap ─────────────────────────────────────────
   group('Ruas 2 — expense rows', () {
     Future<void> goToStep1(WidgetTester tester) async {
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
       await tester.tap(find.text('Rp 3jt', skipOffstage: false));
@@ -496,7 +543,10 @@ void main() {
 
       expect(find.text('Kos / Sewa', skipOffstage: false), findsOneWidget);
       expect(find.text('Listrik & Air', skipOffstage: false), findsOneWidget);
-      expect(find.text('Internet / Wi-Fi', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Internet / Wi-Fi', skipOffstage: false),
+        findsOneWidget,
+      );
       expect(find.text('Pulsa & Data', skipOffstage: false), findsOneWidget);
       expect(find.text('Lainnya', skipOffstage: false), findsOneWidget);
     });
@@ -536,11 +586,13 @@ void main() {
   // ── Ruas 3 — dana darurat ──────────────────────────────────────────────
   group('Ruas 3 — slider dan chips', () {
     Future<void> goToStep2(WidgetTester tester) async {
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
       await tester.tap(find.text('Rp 3jt', skipOffstage: false));
@@ -561,8 +613,10 @@ void main() {
 
       await goToStep2(tester);
 
-      expect(find.text('RUAS 3 · DANA DARURAT', skipOffstage: false),
-          findsOneWidget);
+      expect(
+        find.text('RUAS 3 · DANA DARURAT', skipOffstage: false),
+        findsOneWidget,
+      );
       // Chips — may appear twice if active pct matches (chip + active label)
       expect(find.text('5%', skipOffstage: false), findsWidgets);
       expect(find.text('10%', skipOffstage: false), findsWidgets);
@@ -607,7 +661,9 @@ void main() {
       expect(find.text('Santai', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('tap chip Ekstrem menampilkan feedback Ekstrem', (tester) async {
+    testWidgets('tap chip Ekstrem menampilkan feedback Ekstrem', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -619,8 +675,10 @@ void main() {
       await tester.pump();
 
       // pct=25 → both feedback label "Ekstrem" and chip "Ekstrem" appear
-      expect(find.text('Ekstrem', skipOffstage: false),
-          findsAtLeastNWidgets(2));
+      expect(
+        find.text('Ekstrem', skipOffstage: false),
+        findsAtLeastNWidgets(2),
+      );
       // The pct% indicator shows "25%"
       expect(find.text('25%', skipOffstage: false), findsWidgets);
     });
@@ -629,11 +687,13 @@ void main() {
   // ── Done screen ────────────────────────────────────────────────────────
   group('Layar selesai', () {
     Future<void> goToDone(WidgetTester tester) async {
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
       await tester.tap(find.text('Rp 3jt', skipOffstage: false));
@@ -658,7 +718,10 @@ void main() {
       await goToDone(tester);
 
       expect(find.text('SIAP BERTAHAN', skipOffstage: false), findsOneWidget);
-      expect(find.text('Kamu siap bertahan', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Kamu siap bertahan', skipOffstage: false),
+        findsOneWidget,
+      );
       expect(find.text('ANGGARAN HARIAN', skipOffstage: false), findsOneWidget);
       expect(find.text('PEMASUKAN', skipOffstage: false), findsOneWidget);
     });
@@ -671,11 +734,16 @@ void main() {
 
       await goToDone(tester);
 
-      expect(find.text('Masuk ke Beranda', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Masuk ke Beranda', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     // #208: _submitAll sekarang mengirim satu OnboardingSubmitted, bukan burst 3 event
-    testWidgets('tap "Masuk ke Beranda" mengirim OnboardingSubmitted', (tester) async {
+    testWidgets('tap "Masuk ke Beranda" mengirim OnboardingSubmitted', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -686,28 +754,37 @@ void main() {
       await tester.tap(find.text('Masuk ke Beranda', skipOffstage: false));
       await tester.pump();
 
-      verify(() => mockBloc.add(any(that: isA<OnboardingSubmitted>()))).called(1);
+      verify(
+        () => mockBloc.add(any(that: isA<OnboardingSubmitted>())),
+      ).called(1);
     });
 
-    testWidgets('OnboardingSubmitted membawa emergencyFundPct=0.10 untuk default pct=10', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'OnboardingSubmitted membawa emergencyFundPct=0.10 untuk default pct=10',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await goToDone(tester);
+        await goToDone(tester);
 
-      await tester.tap(find.text('Masuk ke Beranda', skipOffstage: false));
-      await tester.pump();
+        await tester.tap(find.text('Masuk ke Beranda', skipOffstage: false));
+        await tester.pump();
 
-      verify(() => mockBloc.add(any(
-            that: isA<OnboardingSubmitted>().having(
-              (e) => e.emergencyFundPct,
-              'emergencyFundPct',
-              closeTo(0.10, 0.001),
+        verify(
+          () => mockBloc.add(
+            any(
+              that: isA<OnboardingSubmitted>().having(
+                (e) => e.emergencyFundPct,
+                'emergencyFundPct',
+                closeTo(0.10, 0.001),
+              ),
             ),
-          ))).called(1);
-    });
+          ),
+        ).called(1);
+      },
+    );
   });
 
   // ── Back navigation ────────────────────────────────────────────────────
@@ -718,11 +795,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump();
       // Enable CTA by setting income > 0 via preset chip
       await tester.tap(find.text('Rp 3jt', skipOffstage: false));
@@ -738,7 +817,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // Should be back at step 0
-      expect(find.text('RUAS 1 · PEMASUKAN', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('RUAS 1 · PEMASUKAN', skipOffstage: false),
+        findsOneWidget,
+      );
       expect(find.text('Lanjut nanti', skipOffstage: false), findsOneWidget);
     });
   });
@@ -771,18 +853,22 @@ void main() {
     testWidgets('partial < 7 hari → banner muncul', (tester) async {
       sizeView(tester);
       final resumeCubit = MockOnboardingDraftCubit();
-      when(() => resumeCubit.state).thenReturn(
-          OnboardingDraftLoaded(partial(DateTime.now())));
-      when(() => resumeCubit.stream).thenAnswer((_) => Stream.value(
-          OnboardingDraftLoaded(partial(DateTime.now()))));
+      when(
+        () => resumeCubit.state,
+      ).thenReturn(OnboardingDraftLoaded(partial(DateTime.now())));
+      when(() => resumeCubit.stream).thenAnswer(
+        (_) => Stream.value(OnboardingDraftLoaded(partial(DateTime.now()))),
+      );
       when(() => resumeCubit.loadDraft()).thenAnswer((_) async {});
       when(() => resumeCubit.clearDraft()).thenAnswer((_) async {});
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: resumeCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: resumeCubit,
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -792,22 +878,27 @@ void main() {
       );
     });
 
-    testWidgets('tap "Mulai ulang" → konfirmasi → clear + banner hilang',
-        (tester) async {
+    testWidgets('tap "Mulai ulang" → konfirmasi → clear + banner hilang', (
+      tester,
+    ) async {
       sizeView(tester);
       final resumeCubit = MockOnboardingDraftCubit();
-      when(() => resumeCubit.state).thenReturn(
-          OnboardingDraftLoaded(partial(DateTime.now())));
-      when(() => resumeCubit.stream).thenAnswer((_) => Stream.value(
-          OnboardingDraftLoaded(partial(DateTime.now()))));
+      when(
+        () => resumeCubit.state,
+      ).thenReturn(OnboardingDraftLoaded(partial(DateTime.now())));
+      when(() => resumeCubit.stream).thenAnswer(
+        (_) => Stream.value(OnboardingDraftLoaded(partial(DateTime.now()))),
+      );
       when(() => resumeCubit.loadDraft()).thenAnswer((_) async {});
       when(() => resumeCubit.clearDraft()).thenAnswer((_) async {});
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: resumeCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: resumeCubit,
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -817,39 +908,51 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       // Dialog konfirmasi reset muncul.
-      expect(find.text('Mulai ulang setup?', skipOffstage: false),
-          findsOneWidget);
+      expect(
+        find.text('Mulai ulang setup?', skipOffstage: false),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Ya, mulai ulang', skipOffstage: false));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
       verify(() => resumeCubit.clearDraft()).called(1);
-      expect(find.text('Melanjutkan dari sesi sebelumnya', skipOffstage: false),
-          findsNothing);
+      expect(
+        find.text('Melanjutkan dari sesi sebelumnya', skipOffstage: false),
+        findsNothing,
+      );
     });
 
     testWidgets('partial ≥ 7 hari → dialog stale muncul', (tester) async {
       sizeView(tester);
       final staleCubit = MockOnboardingDraftCubit();
       final stalePartial = partial(
-          DateTime.now().subtract(const Duration(days: 8)));
-      when(() => staleCubit.state).thenReturn(
-          OnboardingDraftLoaded(stalePartial));
-      when(() => staleCubit.stream).thenAnswer((_) => Stream.value(
-          OnboardingDraftLoaded(stalePartial)));
+        DateTime.now().subtract(const Duration(days: 8)),
+      );
+      when(
+        () => staleCubit.state,
+      ).thenReturn(OnboardingDraftLoaded(stalePartial));
+      when(
+        () => staleCubit.stream,
+      ).thenAnswer((_) => Stream.value(OnboardingDraftLoaded(stalePartial)));
       when(() => staleCubit.loadDraft()).thenAnswer((_) async {});
       when(() => staleCubit.clearDraft()).thenAnswer((_) async {});
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: staleCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: staleCubit,
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.text('Lanjutkan setup?', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Lanjutkan setup?', skipOffstage: false),
+        findsOneWidget,
+      );
     });
   });
 
@@ -868,11 +971,13 @@ void main() {
         initialState: const OnboardingInitial(),
       );
 
-      await tester.pumpWidget(_buildHarness(
-        onboardingBloc: mockBloc,
-        notificationBloc: mockNotifBloc,
-        draftCubit: mockDraftCubit,
-      ));
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
       await tester.pump(); // initial frame
       await tester.pump(); // stream delivers Calculating
 

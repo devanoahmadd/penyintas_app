@@ -19,11 +19,11 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     required CreateCategoryUseCase createCategory,
     required UpdateCategoryUseCase updateCategory,
     required DeleteCategoryUseCase deleteCategory,
-  })  : _getCategories = getCategories,
-        _createCategory = createCategory,
-        _updateCategory = updateCategory,
-        _deleteCategory = deleteCategory,
-        super(const CategoryInitial()) {
+  }) : _getCategories = getCategories,
+       _createCategory = createCategory,
+       _updateCategory = updateCategory,
+       _deleteCategory = deleteCategory,
+       super(const CategoryInitial()) {
     on<LoadCategories>(_onLoad, transformer: droppable());
     on<CreateCategory>(_onCreate, transformer: sequential());
     on<UpdateCategory>(_onUpdate, transformer: sequential());
@@ -115,7 +115,8 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     final result = await _getCategories(const NoParams());
     result.fold(
       (f) => emit(CategoryError(f.message)),
-      (cats) => emit(CategoryLoaded(categories: cats, successType: successType)),
+      (cats) =>
+          emit(CategoryLoaded(categories: cats, successType: successType)),
     );
   }
 }

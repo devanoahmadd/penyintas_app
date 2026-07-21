@@ -5,7 +5,8 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
 
-class MockNotificationRepository extends Mock implements NotificationRepository {}
+class MockNotificationRepository extends Mock
+    implements NotificationRepository {}
 
 void main() {
   late MockNotificationRepository mockRepo;
@@ -18,8 +19,9 @@ void main() {
 
   group('RequestPermissionUseCase', () {
     test('returns Right(true) when repository grants permission', () async {
-      when(() => mockRepo.requestPermission())
-          .thenAnswer((_) async => const Right(true));
+      when(
+        () => mockRepo.requestPermission(),
+      ).thenAnswer((_) async => const Right(true));
 
       final result = await useCase();
 
@@ -29,14 +31,17 @@ void main() {
 
     test('returns Left(Failure) when repository returns a failure', () async {
       when(() => mockRepo.requestPermission()).thenAnswer(
-        (_) async => const Left(ServerFailure('Gagal meminta izin notifikasi.')),
+        (_) async =>
+            const Left(ServerFailure('Gagal meminta izin notifikasi.')),
       );
 
       final result = await useCase();
 
       expect(
         result,
-        const Left<Failure, bool>(ServerFailure('Gagal meminta izin notifikasi.')),
+        const Left<Failure, bool>(
+          ServerFailure('Gagal meminta izin notifikasi.'),
+        ),
       );
     });
   });

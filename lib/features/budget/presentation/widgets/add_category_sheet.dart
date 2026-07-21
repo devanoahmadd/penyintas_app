@@ -131,8 +131,7 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
             children: [
               Center(
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   child: Container(
                     width: 36,
                     height: 4,
@@ -179,17 +178,20 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(
-                              Radius.circular(AppRadius.md)),
+                            Radius.circular(AppRadius.md),
+                          ),
                           borderSide: BorderSide(color: borderColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(
-                              Radius.circular(AppRadius.md)),
+                            Radius.circular(AppRadius.md),
+                          ),
                           borderSide: BorderSide(color: borderColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(
-                              Radius.circular(AppRadius.md)),
+                            Radius.circular(AppRadius.md),
+                          ),
                           borderSide: const BorderSide(
                             color: AppColors.primary,
                             width: 2,
@@ -212,11 +214,11 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5,
-                        mainAxisSpacing: AppSpacing.sm,
-                        crossAxisSpacing: AppSpacing.sm,
-                        childAspectRatio: 1,
-                      ),
+                            crossAxisCount: 5,
+                            mainAxisSpacing: AppSpacing.sm,
+                            crossAxisSpacing: AppSpacing.sm,
+                            childAspectRatio: 1,
+                          ),
                       itemCount: slugs.length,
                       itemBuilder: (ctx, i) {
                         final slug = slugs[i];
@@ -225,17 +227,19 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                         return GestureDetector(
                           onTap: _isSaving
                               ? null
-                              : () => setState(() =>
-                                  _selectedIconSlug =
-                                      selected ? null : slug),
+                              : () => setState(
+                                  () => _selectedIconSlug = selected
+                                      ? null
+                                      : slug,
+                                ),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             decoration: BoxDecoration(
                               color: selected
                                   ? AppColors.primary
                                   : (isDark
-                                      ? AppColors.surfaceDark
-                                      : AppColors.surfaceLight),
+                                        ? AppColors.surfaceDark
+                                        : AppColors.surfaceLight),
                               borderRadius: BorderRadius.all(
                                 Radius.circular(AppRadius.md),
                               ),
@@ -246,8 +250,8 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                               color: selected
                                   ? Colors.white
                                   : (isDark
-                                      ? AppColors.mutedDark
-                                      : AppColors.mutedLight),
+                                        ? AppColors.mutedDark
+                                        : AppColors.mutedLight),
                             ),
                           ),
                         );
@@ -258,8 +262,7 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         l10n.addCategoryLimitableLabel,
-                        style:
-                            AppTextStyles.body.copyWith(color: textColor),
+                        style: AppTextStyles.body.copyWith(color: textColor),
                       ),
                       subtitle: Text(
                         l10n.addCategoryLimitableSub,
@@ -274,8 +277,9 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                           ? null
                           : (v) => setState(() => _isLimitable = v),
                       activeThumbColor: AppColors.primary,
-                      activeTrackColor:
-                          AppColors.primary.withValues(alpha: 0.4),
+                      activeTrackColor: AppColors.primary.withValues(
+                        alpha: 0.4,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     SizedBox(
@@ -284,11 +288,13 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                         onPressed: _isSaving ? null : _save,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          disabledBackgroundColor:
-                              AppColors.primary.withValues(alpha: 0.5),
+                          disabledBackgroundColor: AppColors.primary.withValues(
+                            alpha: 0.5,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(
-                                Radius.circular(AppRadius.md)),
+                              Radius.circular(AppRadius.md),
+                            ),
                           ),
                         ),
                         child: _isSaving

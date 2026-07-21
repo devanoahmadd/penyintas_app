@@ -19,10 +19,7 @@ class CategoryLoading extends CategoryState {
 /// State stabil setelah load/mutasi berhasil.
 /// [successType] non-null → BlocListener tampilkan snackbar, lalu state tetap ini.
 class CategoryLoaded extends CategoryState {
-  const CategoryLoaded({
-    required this.categories,
-    this.successType,
-  });
+  const CategoryLoaded({required this.categories, this.successType});
   final List<CategoryEntity> categories;
   final CategorySuccessType? successType;
 

@@ -27,17 +27,22 @@ class BudgetLimitEntity extends Equatable {
     BudgetCycle? cycleType,
     bool? isEnabled,
     DateTime? updatedAt,
-  }) =>
-      BudgetLimitEntity(
-        id: id ?? this.id,
-        category: category ?? this.category,
-        limitAmount: limitAmount ?? this.limitAmount,
-        cycleType: cycleType ?? this.cycleType,
-        isEnabled: isEnabled ?? this.isEnabled,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  }) => BudgetLimitEntity(
+    id: id ?? this.id,
+    category: category ?? this.category,
+    limitAmount: limitAmount ?? this.limitAmount,
+    cycleType: cycleType ?? this.cycleType,
+    isEnabled: isEnabled ?? this.isEnabled,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   @override
-  List<Object> get props =>
-      [id, category, limitAmount, cycleType, isEnabled, updatedAt];
+  List<Object> get props => [
+    id,
+    category,
+    limitAmount,
+    cycleType,
+    isEnabled,
+    updatedAt,
+  ];
 }

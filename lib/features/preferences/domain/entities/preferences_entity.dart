@@ -78,8 +78,18 @@ class PreferencesEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        timezone, baseCurrency, homeCurrency, language, displayName, status,
-        currentCountry, currentCity, homeCountry, homeCity, isPerantau,
-        profileCompleted, schemaVersion,
-      ];
+    timezone,
+    baseCurrency,
+    homeCurrency,
+    language,
+    displayName,
+    status,
+    currentCountry,
+    currentCity,
+    homeCountry,
+    homeCity,
+    isPerantau,
+    profileCompleted,
+    schemaVersion,
+  ];
 }

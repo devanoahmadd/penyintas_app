@@ -56,24 +56,24 @@ class _RegisterPageState extends State<RegisterPage>
       parent: _anim,
       curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
     );
-    _slideHeader = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _anim,
-      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
-    ));
+    _slideHeader = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _anim,
+            curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+          ),
+        );
     _fadeBody = CurvedAnimation(
       parent: _anim,
       curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
     );
-    _slideBody = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _anim,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-    ));
+    _slideBody = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _anim,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+          ),
+        );
     _anim.forward();
   }
 
@@ -108,7 +108,8 @@ class _RegisterPageState extends State<RegisterPage>
         _passwordError = l10n.errorPasswordMin;
         valid = false;
       }
-      final confirmOk = _confirmController.text.isNotEmpty &&
+      final confirmOk =
+          _confirmController.text.isNotEmpty &&
           _confirmController.text == _passwordController.text;
       if (!confirmOk) {
         _confirmError = l10n.errorConfirmMismatch;
@@ -120,12 +121,14 @@ class _RegisterPageState extends State<RegisterPage>
 
   void _submit(BuildContext context) {
     if (!_validate(context)) return;
-    context.read<AuthBloc>().add(SignUpRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          name: _nameController.text.trim(),
-          languageCode: Localizations.localeOf(context).languageCode,
-        ));
+    context.read<AuthBloc>().add(
+      SignUpRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        languageCode: Localizations.localeOf(context).languageCode,
+      ),
+    );
   }
 
   SnackBar _buildErrorSnackBar(String message, bool isDark) {
@@ -148,7 +151,11 @@ class _RegisterPageState extends State<RegisterPage>
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 4),
       margin: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl),
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         side: BorderSide(
@@ -163,8 +170,9 @@ class _RegisterPageState extends State<RegisterPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoftColor =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final iconColor = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
 
@@ -239,8 +247,9 @@ class _RegisterPageState extends State<RegisterPage>
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   l10n.authRegisterSubtitle,
-                                  style: AppTextStyles.body
-                                      .copyWith(color: textSoftColor),
+                                  style: AppTextStyles.body.copyWith(
+                                    color: textSoftColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -265,8 +274,7 @@ class _RegisterPageState extends State<RegisterPage>
                                   enabled: !isLoading,
                                   textInputAction: TextInputAction.next,
                                   onChanged: (value) {
-                                    final valid =
-                                        value.trim().length >= 2;
+                                    final valid = value.trim().length >= 2;
                                     if (valid != _nameValid) {
                                       setState(() => _nameValid = valid);
                                     }
@@ -286,8 +294,9 @@ class _RegisterPageState extends State<RegisterPage>
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
                                   onChanged: (value) {
-                                    final valid =
-                                        _emailRegex.hasMatch(value.trim());
+                                    final valid = _emailRegex.hasMatch(
+                                      value.trim(),
+                                    );
                                     if (valid != _emailValid) {
                                       setState(() => _emailValid = valid);
                                     }
@@ -318,10 +327,11 @@ class _RegisterPageState extends State<RegisterPage>
                                     // Sinkronkan _confirmValid saat password berubah
                                     final confirmNowValid =
                                         _confirmController.text.isNotEmpty &&
-                                            _confirmController.text == value;
+                                        _confirmController.text == value;
                                     if (confirmNowValid != _confirmValid) {
                                       setState(
-                                          () => _confirmValid = confirmNowValid);
+                                        () => _confirmValid = confirmNowValid,
+                                      );
                                     }
                                   },
                                 ),
@@ -336,7 +346,8 @@ class _RegisterPageState extends State<RegisterPage>
                                   enabled: !isLoading,
                                   textInputAction: TextInputAction.done,
                                   onChanged: (value) {
-                                    final valid = value.isNotEmpty &&
+                                    final valid =
+                                        value.isNotEmpty &&
                                         value == _passwordController.text;
                                     if (valid != _confirmValid) {
                                       setState(() => _confirmValid = valid);
@@ -382,9 +393,9 @@ class _RegisterPageState extends State<RegisterPage>
                           const SizedBox(height: AppSpacing.lg),
                           GoogleAuthButton(
                             isLoading: isLoading,
-                            onPressed: () => context
-                                .read<AuthBloc>()
-                                .add(const GoogleSignInRequested()),
+                            onPressed: () => context.read<AuthBloc>().add(
+                              const GoogleSignInRequested(),
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.xl),
                           Semantics(
@@ -398,14 +409,16 @@ class _RegisterPageState extends State<RegisterPage>
                               style: TextButton.styleFrom(
                                 minimumSize: const Size.fromHeight(44),
                                 padding: const EdgeInsets.symmetric(
-                                    vertical: AppSpacing.sm),
+                                  vertical: AppSpacing.sm,
+                                ),
                               ),
                               child: RichText(
                                 textAlign: TextAlign.center,
                                 text: TextSpan(
                                   text: l10n.authHasAccount,
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: textSoftColor),
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: textSoftColor,
+                                  ),
                                   children: [
                                     TextSpan(
                                       text: l10n.authSignInLink,

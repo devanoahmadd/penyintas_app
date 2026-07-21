@@ -12,7 +12,8 @@ import 'package:penyintas_app/features/report/domain/entities/report_entity.dart
 
 class MockReportLocalDatasource extends Mock implements ReportLocalDatasource {}
 
-class MockReportRemoteDatasource extends Mock implements ReportRemoteDatasource {}
+class MockReportRemoteDatasource extends Mock
+    implements ReportRemoteDatasource {}
 
 void main() {
   late ReportRepositoryImpl repo;
@@ -55,8 +56,9 @@ void main() {
 
   group('getMonthlyReport', () {
     test('returns Right(report) from local datasource on success', () async {
-      when(() => mockLocal.getMonthlyReport(tMonth))
-          .thenAnswer((_) async => tReport);
+      when(
+        () => mockLocal.getMonthlyReport(tMonth),
+      ).thenAnswer((_) async => tReport);
 
       final result = await repo.getMonthlyReport(tMonth);
 
@@ -64,8 +66,9 @@ void main() {
     });
 
     test('returns Left(CacheFailure) when local datasource throws', () async {
-      when(() => mockLocal.getMonthlyReport(tMonth))
-          .thenThrow(Exception('db error'));
+      when(
+        () => mockLocal.getMonthlyReport(tMonth),
+      ).thenThrow(Exception('db error'));
 
       final result = await repo.getMonthlyReport(tMonth);
 
@@ -78,40 +81,44 @@ void main() {
   });
 
   group('getAiInsights', () {
-    test('returns Right((insights, savingTip)) from remote datasource on success',
-        () async {
-      await testDb.into(testDb.appSettings).insert(
-            AppSettingsCompanion.insert(id: const Value(1)),
-          );
+    test(
+      'returns Right((insights, savingTip)) from remote datasource on success',
+      () async {
+        await testDb
+            .into(testDb.appSettings)
+            .insert(AppSettingsCompanion.insert(id: const Value(1)));
 
-      when(() => mockRemote.getAiInsights(
+        when(
+          () => mockRemote.getAiInsights(
             reportData: any(named: 'reportData'),
             settingsData: any(named: 'settingsData'),
-          )).thenAnswer(
-        (_) async => (['insight1', 'insight2', 'insight3'], 'Tip hemat bulan ini.'),
-      );
+          ),
+        ).thenAnswer(
+          (_) async =>
+              (['insight1', 'insight2', 'insight3'], 'Tip hemat bulan ini.'),
+        );
 
-      final result = await repo.getAiInsights(tReport);
+        final result = await repo.getAiInsights(tReport);
 
-      expect(result.isRight(), isTrue);
-      result.fold(
-        (_) => fail('Expected Right'),
-        (tuple) {
+        expect(result.isRight(), isTrue);
+        result.fold((_) => fail('Expected Right'), (tuple) {
           expect(tuple.$1, ['insight1', 'insight2', 'insight3']);
           expect(tuple.$2, 'Tip hemat bulan ini.');
-        },
-      );
-    });
+        });
+      },
+    );
 
     test('returns Left(ServerFailure) when remote datasource throws', () async {
-      await testDb.into(testDb.appSettings).insert(
-            AppSettingsCompanion.insert(id: const Value(1)),
-          );
+      await testDb
+          .into(testDb.appSettings)
+          .insert(AppSettingsCompanion.insert(id: const Value(1)));
 
-      when(() => mockRemote.getAiInsights(
-            reportData: any(named: 'reportData'),
-            settingsData: any(named: 'settingsData'),
-          )).thenThrow(Exception('network error'));
+      when(
+        () => mockRemote.getAiInsights(
+          reportData: any(named: 'reportData'),
+          settingsData: any(named: 'settingsData'),
+        ),
+      ).thenThrow(Exception('network error'));
 
       final result = await repo.getAiInsights(tReport);
 

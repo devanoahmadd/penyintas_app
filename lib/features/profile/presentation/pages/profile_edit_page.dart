@@ -66,7 +66,8 @@ class _ProfileEditView extends StatelessWidget {
         // • baru tersimpan (saved flip true)
         // • ada error baru DAN draft tidak null (tetap di halaman, tampil SnackBar)
         final savedFlip = !prev.saved && curr.saved;
-        final newError = curr.error != null &&
+        final newError =
+            curr.error != null &&
             curr.error != prev.error &&
             curr.draft != null;
         return savedFlip || newError;
@@ -137,9 +138,7 @@ class _ProfileEditView extends StatelessWidget {
                 tooltip: loc.btnBack,
               ),
             ),
-            body: SafeArea(
-              child: _buildBody(context, state, loc, isDark),
-            ),
+            body: SafeArea(child: _buildBody(context, state, loc, isDark)),
           ),
         );
       },
@@ -154,11 +153,7 @@ class _ProfileEditView extends StatelessWidget {
   ) {
     // Loading terpusat
     if (state.loading) {
-      return Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-        ),
-      );
+      return Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     // H1: load gagal → panel error (TANPA tombol Simpan)
@@ -217,11 +212,7 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppColors.warn,
-            ),
+            Icon(Icons.error_outline, size: 48, color: AppColors.warn),
             const SizedBox(height: AppSpacing.lg),
             Text(
               loc.profileLoadError,
@@ -243,9 +234,7 @@ class _ErrorPanel extends StatelessWidget {
                 ),
                 child: Text(
                   loc.profileErrorRetry,
-                  style: AppTextStyles.label.copyWith(
-                    color: AppColors.primary,
-                  ),
+                  style: AppTextStyles.label.copyWith(color: AppColors.primary),
                 ),
               ),
             ),
@@ -276,7 +265,9 @@ class _FormBody extends StatelessWidget {
     final draft = state.draft!;
     final textMain = isDark ? AppColors.textDark : AppColors.textLight;
     final textMuted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceAlt = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
@@ -350,7 +341,8 @@ class _FormBody extends StatelessWidget {
 
           // ── Seksi: Zona waktu ───────────────────────────────────────
           _TimezoneRow(
-            tzLabel: sl<TimezoneResolver>().labelForIana(draft.timezone) ??
+            tzLabel:
+                sl<TimezoneResolver>().labelForIana(draft.timezone) ??
                 draft.timezone,
             isDark: isDark,
             surface: surface,
@@ -394,10 +386,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: AppTextStyles.label.copyWith(color: textMuted),
-    );
+    return Text(label, style: AppTextStyles.label.copyWith(color: textMuted));
   }
 }
 
@@ -690,7 +679,6 @@ class _TimezoneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -800,9 +788,9 @@ class _PerantauSection extends StatelessWidget {
                         onTap: () async {
                           final result = await showCountryPicker(context);
                           if (result != null && context.mounted) {
-                            context
-                                .read<ProfileEditCubit>()
-                                .setHomeCountry(result);
+                            context.read<ProfileEditCubit>().setHomeCountry(
+                              result,
+                            );
                           }
                         },
                       ),
@@ -829,9 +817,9 @@ class _PerantauSection extends StatelessWidget {
                           );
                           if (result != null && context.mounted) {
                             if (result is String) {
-                              context
-                                  .read<ProfileEditCubit>()
-                                  .setHomeCity(result);
+                              context.read<ProfileEditCubit>().setHomeCity(
+                                result,
+                              );
                             }
                             // TimezonePick dari kota asal diabaikan (hanya kota)
                           }
@@ -884,44 +872,42 @@ class _PickerButton extends StatelessWidget {
             border: Border.all(color: border),
           ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 52), // hit target ≥ 48dp
+            constraints: const BoxConstraints(
+              minHeight: 52,
+            ), // hit target ≥ 48dp
             child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sublabel,
-                        style: AppTextStyles.caption.copyWith(
-                          color: textMuted,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          sublabel,
+                          style: AppTextStyles.caption.copyWith(
+                            color: textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        label,
-                        style: AppTextStyles.body.copyWith(color: textMain),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          label,
+                          style: AppTextStyles.body.copyWith(color: textMain),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Icon(
-                  Icons.expand_more,
-                  size: 20,
-                  color: textMuted,
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(Icons.expand_more, size: 20, color: textMuted),
+                ],
+              ),
             ),
-          ),
           ),
         ),
       ),

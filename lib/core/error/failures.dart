@@ -21,8 +21,9 @@ class AuthFailure extends Failure {
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure(
-      [super.message = 'Tidak ada koneksi. Data tersimpan lokal.']);
+  const NetworkFailure([
+    super.message = 'Tidak ada koneksi. Data tersimpan lokal.',
+  ]);
 }
 
 class ValidationFailure extends Failure {
@@ -30,5 +31,7 @@ class ValidationFailure extends Failure {
 }
 
 class UnknownFailure extends Failure {
-  const UnknownFailure([super.message = 'Terjadi kesalahan yang tidak diketahui.']);
+  const UnknownFailure([
+    super.message = 'Terjadi kesalahan yang tidak diketahui.',
+  ]);
 }

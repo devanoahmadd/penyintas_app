@@ -37,17 +37,17 @@ class DashboardEntity extends Equatable {
 
   @override
   List<Object> get props => [
-        dailyBudget,
-        spentToday,
-        remainingToday,
-        totalMonthlyBudget,
-        totalSpentThisMonth,
-        totalRemaining,
-        daysToLive,
-        remainingDays,
-        avgDailySpend,
-        status,
-        todayTransactions, // lastUpdated sengaja tidak di-include — bukan equality signal
-        emergencyFundMonthly,
-      ];
+    dailyBudget,
+    spentToday,
+    remainingToday,
+    totalMonthlyBudget,
+    totalSpentThisMonth,
+    totalRemaining,
+    daysToLive,
+    remainingDays,
+    avgDailySpend,
+    status,
+    todayTransactions, // lastUpdated sengaja tidak di-include — bukan equality signal
+    emergencyFundMonthly,
+  ];
 }

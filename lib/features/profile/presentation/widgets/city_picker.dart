@@ -34,8 +34,7 @@ class TimezonePick {
   final String iana;
 
   @override
-  bool operator ==(Object other) =>
-      other is TimezonePick && other.iana == iana;
+  bool operator ==(Object other) => other is TimezonePick && other.iana == iana;
 
   @override
   int get hashCode => iana.hashCode;
@@ -77,11 +76,7 @@ Future<dynamic> showCityPicker(
 /// Baris terakhir SELALU escape-hatch [Key('city_pick_tz_direct')].
 /// Jika tidak ada kota → hanya escape-hatch yang ditampilkan.
 class CityPicker extends StatefulWidget {
-  const CityPicker({
-    super.key,
-    required this.country,
-    required this.resolver,
-  });
+  const CityPicker({super.key, required this.country, required this.resolver});
 
   final String country;
   final TimezoneResolver resolver;
@@ -125,8 +120,9 @@ class _CityPickerState extends State<CityPicker> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg =
-        isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final sheetBg = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
@@ -201,13 +197,14 @@ class _CityPickerState extends State<CityPicker> {
                   style: AppTextStyles.body.copyWith(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Cari kota...',
-                    hintStyle:
-                        AppTextStyles.bodySmall.copyWith(color: mutedColor),
-                    prefixIcon:
-                        Icon(Icons.search, color: mutedColor, size: 20),
+                    hintStyle: AppTextStyles.bodySmall.copyWith(
+                      color: mutedColor,
+                    ),
+                    prefixIcon: Icon(Icons.search, color: mutedColor, size: 20),
                     filled: true,
-                    fillColor:
-                        isDark ? AppColors.cardDark : AppColors.cardLight,
+                    fillColor: isDark
+                        ? AppColors.cardDark
+                        : AppColors.cardLight,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
@@ -223,7 +220,9 @@ class _CityPickerState extends State<CityPicker> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       borderSide: const BorderSide(
-                          color: AppColors.primary, width: 1.5),
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -250,8 +249,9 @@ class _CityPickerState extends State<CityPicker> {
                       ),
                       child: Text(
                         'Kota belum tersedia untuk negara ini.\nPilih zona waktu langsung di bawah.',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: mutedColor),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: mutedColor,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -263,8 +263,7 @@ class _CityPickerState extends State<CityPicker> {
                         padding: const EdgeInsets.all(AppSpacing.xl),
                         child: Text(
                           'Kota tidak ditemukan.',
-                          style:
-                              AppTextStyles.body.copyWith(color: mutedColor),
+                          style: AppTextStyles.body.copyWith(color: mutedColor),
                           textAlign: TextAlign.center,
                         ),
                       )
@@ -275,8 +274,7 @@ class _CityPickerState extends State<CityPicker> {
                           textColor: textColor,
                           textSoft: textSoft,
                           borderColor: borderColor,
-                          onTap: () =>
-                              Navigator.of(context).pop(city.city),
+                          onTap: () => Navigator.of(context).pop(city.city),
                         ),
                       ),
                   ],
@@ -341,10 +339,7 @@ class _CityRow extends StatelessWidget {
         horizontal: AppSpacing.xl,
         vertical: AppSpacing.xs,
       ),
-      title: Text(
-        label,
-        style: AppTextStyles.body.copyWith(color: textColor),
-      ),
+      title: Text(label, style: AppTextStyles.body.copyWith(color: textColor)),
       trailing: Icon(Icons.chevron_right, color: textSoft, size: 18),
     );
   }
@@ -435,9 +430,11 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
         _filtered = List.of(_allZones);
       } else {
         _filtered = _allZones
-            .where((z) =>
-                z.label.toLowerCase().contains(query) ||
-                z.iana.toLowerCase().contains(query))
+            .where(
+              (z) =>
+                  z.label.toLowerCase().contains(query) ||
+                  z.iana.toLowerCase().contains(query),
+            )
             .toList();
       }
     });
@@ -452,8 +449,9 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg =
-        isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final sheetBg = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
@@ -524,13 +522,12 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
                 style: AppTextStyles.body.copyWith(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Cari zona waktu...',
-                  hintStyle:
-                      AppTextStyles.bodySmall.copyWith(color: mutedColor),
-                  prefixIcon:
-                      Icon(Icons.search, color: mutedColor, size: 20),
+                  hintStyle: AppTextStyles.bodySmall.copyWith(
+                    color: mutedColor,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: mutedColor, size: 20),
                   filled: true,
-                  fillColor:
-                      isDark ? AppColors.cardDark : AppColors.cardLight,
+                  fillColor: isDark ? AppColors.cardDark : AppColors.cardLight,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.md,
@@ -546,7 +543,9 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: const BorderSide(
-                        color: AppColors.primary, width: 1.5),
+                      color: AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -562,8 +561,7 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
                         padding: const EdgeInsets.all(AppSpacing.xl),
                         child: Text(
                           'Zona waktu tidak ditemukan.',
-                          style:
-                              AppTextStyles.body.copyWith(color: mutedColor),
+                          style: AppTextStyles.body.copyWith(color: mutedColor),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -571,8 +569,7 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
                   : ListView.builder(
                       itemCount: _filtered.length,
                       itemExtent: 56,
-                      padding:
-                          const EdgeInsets.only(bottom: AppSpacing.xxxl),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
                       itemBuilder: (ctx, i) {
                         final zone = _filtered[i];
                         return ListTile(
@@ -583,18 +580,24 @@ class _TzDirectSheetState extends State<_TzDirectSheet> {
                           ),
                           title: Text(
                             zone.label,
-                            style: AppTextStyles.body
-                                .copyWith(color: textColor),
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
                           ),
                           subtitle: Text(
                             zone.iana,
-                            style: AppTextStyles.caption
-                                .copyWith(color: mutedColor),
+                            style: AppTextStyles.caption.copyWith(
+                              color: mutedColor,
+                            ),
                           ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: textSoft, size: 18),
-                          onTap: () => Navigator.of(context)
-                              .pop(TimezonePick(zone.iana)),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: textSoft,
+                            size: 18,
+                          ),
+                          onTap: () => Navigator.of(
+                            context,
+                          ).pop(TimezonePick(zone.iana)),
                         );
                       },
                     ),

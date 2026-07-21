@@ -54,8 +54,9 @@ void main() {
     );
 
     // AI insight returns Left by default so it doesn't interfere
-    when(() => mockGetAiInsight(any()))
-        .thenAnswer((_) async => Left(ServerFailure()));
+    when(
+      () => mockGetAiInsight(any()),
+    ).thenAnswer((_) async => Left(ServerFailure()));
   });
 
   tearDown(() => bloc.close());
@@ -67,8 +68,9 @@ void main() {
   blocTest<ReportBloc, ReportState>(
     'LoadReport emits [Loading, Loaded] on success',
     build: () {
-      when(() => mockGetMonthlyReport(tMonth))
-          .thenAnswer((_) async => Right(tReport));
+      when(
+        () => mockGetMonthlyReport(tMonth),
+      ).thenAnswer((_) async => Right(tReport));
       return bloc;
     },
     act: (b) => b.add(LoadReport(tMonth)),
@@ -77,7 +79,10 @@ void main() {
       const ReportLoading(),
       ReportLoaded(report: tReport, selectedMonth: tMonth),
       ReportLoaded(
-          report: tReport, selectedMonth: tMonth, isLoadingInsight: true),
+        report: tReport,
+        selectedMonth: tMonth,
+        isLoadingInsight: true,
+      ),
       ReportLoaded(report: tReport, selectedMonth: tMonth),
     ],
   );
@@ -85,22 +90,21 @@ void main() {
   blocTest<ReportBloc, ReportState>(
     'LoadReport emits [Loading, Error] on failure',
     build: () {
-      when(() => mockGetMonthlyReport(tMonth))
-          .thenAnswer((_) async => const Left(CacheFailure('db error')));
+      when(
+        () => mockGetMonthlyReport(tMonth),
+      ).thenAnswer((_) async => const Left(CacheFailure('db error')));
       return bloc;
     },
     act: (b) => b.add(LoadReport(tMonth)),
-    expect: () => [
-      const ReportLoading(),
-      const ReportError('db error'),
-    ],
+    expect: () => [const ReportLoading(), const ReportError('db error')],
   );
 
   blocTest<ReportBloc, ReportState>(
     'LoadAiInsight updates aiInsights in ReportLoaded',
     build: () {
-      when(() => mockGetMonthlyReport(tMonth))
-          .thenAnswer((_) async => Right(tReport));
+      when(
+        () => mockGetMonthlyReport(tMonth),
+      ).thenAnswer((_) async => Right(tReport));
       when(() => mockGetAiInsight(any())).thenAnswer(
         (_) async => Right((['insight1', 'insight2', 'insight3'], null)),
       );
@@ -118,7 +122,8 @@ void main() {
       ),
       ReportLoaded(
         report: tReport.copyWith(
-            aiInsights: ['insight1', 'insight2', 'insight3']),
+          aiInsights: ['insight1', 'insight2', 'insight3'],
+        ),
         selectedMonth: tMonth,
       ),
     ],
@@ -127,8 +132,9 @@ void main() {
   blocTest<ReportBloc, ReportState>(
     'PreviousMonth dispatches LoadReport for previous month',
     build: () {
-      when(() => mockGetMonthlyReport(any()))
-          .thenAnswer((_) async => Right(tReport));
+      when(
+        () => mockGetMonthlyReport(any()),
+      ).thenAnswer((_) async => Right(tReport));
       return bloc;
     },
     seed: () => ReportLoaded(report: tReport, selectedMonth: tMonth),
@@ -142,10 +148,7 @@ void main() {
   blocTest<ReportBloc, ReportState>(
     'NextMonth does not dispatch when selectedMonth is current month',
     build: () => bloc,
-    seed: () => ReportLoaded(
-      report: tReport,
-      selectedMonth: DateTime.now(),
-    ),
+    seed: () => ReportLoaded(report: tReport, selectedMonth: DateTime.now()),
     act: (b) => b.add(const NextMonth()),
     expect: () => [],
   );

@@ -11,17 +11,19 @@ class EditTransactionBloc
   EditTransactionBloc({
     required UpdateTransactionUseCase updateTransaction,
     required TransactionEntity initial,
-  })  : _updateTransaction = updateTransaction,
-        super(EditTransactionInProgress(
-          originalId: initial.id,
-          originalCreatedAt: initial.createdAt,
-          amount: initial.amount,
-          category: initial.category,
-          type: initial.type,
-          note: initial.note ?? '',
-          date: initial.date,
-          selectedGoalId: initial.goalId,
-        )) {
+  }) : _updateTransaction = updateTransaction,
+       super(
+         EditTransactionInProgress(
+           originalId: initial.id,
+           originalCreatedAt: initial.createdAt,
+           amount: initial.amount,
+           category: initial.category,
+           type: initial.type,
+           note: initial.note ?? '',
+           date: initial.date,
+           selectedGoalId: initial.goalId,
+         ),
+       ) {
     on<EditAmountChanged>(_onAmountChanged);
     on<EditCategorySelected>(_onCategorySelected);
     on<EditTypeSet>(_onTypeSet);
@@ -34,17 +36,22 @@ class EditTransactionBloc
   final UpdateTransactionUseCase _updateTransaction;
 
   void _onAmountChanged(
-      EditAmountChanged event, Emitter<EditTransactionState> emit) {
+    EditAmountChanged event,
+    Emitter<EditTransactionState> emit,
+  ) {
     if (state is EditTransactionInProgress) {
       emit((state as EditTransactionInProgress).copyWith(amount: event.amount));
     }
   }
 
   void _onCategorySelected(
-      EditCategorySelected event, Emitter<EditTransactionState> emit) {
+    EditCategorySelected event,
+    Emitter<EditTransactionState> emit,
+  ) {
     if (state is EditTransactionInProgress) {
-      emit((state as EditTransactionInProgress)
-          .copyWith(category: event.category));
+      emit(
+        (state as EditTransactionInProgress).copyWith(category: event.category),
+      );
     }
   }
 
@@ -57,29 +64,40 @@ class EditTransactionBloc
   }
 
   void _onNoteChanged(
-      EditNoteChanged event, Emitter<EditTransactionState> emit) {
+    EditNoteChanged event,
+    Emitter<EditTransactionState> emit,
+  ) {
     if (state is EditTransactionInProgress) {
       emit((state as EditTransactionInProgress).copyWith(note: event.note));
     }
   }
 
   void _onDateChanged(
-      EditDateChanged event, Emitter<EditTransactionState> emit) {
+    EditDateChanged event,
+    Emitter<EditTransactionState> emit,
+  ) {
     if (state is EditTransactionInProgress) {
       emit((state as EditTransactionInProgress).copyWith(date: event.date));
     }
   }
 
   void _onGoalSelected(
-      EditGoalSelected event, Emitter<EditTransactionState> emit) {
+    EditGoalSelected event,
+    Emitter<EditTransactionState> emit,
+  ) {
     if (state is EditTransactionInProgress) {
-      emit((state as EditTransactionInProgress)
-          .copyWith(selectedGoalId: event.goalId));
+      emit(
+        (state as EditTransactionInProgress).copyWith(
+          selectedGoalId: event.goalId,
+        ),
+      );
     }
   }
 
   Future<void> _onSubmit(
-      SubmitEdit event, Emitter<EditTransactionState> emit) async {
+    SubmitEdit event,
+    Emitter<EditTransactionState> emit,
+  ) async {
     if (state is! EditTransactionInProgress) return;
     final s = state as EditTransactionInProgress;
     if (!s.isValid) return;

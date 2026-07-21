@@ -4,14 +4,9 @@ final class SettingsState extends Equatable {
   final ThemeMode themeMode;
   final String locale;
 
-  const SettingsState({
-    required this.themeMode,
-    required this.locale,
-  });
+  const SettingsState({required this.themeMode, required this.locale});
 
-  const SettingsState.initial()
-      : themeMode = ThemeMode.system,
-        locale = 'id';
+  const SettingsState.initial() : themeMode = ThemeMode.system, locale = 'id';
 
   SettingsState copyWith({ThemeMode? themeMode, String? locale}) {
     return SettingsState(

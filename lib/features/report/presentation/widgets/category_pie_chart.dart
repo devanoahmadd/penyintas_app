@@ -7,10 +7,7 @@ import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 
 class CategoryPieChart extends StatefulWidget {
-  const CategoryPieChart({
-    super.key,
-    required this.breakdown,
-  });
+  const CategoryPieChart({super.key, required this.breakdown});
 
   final Map<String, int> breakdown;
 
@@ -54,18 +51,19 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
           child: PieChart(
             PieChartData(
               pieTouchData: PieTouchData(
-                touchCallback: (FlTouchEvent event, PieTouchResponse? response) {
-                  setState(() {
-                    if (!event.isInterestedForInteractions ||
-                        response == null ||
-                        response.touchedSection == null) {
-                      _touchedIndex = -1;
-                      return;
-                    }
-                    _touchedIndex =
-                        response.touchedSection!.touchedSectionIndex;
-                  });
-                },
+                touchCallback:
+                    (FlTouchEvent event, PieTouchResponse? response) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            response == null ||
+                            response.touchedSection == null) {
+                          _touchedIndex = -1;
+                          return;
+                        }
+                        _touchedIndex =
+                            response.touchedSection!.touchedSectionIndex;
+                      });
+                    },
               ),
               sections: entries.asMap().entries.map((entry) {
                 final idx = entry.key;
@@ -77,9 +75,7 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
                   color: color,
                   radius: isTouched ? 70 : 60,
                   showTitle: isTouched,
-                  title: isTouched
-                      ? '${e.key}\n${formatRupiah(e.value)}'
-                      : '',
+                  title: isTouched ? '${e.key}\n${formatRupiah(e.value)}' : '',
                   titleStyle: AppTextStyles.caption.copyWith(
                     color: Colors.white,
                     fontSize: 11,

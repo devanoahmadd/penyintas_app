@@ -20,8 +20,9 @@ class PreferencesLocalDatasourceImpl implements PreferencesLocalDatasource {
 
   @override
   Future<PreferencesEntity?> read() async {
-    final row = await (_db.select(_db.preferences)..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.preferences,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     if (row == null) return null;
     return PreferencesEntity(
       timezone: row.timezone,
@@ -42,36 +43,42 @@ class PreferencesLocalDatasourceImpl implements PreferencesLocalDatasource {
 
   @override
   Future<void> write(PreferencesEntity p) async {
-    await _db.into(_db.preferences).insertOnConflictUpdate(PreferencesCompanion(
-          id: const Value(1),
-          timezone: Value(p.timezone),
-          baseCurrency: Value(p.baseCurrency),
-          homeCurrency: Value(p.homeCurrency),
-          language: Value(p.language),
-          displayName: Value(p.displayName),
-          status: Value(p.status),
-          currentCountry: Value(p.currentCountry),
-          currentCity: Value(p.currentCity),
-          homeCountry: Value(p.homeCountry),
-          homeCity: Value(p.homeCity),
-          isPerantau: Value(p.isPerantau),
-          profileCompleted: Value(p.profileCompleted),
-          schemaVersion: Value(p.schemaVersion),
-          // T-1: tiap tulis lokal = "dirty" sampai mirror sukses (markMirrored).
-          lastSyncedAtMs: const Value<int?>(null),
-        ));
+    await _db
+        .into(_db.preferences)
+        .insertOnConflictUpdate(
+          PreferencesCompanion(
+            id: const Value(1),
+            timezone: Value(p.timezone),
+            baseCurrency: Value(p.baseCurrency),
+            homeCurrency: Value(p.homeCurrency),
+            language: Value(p.language),
+            displayName: Value(p.displayName),
+            status: Value(p.status),
+            currentCountry: Value(p.currentCountry),
+            currentCity: Value(p.currentCity),
+            homeCountry: Value(p.homeCountry),
+            homeCity: Value(p.homeCity),
+            isPerantau: Value(p.isPerantau),
+            profileCompleted: Value(p.profileCompleted),
+            schemaVersion: Value(p.schemaVersion),
+            // T-1: tiap tulis lokal = "dirty" sampai mirror sukses (markMirrored).
+            lastSyncedAtMs: const Value<int?>(null),
+          ),
+        );
   }
 
   @override
   Future<bool> hasPendingMirror() async {
-    final row = await (_db.select(_db.preferences)..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.preferences,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     return row == null || row.lastSyncedAtMs == null;
   }
 
   @override
   Future<void> markMirrored(int atMs) async {
-    await (_db.update(_db.preferences)..where((t) => t.id.equals(1)))
-        .write(PreferencesCompanion(lastSyncedAtMs: Value(atMs)));
+    await (_db.update(_db.preferences)..where((t) => t.id.equals(1))).write(
+      PreferencesCompanion(lastSyncedAtMs: Value(atMs)),
+    );
   }
 }

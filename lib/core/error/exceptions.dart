@@ -15,8 +15,7 @@ class AuthException implements Exception {
 
 class NetworkException implements Exception {
   final String message;
-  const NetworkException(
-      [this.message = 'Tidak ada koneksi internet.']);
+  const NetworkException([this.message = 'Tidak ada koneksi internet.']);
 }
 
 class ValidationException implements Exception {

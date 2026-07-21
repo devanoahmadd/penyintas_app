@@ -18,8 +18,9 @@ void main() {
   });
 
   test('should call repository.wipeLocalData and return Right(unit)', () async {
-    when(() => mockRepo.wipeLocalData())
-        .thenAnswer((_) async => const Right(unit));
+    when(
+      () => mockRepo.wipeLocalData(),
+    ).thenAnswer((_) async => const Right(unit));
 
     final result = await useCase(const NoParams());
 

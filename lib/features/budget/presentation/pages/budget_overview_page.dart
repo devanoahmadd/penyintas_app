@@ -79,17 +79,16 @@ class BudgetOverviewPage extends StatelessWidget {
         onSave: (entity) =>
             context.read<BudgetLimitsBloc>().add(SaveBudgetLimit(entity)),
         onDelete: existing != null
-            ? (id, catName) => context
-                .read<BudgetLimitsBloc>()
-                .add(DeleteBudgetLimit(id: id, categoryName: catName))
+            ? (id, catName) => context.read<BudgetLimitsBloc>().add(
+                DeleteBudgetLimit(id: id, categoryName: catName),
+              )
             : null,
       ),
     );
   }
 
   // ── Category picker sheet — icon grid ────────────────────────────────────
-  void _showAddPicker(
-      BuildContext context, List<CategoryEntity> categories) {
+  void _showAddPicker(BuildContext context, List<CategoryEntity> categories) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final hintColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -183,9 +182,7 @@ class BudgetOverviewPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Inline header ─────────────────────────────────────────
-              _PageHeader(
-                onSettingsTap: () => _openSettings(context),
-              ),
+              _PageHeader(onSettingsTap: () => _openSettings(context)),
               // ── Content ───────────────────────────────────────────────
               Expanded(
                 child: BlocBuilder<BudgetLimitsBloc, BudgetLimitsState>(
@@ -198,8 +195,7 @@ class BudgetOverviewPage extends StatelessWidget {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Text(state.message,
-                              style: AppTextStyles.body),
+                          child: Text(state.message, style: AppTextStyles.body),
                         ),
                       );
                     }
@@ -211,10 +207,10 @@ class BudgetOverviewPage extends StatelessWidget {
                         onAddLimit: (cat) => _showLimitSheet(context, cat),
                         onEditLimit: (cat, existing) =>
                             _showLimitSheet(context, cat, existing: existing),
-                        onDeleteLimit: (id, catName) => context
-                            .read<BudgetLimitsBloc>()
-                            .add(DeleteBudgetLimit(
-                                id: id, categoryName: catName)),
+                        onDeleteLimit: (id, catName) =>
+                            context.read<BudgetLimitsBloc>().add(
+                              DeleteBudgetLimit(id: id, categoryName: catName),
+                            ),
                         onToggleLimit: (id, enabled) => context
                             .read<BudgetLimitsBloc>()
                             .add(ToggleBudgetLimit(id: id, isEnabled: enabled)),
@@ -280,9 +276,9 @@ class _PageHeader extends StatelessWidget {
                   if (context.mounted) {
                     // force: daftar/limitabilitas kategori bisa berubah —
                     // bukan perubahan transaksi, jadi perlu refresh eksplisit.
-                    context
-                        .read<BudgetLimitsBloc>()
-                        .add(const LoadBudgetLimits(force: true));
+                    context.read<BudgetLimitsBloc>().add(
+                      const LoadBudgetLimits(force: true),
+                    );
                   }
                 },
               ),
@@ -326,13 +322,12 @@ class _LoadedBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    final withLimit =
-        overview.categoryItems.where((i) => i.hasLimit).toList();
-    final withoutLimit =
-        overview.categoryItems.where((i) => !i.hasLimit).toList();
+    final withLimit = overview.categoryItems.where((i) => i.hasLimit).toList();
+    final withoutLimit = overview.categoryItems
+        .where((i) => !i.hasLimit)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -367,11 +362,14 @@ class _LoadedBody extends StatelessWidget {
         else
           ...withLimit.map((item) {
             // Guard: skip item tanpa matching entity (state desync sesaat, fix #9).
-            final matches =
-                limits.where((l) => l.category == item.category.slug);
+            final matches = limits.where(
+              (l) => l.category == item.category.slug,
+            );
             if (matches.isEmpty) {
-              assert(false,
-                  'BudgetOverviewPage: category ${item.category.slug} in overview but not in limits — state desync');
+              assert(
+                false,
+                'BudgetOverviewPage: category ${item.category.slug} in overview but not in limits — state desync',
+              );
               return const SizedBox.shrink();
             }
             final entity = matches.first;
@@ -379,8 +377,7 @@ class _LoadedBody extends StatelessWidget {
               item: item,
               isEnabled: entity.isEnabled,
               onEdit: () => onEditLimit(item.category, entity),
-              onDelete: () =>
-                  onDeleteLimit(entity.id, entity.category),
+              onDelete: () => onDeleteLimit(entity.id, entity.category),
               onToggle: (v) => onToggleLimit(entity.id, v),
             );
           }),
@@ -462,10 +459,7 @@ class _CategoryGridTile extends StatelessWidget {
 // ── Add tile ─────────────────────────────────────────────────────────────────
 
 class _AddLimitTile extends StatelessWidget {
-  const _AddLimitTile({
-    required this.borderColor,
-    required this.onTap,
-  });
+  const _AddLimitTile({required this.borderColor, required this.onTap});
 
   final Color borderColor;
   final VoidCallback onTap;
@@ -492,8 +486,7 @@ class _AddLimitTile extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'Tambah batas kategori',
-                style: AppTextStyles.label
-                    .copyWith(color: AppColors.primary),
+                style: AppTextStyles.label.copyWith(color: AppColors.primary),
               ),
             ],
           ),

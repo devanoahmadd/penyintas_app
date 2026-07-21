@@ -16,8 +16,8 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
   const NotificationRemoteDatasourceImpl({
     required FirebaseMessaging messaging,
     required FirebaseFirestore firestore,
-  })  : _messaging = messaging,
-        _firestore = firestore;
+  }) : _messaging = messaging,
+       _firestore = firestore;
 
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _firestore;
@@ -30,8 +30,9 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
 
   @override
   Future<void> registerToken(String uid, String token) async {
-    final platform =
-        defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+    final platform = defaultTargetPlatform == TargetPlatform.iOS
+        ? 'ios'
+        : 'android';
     final tokenRef = _firestore
         .collection('users')
         .doc(uid)
@@ -48,10 +49,10 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
     await tokenRef.set(data, SetOptions(merge: true));
 
     // Dual-write legacy (§G) — agar CF lama yang belum deploy tetap menemukan token.
-    await _firestore.collection('users').doc(uid).set(
-      {'fcmToken': token, 'fcmUpdatedAt': FieldValue.serverTimestamp()},
-      SetOptions(merge: true),
-    );
+    await _firestore.collection('users').doc(uid).set({
+      'fcmToken': token,
+      'fcmUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -89,14 +90,13 @@ class NotificationRemoteDatasourceImpl implements NotificationRemoteDatasource {
   }
 
   @override
-  Future<void> setPushEnabled(String uid, bool enabled) =>
-      _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('settings')
-          .doc('notifications')
-          .set(
-        {'pushEnabled': enabled, 'updatedAt': FieldValue.serverTimestamp()},
-        SetOptions(merge: true),
-      );
+  Future<void> setPushEnabled(String uid, bool enabled) => _firestore
+      .collection('users')
+      .doc(uid)
+      .collection('settings')
+      .doc('notifications')
+      .set({
+        'pushEnabled': enabled,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 }

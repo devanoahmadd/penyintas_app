@@ -6,6 +6,7 @@ import 'package:penyintas_app/features/preferences/data/datasources/preferences_
 import 'package:penyintas_app/features/preferences/domain/entities/preferences_entity.dart';
 
 class _MockAuth extends Mock implements FirebaseAuth {}
+
 class _MockUser extends Mock implements User {}
 
 void main() {
@@ -27,12 +28,18 @@ void main() {
   });
 
   test('mirror() menulis full-doc lalu fetch() membacanya', () async {
-    await ds.mirror(PreferencesEntity.defaults.copyWith(
-      timezone: 'Europe/Moscow', profileCompleted: true,
-    ));
+    await ds.mirror(
+      PreferencesEntity.defaults.copyWith(
+        timezone: 'Europe/Moscow',
+        profileCompleted: true,
+      ),
+    );
     final snap = await firestore
-        .collection('users').doc('u1')
-        .collection('preferences').doc('current').get();
+        .collection('users')
+        .doc('u1')
+        .collection('preferences')
+        .doc('current')
+        .get();
     expect(snap.exists, true);
     expect(snap.data()!['timezone'], 'Europe/Moscow');
     expect(snap.data()!['baseCurrency'], 'IDR');
@@ -41,14 +48,26 @@ void main() {
     expect(got!.profileCompleted, true);
   });
 
-  test('mirror() overwrite penuh (bukan merge) — field lama tak nyangkut', () async {
-    await firestore.collection('users').doc('u1')
-        .collection('preferences').doc('current')
-        .set({'ghostField': 'x', 'timezone': 'Asia/Jakarta'});
-    await ds.mirror(PreferencesEntity.defaults.copyWith(timezone: 'Europe/Moscow'));
-    final snap = await firestore.collection('users').doc('u1')
-        .collection('preferences').doc('current').get();
-    expect(snap.data()!.containsKey('ghostField'), false); // overwrite penuh
-    expect(snap.data()!['timezone'], 'Europe/Moscow');
-  });
+  test(
+    'mirror() overwrite penuh (bukan merge) — field lama tak nyangkut',
+    () async {
+      await firestore
+          .collection('users')
+          .doc('u1')
+          .collection('preferences')
+          .doc('current')
+          .set({'ghostField': 'x', 'timezone': 'Asia/Jakarta'});
+      await ds.mirror(
+        PreferencesEntity.defaults.copyWith(timezone: 'Europe/Moscow'),
+      );
+      final snap = await firestore
+          .collection('users')
+          .doc('u1')
+          .collection('preferences')
+          .doc('current')
+          .get();
+      expect(snap.data()!.containsKey('ghostField'), false); // overwrite penuh
+      expect(snap.data()!['timezone'], 'Europe/Moscow');
+    },
+  );
 }

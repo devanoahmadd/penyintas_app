@@ -6,8 +6,8 @@ class OnboardingGuard {
   OnboardingGuard({
     required OnboardingLocalDataSource onboardingDs,
     required PreferencesRepository prefsRepo,
-  })  : _onboardingDs = onboardingDs,
-        _prefsRepo = prefsRepo;
+  }) : _onboardingDs = onboardingDs,
+       _prefsRepo = prefsRepo;
 
   final OnboardingLocalDataSource _onboardingDs;
   final PreferencesRepository _prefsRepo;
@@ -25,8 +25,9 @@ class OnboardingGuard {
         computed = OnboardingStatus.needsProfile;
       } else {
         final budgetDone = await _onboardingDs.isOnboardingCompleted();
-        computed =
-            budgetDone ? OnboardingStatus.done : OnboardingStatus.needsBudget;
+        computed = budgetDone
+            ? OnboardingStatus.done
+            : OnboardingStatus.needsBudget;
       }
     } catch (_) {
       computed = OnboardingStatus.needsProfile; // fail-safe (A8)

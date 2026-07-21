@@ -15,10 +15,10 @@ class OnboardingDraftCubit extends Cubit<OnboardingDraftState> {
     required LoadPartialOnboardingUseCase loadDraft,
     required SavePartialOnboardingUseCase saveDraft,
     required ClearPartialOnboardingUseCase clearDraft,
-  })  : _load = loadDraft,
-        _save = saveDraft,
-        _clear = clearDraft,
-        super(const OnboardingDraftInitial());
+  }) : _load = loadDraft,
+       _save = saveDraft,
+       _clear = clearDraft,
+       super(const OnboardingDraftInitial());
 
   final LoadPartialOnboardingUseCase _load;
   final SavePartialOnboardingUseCase _save;
@@ -38,13 +38,15 @@ class OnboardingDraftCubit extends Cubit<OnboardingDraftState> {
     required int pct,
     required int payday,
   }) async {
-    await _save(SavePartialParams(
-      step: step,
-      income: income,
-      expenses: expenses,
-      pct: pct,
-      payday: payday,
-    ));
+    await _save(
+      SavePartialParams(
+        step: step,
+        income: income,
+        expenses: expenses,
+        pct: pct,
+        payday: payday,
+      ),
+    );
   }
 
   /// Hapus draft (reset / sukses onboarding). Kegagalan ditelan.

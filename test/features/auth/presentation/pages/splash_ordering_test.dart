@@ -16,7 +16,9 @@ import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
 
 class _MockCoordinator extends Mock implements BootstrapCoordinator {}
-class _FakeAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+
+class _FakeAuthBloc extends MockBloc<AuthEvent, AuthState>
+    implements AuthBloc {}
 
 // CATATAN deviasi brief: `Authenticated` mengambil `UserEntity` (domain), bukan
 // Firebase `User`. Brief verbatim memakai `_FakeUser implements User` → tak compile.
@@ -32,7 +34,8 @@ void main() {
   final sl = GetIt.instance; // sama dgn `sl` injection_container
   late _MockCoordinator coordinator;
   late _FakeAuthBloc authBloc;
-  late Completer<void> syncGate; // gate ensure() agar bisa amati "sebelum navigate"
+  late Completer<void>
+  syncGate; // gate ensure() agar bisa amati "sebelum navigate"
   final order = <String>[];
 
   setUp(() {
@@ -43,7 +46,8 @@ void main() {
 
     when(() => coordinator.ensure()).thenAnswer((_) async {
       order.add('ensure');
-      await syncGate.future; // tahan sampai test melepas → amati "belum navigate"
+      await syncGate
+          .future; // tahan sampai test melepas → amati "belum navigate"
     });
     sl.registerSingleton<BootstrapCoordinator>(coordinator);
     // Task 8: SplashPage kini mengambil pending-route via
@@ -56,35 +60,51 @@ void main() {
     // BlocListener splash tak fire untuk initial-state, hanya transisi.
     whenListen(
       authBloc,
-      Stream<AuthState>.fromIterable([const AuthLoading(), Authenticated(_tUser)]),
+      Stream<AuthState>.fromIterable([
+        const AuthLoading(),
+        Authenticated(_tUser),
+      ]),
       initialState: const AuthLoading(),
     );
   });
   tearDown(() => sl.reset());
 
-  testWidgets('A2/F-D7: navigate ke /dashboard TERTUNDA sampai ensure() selesai', (t) async {
+  testWidgets('A2/F-D7: navigate ke /dashboard TERTUNDA sampai ensure() selesai', (
+    t,
+  ) async {
     final router = GoRouter(
       initialLocation: '/splash',
       routes: [
         GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
-        GoRoute(path: '/dashboard', builder: (_, _) {
-          order.add('nav');
-          return const SizedBox.shrink();
-        }),
+        GoRoute(
+          path: '/dashboard',
+          builder: (_, _) {
+            order.add('nav');
+            return const SizedBox.shrink();
+          },
+        ),
         GoRoute(path: '/login', builder: (_, _) => const SizedBox.shrink()),
       ],
     );
-    await t.pumpWidget(MaterialApp.router(
-      routerConfig: router,
-      builder: (_, child) =>
-          BlocProvider<AuthBloc>.value(value: authBloc, child: child!),
-    ));
+    await t.pumpWidget(
+      MaterialApp.router(
+        routerConfig: router,
+        builder: (_, child) =>
+            BlocProvider<AuthBloc>.value(value: authBloc, child: child!),
+      ),
+    );
 
-    await t.pump(); // proses stream → BlocListener → _syncThenNavigate → await ensure()
-    await t.pump(const Duration(milliseconds: 2600)); // lewati branding gate (2500ms)
+    await t
+        .pump(); // proses stream → BlocListener → _syncThenNavigate → await ensure()
+    await t.pump(
+      const Duration(milliseconds: 2600),
+    ); // lewati branding gate (2500ms)
     expect(order, contains('ensure'));
-    expect(order, isNot(contains('nav')),
-        reason: 'navigate TAK boleh sebelum ensure() selesai (bug d4de2f2)');
+    expect(
+      order,
+      isNot(contains('nav')),
+      reason: 'navigate TAK boleh sebelum ensure() selesai (bug d4de2f2)',
+    );
 
     // DEVIASI brief: `pumpAndSettle()` kembali SEBELUM continuation microtask gate
     // ter-drain di splash nyata (interaksi fake-clock dgn timer RemoteConfig/animasi).
@@ -92,9 +112,14 @@ void main() {
     // ter-flush, lalu pump untuk memproses `context.go('/dashboard')`.
     await t.runAsync(() async {
       syncGate.complete(); // bootstrap selesai
-      await Future<void>.delayed(Duration.zero); // flush continuation `await ensure()`
+      await Future<void>.delayed(
+        Duration.zero,
+      ); // flush continuation `await ensure()`
     });
     await t.pump(); // go_router rebuild → /dashboard
-    expect(order.indexOf('ensure') < order.indexOf('nav'), isTrue); // urutan benar
+    expect(
+      order.indexOf('ensure') < order.indexOf('nav'),
+      isTrue,
+    ); // urutan benar
   });
 }

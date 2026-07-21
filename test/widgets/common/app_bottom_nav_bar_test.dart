@@ -66,16 +66,20 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('widget renders without exception in dark mode', (tester) async {
+    testWidgets('widget renders without exception in dark mode', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(MaterialApp.router(
-        routerConfig: _router(),
-        theme: ThemeData(brightness: Brightness.dark),
-      ));
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: _router(),
+          theme: ThemeData(brightness: Brightness.dark),
+        ),
+      );
       await tester.pump();
 
       expect(tester.takeException(), isNull);

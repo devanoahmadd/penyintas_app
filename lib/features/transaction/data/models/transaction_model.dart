@@ -30,60 +30,60 @@ class TransactionModel {
   final int? goalId;
 
   TransactionEntity toEntity() => TransactionEntity(
-        id: id,
-        amount: amount,
-        category: category,
-        type: type,
-        note: note,
-        date: date,
-        isFixed: isFixed,
-        isSynced: isSynced,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        goalId: goalId,
-      );
+    id: id,
+    amount: amount,
+    category: category,
+    type: type,
+    note: note,
+    date: date,
+    isFixed: isFixed,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    goalId: goalId,
+  );
 
   static TransactionModel fromEntity(TransactionEntity e) => TransactionModel(
-        id: e.id,
-        amount: e.amount,
-        category: e.category,
-        type: e.type,
-        note: e.note,
-        date: e.date,
-        isFixed: e.isFixed,
-        isSynced: e.isSynced,
-        createdAt: e.createdAt,
-        updatedAt: e.updatedAt,
-        goalId: e.goalId,
-      );
+    id: e.id,
+    amount: e.amount,
+    category: e.category,
+    type: e.type,
+    note: e.note,
+    date: e.date,
+    isFixed: e.isFixed,
+    isSynced: e.isSynced,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    goalId: e.goalId,
+  );
 
   static TransactionModel fromDrift(Transaction row) => TransactionModel(
-        id: row.txId,
-        amount: row.amount,
-        category: row.category,
-        type: TransactionType.values.byName(row.type),
-        note: row.note,
-        date: row.date,
-        isFixed: row.isFixed,
-        isSynced: row.isSynced,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        goalId: row.goalId,
-      );
+    id: row.txId,
+    amount: row.amount,
+    category: row.category,
+    type: TransactionType.values.byName(row.type),
+    note: row.note,
+    date: row.date,
+    isFixed: row.isFixed,
+    isSynced: row.isSynced,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    goalId: row.goalId,
+  );
 
   TransactionsCompanion toDriftCompanion() => TransactionsCompanion(
-        txId: Value(id),
-        amount: Value(amount),
-        category: Value(category),
-        type: Value(type.name),
-        note: Value(note),
-        date: Value(date),
-        isFixed: Value(isFixed),
-        isSynced: Value(isSynced),
-        createdAt: Value(createdAt),
-        updatedAt: Value(updatedAt),
-        goalId: Value(goalId),
-      );
+    txId: Value(id),
+    amount: Value(amount),
+    category: Value(category),
+    type: Value(type.name),
+    note: Value(note),
+    date: Value(date),
+    isFixed: Value(isFixed),
+    isSynced: Value(isSynced),
+    createdAt: Value(createdAt),
+    updatedAt: Value(updatedAt),
+    goalId: Value(goalId),
+  );
 
   static TransactionModel fromFirestore(Map<String, dynamic> data) =>
       TransactionModel(
@@ -101,32 +101,32 @@ class TransactionModel {
       );
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'amount': amount,
-        'category': category,
-        'type': type.name,
-        'note': note,
-        'date': date.toIso8601String(),
-        'isFixed': isFixed,
-        'isSynced': true,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'goalId': goalId,
-      };
+    'id': id,
+    'amount': amount,
+    'category': category,
+    'type': type.name,
+    'note': note,
+    'date': date.toIso8601String(),
+    'isFixed': isFixed,
+    'isSynced': true,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'goalId': goalId,
+  };
 
   TransactionModel copyWith({bool? isSynced}) => TransactionModel(
-        id: id,
-        amount: amount,
-        category: category,
-        type: type,
-        note: note,
-        date: date,
-        isFixed: isFixed,
-        isSynced: isSynced ?? this.isSynced,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        goalId: goalId,
-      );
+    id: id,
+    amount: amount,
+    category: category,
+    type: type,
+    note: note,
+    date: date,
+    isFixed: isFixed,
+    isSynced: isSynced ?? this.isSynced,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    goalId: goalId,
+  );
 
   static String _categoryFromString(String s) {
     switch (s) {

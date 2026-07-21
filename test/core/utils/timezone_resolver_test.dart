@@ -3,9 +3,24 @@ import 'package:penyintas_app/core/utils/timezone_resolver.dart';
 
 void main() {
   final cities = const [
-    TimezoneCity(city: 'Jakarta', country: 'ID', iana: 'Asia/Jakarta', gmt: '+07:00'),
-    TimezoneCity(city: 'Makassar', country: 'ID', iana: 'Asia/Makassar', gmt: '+08:00'),
-    TimezoneCity(city: 'Moscow', country: 'RU', iana: 'Europe/Moscow', gmt: '+03:00'),
+    TimezoneCity(
+      city: 'Jakarta',
+      country: 'ID',
+      iana: 'Asia/Jakarta',
+      gmt: '+07:00',
+    ),
+    TimezoneCity(
+      city: 'Makassar',
+      country: 'ID',
+      iana: 'Asia/Makassar',
+      gmt: '+08:00',
+    ),
+    TimezoneCity(
+      city: 'Moscow',
+      country: 'RU',
+      iana: 'Europe/Moscow',
+      gmt: '+03:00',
+    ),
   ];
   final r = TimezoneResolver(cities);
 
@@ -18,7 +33,10 @@ void main() {
   });
 
   test('citiesIn: discope ke negara', () {
-    expect(r.citiesIn('ID').map((c) => c.city), containsAll(['Jakarta', 'Makassar']));
+    expect(
+      r.citiesIn('ID').map((c) => c.city),
+      containsAll(['Jakarta', 'Makassar']),
+    );
     expect(r.citiesIn('ID').any((c) => c.country == 'RU'), false);
   });
 
@@ -34,9 +52,12 @@ void main() {
     expect(cities[0].label, 'Jakarta · GMT+7');
   });
 
-  test('distinctZones: 1 entri per IANA unik (fallback "pilih zona langsung", B-2)', () {
-    final zones = r.distinctZones();
-    expect(zones.map((z) => z.iana).toSet().length, zones.length);
-    expect(zones.any((z) => z.iana == 'Europe/Moscow'), true);
-  });
+  test(
+    'distinctZones: 1 entri per IANA unik (fallback "pilih zona langsung", B-2)',
+    () {
+      final zones = r.distinctZones();
+      expect(zones.map((z) => z.iana).toSet().length, zones.length);
+      expect(zones.any((z) => z.iana == 'Europe/Moscow'), true);
+    },
+  );
 }

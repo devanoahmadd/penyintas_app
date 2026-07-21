@@ -15,10 +15,10 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
     required PreferencesRepository repo,
     required TimezoneResolver tz,
     required Future<String> Function() getDeviceTimezone,
-  })  : _repo = repo,
-        _tz = tz,
-        _getDeviceTz = getDeviceTimezone,
-        super(const TimezoneReconciliationState());
+  }) : _repo = repo,
+       _tz = tz,
+       _getDeviceTz = getDeviceTimezone,
+       super(const TimezoneReconciliationState());
 
   final PreferencesRepository _repo;
   final TimezoneResolver _tz;
@@ -41,18 +41,21 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
     _checking = true;
     try {
       final device = (await _getDeviceTz()).trim();
-      if (device.isEmpty || device == _snoozedTz) return; // F-D5: hormati snooze
+      if (device.isEmpty || device == _snoozedTz)
+        return; // F-D5: hormati snooze
       final prefs = await _repo.read();
       if (device == prefs.timezone) return; // selaras → diam
       final deviceLabel = _tz.labelForIana(device) ?? device;
       if (!isClosed) {
-        emit(TimezoneReconciliationState(
-          prompt: TimezonePrompt(
-            deviceTz: device,
-            deviceLabel: deviceLabel,
-            storedLabel: _storedLabel(prefs),
+        emit(
+          TimezoneReconciliationState(
+            prompt: TimezonePrompt(
+              deviceTz: device,
+              deviceLabel: deviceLabel,
+              storedLabel: _storedLabel(prefs),
+            ),
           ),
-        ));
+        );
       }
     } catch (e, s) {
       _log(e, s); // never crash launch
@@ -71,9 +74,11 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
     final country = p.currentCountry;
     if (city != null && city.isNotEmpty && country.isNotEmpty) {
       final m = _tz.cityToTz(city, country);
-      if (m != null && m.iana == p.timezone) return city; // kota cocok zona → akurat
+      if (m != null && m.iana == p.timezone)
+        return city; // kota cocok zona → akurat
     }
-    return _tz.labelForIana(p.timezone) ?? p.timezone; // selain itu → label dari zona
+    return _tz.labelForIana(p.timezone) ??
+        p.timezone; // selain itu → label dari zona
   }
 
   /// User setuju pakai zona device. Update timezone saja (full-doc via repo.save).
@@ -96,7 +101,8 @@ class TimezoneReconciliationCubit extends Cubit<TimezoneReconciliationState> {
   }
 
   void dismiss() {
-    _snoozedTz = state.prompt?.deviceTz; // F-D5: snooze zona ini utk sesi berjalan
+    _snoozedTz =
+        state.prompt?.deviceTz; // F-D5: snooze zona ini utk sesi berjalan
     if (!isClosed) emit(const TimezoneReconciliationState());
   }
 

@@ -28,17 +28,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     required NotificationLocalDatasource local,
     required NotificationLaunchHolder launchHolder,
     required AppDatabase db,
-  })  : _requestPermission = requestPermission,
-        _registerToken = registerToken,
-        _setPushPreference = setPushPreference,
-        _scheduleDailyReminder = scheduleDailyReminder,
-        _cancelDailyReminder = cancelDailyReminder,
-        _messaging = messaging,
-        _auth = auth,
-        _local = local,
-        _launchHolder = launchHolder,
-        _db = db,
-        super(const NotificationInitial()) {
+  }) : _requestPermission = requestPermission,
+       _registerToken = registerToken,
+       _setPushPreference = setPushPreference,
+       _scheduleDailyReminder = scheduleDailyReminder,
+       _cancelDailyReminder = cancelDailyReminder,
+       _messaging = messaging,
+       _auth = auth,
+       _local = local,
+       _launchHolder = launchHolder,
+       _db = db,
+       super(const NotificationInitial()) {
     on<InitNotification>(_onInit);
     on<RequestPermission>(_onRequestPermission);
     on<FcmTokenRefreshed>(_onTokenRefreshed);
@@ -81,11 +81,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         // initialize, atau onMessageOpenedApp) — bukan saat pesan datang.
         final notif = message.notification;
         if (notif == null) return; // pesan data-only: tak ada yang ditampilkan
-        unawaited(_local.show(
-          title: notif.title ?? '',
-          body: notif.body ?? '',
-          payload: message.data['route'] as String?,
-        ));
+        unawaited(
+          _local.show(
+            title: notif.title ?? '',
+            body: notif.body ?? '',
+            payload: message.data['route'] as String?,
+          ),
+        );
       });
 
       _openedAppSub = FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -96,9 +98,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       // G6: app diluncurkan dari terminated via tap notif → simpan route.
       add(const CheckInitialMessage());
 
-      final settings = await (_db.select(_db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
+      final settings = await (_db.select(
+        _db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingleOrNull();
       if (settings != null && settings.reminderEnabled) {
         await _local.scheduleDailyReminder(
           hour: settings.reminderHour,
@@ -147,10 +149,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     await _registerToken(uid);
   }
 
-  void _onTapped(
-    NotificationTapped event,
-    Emitter<NotificationState> emit,
-  ) {
+  void _onTapped(NotificationTapped event, Emitter<NotificationState> emit) {
     emit(NotificationTapHandled(event.payload ?? '/dashboard'));
   }
 

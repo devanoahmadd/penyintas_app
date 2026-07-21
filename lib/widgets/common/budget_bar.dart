@@ -5,11 +5,7 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 
 class BudgetBar extends StatefulWidget {
-  const BudgetBar({
-    super.key,
-    required this.spent,
-    required this.total,
-  });
+  const BudgetBar({super.key, required this.spent, required this.total});
 
   final int spent;
   final int total;
@@ -28,8 +24,9 @@ class _BudgetBarState extends State<BudgetBar> {
   void didUpdateWidget(BudgetBar old) {
     super.didUpdateWidget(old);
     // Tangkap nilai lama sebelum rebuild sehingga animasi mulai dari sana
-    final oldPct =
-        old.total > 0 ? (old.spent / old.total).clamp(0.0, 1.0) : 0.0;
+    final oldPct = old.total > 0
+        ? (old.spent / old.total).clamp(0.0, 1.0)
+        : 0.0;
     _prevPct = oldPct;
   }
 

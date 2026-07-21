@@ -11,10 +11,16 @@ import 'package:penyintas_app/features/transaction/data/repositories/transaction
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 class MockLocalDataSource extends Mock implements TransactionLocalDataSource {}
-class MockRemoteDataSource extends Mock implements TransactionRemoteDataSource {}
+
+class MockRemoteDataSource extends Mock
+    implements TransactionRemoteDataSource {}
+
 class MockNetworkInfo extends Mock implements NetworkInfo {}
+
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
 class MockFirebaseUser extends Mock implements User {}
+
 class FakeTransactionModel extends Fake implements TransactionModel {}
 
 void main() {
@@ -62,35 +68,40 @@ void main() {
 
   group('addTransaction', () {
     setUp(() {
-      when(() => mockLocal.saveTransaction(any()))
-          .thenAnswer((_) async {});
+      when(() => mockLocal.saveTransaction(any())).thenAnswer((_) async {});
       when(() => mockLocal.markSynced(any())).thenAnswer((_) async {});
-      when(() => mockLocal.addToSyncQueue(
+      when(
+        () => mockLocal.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      ).thenAnswer((_) async {});
+    });
+
+    test(
+      'online + Firestore succeeds → saves Isar, saves Firestore, marks synced',
+      () async {
+        when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
+        when(() => mockRemote.saveTransaction(any())).thenAnswer((_) async {});
+
+        final result = await repository.addTransaction(tEntity);
+
+        expect(result, const Right(null));
+        verify(() => mockLocal.saveTransaction(any())).called(1);
+        verify(() => mockRemote.saveTransaction(any())).called(1);
+        verify(() => mockLocal.markSynced('tx-1')).called(1);
+        verifyNever(
+          () => mockLocal.addToSyncQueue(
             itemId: any(named: 'itemId'),
             collectionPath: any(named: 'collectionPath'),
             data: any(named: 'data'),
             operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
-    });
-
-    test('online + Firestore succeeds → saves Isar, saves Firestore, marks synced', () async {
-      when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemote.saveTransaction(any()))
-          .thenAnswer((_) async {});
-
-      final result = await repository.addTransaction(tEntity);
-
-      expect(result, const Right(null));
-      verify(() => mockLocal.saveTransaction(any())).called(1);
-      verify(() => mockRemote.saveTransaction(any())).called(1);
-      verify(() => mockLocal.markSynced('tx-1')).called(1);
-      verifyNever(() => mockLocal.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          ));
-    });
+          ),
+        );
+      },
+    );
 
     test('online + Firestore fails → saves Isar, adds to sync queue', () async {
       when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
@@ -100,12 +111,14 @@ void main() {
 
       expect(result, const Right(null));
       verify(() => mockLocal.saveTransaction(any())).called(1);
-      verify(() => mockLocal.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: SyncOperation.create,
-          )).called(1);
+      verify(
+        () => mockLocal.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: SyncOperation.create,
+        ),
+      ).called(1);
       verifyNever(() => mockLocal.markSynced(any()));
     });
 
@@ -116,32 +129,34 @@ void main() {
 
       expect(result, const Right(null));
       verify(() => mockLocal.saveTransaction(any())).called(1);
-      verify(() => mockLocal.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: SyncOperation.create,
-          )).called(1);
+      verify(
+        () => mockLocal.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: SyncOperation.create,
+        ),
+      ).called(1);
       verifyNever(() => mockRemote.saveTransaction(any()));
     });
   });
 
   group('deleteTransaction', () {
     setUp(() {
-      when(() => mockLocal.deleteTransaction(any()))
-          .thenAnswer((_) async {});
-      when(() => mockLocal.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: any(named: 'operation'),
-          )).thenAnswer((_) async {});
+      when(() => mockLocal.deleteTransaction(any())).thenAnswer((_) async {});
+      when(
+        () => mockLocal.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: any(named: 'operation'),
+        ),
+      ).thenAnswer((_) async {});
     });
 
     test('online → deletes from Isar and Firestore', () async {
       when(() => mockNetwork.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemote.deleteTransaction(any()))
-          .thenAnswer((_) async {});
+      when(() => mockRemote.deleteTransaction(any())).thenAnswer((_) async {});
 
       final result = await repository.deleteTransaction('tx-1');
 
@@ -157,12 +172,14 @@ void main() {
 
       expect(result, const Right(null));
       verify(() => mockLocal.deleteTransaction('tx-1')).called(1);
-      verify(() => mockLocal.addToSyncQueue(
-            itemId: any(named: 'itemId'),
-            collectionPath: any(named: 'collectionPath'),
-            data: any(named: 'data'),
-            operation: SyncOperation.delete,
-          )).called(1);
+      verify(
+        () => mockLocal.addToSyncQueue(
+          itemId: any(named: 'itemId'),
+          collectionPath: any(named: 'collectionPath'),
+          data: any(named: 'data'),
+          operation: SyncOperation.delete,
+        ),
+      ).called(1);
       verifyNever(() => mockRemote.deleteTransaction(any()));
     });
   });

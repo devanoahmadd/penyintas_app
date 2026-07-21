@@ -87,12 +87,14 @@ void main() {
     });
 
     test('remainingDays = 1 → daily = spendable penuh', () async {
-      final result = await useCase(const CalcParams(
-        income: 1500000,
-        fixedExpenses: 500000,
-        emergencyPct: 0.10,
-        remainingDays: 1,
-      ));
+      final result = await useCase(
+        const CalcParams(
+          income: 1500000,
+          fixedExpenses: 500000,
+          emergencyPct: 0.10,
+          remainingDays: 1,
+        ),
+      );
       // available=1000000, emergency=100000, spendable=900000, daily=900000
       expect(result, isA<Right>());
       expect(
@@ -102,12 +104,14 @@ void main() {
     });
 
     test('daily di-floor, bukan dibulatkan ke atas', () async {
-      final result = await useCase(const CalcParams(
-        income: 1000000,
-        fixedExpenses: 0,
-        emergencyPct: 0.0,
-        remainingDays: 3,
-      ));
+      final result = await useCase(
+        const CalcParams(
+          income: 1000000,
+          fixedExpenses: 0,
+          emergencyPct: 0.0,
+          remainingDays: 3,
+        ),
+      );
       // spendable=1000000, daily=333333.33 → floor 333333
       expect(result, isA<Right>());
       expect(
@@ -117,12 +121,14 @@ void main() {
     });
 
     test('emergency maksimum 25%', () async {
-      final result = await useCase(const CalcParams(
-        income: 2000000,
-        fixedExpenses: 0,
-        emergencyPct: 0.25,
-        remainingDays: 25,
-      ));
+      final result = await useCase(
+        const CalcParams(
+          income: 2000000,
+          fixedExpenses: 0,
+          emergencyPct: 0.25,
+          remainingDays: 25,
+        ),
+      );
       // emergency=500000, spendable=1500000, daily=60000
       expect(result, isA<Right>());
       final v = (result as Right<Failure, DailyBudgetResult>).value;

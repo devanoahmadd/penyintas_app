@@ -60,8 +60,7 @@ class ProfileLegPage extends StatelessWidget {
           }
         },
         child: Scaffold(
-          backgroundColor:
-              isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
           body: SafeArea(
             child: BlocBuilder<ProfileSetupCubit, ProfileSetupState>(
               builder: (context, state) {
@@ -112,9 +111,7 @@ class ProfileLegPage extends StatelessWidget {
             },
             child: Text(
               loc.profileExitDialogConfirm,
-              style: TextStyle(
-                color: AppColors.warn,
-              ),
+              style: TextStyle(color: AppColors.warn),
             ),
           ),
         ],
@@ -140,8 +137,9 @@ class _SubStepA extends StatelessWidget {
 
     final textMain = isDark ? AppColors.textDark : AppColors.textLight;
     final textMuted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceAlt =
-        isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surfaceAlt = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return SingleChildScrollView(
@@ -372,9 +370,9 @@ class _SubStepB extends StatelessWidget {
                           onTap: () async {
                             final result = await showCountryPicker(context);
                             if (result != null && context.mounted) {
-                              context
-                                  .read<ProfileSetupCubit>()
-                                  .setHomeCountry(result);
+                              context.read<ProfileSetupCubit>().setHomeCountry(
+                                result,
+                              );
                             }
                           },
                         ),
@@ -400,9 +398,9 @@ class _SubStepB extends StatelessWidget {
                             );
                             if (result != null && context.mounted) {
                               if (result is String) {
-                                context
-                                    .read<ProfileSetupCubit>()
-                                    .setHomeCity(result);
+                                context.read<ProfileSetupCubit>().setHomeCity(
+                                  result,
+                                );
                               }
                               // TimezonePick dari kota asal diabaikan — hanya kota
                             }
@@ -431,8 +429,9 @@ class _SubStepB extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.5),
+                    disabledBackgroundColor: AppColors.primary.withValues(
+                      alpha: 0.5,
+                    ),
                     shape: const StadiumBorder(),
                     elevation: 0,
                   ),
@@ -447,7 +446,9 @@ class _SubStepB extends StatelessWidget {
                         )
                       : Text(
                           loc.btnSave,
-                          style: AppTextStyles.label.copyWith(color: Colors.white),
+                          style: AppTextStyles.label.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               );
@@ -477,7 +478,9 @@ class _LangToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight;
+    final surface = isDark
+        ? AppColors.surfaceAltDark
+        : AppColors.surfaceAltLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Container(
@@ -705,7 +708,9 @@ class _StatusChip extends StatelessWidget {
           color: selected ? AppColors.primary : surface,
           borderRadius: BorderRadius.circular(AppRadius.pill),
           border: Border.all(
-            color: selected ? AppColors.primary : (isDark ? AppColors.borderDark : AppColors.borderLight),
+            color: selected
+                ? AppColors.primary
+                : (isDark ? AppColors.borderDark : AppColors.borderLight),
           ),
         ),
         child: Text(
@@ -819,11 +824,7 @@ class _TimezoneChip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.schedule_rounded,
-            size: 16,
-            color: textMuted,
-          ),
+          Icon(Icons.schedule_rounded, size: 16, color: textMuted),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

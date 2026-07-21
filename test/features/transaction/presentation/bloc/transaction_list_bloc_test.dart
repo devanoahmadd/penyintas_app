@@ -45,17 +45,18 @@ void main() {
   });
 
   TransactionListBloc buildBloc() => TransactionListBloc(
-        getTransactions: mockGet,
-        deleteTransaction: mockDelete,
-      );
+    getTransactions: mockGet,
+    deleteTransaction: mockDelete,
+  );
 
   group('LoadTransactions', () {
     blocTest<TransactionListBloc, TransactionListState>(
       'emits Loading then Loaded with transactions',
       build: buildBloc,
       setUp: () {
-        when(() => mockGet(any()))
-            .thenAnswer((_) async => Right([tTransaction]));
+        when(
+          () => mockGet(any()),
+        ).thenAnswer((_) async => Right([tTransaction]));
       },
       act: (bloc) => bloc.add(LoadTransactions(from: tFrom, to: tTo)),
       expect: () => [
@@ -70,8 +71,9 @@ void main() {
       'emits Loading then Error on failure',
       build: buildBloc,
       setUp: () {
-        when(() => mockGet(any()))
-            .thenAnswer((_) async => const Left(CacheFailure()));
+        when(
+          () => mockGet(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure()));
       },
       act: (bloc) => bloc.add(LoadTransactions(from: tFrom, to: tTo)),
       expect: () => [
@@ -115,11 +117,11 @@ void main() {
         to: tTo,
       ),
       setUp: () {
-        when(() => mockDelete(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDelete(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
-      act: (bloc) =>
-          bloc.add(const DeleteTransactionRequested('tx-1')),
+      act: (bloc) => bloc.add(const DeleteTransactionRequested('tx-1')),
       expect: () => [
         isA<TransactionListLoaded>()
             .having((s) => s.transactions.length, 'length', 0)
@@ -140,19 +142,14 @@ void main() {
         from: tFrom,
         to: tTo,
       ),
-      act: (bloc) => bloc.add(
-        const FilterSheetApplied(
-          categories: {'shopping'},
-        ),
-      ),
+      act: (bloc) =>
+          bloc.add(const FilterSheetApplied(categories: {'shopping'})),
       expect: () => [
         isA<TransactionListLoaded>()
             .having((s) => s.filtered.length, 'filtered empty', 0)
-            .having(
-              (s) => s.categoryFilter,
-              'categoryFilter set',
-              {'shopping'},
-            ),
+            .having((s) => s.categoryFilter, 'categoryFilter set', {
+              'shopping',
+            }),
       ],
     );
 
@@ -187,11 +184,13 @@ void main() {
         from: tFrom,
         to: tTo,
       ),
-      act: (bloc) =>
-          bloc.add(const FilterSheetApplied(minAmount: 100000)),
+      act: (bloc) => bloc.add(const FilterSheetApplied(minAmount: 100000)),
       expect: () => [
-        isA<TransactionListLoaded>()
-            .having((s) => s.filtered.length, 'filtered empty', 0),
+        isA<TransactionListLoaded>().having(
+          (s) => s.filtered.length,
+          'filtered empty',
+          0,
+        ),
       ],
     );
   });

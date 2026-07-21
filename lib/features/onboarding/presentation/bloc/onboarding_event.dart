@@ -18,8 +18,7 @@ class OnboardingSubmitted extends OnboardingEvent {
   final Map<String, int> expenses;
   final double emergencyFundPct;
 
-  int get fixedExpenses =>
-      expenses.values.fold(0, (s, v) => s + v);
+  int get fixedExpenses => expenses.values.fold(0, (s, v) => s + v);
 
   @override
   List<Object> get props => [income, paymentDate, expenses, emergencyFundPct];

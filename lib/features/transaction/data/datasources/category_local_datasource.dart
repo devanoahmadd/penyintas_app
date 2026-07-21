@@ -20,37 +20,42 @@ class CategoryLocalDatasourceImpl implements CategoryLocalDatasource {
 
   @override
   Future<List<CategoryModel>> getCategories() async {
-    final rows = await (_db.select(_db.categories)
-          ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
-        .get();
+    final rows = await (_db.select(
+      _db.categories,
+    )..orderBy([(c) => OrderingTerm.asc(c.sortOrder)])).get();
     return rows.map(CategoryModel.fromRow).toList();
   }
 
   @override
   Future<List<CategoryModel>> getLimitableCategories() async {
-    final rows = await (_db.select(_db.categories)
-          ..where((c) => c.isLimitable)
-          ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
-        .get();
+    final rows =
+        await (_db.select(_db.categories)
+              ..where((c) => c.isLimitable)
+              ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
+            .get();
     return rows.map(CategoryModel.fromRow).toList();
   }
 
   @override
   Future<CategoryModel> createCategory(CategoryEntity category) async {
     try {
-      final id = await _db.into(_db.categories).insert(
-        CategoriesCompanion(
-          slug: Value(category.slug),
-          labelOverride: Value(category.labelOverride),
-          isBuiltIn: const Value(false),
-          isLimitable: Value(category.isLimitable),
-          type: Value(category.type),
-          sortOrder: Value(category.sortOrder),
-          iconSlug: Value(category.iconSlug),
-        ),
-      );
+      final id = await _db
+          .into(_db.categories)
+          .insert(
+            CategoriesCompanion(
+              slug: Value(category.slug),
+              labelOverride: Value(category.labelOverride),
+              isBuiltIn: const Value(false),
+              isLimitable: Value(category.isLimitable),
+              type: Value(category.type),
+              sortOrder: Value(category.sortOrder),
+              iconSlug: Value(category.iconSlug),
+            ),
+          );
       return CategoryModel.fromRow(
-        await (_db.select(_db.categories)..where((c) => c.id.equals(id))).getSingle(),
+        await (_db.select(
+          _db.categories,
+        )..where((c) => c.id.equals(id))).getSingle(),
       );
     } on SqliteException catch (e) {
       if (e.message.contains('UNIQUE constraint failed')) {
@@ -62,7 +67,9 @@ class CategoryLocalDatasourceImpl implements CategoryLocalDatasource {
 
   @override
   Future<void> updateCategory(CategoryEntity category) async {
-    await (_db.update(_db.categories)..where((c) => c.id.equals(category.id))).write(
+    await (_db.update(
+      _db.categories,
+    )..where((c) => c.id.equals(category.id))).write(
       CategoriesCompanion(
         labelOverride: Value(category.labelOverride),
         isLimitable: Value(category.isLimitable),
@@ -75,9 +82,13 @@ class CategoryLocalDatasourceImpl implements CategoryLocalDatasource {
   Future<void> deleteCategory(String slug) async {
     await _db.transaction(() async {
       // 1. Cascade: hapus budget_limits yang pakai slug ini
-      await (_db.delete(_db.budgetLimits)..where((b) => b.category.equals(slug))).go();
+      await (_db.delete(
+        _db.budgetLimits,
+      )..where((b) => b.category.equals(slug))).go();
       // 2. Hapus kategori itu sendiri
-      await (_db.delete(_db.categories)..where((c) => c.slug.equals(slug))).go();
+      await (_db.delete(
+        _db.categories,
+      )..where((c) => c.slug.equals(slug))).go();
     });
   }
 }

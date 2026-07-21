@@ -29,14 +29,14 @@ class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
 }
 
 UserEntity _makeUser({required bool hasPasswordProvider}) => UserEntity(
-      uid: 'uid-1',
-      email: 'a@b.com',
-      displayName: 'Andi',
-      photoUrl: null,
-      createdAt: DateTime(2026, 7, 1),
-      emailVerified: true,
-      hasPasswordProvider: hasPasswordProvider,
-    );
+  uid: 'uid-1',
+  email: 'a@b.com',
+  displayName: 'Andi',
+  photoUrl: null,
+  createdAt: DateTime(2026, 7, 1),
+  emailVerified: true,
+  hasPasswordProvider: hasPasswordProvider,
+);
 
 void main() {
   late AppLocalizations l10n;
@@ -53,8 +53,9 @@ void main() {
     whenListen(
       bloc,
       const Stream<AuthState>.empty(),
-      initialState:
-          Authenticated(_makeUser(hasPasswordProvider: hasPasswordProvider)),
+      initialState: Authenticated(
+        _makeUser(hasPasswordProvider: hasPasswordProvider),
+      ),
     );
     return MaterialApp(
       locale: const Locale('id'),
@@ -84,8 +85,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-      'akun berpassword → field password tampil, centang → dispatch '
+  testWidgets('akun berpassword → field password tampil, centang → dispatch '
       'password terisi (perilaku lama)', (tester) async {
     await pumpSheet(tester, hasPasswordProvider: true);
 
@@ -99,13 +99,20 @@ void main() {
     await tester.tap(find.text(l10n.deleteAccountConfirm));
     await tester.pump();
 
-    verify(() => bloc.add(any(
-        that: isA<DeleteAccountRequested>()
-            .having((e) => e.password, 'password', 'rahasia123')))).called(1);
+    verify(
+      () => bloc.add(
+        any(
+          that: isA<DeleteAccountRequested>().having(
+            (e) => e.password,
+            'password',
+            'rahasia123',
+          ),
+        ),
+      ),
+    ).called(1);
   });
 
-  testWidgets(
-      'akun Google-only → tanpa field password, hint Google tampil, '
+  testWidgets('akun Google-only → tanpa field password, hint Google tampil, '
       'centang → dispatch password null', (tester) async {
     await pumpSheet(tester, hasPasswordProvider: false);
 
@@ -117,8 +124,16 @@ void main() {
     await tester.tap(find.text(l10n.deleteAccountConfirm));
     await tester.pump();
 
-    verify(() => bloc.add(any(
-        that: isA<DeleteAccountRequested>()
-            .having((e) => e.password, 'password', isNull)))).called(1);
+    verify(
+      () => bloc.add(
+        any(
+          that: isA<DeleteAccountRequested>().having(
+            (e) => e.password,
+            'password',
+            isNull,
+          ),
+        ),
+      ),
+    ).called(1);
   });
 }

@@ -11,9 +11,12 @@ class CreateCategoryUseCase implements UseCase<CategoryEntity, CategoryEntity> {
   @override
   Future<Either<Failure, CategoryEntity>> call(CategoryEntity category) async {
     if (category.isBuiltIn) {
-      return const Left(ValidationFailure('Tidak bisa membuat kategori bawaan.'));
+      return const Left(
+        ValidationFailure('Tidak bisa membuat kategori bawaan.'),
+      );
     }
-    if (category.labelOverride == null || category.labelOverride!.trim().isEmpty) {
+    if (category.labelOverride == null ||
+        category.labelOverride!.trim().isEmpty) {
       return const Left(ValidationFailure('Nama kategori tidak boleh kosong.'));
     }
     return _repo.createCategory(category);

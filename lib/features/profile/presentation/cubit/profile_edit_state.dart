@@ -14,7 +14,8 @@ class ProfileEditState extends Equatable {
   final bool loading;
   final PreferencesEntity? draft;
   final PreferencesEntity? loaded; // M3: baseline immutable utk dirty-check
-  final bool currentLocationResolved; // H2: false setelah ganti negara s/d kota/tz dipilih
+  final bool
+  currentLocationResolved; // H2: false setelah ganti negara s/d kota/tz dipilih
   final bool saving;
   final bool saved;
   final String? error;
@@ -30,19 +31,25 @@ class ProfileEditState extends Equatable {
     bool? saving,
     bool? saved,
     String? error, // sengaja tanpa `?? this` — copyWith mengosongkan error
-  }) =>
-      ProfileEditState(
-        loading: loading ?? this.loading,
-        draft: draft ?? this.draft,
-        loaded: loaded ?? this.loaded,
-        currentLocationResolved:
-            currentLocationResolved ?? this.currentLocationResolved,
-        saving: saving ?? this.saving,
-        saved: saved ?? this.saved,
-        error: error,
-      );
+  }) => ProfileEditState(
+    loading: loading ?? this.loading,
+    draft: draft ?? this.draft,
+    loaded: loaded ?? this.loaded,
+    currentLocationResolved:
+        currentLocationResolved ?? this.currentLocationResolved,
+    saving: saving ?? this.saving,
+    saved: saved ?? this.saved,
+    error: error,
+  );
 
   @override
-  List<Object?> get props =>
-      [loading, draft, loaded, currentLocationResolved, saving, saved, error];
+  List<Object?> get props => [
+    loading,
+    draft,
+    loaded,
+    currentLocationResolved,
+    saving,
+    saved,
+    error,
+  ];
 }

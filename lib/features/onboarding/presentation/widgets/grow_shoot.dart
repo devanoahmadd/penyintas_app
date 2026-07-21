@@ -66,8 +66,9 @@ class _GrowShootState extends State<GrowShoot>
       builder: (context, _) {
         final g = _growAnim.value.clamp(0.0, 1.0);
         final stemH = (16 + g * (widget.size - 30)).roundToDouble();
-        final stemColor =
-            g >= 0.8 ? AppColors.primaryBright : AppColors.primary;
+        final stemColor = g >= 0.8
+            ? AppColors.primaryBright
+            : AppColors.primary;
 
         return SizedBox(
           width: 78,

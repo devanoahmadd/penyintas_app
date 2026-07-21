@@ -49,8 +49,17 @@ class CategoryEntity extends Equatable {
   bool get isIncomeType => type == 'income';
 
   @override
-  List<Object?> get props =>
-      [id, slug, labelKey, labelOverride, isBuiltIn, isLimitable, type, sortOrder, iconSlug];
+  List<Object?> get props => [
+    id,
+    slug,
+    labelKey,
+    labelOverride,
+    isBuiltIn,
+    isLimitable,
+    type,
+    sortOrder,
+    iconSlug,
+  ];
 
   CategoryEntity copyWith({
     int? id,

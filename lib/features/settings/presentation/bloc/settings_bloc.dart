@@ -36,10 +36,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     } catch (_) {}
   }
 
-  Future<void> _onLoaded(SettingsLoaded event, Emitter<SettingsState> emit) async {
+  Future<void> _onLoaded(
+    SettingsLoaded event,
+    Emitter<SettingsState> emit,
+  ) async {
     // Theme dari app_settings; language dari preferences (canonical pasca-cutover).
-    final saved = await (_db.select(_db.appSettings)..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final saved = await (_db.select(
+      _db.appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
     PreferencesEntity prefs;
     try {
       prefs = await _prefs.read();
@@ -47,63 +51,82 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       _log(e, s);
       prefs = PreferencesEntity.defaults; // fail-safe: bahasa default
     }
-    emit(state.copyWith(
-      themeMode: saved != null
-          ? AppSettingsEntity.themeModeFromString(saved.themeMode)
-          : state.themeMode,
-      locale: _clampLang(prefs.language), // M2: clamp boundary {id,en}
-    ));
-    if (saved == null) await _persistTheme(state); // seed baris theme bila belum ada
+    emit(
+      state.copyWith(
+        themeMode: saved != null
+            ? AppSettingsEntity.themeModeFromString(saved.themeMode)
+            : state.themeMode,
+        locale: _clampLang(prefs.language), // M2: clamp boundary {id,en}
+      ),
+    );
+    if (saved == null)
+      await _persistTheme(state); // seed baris theme bila belum ada
   }
 
-  Future<void> _onChangeTheme(ChangeTheme event, Emitter<SettingsState> emit) async {
+  Future<void> _onChangeTheme(
+    ChangeTheme event,
+    Emitter<SettingsState> emit,
+  ) async {
     emit(state.copyWith(themeMode: event.themeMode));
     await _persistTheme(state);
   }
 
-  Future<void> _onChangeLanguage(ChangeLanguage event, Emitter<SettingsState> emit) async {
-    final previous = state.locale;         // M1: utk revert bila persist gagal
+  Future<void> _onChangeLanguage(
+    ChangeLanguage event,
+    Emitter<SettingsState> emit,
+  ) async {
+    final previous = state.locale; // M1: utk revert bila persist gagal
     final next = _clampLang(event.locale); // M2: clamp boundary {id,en}
-    emit(state.copyWith(locale: next));    // optimistic: locale-live langsung berubah
+    emit(
+      state.copyWith(locale: next),
+    ); // optimistic: locale-live langsung berubah
 
     PreferencesEntity current;
     try {
       current = await _prefs.read();
     } catch (e, s) {
       _log(e, s);
-      emit(state.copyWith(locale: previous)); // M1: jujur — UI mundur, bukan phantom-sukses
+      emit(
+        state.copyWith(locale: previous),
+      ); // M1: jujur — UI mundur, bukan phantom-sukses
       return;
     }
     // save() menangkap error lokalnya sendiri → kembalikan Left (TAK throw). Wajib
     // inspeksi Either: kalau cuma try/catch, Left lolos & UI klaim sukses palsu →
     // bahasa balik saat restart (silent revert). M1.
     final res = await _prefs.save(current.copyWith(language: next));
-    res.fold(
-      (f) {
-        _log(f, StackTrace.current);
-        emit(state.copyWith(locale: previous)); // M1: revert
-      },
-      (_) {},
-    );
+    res.fold((f) {
+      _log(f, StackTrace.current);
+      emit(state.copyWith(locale: previous)); // M1: revert
+    }, (_) {});
   }
 
   /// Hanya theme yg canonical di app_settings. `locale` dipertahankan (vestigial,
   /// kolom NOT NULL) agar tak meng-clobber; tak ada yg membacanya pasca-cutover.
   Future<void> _persistTheme(SettingsState s) async {
     try {
-      final existing = await (_db.select(_db.appSettings)..where((t) => t.id.equals(1)))
-          .getSingleOrNull();
-      await _db.into(_db.appSettings).insertOnConflictUpdate(AppSettingsCompanion(
-            id: const Value(1),
-            themeMode: Value(AppSettingsEntity.themeModeToString(s.themeMode)),
-            locale: Value(existing?.locale ?? 'id'),
-            onboardingCompleted: Value(existing?.onboardingCompleted ?? false),
-            monthlyIncome: Value(existing?.monthlyIncome ?? 0),
-            paymentDate: Value(existing?.paymentDate ?? 1),
-            fixedExpenses: Value(existing?.fixedExpenses ?? 0),
-            emergencyFundPct: Value(existing?.emergencyFundPct ?? 0.10),
-            onboardingCreatedAt: Value(existing?.onboardingCreatedAt),
-          ));
+      final existing = await (_db.select(
+        _db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingleOrNull();
+      await _db
+          .into(_db.appSettings)
+          .insertOnConflictUpdate(
+            AppSettingsCompanion(
+              id: const Value(1),
+              themeMode: Value(
+                AppSettingsEntity.themeModeToString(s.themeMode),
+              ),
+              locale: Value(existing?.locale ?? 'id'),
+              onboardingCompleted: Value(
+                existing?.onboardingCompleted ?? false,
+              ),
+              monthlyIncome: Value(existing?.monthlyIncome ?? 0),
+              paymentDate: Value(existing?.paymentDate ?? 1),
+              fixedExpenses: Value(existing?.fixedExpenses ?? 0),
+              emergencyFundPct: Value(existing?.emergencyFundPct ?? 0.10),
+              onboardingCreatedAt: Value(existing?.onboardingCreatedAt),
+            ),
+          );
     } catch (e, stack) {
       _log(e, stack);
     }

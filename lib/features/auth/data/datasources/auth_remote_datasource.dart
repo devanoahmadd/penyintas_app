@@ -77,7 +77,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException();
     }
   }
@@ -101,7 +103,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         if (languageCode != null) await auth.setLanguageCode(languageCode);
         await credential.user!.sendEmailVerification();
       } catch (e, s) {
-        try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+        try {
+          FirebaseCrashlytics.instance.recordError(e, s);
+        } catch (_) {}
       }
 
       final model = UserModel(
@@ -109,8 +113,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: email,
         displayName: name,
         createdAt: DateTime.now(),
-        emailVerified: false,       // baru register — pasti belum verifikasi
-        hasPasswordProvider: true,  // jalur ini selalu email/password
+        emailVerified: false, // baru register — pasti belum verifikasi
+        hasPasswordProvider: true, // jalur ini selalu email/password
       );
 
       await firestore
@@ -122,7 +126,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException();
     }
   }
@@ -132,7 +138,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await auth.signOut();
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal keluar. Coba lagi.');
     }
   }
@@ -160,7 +168,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         hasPasswordProvider: _hasPasswordProvider(user),
       );
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const ServerException();
     }
   }
@@ -170,8 +180,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return auth.authStateChanges().asyncMap((user) async {
       if (user == null) return null;
       try {
-        final doc =
-            await firestore.collection('users').doc(user.uid).get();
+        final doc = await firestore.collection('users').doc(user.uid).get();
         if (doc.exists) {
           return UserModel.fromFirestore(
             doc,
@@ -201,7 +210,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final email = user.email;
       if (email == null) {
-        throw const AuthException('Akun ini tidak mendukung konfirmasi password. Hubungi dukungan.');
+        throw const AuthException(
+          'Akun ini tidak mendukung konfirmasi password. Hubungi dukungan.',
+        );
       }
       final credential = EmailAuthProvider.credential(
         email: email,
@@ -223,7 +234,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       idToken = await googleSignInService.getIdToken();
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal menghubungi Google. Coba lagi ya.');
     }
     if (idToken == null) return false; // user membatalkan dialog — bukan error
@@ -242,7 +255,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Non-FirebaseAuthException (mis. PlatformException) — tanpa ini bocor
       // ke catch generik repository jadi UnknownFailure ('kesalahan yang tidak
       // diketahui'). Pola sama signInWithGoogle di file yang sama.
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal konfirmasi lewat Google. Coba lagi ya.');
     }
   }
@@ -254,7 +269,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseFunctionsException catch (e) {
       throw AuthException(e.message ?? 'Gagal menghapus akun.');
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal menghapus akun.');
     }
   }
@@ -269,7 +286,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (e.code == 'user-not-found') return;
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException();
     }
   }
@@ -286,7 +305,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException();
     }
   }
@@ -329,7 +350,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       idToken = await googleSignInService.getIdToken();
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal masuk dengan Google. Coba lagi ya.');
     }
     if (idToken == null) return null; // user membatalkan dialog — bukan error
@@ -364,7 +387,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseAuthException catch (e) {
       throw AuthException(_mapFirebaseCode(e.code));
     } catch (e, s) {
-      try { FirebaseCrashlytics.instance.recordError(e, s); } catch (_) {}
+      try {
+        FirebaseCrashlytics.instance.recordError(e, s);
+      } catch (_) {}
       throw const AuthException('Gagal masuk dengan Google. Coba lagi ya.');
     }
   }
@@ -374,22 +399,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       user.providerData.any((p) => p.providerId == 'password');
 
   static String _mapFirebaseCode(String code) => switch (code) {
-        'email-already-in-use' =>
-          'Email ini sudah terdaftar. Coba masuk langsung, atau pakai tombol Google.',
-        // user-not-found digabung agar tidak bocorkan info email terdaftar
-        // (anti user-enumeration). Pesan signup 'email-already-in-use' di bawah
-        // dipertahankan karena UX-nya memang perlu memberi tahu — kini juga
-        // menyertakan alternatif tombol Google.
-        'wrong-password' || 'invalid-credential' || 'user-not-found' =>
-          'Email atau password salah. Coba lagi ya.',
-        'invalid-email' => 'Format email tidak valid.',
-        'weak-password' => 'Password terlalu lemah. Gunakan minimal 8 karakter.',
-        'too-many-requests' =>
-          'Terlalu banyak percobaan. Tunggu sebentar ya.',
-        'network-request-failed' =>
-          'Tidak ada koneksi. Periksa internet kamu.',
-        'user-disabled' => 'Akun ini dinonaktifkan. Hubungi dukungan.',
-        'requires-recent-login' => 'Sesi kamu sudah habis. Login ulang untuk melanjutkan.',
-        _ => 'Terjadi kesalahan. Coba lagi.',
-      };
+    'email-already-in-use' =>
+      'Email ini sudah terdaftar. Coba masuk langsung, atau pakai tombol Google.',
+    // user-not-found digabung agar tidak bocorkan info email terdaftar
+    // (anti user-enumeration). Pesan signup 'email-already-in-use' di bawah
+    // dipertahankan karena UX-nya memang perlu memberi tahu — kini juga
+    // menyertakan alternatif tombol Google.
+    'wrong-password' ||
+    'invalid-credential' ||
+    'user-not-found' => 'Email atau password salah. Coba lagi ya.',
+    'invalid-email' => 'Format email tidak valid.',
+    'weak-password' => 'Password terlalu lemah. Gunakan minimal 8 karakter.',
+    'too-many-requests' => 'Terlalu banyak percobaan. Tunggu sebentar ya.',
+    'network-request-failed' => 'Tidak ada koneksi. Periksa internet kamu.',
+    'user-disabled' => 'Akun ini dinonaktifkan. Hubungi dukungan.',
+    'requires-recent-login' =>
+      'Sesi kamu sudah habis. Login ulang untuk melanjutkan.',
+    _ => 'Terjadi kesalahan. Coba lagi.',
+  };
 }

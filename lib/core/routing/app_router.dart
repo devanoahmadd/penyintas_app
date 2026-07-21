@@ -47,14 +47,8 @@ GoRouter createAppRouter() => GoRouter(
   ),
   redirect: _redirect,
   routes: [
-    GoRoute(
-      path: '/splash',
-      builder: (context, state) => const SplashPage(),
-    ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginPage(),
-    ),
+    GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterPage(),
@@ -85,7 +79,9 @@ GoRouter createAppRouter() => GoRouter(
             // .value — jangan close singleton saat route di-pop/replace
             BlocProvider.value(value: sl<DashboardBloc>()),
             BlocProvider.value(value: sl<SurvivalBloc>()),
-            BlocProvider.value(value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits())),
+            BlocProvider.value(
+              value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits()),
+            ),
             // F-D6: lazySingleton — .value agar snooze tetap hidup lintas-remount
             BlocProvider.value(value: sl<TimezoneReconciliationCubit>()),
           ],
@@ -108,10 +104,12 @@ GoRouter createAppRouter() => GoRouter(
           key: state.pageKey,
           child: BlocProvider(
             create: (_) => sl<TransactionListBloc>()
-              ..add(LoadTransactions(
-                from: DateTime(now.year, now.month, 1),
-                to: now,
-              )),
+              ..add(
+                LoadTransactions(
+                  from: DateTime(now.year, now.month, 1),
+                  to: now,
+                ),
+              ),
             child: const TransactionListPage(),
           ),
         );
@@ -148,7 +146,8 @@ GoRouter createAppRouter() => GoRouter(
         child: MultiBlocProvider(
           providers: [
             BlocProvider(
-              create: (_) => sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
+              create: (_) =>
+                  sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
             ),
             BlocProvider.value(
               value: sl<BudgetLimitsBloc>()..add(const LoadBudgetLimits()),
@@ -163,7 +162,8 @@ GoRouter createAppRouter() => GoRouter(
           pageBuilder: (context, state) => MaterialPage(
             key: state.pageKey,
             child: BlocProvider(
-              create: (_) => sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
+              create: (_) =>
+                  sl<BudgetSettingsBloc>()..add(const LoadBudgetSettings()),
               child: const BudgetEditSettingsPage(),
             ),
           ),
@@ -222,11 +222,14 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
 
     if (user == null) {
       sl<OnboardingGuard>().resetCache(); // reset saat logout
-      sl<BootstrapCoordinator>().reset(); // Temuan 1: bootstrap fresh utk user berikutnya
+      sl<BootstrapCoordinator>()
+          .reset(); // Temuan 1: bootstrap fresh utk user berikutnya
       return publicRoutes.contains(location) ? null : '/login';
     }
 
-    return redirectForAuthedUser(location); // Temuan 1/T-3: gate + guard (dapat diuji)
+    return redirectForAuthedUser(
+      location,
+    ); // Temuan 1/T-3: gate + guard (dapat diuji)
   } catch (e, stack) {
     FirebaseCrashlytics.instance.recordError(e, stack);
     return '/login';

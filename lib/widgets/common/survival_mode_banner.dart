@@ -37,8 +37,11 @@ class SurvivalModeBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.shield_outlined,
-                    color: Colors.white, size: 20),
+                const Icon(
+                  Icons.shield_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   l10n.survivalModeTitle,
@@ -46,8 +49,11 @@ class SurvivalModeBanner extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (onTap != null)
-                  const Icon(Icons.chevron_right,
-                      color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Colors.white,
+                    size: 20,
+                  ),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -58,8 +64,9 @@ class SurvivalModeBanner extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               l10n.survivalBannerBalance(amountStr, remainingDays),
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: Colors.white.withAlpha(220)),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.white.withAlpha(220),
+              ),
             ),
             if (onTap != null) ...[
               const SizedBox(height: AppSpacing.sm),

@@ -30,10 +30,7 @@ class BudgetSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (overview.totalSpendable <= 0) {
-      return _OverBudgetCard(
-        overview: overview,
-        onSettingsTap: onSettingsTap,
-      );
+      return _OverBudgetCard(overview: overview, onSettingsTap: onSettingsTap);
     }
     return _NormalCard(overview: overview);
   }
@@ -165,11 +162,11 @@ class _NormalCard extends StatelessWidget {
   }
 
   Color _paceColor(BudgetStatus? status) => switch (status) {
-        BudgetStatus.safe => Colors.white.withValues(alpha: 0.75),
-        BudgetStatus.caution => AppColors.caution,
-        BudgetStatus.danger => AppColors.warn,
-        _ => Colors.white.withValues(alpha: 0.75),
-      };
+    BudgetStatus.safe => Colors.white.withValues(alpha: 0.75),
+    BudgetStatus.caution => AppColors.caution,
+    BudgetStatus.danger => AppColors.warn,
+    _ => Colors.white.withValues(alpha: 0.75),
+  };
 }
 
 // ── Over-budget setup state ───────────────────────────────────────────────────
@@ -179,10 +176,7 @@ class _NormalCard extends StatelessWidget {
 // deficit dan diarahkan ke settings untuk memperbaiki.
 
 class _OverBudgetCard extends StatelessWidget {
-  const _OverBudgetCard({
-    required this.overview,
-    this.onSettingsTap,
-  });
+  const _OverBudgetCard({required this.overview, this.onSettingsTap});
 
   final BudgetOverviewEntity overview;
   final VoidCallback? onSettingsTap;
@@ -194,9 +188,10 @@ class _OverBudgetCard extends StatelessWidget {
     final divider = Colors.white.withValues(alpha: 0.20);
 
     // Selisih sebenarnya sebelum clamp — bisa negatif.
-    final rawSpendable = overview.monthlyIncome
-        - overview.totalFixedExpenses
-        - overview.emergencyFundMonthly;
+    final rawSpendable =
+        overview.monthlyIncome -
+        overview.totalFixedExpenses -
+        overview.emergencyFundMonthly;
     final deficitAbs = rawSpendable.abs();
 
     return Container(
@@ -300,8 +295,8 @@ class _OverBudgetCard extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(AppRadius.md),
             child: InkWell(
-              onTap: onSettingsTap ??
-                  () => context.push('/budget/edit-settings'),
+              onTap:
+                  onSettingsTap ?? () => context.push('/budget/edit-settings'),
               borderRadius: BorderRadius.circular(AppRadius.md),
               splashColor: Colors.white.withValues(alpha: 0.10),
               highlightColor: Colors.white.withValues(alpha: 0.06),
@@ -364,10 +359,7 @@ class _BreakdownRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(color: mutedColor),
-        ),
+        Text(label, style: AppTextStyles.bodySmall.copyWith(color: mutedColor)),
         Text(
           isNegative ? '− ${formatRupiah(value)}' : formatRupiah(value),
           style: AppTextStyles.numericSm.copyWith(color: textColor),

@@ -34,31 +34,30 @@ final class EditTransactionInProgress extends EditTransactionState {
     String? note,
     DateTime? date,
     Object? selectedGoalId = _kEditSentinel,
-  }) =>
-      EditTransactionInProgress(
-        originalId: originalId,
-        originalCreatedAt: originalCreatedAt,
-        amount: amount ?? this.amount,
-        category: category ?? this.category,
-        type: type ?? this.type,
-        note: note ?? this.note,
-        date: date ?? this.date,
-        selectedGoalId: identical(selectedGoalId, _kEditSentinel)
-            ? this.selectedGoalId
-            : selectedGoalId as int?,
-      );
+  }) => EditTransactionInProgress(
+    originalId: originalId,
+    originalCreatedAt: originalCreatedAt,
+    amount: amount ?? this.amount,
+    category: category ?? this.category,
+    type: type ?? this.type,
+    note: note ?? this.note,
+    date: date ?? this.date,
+    selectedGoalId: identical(selectedGoalId, _kEditSentinel)
+        ? this.selectedGoalId
+        : selectedGoalId as int?,
+  );
 
   @override
   List<Object?> get props => [
-        originalId,
-        originalCreatedAt,
-        amount,
-        category,
-        type,
-        note,
-        date,
-        selectedGoalId,
-      ];
+    originalId,
+    originalCreatedAt,
+    amount,
+    category,
+    type,
+    note,
+    date,
+    selectedGoalId,
+  ];
 }
 
 const _kEditSentinel = Object();

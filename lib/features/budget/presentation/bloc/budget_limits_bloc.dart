@@ -30,14 +30,14 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     required GetBudgetOverviewUseCase getBudgetOverview,
     required TransactionRepository transactionRepository,
     required GetLimitableCategoriesUseCase getLimitableCategories,
-  })  : _getSettings = getBudgetSettings,
-        _getLimits = getBudgetLimits,
-        _save = saveBudgetLimit,
-        _delete = deleteBudgetLimit,
-        _getOverview = getBudgetOverview,
-        _txRepo = transactionRepository,
-        _getLimitableCategories = getLimitableCategories,
-        super(const BudgetLimitsInitial()) {
+  }) : _getSettings = getBudgetSettings,
+       _getLimits = getBudgetLimits,
+       _save = saveBudgetLimit,
+       _delete = deleteBudgetLimit,
+       _getOverview = getBudgetOverview,
+       _txRepo = transactionRepository,
+       _getLimitableCategories = getLimitableCategories,
+       super(const BudgetLimitsInitial()) {
     on<LoadBudgetLimits>(_onLoad, transformer: droppable());
     on<SaveBudgetLimit>(_onSave, transformer: sequential());
     on<DeleteBudgetLimit>(_onDelete, transformer: sequential());
@@ -48,8 +48,9 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
 
     // Reaktif: setiap perubahan transaksi (tambah/edit/hapus) dari mana pun
     // memicu recompute overview agar `spent` per kategori tidak basi.
-    _txChangeSub =
-        _txRepo.watchTransactionChanges().listen((_) => add(const _TransactionsChanged()));
+    _txChangeSub = _txRepo.watchTransactionChanges().listen(
+      (_) => add(const _TransactionsChanged()),
+    );
   }
 
   StreamSubscription<void>? _txChangeSub;
@@ -118,14 +119,14 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final result = await _delete(
       DeleteLimitParams(id: event.id, categoryName: event.categoryName),
     );
-    await result.fold(
-      (f) async => emit(BudgetLimitsError(f.message)),
-      (_) async {
-        final updatedLimits =
-            current.limits.where((l) => l.id != event.id).toList();
-        await _reloadAfterMutation(emit, updatedLimits: updatedLimits);
-      },
-    );
+    await result.fold((f) async => emit(BudgetLimitsError(f.message)), (
+      _,
+    ) async {
+      final updatedLimits = current.limits
+          .where((l) => l.id != event.id)
+          .toList();
+      await _reloadAfterMutation(emit, updatedLimits: updatedLimits);
+    });
   }
 
   Future<void> _onToggle(
@@ -135,9 +136,7 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final current = state;
     if (current is! BudgetLimitsLoaded) return;
 
-    final target = current.limits
-        .where((l) => l.id == event.id)
-        .firstOrNull;
+    final target = current.limits.where((l) => l.id == event.id).firstOrNull;
     if (target == null) return; // id tidak ditemukan — event stale, skip aman
 
     final updated = target.copyWith(
@@ -185,13 +184,12 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
       limits = fetchedLimits!;
     }
     final settingsResult = await _getSettings(const NoParams());
-    await settingsResult.fold(
-      (f) async => emit(BudgetLimitsError(f.message)),
-      (settings) async {
-        final overview = await _computeOverview(settings, limits);
-        emit(BudgetLimitsLoaded(limits: limits, overview: overview));
-      },
-    );
+    await settingsResult.fold((f) async => emit(BudgetLimitsError(f.message)), (
+      settings,
+    ) async {
+      final overview = await _computeOverview(settings, limits);
+      emit(BudgetLimitsLoaded(limits: limits, overview: overview));
+    });
   }
 
   Future<BudgetOverviewEntity> _computeOverview(
@@ -203,10 +201,7 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
     final now = DateTime.now();
     final start = cycleStart(settings.paymentDate, now: now);
     final txResult = await _txRepo.getTransactions(from: start, to: now);
-    final txns = txResult.fold(
-      (_) => <TransactionEntity>[],
-      (list) => list,
-    );
+    final txns = txResult.fold((_) => <TransactionEntity>[], (list) => list);
     final remaining = remainingDaysInCycle(settings.paymentDate, now: now);
     // cycleStart() sudah return midnight — tidak perlu re-extract (fix F1-8)
     final daysElapsed = now.difference(start).inDays.clamp(1, 366);
@@ -218,14 +213,16 @@ class BudgetLimitsBloc extends Bloc<BudgetLimitsEvent, BudgetLimitsState> {
       (cats) => cats,
     );
 
-    return _getOverview(OverviewParams(
-      settings: settings,
-      limits: limits,
-      currentPeriodTransactions: txns,
-      remainingDays: remaining,
-      daysElapsed: daysElapsed,
-      limitableCategories: limitableCategories,
-    ));
+    return _getOverview(
+      OverviewParams(
+        settings: settings,
+        limits: limits,
+        currentPeriodTransactions: txns,
+        remainingDays: remaining,
+        daysElapsed: daysElapsed,
+        limitableCategories: limitableCategories,
+      ),
+    );
   }
 
   @override

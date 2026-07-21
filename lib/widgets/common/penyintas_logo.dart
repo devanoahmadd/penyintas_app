@@ -11,11 +11,8 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 ///
 /// Kemiringan 6° sudah baked-in di SVG, jangan rotate ulang.
 class PenyintasLogo extends StatelessWidget {
-  const PenyintasLogo({
-    super.key,
-    this.size = 40,
-    this.reversed = false,
-  }) : assert(size >= 24, 'Ukuran minimum logo adalah 24dp');
+  const PenyintasLogo({super.key, this.size = 40, this.reversed = false})
+    : assert(size >= 24, 'Ukuran minimum logo adalah 24dp');
 
   final double size;
 
@@ -30,8 +27,8 @@ class PenyintasLogo extends StatelessWidget {
     final ColorFilter? colorFilter = reversed
         ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
         : isDark
-            ? const ColorFilter.mode(AppColors.shoot, BlendMode.srcIn)
-            : null;
+        ? const ColorFilter.mode(AppColors.shoot, BlendMode.srcIn)
+        : null;
 
     return Semantics(
       label: 'Penyintas logo',

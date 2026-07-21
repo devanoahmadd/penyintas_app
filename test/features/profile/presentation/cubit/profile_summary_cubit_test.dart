@@ -19,14 +19,16 @@ void main() {
   test('memuat preferences saat dibuat & refresh()', () async {
     final repo = _MockRepo();
     when(() => repo.read()).thenAnswer(
-        (_) async => PreferencesEntity.defaults.copyWith(displayName: 'Devano'));
+      (_) async => PreferencesEntity.defaults.copyWith(displayName: 'Devano'),
+    );
     final c = ProfileSummaryCubit(repo);
     await Future<void>.delayed(Duration.zero);
     expect(c.state.loading, false);
     expect(c.state.prefs!.displayName, 'Devano');
 
     when(() => repo.read()).thenAnswer(
-        (_) async => PreferencesEntity.defaults.copyWith(displayName: 'Baru'));
+      (_) async => PreferencesEntity.defaults.copyWith(displayName: 'Baru'),
+    );
     await c.refresh();
     expect(c.state.prefs!.displayName, 'Baru');
   });

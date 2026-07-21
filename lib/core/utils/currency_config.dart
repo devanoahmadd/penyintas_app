@@ -28,13 +28,18 @@ class CurrencyConfig extends Equatable {
   );
 
   // Placeholder registry — akan di-expand di Phase 8B
-  static const Map<String, CurrencyConfig> registry = {
-    'IDR': idr,
-  };
+  static const Map<String, CurrencyConfig> registry = {'IDR': idr};
 
   static CurrencyConfig fromCode(String code) =>
       registry[code.toUpperCase()] ?? idr;
 
   @override
-  List<Object> get props => [code, symbol, locale, decimalDigits, compactThousand, compactMillion];
+  List<Object> get props => [
+    code,
+    symbol,
+    locale,
+    decimalDigits,
+    compactThousand,
+    compactMillion,
+  ];
 }

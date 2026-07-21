@@ -13,12 +13,11 @@ class GetTransactionsUseCase
   @override
   Future<Either<Failure, List<TransactionEntity>>> call(
     GetTransactionsParams params,
-  ) =>
-      _repository.getTransactions(
-        from: params.from,
-        to: params.to,
-        categoryFilter: params.categoryFilter,
-      );
+  ) => _repository.getTransactions(
+    from: params.from,
+    to: params.to,
+    categoryFilter: params.categoryFilter,
+  );
 }
 
 class GetTransactionsParams extends Equatable {

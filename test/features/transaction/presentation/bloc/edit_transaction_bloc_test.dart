@@ -36,10 +36,8 @@ void main() {
     mockUpdate = MockUpdateTransactionUseCase();
   });
 
-  EditTransactionBloc buildBloc() => EditTransactionBloc(
-        updateTransaction: mockUpdate,
-        initial: tTransaction,
-      );
+  EditTransactionBloc buildBloc() =>
+      EditTransactionBloc(updateTransaction: mockUpdate, initial: tTransaction);
 
   group('initial state', () {
     test('di-seed dari TransactionEntity yang diberikan', () {
@@ -59,8 +57,11 @@ void main() {
       build: buildBloc,
       act: (b) => b.add(const EditAmountChanged(99000)),
       expect: () => [
-        isA<EditTransactionInProgress>()
-            .having((s) => s.amount, 'amount', 99000),
+        isA<EditTransactionInProgress>().having(
+          (s) => s.amount,
+          'amount',
+          99000,
+        ),
       ],
     );
   });
@@ -69,11 +70,13 @@ void main() {
     blocTest<EditTransactionBloc, EditTransactionState>(
       'update category di state',
       build: buildBloc,
-      act: (b) =>
-          b.add(const EditCategorySelected('transport')),
+      act: (b) => b.add(const EditCategorySelected('transport')),
       expect: () => [
         isA<EditTransactionInProgress>().having(
-            (s) => s.category, 'category', 'transport'),
+          (s) => s.category,
+          'category',
+          'transport',
+        ),
       ],
     );
   });
@@ -104,8 +107,11 @@ void main() {
       build: buildBloc,
       act: (b) => b.add(const EditNoteChanged('Edited note')),
       expect: () => [
-        isA<EditTransactionInProgress>()
-            .having((s) => s.note, 'note', 'Edited note'),
+        isA<EditTransactionInProgress>().having(
+          (s) => s.note,
+          'note',
+          'Edited note',
+        ),
       ],
     );
   });
@@ -115,8 +121,9 @@ void main() {
       'emit Loading → Success saat update berhasil',
       build: buildBloc,
       setUp: () {
-        when(() => mockUpdate(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       act: (b) => b.add(const SubmitEdit()),
       expect: () => [
@@ -132,9 +139,9 @@ void main() {
       'emit Loading → Error saat update gagal',
       build: buildBloc,
       setUp: () {
-        when(() => mockUpdate(any())).thenAnswer(
-          (_) async => Left(CacheFailure('Gagal menyimpan')),
-        );
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => Left(CacheFailure('Gagal menyimpan')));
       },
       act: (b) => b.add(const SubmitEdit()),
       expect: () => [
@@ -151,8 +158,7 @@ void main() {
         b.add(const SubmitEdit());
       },
       expect: () => [
-        isA<EditTransactionInProgress>()
-            .having((s) => s.amount, 'amount', 0),
+        isA<EditTransactionInProgress>().having((s) => s.amount, 'amount', 0),
       ],
       verify: (_) {
         verifyNever(() => mockUpdate(any()));
@@ -163,8 +169,9 @@ void main() {
       'entity yang di-submit memakai originalId dan originalCreatedAt',
       build: buildBloc,
       setUp: () {
-        when(() => mockUpdate(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
       },
       act: (b) => b.add(const SubmitEdit()),
       verify: (_) {

@@ -15,15 +15,17 @@ class AddTransactionBloc
   AddTransactionBloc({
     required AddTransactionUseCase addTransaction,
     required GetCategoriesUseCase getCategories,
-  })  : _addTransaction = addTransaction,
-        _getCategories = getCategories,
-        super(AddTransactionInProgress(
-          amount: 0,
-          selectedCategory: null,
-          type: TransactionType.expense,
-          note: '',
-          date: DateTime.now(),
-        )) {
+  }) : _addTransaction = addTransaction,
+       _getCategories = getCategories,
+       super(
+         AddTransactionInProgress(
+           amount: 0,
+           selectedCategory: null,
+           type: TransactionType.expense,
+           note: '',
+           date: DateTime.now(),
+         ),
+       ) {
     on<AmountChanged>(_onAmountChanged);
     on<CategorySelected>(_onCategorySelected);
     on<TypeToggled>(_onTypeToggled);
@@ -39,17 +41,25 @@ class AddTransactionBloc
   final GetCategoriesUseCase _getCategories;
   static const _uuid = Uuid();
 
-  void _onAmountChanged(AmountChanged event, Emitter<AddTransactionState> emit) {
+  void _onAmountChanged(
+    AmountChanged event,
+    Emitter<AddTransactionState> emit,
+  ) {
     if (state is AddTransactionInProgress) {
       emit((state as AddTransactionInProgress).copyWith(amount: event.amount));
     }
   }
 
   void _onCategorySelected(
-      CategorySelected event, Emitter<AddTransactionState> emit) {
+    CategorySelected event,
+    Emitter<AddTransactionState> emit,
+  ) {
     if (state is AddTransactionInProgress) {
-      emit((state as AddTransactionInProgress)
-          .copyWith(selectedCategory: event.categorySlug));
+      emit(
+        (state as AddTransactionInProgress).copyWith(
+          selectedCategory: event.categorySlug,
+        ),
+      );
     }
   }
 
@@ -60,11 +70,13 @@ class AddTransactionBloc
           ? TransactionType.income
           : TransactionType.expense;
       // Clear goal link dan selectedCategory saat beralih tipe
-      emit(s.copyWith(
-        type: next,
-        selectedGoalId: null,
-        clearSelectedCategory: true,
-      ));
+      emit(
+        s.copyWith(
+          type: next,
+          selectedGoalId: null,
+          clearSelectedCategory: true,
+        ),
+      );
       add(const LoadTransactionCategories());
     }
   }
@@ -73,11 +85,13 @@ class AddTransactionBloc
     if (state is AddTransactionInProgress) {
       final s = state as AddTransactionInProgress;
       if (s.type == event.type) return;
-      emit(s.copyWith(
-        type: event.type,
-        selectedGoalId: null,
-        clearSelectedCategory: true,
-      ));
+      emit(
+        s.copyWith(
+          type: event.type,
+          selectedGoalId: null,
+          clearSelectedCategory: true,
+        ),
+      );
       add(const LoadTransactionCategories());
     }
   }
@@ -96,8 +110,11 @@ class AddTransactionBloc
 
   void _onGoalSelected(GoalSelected event, Emitter<AddTransactionState> emit) {
     if (state is AddTransactionInProgress) {
-      emit((state as AddTransactionInProgress)
-          .copyWith(selectedGoalId: event.goalId));
+      emit(
+        (state as AddTransactionInProgress).copyWith(
+          selectedGoalId: event.goalId,
+        ),
+      );
     }
   }
 
@@ -121,7 +138,9 @@ class AddTransactionBloc
   }
 
   Future<void> _onSubmit(
-      SubmitTransaction event, Emitter<AddTransactionState> emit) async {
+    SubmitTransaction event,
+    Emitter<AddTransactionState> emit,
+  ) async {
     if (state is! AddTransactionInProgress) return;
     final s = state as AddTransactionInProgress;
     if (!s.isValid) return;

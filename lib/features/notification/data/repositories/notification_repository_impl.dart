@@ -9,8 +9,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   const NotificationRepositoryImpl({
     required NotificationLocalDatasource local,
     required NotificationRemoteDatasource remote,
-  })  : _local = local,
-        _remote = remote;
+  }) : _local = local,
+       _remote = remote;
 
   final NotificationLocalDatasource _local;
   final NotificationRemoteDatasource _remote;

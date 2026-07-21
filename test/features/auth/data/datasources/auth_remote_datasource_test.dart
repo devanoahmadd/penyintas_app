@@ -306,45 +306,55 @@ void main() {
   });
 
   group('reauthenticateWithGoogle', () {
-    test('user batal (idToken null) → return false tanpa panggil reauth',
-        () async {
-      when(() => auth.currentUser).thenReturn(user);
-      when(() => googleService.getIdToken()).thenAnswer((_) async => null);
+    test(
+      'user batal (idToken null) → return false tanpa panggil reauth',
+      () async {
+        when(() => auth.currentUser).thenReturn(user);
+        when(() => googleService.getIdToken()).thenAnswer((_) async => null);
 
-      final result = await datasource.reauthenticateWithGoogle();
+        final result = await datasource.reauthenticateWithGoogle();
 
-      expect(result, isFalse);
-      verifyNever(() => user.reauthenticateWithCredential(any()));
-    });
+        expect(result, isFalse);
+        verifyNever(() => user.reauthenticateWithCredential(any()));
+      },
+    );
 
-    test('sukses → reauthenticateWithCredential dipanggil, return true',
-        () async {
-      when(() => auth.currentUser).thenReturn(user);
-      when(() => googleService.getIdToken())
-          .thenAnswer((_) async => 'id-token-1');
-      when(() => user.reauthenticateWithCredential(any()))
-          .thenAnswer((_) async => credential);
+    test(
+      'sukses → reauthenticateWithCredential dipanggil, return true',
+      () async {
+        when(() => auth.currentUser).thenReturn(user);
+        when(
+          () => googleService.getIdToken(),
+        ).thenAnswer((_) async => 'id-token-1');
+        when(
+          () => user.reauthenticateWithCredential(any()),
+        ).thenAnswer((_) async => credential);
 
-      final result = await datasource.reauthenticateWithGoogle();
+        final result = await datasource.reauthenticateWithGoogle();
 
-      expect(result, isTrue);
-      verify(() => user.reauthenticateWithCredential(any())).called(1);
-    });
+        expect(result, isTrue);
+        verify(() => user.reauthenticateWithCredential(any())).called(1);
+      },
+    );
 
     test('user-mismatch → AuthException pesan akun Google berbeda', () async {
       when(() => auth.currentUser).thenReturn(user);
-      when(() => googleService.getIdToken())
-          .thenAnswer((_) async => 'id-token-1');
-      when(() => user.reauthenticateWithCredential(any()))
-          .thenThrow(FirebaseAuthException(code: 'user-mismatch'));
+      when(
+        () => googleService.getIdToken(),
+      ).thenAnswer((_) async => 'id-token-1');
+      when(
+        () => user.reauthenticateWithCredential(any()),
+      ).thenThrow(FirebaseAuthException(code: 'user-mismatch'));
 
       expect(
         () => datasource.reauthenticateWithGoogle(),
-        throwsA(isA<AuthException>().having(
-          (e) => e.message,
-          'message',
-          contains('berbeda'),
-        )),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            contains('berbeda'),
+          ),
+        ),
       );
     });
 
@@ -359,16 +369,19 @@ void main() {
 
     test('getIdToken melempar exception → AuthException', () async {
       when(() => auth.currentUser).thenReturn(user);
-      when(() => googleService.getIdToken())
-          .thenThrow(Exception('play services'));
+      when(
+        () => googleService.getIdToken(),
+      ).thenThrow(Exception('play services'));
 
       expect(
         () => datasource.reauthenticateWithGoogle(),
-        throwsA(isA<AuthException>().having(
-          (e) => e.message,
-          'message',
-          contains('Gagal menghubungi Google'),
-        )),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            contains('Gagal menghubungi Google'),
+          ),
+        ),
       );
     });
   });

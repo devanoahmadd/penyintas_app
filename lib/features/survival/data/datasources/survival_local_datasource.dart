@@ -13,9 +13,9 @@ class SurvivalLocalDatasourceImpl implements SurvivalLocalDatasource {
 
   @override
   Future<DateTime?> getSurvivalActivatedAt() async {
-    final row = await (_db.select(_db.appSettings)
-          ..where((s) => s.id.equals(1)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.appSettings,
+    )..where((s) => s.id.equals(1))).getSingleOrNull();
     return row?.survivalModeActivatedAt;
   }
 

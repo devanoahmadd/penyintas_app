@@ -82,8 +82,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Sheet uses page background — cleaner, no surface layer
     final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final borderColor =
-        isDark ? AppColors.borderDark : AppColors.borderLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final isEdit = widget.existing != null;
@@ -182,8 +181,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
               if (isEdit && widget.onDelete != null)
                 TextButton(
                   onPressed: () {
-                    widget.onDelete!(
-                        widget.existing!.id, widget.category.slug);
+                    widget.onDelete!(widget.existing!.id, widget.category.slug);
                     Navigator.of(context).pop();
                   },
                   child: Text(
@@ -192,11 +190,7 @@ class _CategoryLimitSheetState extends State<CategoryLimitSheet> {
                   ),
                 ),
               const Spacer(),
-              PrimaryButton(
-                label: 'Simpan',
-                width: 120,
-                onPressed: _save,
-              ),
+              PrimaryButton(label: 'Simpan', width: 120, onPressed: _save),
             ],
           ),
         ],
@@ -244,17 +238,11 @@ class _CategoryChip extends StatelessWidget {
           Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
             child: Icon(icon, size: 17, color: accentColor),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            label,
-            style: AppTextStyles.label.copyWith(color: accentColor),
-          ),
+          Text(label, style: AppTextStyles.label.copyWith(color: accentColor)),
         ],
       ),
     );
@@ -285,8 +273,7 @@ class _AmountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final displayStr =
-        NumberFormat.decimalPattern('id_ID').format(amount);
+    final displayStr = NumberFormat.decimalPattern('id_ID').format(amount);
 
     return GestureDetector(
       onTap: onTap,
@@ -375,8 +362,7 @@ class _BudgetNumpadSheetState extends State<_BudgetNumpadSheet> {
   @override
   void initState() {
     super.initState();
-    _raw =
-        widget.initialAmount == 0 ? '0' : widget.initialAmount.toString();
+    _raw = widget.initialAmount == 0 ? '0' : widget.initialAmount.toString();
   }
 
   void _onKey(String key) {
@@ -545,8 +531,7 @@ class _BudgetNumpadKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
 
     return GestureDetector(
@@ -664,9 +649,7 @@ class _PillOption extends StatelessWidget {
             Text(
               sublabel,
               style: AppTextStyles.caption.copyWith(
-                color: isActive
-                    ? Colors.white.withValues(alpha: 0.75)
-                    : muted,
+                color: isActive ? Colors.white.withValues(alpha: 0.75) : muted,
                 letterSpacing: 0,
                 fontSize: 10,
               ),

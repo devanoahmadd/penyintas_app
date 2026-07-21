@@ -107,7 +107,10 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl,
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,18 +123,26 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       _EditSectionLabel(
-                          context.l10n.txSectionCategory, isDark: isDark),
+                        context.l10n.txSectionCategory,
+                        isDark: isDark,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       _EditCategoryGrid(isDark: isDark),
                       const SizedBox(height: AppSpacing.xl),
                       _EditSectionLabel(
-                          context.l10n.txSectionNote, isDark: isDark),
+                        context.l10n.txSectionNote,
+                        isDark: isDark,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       _EditNoteField(
-                          controller: _noteController, isDark: isDark),
+                        controller: _noteController,
+                        isDark: isDark,
+                      ),
                       const SizedBox(height: AppSpacing.xl),
                       _EditSectionLabel(
-                          context.l10n.txSectionDate, isDark: isDark),
+                        context.l10n.txSectionDate,
+                        isDark: isDark,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       _EditDateField(isDark: isDark),
                       if (widget.activeGoals.isNotEmpty)
@@ -139,7 +150,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                           builder: (context, state) {
                             final isIncome =
                                 state is EditTransactionInProgress &&
-                                    state.type == TransactionType.income;
+                                state.type == TransactionType.income;
                             if (!isIncome) return const SizedBox.shrink();
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,9 +215,9 @@ class _EditNumpadSheetState extends State<_EditNumpadSheet> {
         }
       }
     });
-    context
-        .read<EditTransactionBloc>()
-        .add(EditAmountChanged(int.tryParse(_raw) ?? 0));
+    context.read<EditTransactionBloc>().add(
+      EditAmountChanged(int.tryParse(_raw) ?? 0),
+    );
   }
 
   @override
@@ -260,7 +271,10 @@ class _EditNumpadSheetState extends State<_EditNumpadSheet> {
           _EditNumpad(onDigit: _onDigit, isDark: isDark),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0,
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              0,
             ),
             child: SizedBox(
               width: double.infinity,
@@ -316,11 +330,16 @@ class _EditSheetHeader extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
       child: Row(
         children: [
@@ -378,7 +397,9 @@ class _EditTypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     return BlocBuilder<EditTransactionBloc, EditTransactionState>(
       builder: (context, state) {
@@ -403,9 +424,9 @@ class _EditTypeToggle extends StatelessWidget {
                   onTap: () {
                     if (isExpense) {
                       HapticFeedback.selectionClick();
-                      context
-                          .read<EditTransactionBloc>()
-                          .add(const EditTypeSet(TransactionType.income));
+                      context.read<EditTransactionBloc>().add(
+                        const EditTypeSet(TransactionType.income),
+                      );
                     }
                   },
                 ),
@@ -420,9 +441,9 @@ class _EditTypeToggle extends StatelessWidget {
                   onTap: () {
                     if (!isExpense) {
                       HapticFeedback.selectionClick();
-                      context
-                          .read<EditTransactionBloc>()
-                          .add(const EditTypeSet(TransactionType.expense));
+                      context.read<EditTransactionBloc>().add(
+                        const EditTypeSet(TransactionType.expense),
+                      );
                     }
                   },
                 ),
@@ -488,10 +509,8 @@ class _EditNominalCard extends StatelessWidget {
 
     return BlocBuilder<EditTransactionBloc, EditTransactionState>(
       builder: (context, state) {
-        final amount =
-            state is EditTransactionInProgress ? state.amount : 0;
-        final displayStr =
-            NumberFormat.decimalPattern('id_ID').format(amount);
+        final amount = state is EditTransactionInProgress ? state.amount : 0;
+        final displayStr = NumberFormat.decimalPattern('id_ID').format(amount);
 
         return Container(
           width: double.infinity,
@@ -578,14 +597,16 @@ class _EditCategoryGrid extends StatelessWidget {
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           children: _cats
-              .map((cat) => _EditCategoryCell(
-                    category: cat,
-                    isSelected: cat == selected,
-                    isDark: isDark,
-                    onTap: () => context
-                        .read<EditTransactionBloc>()
-                        .add(EditCategorySelected(cat)),
-                  ))
+              .map(
+                (cat) => _EditCategoryCell(
+                  category: cat,
+                  isSelected: cat == selected,
+                  isDark: isDark,
+                  onTap: () => context.read<EditTransactionBloc>().add(
+                    EditCategorySelected(cat),
+                  ),
+                ),
+              )
               .toList(),
         );
       },
@@ -626,11 +647,7 @@ class _EditCategoryCell extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: isSelected ? Colors.white : textColor,
-            ),
+            Icon(icon, size: 22, color: isSelected ? Colors.white : textColor),
             const SizedBox(height: 4),
             Text(
               category.toUpperCase(),
@@ -714,8 +731,9 @@ class _EditDateField extends StatelessWidget {
         final label =
             '${DateFormat('d MMM yyyy', 'id_ID').format(date)} · ${DateFormat('HH:mm').format(date)}';
         final surfaceColor = isDark ? AppColors.cardDark : AppColors.cardLight;
-        final borderColor =
-            isDark ? AppColors.borderDark : AppColors.borderLight;
+        final borderColor = isDark
+            ? AppColors.borderDark
+            : AppColors.borderLight;
         final textColor = isDark ? AppColors.textDark : AppColors.textLight;
         final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
@@ -743,14 +761,16 @@ class _EditDateField extends StatelessWidget {
             );
             if (!context.mounted) return;
             context.read<EditTransactionBloc>().add(
-                  EditDateChanged(DateTime(
-                    picked.year,
-                    picked.month,
-                    picked.day,
-                    time?.hour ?? date.hour,
-                    time?.minute ?? date.minute,
-                  )),
-                );
+              EditDateChanged(
+                DateTime(
+                  picked.year,
+                  picked.month,
+                  picked.day,
+                  time?.hour ?? date.hour,
+                  time?.minute ?? date.minute,
+                ),
+              ),
+            );
           },
           child: Container(
             padding: const EdgeInsets.symmetric(
@@ -764,8 +784,11 @@ class _EditDateField extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_month_outlined,
-                    size: 18, color: mutedColor),
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 18,
+                  color: mutedColor,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   label,
@@ -803,17 +826,21 @@ class _EditNumpad extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         children: _rows
-            .map((row) => Row(
-                  children: row
-                      .map((key) => Expanded(
-                            child: _EditNumpadKey(
-                              label: key,
-                              onTap: () => onDigit(key),
-                              isDark: isDark,
-                            ),
-                          ))
-                      .toList(),
-                ))
+            .map(
+              (row) => Row(
+                children: row
+                    .map(
+                      (key) => Expanded(
+                        child: _EditNumpadKey(
+                          label: key,
+                          onTap: () => onDigit(key),
+                          isDark: isDark,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
             .toList(),
       ),
     );
@@ -875,8 +902,9 @@ class _EditGoalPicker extends StatelessWidget {
 
     return BlocBuilder<EditTransactionBloc, EditTransactionState>(
       builder: (context, state) {
-        final selectedId =
-            state is EditTransactionInProgress ? state.selectedGoalId : null;
+        final selectedId = state is EditTransactionInProgress
+            ? state.selectedGoalId
+            : null;
 
         return Container(
           padding: const EdgeInsets.symmetric(
@@ -914,13 +942,18 @@ class _EditGoalPicker extends StatelessWidget {
                     value: g.id,
                     child: Row(
                       children: [
-                        const Icon(Icons.flag_outlined,
-                            size: 16, color: AppColors.primary),
+                        const Icon(
+                          Icons.flag_outlined,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             g.title,
-                            style: AppTextStyles.body.copyWith(color: textColor),
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -930,9 +963,8 @@ class _EditGoalPicker extends StatelessWidget {
                   ),
                 ),
               ],
-              onChanged: (id) => context
-                  .read<EditTransactionBloc>()
-                  .add(EditGoalSelected(id)),
+              onChanged: (id) =>
+                  context.read<EditTransactionBloc>().add(EditGoalSelected(id)),
             ),
           ),
         );
@@ -953,22 +985,26 @@ class _EditSubmitButton extends StatelessWidget {
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0,
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            0,
           ),
           child: SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
               onPressed: isValid && !isLoading
-                  ? () => context
-                      .read<EditTransactionBloc>()
-                      .add(const SubmitEdit())
+                  ? () => context.read<EditTransactionBloc>().add(
+                      const SubmitEdit(),
+                    )
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor:
-                    AppColors.primary.withValues(alpha: 0.4),
+                disabledBackgroundColor: AppColors.primary.withValues(
+                  alpha: 0.4,
+                ),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.lg),

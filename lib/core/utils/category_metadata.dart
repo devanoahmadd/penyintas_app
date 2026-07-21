@@ -40,17 +40,18 @@ class CategoryMetadata {
     return slug;
   }
 
-  static String _fromLabelKey(String key, AppLocalizations l10n) => switch (key) {
-    'category_food'      => l10n.categoryFood,
-    'category_transport' => l10n.categoryTransport,
-    'category_shopping'  => l10n.categoryShopping,
-    'category_health'    => l10n.categoryHealth,
-    'category_internet'  => l10n.categoryInternet,
-    'category_other'     => l10n.categoryOther,
-    'category_fixed'     => l10n.categoryFixed,
-    'category_income'    => l10n.categoryIncome,
-    _                    => _unregisteredLabelKey(key),
-  };
+  static String _fromLabelKey(String key, AppLocalizations l10n) =>
+      switch (key) {
+        'category_food' => l10n.categoryFood,
+        'category_transport' => l10n.categoryTransport,
+        'category_shopping' => l10n.categoryShopping,
+        'category_health' => l10n.categoryHealth,
+        'category_internet' => l10n.categoryInternet,
+        'category_other' => l10n.categoryOther,
+        'category_fixed' => l10n.categoryFixed,
+        'category_income' => l10n.categoryIncome,
+        _ => _unregisteredLabelKey(key),
+      };
 
   static String _unregisteredLabelKey(String key) {
     assert(
@@ -62,54 +63,54 @@ class CategoryMetadata {
   }
 
   static const _slugToLabelKey = <String, String>{
-    'food':      'category_food',
+    'food': 'category_food',
     'transport': 'category_transport',
-    'shopping':  'category_shopping',
-    'health':    'category_health',
-    'internet':  'category_internet',
-    'other':     'category_other',
-    'fixed':     'category_fixed',
-    'income':    'category_income',
+    'shopping': 'category_shopping',
+    'health': 'category_health',
+    'internet': 'category_internet',
+    'other': 'category_other',
+    'fixed': 'category_fixed',
+    'income': 'category_income',
   };
 
   // Built-in slug → (icon, color)
   static const _map = <String, (IconData, Color)>{
-    'food':      (Icons.restaurant_outlined,     AppColors.warn),
+    'food': (Icons.restaurant_outlined, AppColors.warn),
     'transport': (Icons.directions_car_outlined, AppColors.primary),
-    'shopping':  (Icons.shopping_bag_outlined,   AppColors.caution),
-    'health':    (Icons.favorite_outline,        AppColors.primaryBright),
-    'internet':  (Icons.wifi_rounded,            AppColors.primaryDeep),
-    'fixed':     (Icons.home_outlined,           AppColors.primary),
-    'income':    (Icons.arrow_upward_rounded,    AppColors.primaryBright),
-    'other':     (Icons.grid_view_outlined,      AppColors.primary),
+    'shopping': (Icons.shopping_bag_outlined, AppColors.caution),
+    'health': (Icons.favorite_outline, AppColors.primaryBright),
+    'internet': (Icons.wifi_rounded, AppColors.primaryDeep),
+    'fixed': (Icons.home_outlined, AppColors.primary),
+    'income': (Icons.arrow_upward_rounded, AppColors.primaryBright),
+    'other': (Icons.grid_view_outlined, AppColors.primary),
   };
 
   // Icon slug → IconData (untuk custom kategori)
   static const _iconMap = <String, IconData>{
-    'restaurant':  Icons.restaurant_outlined,
-    'fitness':     Icons.fitness_center_outlined,
-    'school':      Icons.school_outlined,
-    'pets':        Icons.pets_outlined,
-    'travel':      Icons.flight_outlined,
-    'gaming':      Icons.sports_esports_outlined,
-    'movie':       Icons.movie_outlined,
-    'coffee':      Icons.coffee_outlined,
-    'pharmacy':    Icons.local_pharmacy_outlined,
-    'home':        Icons.home_outlined,
-    'sports':      Icons.sports_soccer,
-    'book':        Icons.book_outlined,
-    'music':       Icons.music_note_outlined,
-    'camera':      Icons.photo_camera_outlined,
-    'childcare':   Icons.child_care,
-    'bar':         Icons.local_bar_outlined,
-    'laundry':     Icons.local_laundry_service,
-    'bike':        Icons.directions_bike_outlined,
-    'wellness':    Icons.self_improvement_outlined,
-    'donation':    Icons.volunteer_activism_outlined,
-    'cake':        Icons.cake_outlined,
-    'repair':      Icons.build_outlined,
+    'restaurant': Icons.restaurant_outlined,
+    'fitness': Icons.fitness_center_outlined,
+    'school': Icons.school_outlined,
+    'pets': Icons.pets_outlined,
+    'travel': Icons.flight_outlined,
+    'gaming': Icons.sports_esports_outlined,
+    'movie': Icons.movie_outlined,
+    'coffee': Icons.coffee_outlined,
+    'pharmacy': Icons.local_pharmacy_outlined,
+    'home': Icons.home_outlined,
+    'sports': Icons.sports_soccer,
+    'book': Icons.book_outlined,
+    'music': Icons.music_note_outlined,
+    'camera': Icons.photo_camera_outlined,
+    'childcare': Icons.child_care,
+    'bar': Icons.local_bar_outlined,
+    'laundry': Icons.local_laundry_service,
+    'bike': Icons.directions_bike_outlined,
+    'wellness': Icons.self_improvement_outlined,
+    'donation': Icons.volunteer_activism_outlined,
+    'cake': Icons.cake_outlined,
+    'repair': Icons.build_outlined,
     'electronics': Icons.devices_outlined,
-    'spa':         Icons.spa_outlined,
-    'savings':     Icons.savings_outlined,
+    'spa': Icons.spa_outlined,
+    'savings': Icons.savings_outlined,
   };
 }

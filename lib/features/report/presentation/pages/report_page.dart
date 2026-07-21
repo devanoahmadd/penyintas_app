@@ -94,8 +94,9 @@ class _ReportPageState extends State<ReportPage> {
 
     return BlocBuilder<ReportBloc, ReportState>(
       builder: (context, state) {
-        final selectedMonth =
-            state is ReportLoaded ? state.selectedMonth : DateTime.now();
+        final selectedMonth = state is ReportLoaded
+            ? state.selectedMonth
+            : DateTime.now();
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -117,8 +118,7 @@ class _ReportPageState extends State<ReportPage> {
                 selectedMonth: selectedMonth,
                 onPrevious: () =>
                     context.read<ReportBloc>().add(const PreviousMonth()),
-                onNext: () =>
-                    context.read<ReportBloc>().add(const NextMonth()),
+                onNext: () => context.read<ReportBloc>().add(const NextMonth()),
               ),
             ),
           ),
@@ -139,8 +139,7 @@ class _ReportContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
-    final textSoft =
-        isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
+    final textSoft = isDark ? AppColors.textSoftDark : AppColors.textSoftLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final border = isDark ? AppColors.borderDark : AppColors.borderLight;
     final muted = isDark ? AppColors.mutedDark : AppColors.mutedLight;
@@ -150,8 +149,10 @@ class _ReportContent extends StatelessWidget {
     final netColor = netIsPositive ? AppColors.success : AppColors.warn;
     final comparedText = comparedLabelText(report);
 
-    final monthLabel =
-        DateFormat('MMMM yyyy', 'id').format(report.month).toUpperCase();
+    final monthLabel = DateFormat(
+      'MMMM yyyy',
+      'id',
+    ).format(report.month).toUpperCase();
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -295,10 +296,7 @@ class _SummaryItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.numericSm.copyWith(color: valueColor),
-        ),
+        Text(value, style: AppTextStyles.numericSm.copyWith(color: valueColor)),
       ],
     );
   }

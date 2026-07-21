@@ -14,10 +14,8 @@ class BudgetOverviewSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor =
-        isDark ? const Color(0xFF1C3526) : AppColors.cardLight;
-    final highlightColor =
-        isDark ? const Color(0xFF2E5040) : AppColors.bgLight;
+    final baseColor = isDark ? const Color(0xFF1C3526) : AppColors.cardLight;
+    final highlightColor = isDark ? const Color(0xFF2E5040) : AppColors.bgLight;
 
     return Shimmer.fromColors(
       baseColor: baseColor,

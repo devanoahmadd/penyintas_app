@@ -3,7 +3,9 @@ import 'package:penyintas_app/features/auth/data/models/user_settings_model.dart
 
 void main() {
   test('fromFirestore membaca onboardingCompleted', () {
-    final model = UserSettingsModel.fromFirestore({'onboardingCompleted': true});
+    final model = UserSettingsModel.fromFirestore({
+      'onboardingCompleted': true,
+    });
     expect(model.onboardingCompleted, true);
   });
 

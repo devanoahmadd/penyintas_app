@@ -13,9 +13,9 @@ class PreferencesRepositoryImpl implements PreferencesRepository {
     required PreferencesLocalDatasource local,
     required PreferencesRemoteDatasource remote,
     Duration syncTimeout = const Duration(seconds: 3),
-  })  : _local = local,
-        _remote = remote,
-        _syncTimeout = syncTimeout;
+  }) : _local = local,
+       _remote = remote,
+       _syncTimeout = syncTimeout;
 
   final PreferencesLocalDatasource _local;
   final PreferencesRemoteDatasource _remote;
@@ -49,7 +49,10 @@ class PreferencesRepositoryImpl implements PreferencesRepository {
       // jalur A) agar perubahan offline tetap tersinkron, tanpa re-mirror tiap launch.
       await _local.markMirrored(DateTime.now().millisecondsSinceEpoch);
     } catch (e, s) {
-      _logError(e, s); // non-fatal — local sudah tersimpan (tetap dirty → retry)
+      _logError(
+        e,
+        s,
+      ); // non-fatal — local sudah tersimpan (tetap dirty → retry)
     }
     return const Right(unit);
   }
@@ -84,13 +87,16 @@ class PreferencesRepositoryImpl implements PreferencesRepository {
         remote = await _remote.fetch().timeout(_syncTimeout);
       } catch (e, s) {
         _logError(e, s);
-        fetchFailed = true; // timeout/offline/belum-auth → status cloud TAK DIKETAHUI
+        fetchFailed =
+            true; // timeout/offline/belum-auth → status cloud TAK DIKETAHUI
       }
 
       // (B) Remote selesai & VALID → ratchet UP: seed local. Tak perlu mirror (local
       //     kini == remote). F-D4: validasi data di sisi konsumsi (defense-in-depth atas
       //     clamp M1) — jangan seed "completed" yang field-nya rusak/kosong.
-      if (remote != null && remote.profileCompleted && _isProfileValid(remote)) {
+      if (remote != null &&
+          remote.profileCompleted &&
+          _isProfileValid(remote)) {
         await _local.write(remote);
         // T-1: local kini == remote (salinan setia) → tandai clean, jangan mirror balik.
         await _local.markMirrored(DateTime.now().millisecondsSinceEpoch);

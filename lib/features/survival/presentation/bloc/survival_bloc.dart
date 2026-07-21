@@ -20,11 +20,11 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     required RecordSurvivalActivatedUseCase recordActivated,
     required ClearSurvivalActivatedUseCase clearActivated,
     Stream<String?>? uidChanges,
-  })  : _getSurvivalMode = getSurvivalMode,
-        _getSurvivalTips = getSurvivalTips,
-        _recordActivated = recordActivated,
-        _clearActivated = clearActivated,
-        super(const SurvivalInitial()) {
+  }) : _getSurvivalMode = getSurvivalMode,
+       _getSurvivalTips = getSurvivalTips,
+       _recordActivated = recordActivated,
+       _clearActivated = clearActivated,
+       super(const SurvivalInitial()) {
     on<LoadSurvivalMode>(_onLoad, transformer: droppable());
     on<FetchSurvivalTips>(_onFetchTips, transformer: droppable());
     on<SurvivalSessionReset>(_onSessionReset);
@@ -56,7 +56,9 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
   final ClearSurvivalActivatedUseCase _clearActivated;
 
   Future<void> _onLoad(
-      LoadSurvivalMode event, Emitter<SurvivalState> emit) async {
+    LoadSurvivalMode event,
+    Emitter<SurvivalState> emit,
+  ) async {
     final result = await _getSurvivalMode(event.dashboard);
     if (result.isLeft()) {
       result.fold((f) => emit(SurvivalError(f.message)), (_) {});
@@ -85,13 +87,18 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
 
   /// Reset sesi: buang state milik user lama sekaligus batalkan hasil fetch
   /// yang masih berjalan (lewat kenaikan [_sessionEpoch]).
-  void _onSessionReset(SurvivalSessionReset event, Emitter<SurvivalState> emit) {
+  void _onSessionReset(
+    SurvivalSessionReset event,
+    Emitter<SurvivalState> emit,
+  ) {
     _sessionEpoch++;
     emit(const SurvivalInitial());
   }
 
   Future<void> _onFetchTips(
-      FetchSurvivalTips event, Emitter<SurvivalState> emit) async {
+    FetchSurvivalTips event,
+    Emitter<SurvivalState> emit,
+  ) async {
     // Tidak re-fetch jika tips sudah tersedia
     if (state is SurvivalTipsLoaded) return;
 
@@ -108,11 +115,13 @@ class SurvivalBloc extends Bloc<SurvivalEvent, SurvivalState> {
     final epoch = _sessionEpoch;
 
     emit(SurvivalTipsLoading(entity));
-    final result = await _getSurvivalTips(SurvivalTipsParams(
-      remainingAmount: entity.remainingAmount,
-      remainingDays: entity.remainingDays,
-      language: event.language,
-    ));
+    final result = await _getSurvivalTips(
+      SurvivalTipsParams(
+        remainingAmount: entity.remainingAmount,
+        remainingDays: entity.remainingDays,
+        language: event.language,
+      ),
+    );
 
     // Sesi sudah di-reset (logout / ganti akun) saat fetch berjalan — buang
     // hasilnya supaya tips user lama tidak menimpa SurvivalInitial (#152).

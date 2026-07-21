@@ -60,10 +60,14 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
 
   @override
   Future<bool> requestPermission() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
 
     if (android != null) {
       return await android.requestNotificationsPermission() ?? false;
@@ -118,8 +122,7 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
   }
 
   @override
-  Future<void> cancelDailyReminder() =>
-      _plugin.cancel(id: _dailyReminderId);
+  Future<void> cancelDailyReminder() => _plugin.cancel(id: _dailyReminderId);
 
   @override
   Future<void> show({
