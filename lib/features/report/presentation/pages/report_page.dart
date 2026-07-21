@@ -19,7 +19,6 @@ import 'package:penyintas_app/features/report/presentation/widgets/category_pie_
 import 'package:penyintas_app/features/report/presentation/widgets/insight_card.dart';
 import 'package:penyintas_app/features/report/presentation/widgets/month_selector.dart';
 import 'package:penyintas_app/features/report/presentation/widgets/weekly_bar_chart.dart';
-import 'package:penyintas_app/widgets/common/penyintas_logo.dart';
 
 /// Label perbandingan bulan (#99) — top-level agar bisa diuji tanpa widget.
 /// String hardcoded Indonesia — konsisten halaman; sapu l10n = D-sprint 2.
@@ -211,8 +210,6 @@ class _ReportContent extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    PenyintasLogo(size: 14),
-                    const SizedBox(width: 4),
                     Text(
                       'Penyintas',
                       style: AppTextStyles.caption.copyWith(color: muted),
