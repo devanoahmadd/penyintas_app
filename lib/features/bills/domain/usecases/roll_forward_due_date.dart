@@ -1,6 +1,5 @@
-import 'dart:math' as math;
-
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/clamp_day_of_month.dart';
 
 /// Menghitung tanggal jatuh tempo berikutnya dari [current], secara MURNI
 /// (tanpa efek samping, deterministik).
@@ -25,17 +24,10 @@ DateTime rollForwardDueDate({
       // current.month + 1 = 13 dinormalisasi DateTime menjadi Januari tahun
       // berikutnya, jadi rollover tahun tertangani otomatis.
       final target = DateTime(current.year, current.month + 1, 1);
-      return _clampToMonth(target.year, target.month, dueDayOfMonth);
+      return clampDayOfMonth(target.year, target.month, dueDayOfMonth);
     case Recurrence.yearly:
-      return _clampToMonth(current.year + 1, current.month, dueDayOfMonth);
+      return clampDayOfMonth(current.year + 1, current.month, dueDayOfMonth);
     case Recurrence.none:
       return current;
   }
-}
-
-/// Bangun DateTime pada [year]/[month] dengan hari = min(anchor, hari terakhir
-/// bulan tersebut). Hari terakhir dihitung via "hari ke-0 bulan berikutnya".
-DateTime _clampToMonth(int year, int month, int dueDayOfMonth) {
-  final lastDay = DateTime(year, month + 1, 0).day;
-  return DateTime(year, month, math.min(dueDayOfMonth, lastDay));
 }
