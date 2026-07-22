@@ -34,6 +34,26 @@ const _createGoalsV12 = '''
   )
 ''';
 
+// DB v9 nyata punya tabel transactions (skema dasar sejak v1). Fixture wajib
+// memuatnya agar migrasi 9→14 (ALTER TABLE transactions, A1 Tagihan) tidak
+// gagal "no such table: transactions" — pola sama seperti di atas.
+const _createTransactionsPreV14 = '''
+  CREATE TABLE transactions (
+    tx_id TEXT NOT NULL PRIMARY KEY,
+    amount INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    type TEXT NOT NULL,
+    note TEXT,
+    date INTEGER NOT NULL,
+    is_fixed INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    goal_id INTEGER
+  )
+''';
+
 void main() {
   test(
     'migrasi 9→10: buat tabel preferences + copy locale dari app_settings',
@@ -45,6 +65,7 @@ void main() {
       );
       raw.execute(_createCategoriesV9);
       raw.execute(_createGoalsV12);
+      raw.execute(_createTransactionsPreV14);
       raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'en')");
 
       final db = AppDatabase(NativeDatabase.opened(raw));
@@ -70,6 +91,7 @@ void main() {
     );
     raw.execute(_createCategoriesV9);
     raw.execute(_createGoalsV12);
+    raw.execute(_createTransactionsPreV14);
     raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, 'fr')");
 
     final db = AppDatabase(NativeDatabase.opened(raw));
@@ -93,6 +115,7 @@ void main() {
       );
       raw.execute(_createCategoriesV9);
       raw.execute(_createGoalsV12);
+      raw.execute(_createTransactionsPreV14);
       // sengaja TIDAK INSERT row app_settings
 
       final db = AppDatabase(NativeDatabase.opened(raw));

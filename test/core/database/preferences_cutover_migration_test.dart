@@ -44,6 +44,25 @@ void _seedV10(
     )
   ''');
   raw.execute("INSERT INTO app_settings (id, locale) VALUES (1, '$appLocale')");
+  // DB v10 nyata punya tabel transactions (skema dasar sejak v1). Wajib ada
+  // agar migrasi 10→14 (ALTER TABLE transactions, A1 Tagihan) tak gagal
+  // "no such table: transactions" — pola sama seperti categories/goals di atas.
+  raw.execute('''
+    CREATE TABLE transactions (
+      tx_id TEXT NOT NULL PRIMARY KEY,
+      amount INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      type TEXT NOT NULL,
+      note TEXT,
+      date INTEGER NOT NULL,
+      is_fixed INTEGER NOT NULL DEFAULT 0,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      goal_id INTEGER
+    )
+  ''');
   raw.execute('''
     CREATE TABLE preferences (
       id INTEGER NOT NULL PRIMARY KEY,

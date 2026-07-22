@@ -243,6 +243,29 @@ class $AppSettingsTable extends AppSettings
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _billReminderDaysBeforeMeta =
+      const VerificationMeta('billReminderDaysBefore');
+  @override
+  late final GeneratedColumn<int> billReminderDaysBefore = GeneratedColumn<int>(
+    'bill_reminder_days_before',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _billReminderHourMeta = const VerificationMeta(
+    'billReminderHour',
+  );
+  @override
+  late final GeneratedColumn<int> billReminderHour = GeneratedColumn<int>(
+    'bill_reminder_hour',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(9),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -265,6 +288,8 @@ class $AppSettingsTable extends AppSettings
     survivalModeActivatedAt,
     partialOnboardingStep,
     partialOnboardingAt,
+    billReminderDaysBefore,
+    billReminderHour,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -446,6 +471,24 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('bill_reminder_days_before')) {
+      context.handle(
+        _billReminderDaysBeforeMeta,
+        billReminderDaysBefore.isAcceptableOrUnknown(
+          data['bill_reminder_days_before']!,
+          _billReminderDaysBeforeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bill_reminder_hour')) {
+      context.handle(
+        _billReminderHourMeta,
+        billReminderHour.isAcceptableOrUnknown(
+          data['bill_reminder_hour']!,
+          _billReminderHourMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -535,6 +578,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}partial_onboarding_at'],
       ),
+      billReminderDaysBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bill_reminder_days_before'],
+      )!,
+      billReminderHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bill_reminder_hour'],
+      )!,
     );
   }
 
@@ -565,6 +616,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final DateTime? survivalModeActivatedAt;
   final int? partialOnboardingStep;
   final int? partialOnboardingAt;
+  final int billReminderDaysBefore;
+  final int billReminderHour;
   const AppSetting({
     required this.id,
     required this.locale,
@@ -586,6 +639,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.survivalModeActivatedAt,
     this.partialOnboardingStep,
     this.partialOnboardingAt,
+    required this.billReminderDaysBefore,
+    required this.billReminderHour,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -620,6 +675,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     if (!nullToAbsent || partialOnboardingAt != null) {
       map['partial_onboarding_at'] = Variable<int>(partialOnboardingAt);
     }
+    map['bill_reminder_days_before'] = Variable<int>(billReminderDaysBefore);
+    map['bill_reminder_hour'] = Variable<int>(billReminderHour);
     return map;
   }
 
@@ -653,6 +710,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       partialOnboardingAt: partialOnboardingAt == null && nullToAbsent
           ? const Value.absent()
           : Value(partialOnboardingAt),
+      billReminderDaysBefore: Value(billReminderDaysBefore),
+      billReminderHour: Value(billReminderHour),
     );
   }
 
@@ -692,6 +751,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       partialOnboardingAt: serializer.fromJson<int?>(
         json['partialOnboardingAt'],
       ),
+      billReminderDaysBefore: serializer.fromJson<int>(
+        json['billReminderDaysBefore'],
+      ),
+      billReminderHour: serializer.fromJson<int>(json['billReminderHour']),
     );
   }
   @override
@@ -720,6 +783,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       ),
       'partialOnboardingStep': serializer.toJson<int?>(partialOnboardingStep),
       'partialOnboardingAt': serializer.toJson<int?>(partialOnboardingAt),
+      'billReminderDaysBefore': serializer.toJson<int>(billReminderDaysBefore),
+      'billReminderHour': serializer.toJson<int>(billReminderHour),
     };
   }
 
@@ -744,6 +809,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
     Value<int?> partialOnboardingStep = const Value.absent(),
     Value<int?> partialOnboardingAt = const Value.absent(),
+    int? billReminderDaysBefore,
+    int? billReminderHour,
   }) => AppSetting(
     id: id ?? this.id,
     locale: locale ?? this.locale,
@@ -773,6 +840,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     partialOnboardingAt: partialOnboardingAt.present
         ? partialOnboardingAt.value
         : this.partialOnboardingAt,
+    billReminderDaysBefore:
+        billReminderDaysBefore ?? this.billReminderDaysBefore,
+    billReminderHour: billReminderHour ?? this.billReminderHour,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -830,6 +900,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       partialOnboardingAt: data.partialOnboardingAt.present
           ? data.partialOnboardingAt.value
           : this.partialOnboardingAt,
+      billReminderDaysBefore: data.billReminderDaysBefore.present
+          ? data.billReminderDaysBefore.value
+          : this.billReminderDaysBefore,
+      billReminderHour: data.billReminderHour.present
+          ? data.billReminderHour.value
+          : this.billReminderHour,
     );
   }
 
@@ -855,13 +931,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('otherFixedExpense: $otherFixedExpense, ')
           ..write('survivalModeActivatedAt: $survivalModeActivatedAt, ')
           ..write('partialOnboardingStep: $partialOnboardingStep, ')
-          ..write('partialOnboardingAt: $partialOnboardingAt')
+          ..write('partialOnboardingAt: $partialOnboardingAt, ')
+          ..write('billReminderDaysBefore: $billReminderDaysBefore, ')
+          ..write('billReminderHour: $billReminderHour')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     locale,
     themeMode,
@@ -882,7 +960,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     survivalModeActivatedAt,
     partialOnboardingStep,
     partialOnboardingAt,
-  );
+    billReminderDaysBefore,
+    billReminderHour,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -906,7 +986,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.otherFixedExpense == this.otherFixedExpense &&
           other.survivalModeActivatedAt == this.survivalModeActivatedAt &&
           other.partialOnboardingStep == this.partialOnboardingStep &&
-          other.partialOnboardingAt == this.partialOnboardingAt);
+          other.partialOnboardingAt == this.partialOnboardingAt &&
+          other.billReminderDaysBefore == this.billReminderDaysBefore &&
+          other.billReminderHour == this.billReminderHour);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -930,6 +1012,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<DateTime?> survivalModeActivatedAt;
   final Value<int?> partialOnboardingStep;
   final Value<int?> partialOnboardingAt;
+  final Value<int> billReminderDaysBefore;
+  final Value<int> billReminderHour;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locale = const Value.absent(),
@@ -951,6 +1035,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.survivalModeActivatedAt = const Value.absent(),
     this.partialOnboardingStep = const Value.absent(),
     this.partialOnboardingAt = const Value.absent(),
+    this.billReminderDaysBefore = const Value.absent(),
+    this.billReminderHour = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -973,6 +1059,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.survivalModeActivatedAt = const Value.absent(),
     this.partialOnboardingStep = const Value.absent(),
     this.partialOnboardingAt = const Value.absent(),
+    this.billReminderDaysBefore = const Value.absent(),
+    this.billReminderHour = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -995,6 +1083,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<DateTime>? survivalModeActivatedAt,
     Expression<int>? partialOnboardingStep,
     Expression<int>? partialOnboardingAt,
+    Expression<int>? billReminderDaysBefore,
+    Expression<int>? billReminderHour,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1022,6 +1112,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
         'partial_onboarding_step': partialOnboardingStep,
       if (partialOnboardingAt != null)
         'partial_onboarding_at': partialOnboardingAt,
+      if (billReminderDaysBefore != null)
+        'bill_reminder_days_before': billReminderDaysBefore,
+      if (billReminderHour != null) 'bill_reminder_hour': billReminderHour,
     });
   }
 
@@ -1046,6 +1139,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<DateTime?>? survivalModeActivatedAt,
     Value<int?>? partialOnboardingStep,
     Value<int?>? partialOnboardingAt,
+    Value<int>? billReminderDaysBefore,
+    Value<int>? billReminderHour,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -1070,6 +1165,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       partialOnboardingStep:
           partialOnboardingStep ?? this.partialOnboardingStep,
       partialOnboardingAt: partialOnboardingAt ?? this.partialOnboardingAt,
+      billReminderDaysBefore:
+          billReminderDaysBefore ?? this.billReminderDaysBefore,
+      billReminderHour: billReminderHour ?? this.billReminderHour,
     );
   }
 
@@ -1142,6 +1240,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (partialOnboardingAt.present) {
       map['partial_onboarding_at'] = Variable<int>(partialOnboardingAt.value);
     }
+    if (billReminderDaysBefore.present) {
+      map['bill_reminder_days_before'] = Variable<int>(
+        billReminderDaysBefore.value,
+      );
+    }
+    if (billReminderHour.present) {
+      map['bill_reminder_hour'] = Variable<int>(billReminderHour.value);
+    }
     return map;
   }
 
@@ -1167,7 +1273,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('otherFixedExpense: $otherFixedExpense, ')
           ..write('survivalModeActivatedAt: $survivalModeActivatedAt, ')
           ..write('partialOnboardingStep: $partialOnboardingStep, ')
-          ..write('partialOnboardingAt: $partialOnboardingAt')
+          ..write('partialOnboardingAt: $partialOnboardingAt, ')
+          ..write('billReminderDaysBefore: $billReminderDaysBefore, ')
+          ..write('billReminderHour: $billReminderHour')
           ..write(')'))
         .toString();
   }
@@ -1709,6 +1817,17 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sourceBillIdMeta = const VerificationMeta(
+    'sourceBillId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceBillId = GeneratedColumn<int>(
+    'source_bill_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     txId,
@@ -1723,6 +1842,7 @@ class $TransactionsTable extends Transactions
     createdAt,
     updatedAt,
     goalId,
+    sourceBillId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1822,6 +1942,15 @@ class $TransactionsTable extends Transactions
         goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta),
       );
     }
+    if (data.containsKey('source_bill_id')) {
+      context.handle(
+        _sourceBillIdMeta,
+        sourceBillId.isAcceptableOrUnknown(
+          data['source_bill_id']!,
+          _sourceBillIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1879,6 +2008,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.int,
         data['${effectivePrefix}goal_id'],
       ),
+      sourceBillId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_bill_id'],
+      ),
     );
   }
 
@@ -1901,6 +2034,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int? goalId;
+  final int? sourceBillId;
   const Transaction({
     required this.txId,
     required this.amount,
@@ -1914,6 +2048,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.createdAt,
     required this.updatedAt,
     this.goalId,
+    this.sourceBillId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1936,6 +2071,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || goalId != null) {
       map['goal_id'] = Variable<int>(goalId);
     }
+    if (!nullToAbsent || sourceBillId != null) {
+      map['source_bill_id'] = Variable<int>(sourceBillId);
+    }
     return map;
   }
 
@@ -1957,6 +2095,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       goalId: goalId == null && nullToAbsent
           ? const Value.absent()
           : Value(goalId),
+      sourceBillId: sourceBillId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceBillId),
     );
   }
 
@@ -1978,6 +2119,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       goalId: serializer.fromJson<int?>(json['goalId']),
+      sourceBillId: serializer.fromJson<int?>(json['sourceBillId']),
     );
   }
   @override
@@ -1996,6 +2138,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'goalId': serializer.toJson<int?>(goalId),
+      'sourceBillId': serializer.toJson<int?>(sourceBillId),
     };
   }
 
@@ -2012,6 +2155,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<int?> goalId = const Value.absent(),
+    Value<int?> sourceBillId = const Value.absent(),
   }) => Transaction(
     txId: txId ?? this.txId,
     amount: amount ?? this.amount,
@@ -2025,6 +2169,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     goalId: goalId.present ? goalId.value : this.goalId,
+    sourceBillId: sourceBillId.present ? sourceBillId.value : this.sourceBillId,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -2040,6 +2185,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
+      sourceBillId: data.sourceBillId.present
+          ? data.sourceBillId.value
+          : this.sourceBillId,
     );
   }
 
@@ -2057,7 +2205,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('goalId: $goalId')
+          ..write('goalId: $goalId, ')
+          ..write('sourceBillId: $sourceBillId')
           ..write(')'))
         .toString();
   }
@@ -2076,6 +2225,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     createdAt,
     updatedAt,
     goalId,
+    sourceBillId,
   );
   @override
   bool operator ==(Object other) =>
@@ -2092,7 +2242,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.syncedAt == this.syncedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.goalId == this.goalId);
+          other.goalId == this.goalId &&
+          other.sourceBillId == this.sourceBillId);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -2108,6 +2259,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int?> goalId;
+  final Value<int?> sourceBillId;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.txId = const Value.absent(),
@@ -2122,6 +2274,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.sourceBillId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -2137,6 +2290,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.goalId = const Value.absent(),
+    this.sourceBillId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : txId = Value(txId),
        amount = Value(amount),
@@ -2158,6 +2312,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? goalId,
+    Expression<int>? sourceBillId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2173,6 +2328,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (goalId != null) 'goal_id': goalId,
+      if (sourceBillId != null) 'source_bill_id': sourceBillId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2190,6 +2346,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int?>? goalId,
+    Value<int?>? sourceBillId,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -2205,6 +2362,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       goalId: goalId ?? this.goalId,
+      sourceBillId: sourceBillId ?? this.sourceBillId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2248,6 +2406,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (goalId.present) {
       map['goal_id'] = Variable<int>(goalId.value);
     }
+    if (sourceBillId.present) {
+      map['source_bill_id'] = Variable<int>(sourceBillId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2269,6 +2430,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('goalId: $goalId, ')
+          ..write('sourceBillId: $sourceBillId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4638,6 +4800,1042 @@ class PreferencesCompanion extends UpdateCompanion<Preference> {
   }
 }
 
+class $BillsTable extends Bills with TableInfo<$BillsTable, Bill> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _cloudIdMeta = const VerificationMeta(
+    'cloudId',
+  );
+  @override
+  late final GeneratedColumn<String> cloudId = GeneratedColumn<String>(
+    'cloud_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _estimatedAmountMeta = const VerificationMeta(
+    'estimatedAmount',
+  );
+  @override
+  late final GeneratedColumn<int> estimatedAmount = GeneratedColumn<int>(
+    'estimated_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isFixedNeedMeta = const VerificationMeta(
+    'isFixedNeed',
+  );
+  @override
+  late final GeneratedColumn<bool> isFixedNeed = GeneratedColumn<bool>(
+    'is_fixed_need',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_fixed_need" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+    'due_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recurrenceMeta = const VerificationMeta(
+    'recurrence',
+  );
+  @override
+  late final GeneratedColumn<String> recurrence = GeneratedColumn<String>(
+    'recurrence',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _installmentTotalMeta = const VerificationMeta(
+    'installmentTotal',
+  );
+  @override
+  late final GeneratedColumn<int> installmentTotal = GeneratedColumn<int>(
+    'installment_total',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _installmentsPaidMeta = const VerificationMeta(
+    'installmentsPaid',
+  );
+  @override
+  late final GeneratedColumn<int> installmentsPaid = GeneratedColumn<int>(
+    'installments_paid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _recurrenceEndDateMeta = const VerificationMeta(
+    'recurrenceEndDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recurrenceEndDate =
+      GeneratedColumn<DateTime>(
+        'recurrence_end_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _dueDayOfMonthMeta = const VerificationMeta(
+    'dueDayOfMonth',
+  );
+  @override
+  late final GeneratedColumn<int> dueDayOfMonth = GeneratedColumn<int>(
+    'due_day_of_month',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reminderDaysBeforeMeta =
+      const VerificationMeta('reminderDaysBefore');
+  @override
+  late final GeneratedColumn<int> reminderDaysBefore = GeneratedColumn<int>(
+    'reminder_days_before',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    cloudId,
+    name,
+    estimatedAmount,
+    category,
+    isFixedNeed,
+    notes,
+    dueDate,
+    recurrence,
+    installmentTotal,
+    installmentsPaid,
+    recurrenceEndDate,
+    dueDayOfMonth,
+    reminderDaysBefore,
+    reminderEnabled,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bills';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Bill> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('cloud_id')) {
+      context.handle(
+        _cloudIdMeta,
+        cloudId.isAcceptableOrUnknown(data['cloud_id']!, _cloudIdMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('estimated_amount')) {
+      context.handle(
+        _estimatedAmountMeta,
+        estimatedAmount.isAcceptableOrUnknown(
+          data['estimated_amount']!,
+          _estimatedAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_estimatedAmountMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('is_fixed_need')) {
+      context.handle(
+        _isFixedNeedMeta,
+        isFixedNeed.isAcceptableOrUnknown(
+          data['is_fixed_need']!,
+          _isFixedNeedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_isFixedNeedMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dueDateMeta);
+    }
+    if (data.containsKey('recurrence')) {
+      context.handle(
+        _recurrenceMeta,
+        recurrence.isAcceptableOrUnknown(data['recurrence']!, _recurrenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recurrenceMeta);
+    }
+    if (data.containsKey('installment_total')) {
+      context.handle(
+        _installmentTotalMeta,
+        installmentTotal.isAcceptableOrUnknown(
+          data['installment_total']!,
+          _installmentTotalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('installments_paid')) {
+      context.handle(
+        _installmentsPaidMeta,
+        installmentsPaid.isAcceptableOrUnknown(
+          data['installments_paid']!,
+          _installmentsPaidMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recurrence_end_date')) {
+      context.handle(
+        _recurrenceEndDateMeta,
+        recurrenceEndDate.isAcceptableOrUnknown(
+          data['recurrence_end_date']!,
+          _recurrenceEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('due_day_of_month')) {
+      context.handle(
+        _dueDayOfMonthMeta,
+        dueDayOfMonth.isAcceptableOrUnknown(
+          data['due_day_of_month']!,
+          _dueDayOfMonthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_days_before')) {
+      context.handle(
+        _reminderDaysBeforeMeta,
+        reminderDaysBefore.isAcceptableOrUnknown(
+          data['reminder_days_before']!,
+          _reminderDaysBeforeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Bill map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Bill(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      cloudId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloud_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      estimatedAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}estimated_amount'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      isFixedNeed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_fixed_need'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due_date'],
+      )!,
+      recurrence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence'],
+      )!,
+      installmentTotal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installment_total'],
+      ),
+      installmentsPaid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installments_paid'],
+      )!,
+      recurrenceEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recurrence_end_date'],
+      ),
+      dueDayOfMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}due_day_of_month'],
+      ),
+      reminderDaysBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_days_before'],
+      ),
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BillsTable createAlias(String alias) {
+    return $BillsTable(attachedDatabase, alias);
+  }
+}
+
+class Bill extends DataClass implements Insertable<Bill> {
+  final int id;
+  final String? cloudId;
+  final String name;
+  final int estimatedAmount;
+  final String category;
+  final bool isFixedNeed;
+  final String? notes;
+  final DateTime dueDate;
+  final String recurrence;
+  final int? installmentTotal;
+  final int installmentsPaid;
+  final DateTime? recurrenceEndDate;
+  final int? dueDayOfMonth;
+  final int? reminderDaysBefore;
+  final bool reminderEnabled;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const Bill({
+    required this.id,
+    this.cloudId,
+    required this.name,
+    required this.estimatedAmount,
+    required this.category,
+    required this.isFixedNeed,
+    this.notes,
+    required this.dueDate,
+    required this.recurrence,
+    this.installmentTotal,
+    required this.installmentsPaid,
+    this.recurrenceEndDate,
+    this.dueDayOfMonth,
+    this.reminderDaysBefore,
+    required this.reminderEnabled,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || cloudId != null) {
+      map['cloud_id'] = Variable<String>(cloudId);
+    }
+    map['name'] = Variable<String>(name);
+    map['estimated_amount'] = Variable<int>(estimatedAmount);
+    map['category'] = Variable<String>(category);
+    map['is_fixed_need'] = Variable<bool>(isFixedNeed);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['due_date'] = Variable<DateTime>(dueDate);
+    map['recurrence'] = Variable<String>(recurrence);
+    if (!nullToAbsent || installmentTotal != null) {
+      map['installment_total'] = Variable<int>(installmentTotal);
+    }
+    map['installments_paid'] = Variable<int>(installmentsPaid);
+    if (!nullToAbsent || recurrenceEndDate != null) {
+      map['recurrence_end_date'] = Variable<DateTime>(recurrenceEndDate);
+    }
+    if (!nullToAbsent || dueDayOfMonth != null) {
+      map['due_day_of_month'] = Variable<int>(dueDayOfMonth);
+    }
+    if (!nullToAbsent || reminderDaysBefore != null) {
+      map['reminder_days_before'] = Variable<int>(reminderDaysBefore);
+    }
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  BillsCompanion toCompanion(bool nullToAbsent) {
+    return BillsCompanion(
+      id: Value(id),
+      cloudId: cloudId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cloudId),
+      name: Value(name),
+      estimatedAmount: Value(estimatedAmount),
+      category: Value(category),
+      isFixedNeed: Value(isFixedNeed),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      dueDate: Value(dueDate),
+      recurrence: Value(recurrence),
+      installmentTotal: installmentTotal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installmentTotal),
+      installmentsPaid: Value(installmentsPaid),
+      recurrenceEndDate: recurrenceEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceEndDate),
+      dueDayOfMonth: dueDayOfMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dueDayOfMonth),
+      reminderDaysBefore: reminderDaysBefore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderDaysBefore),
+      reminderEnabled: Value(reminderEnabled),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Bill.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Bill(
+      id: serializer.fromJson<int>(json['id']),
+      cloudId: serializer.fromJson<String?>(json['cloudId']),
+      name: serializer.fromJson<String>(json['name']),
+      estimatedAmount: serializer.fromJson<int>(json['estimatedAmount']),
+      category: serializer.fromJson<String>(json['category']),
+      isFixedNeed: serializer.fromJson<bool>(json['isFixedNeed']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      dueDate: serializer.fromJson<DateTime>(json['dueDate']),
+      recurrence: serializer.fromJson<String>(json['recurrence']),
+      installmentTotal: serializer.fromJson<int?>(json['installmentTotal']),
+      installmentsPaid: serializer.fromJson<int>(json['installmentsPaid']),
+      recurrenceEndDate: serializer.fromJson<DateTime?>(
+        json['recurrenceEndDate'],
+      ),
+      dueDayOfMonth: serializer.fromJson<int?>(json['dueDayOfMonth']),
+      reminderDaysBefore: serializer.fromJson<int?>(json['reminderDaysBefore']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'cloudId': serializer.toJson<String?>(cloudId),
+      'name': serializer.toJson<String>(name),
+      'estimatedAmount': serializer.toJson<int>(estimatedAmount),
+      'category': serializer.toJson<String>(category),
+      'isFixedNeed': serializer.toJson<bool>(isFixedNeed),
+      'notes': serializer.toJson<String?>(notes),
+      'dueDate': serializer.toJson<DateTime>(dueDate),
+      'recurrence': serializer.toJson<String>(recurrence),
+      'installmentTotal': serializer.toJson<int?>(installmentTotal),
+      'installmentsPaid': serializer.toJson<int>(installmentsPaid),
+      'recurrenceEndDate': serializer.toJson<DateTime?>(recurrenceEndDate),
+      'dueDayOfMonth': serializer.toJson<int?>(dueDayOfMonth),
+      'reminderDaysBefore': serializer.toJson<int?>(reminderDaysBefore),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Bill copyWith({
+    int? id,
+    Value<String?> cloudId = const Value.absent(),
+    String? name,
+    int? estimatedAmount,
+    String? category,
+    bool? isFixedNeed,
+    Value<String?> notes = const Value.absent(),
+    DateTime? dueDate,
+    String? recurrence,
+    Value<int?> installmentTotal = const Value.absent(),
+    int? installmentsPaid,
+    Value<DateTime?> recurrenceEndDate = const Value.absent(),
+    Value<int?> dueDayOfMonth = const Value.absent(),
+    Value<int?> reminderDaysBefore = const Value.absent(),
+    bool? reminderEnabled,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => Bill(
+    id: id ?? this.id,
+    cloudId: cloudId.present ? cloudId.value : this.cloudId,
+    name: name ?? this.name,
+    estimatedAmount: estimatedAmount ?? this.estimatedAmount,
+    category: category ?? this.category,
+    isFixedNeed: isFixedNeed ?? this.isFixedNeed,
+    notes: notes.present ? notes.value : this.notes,
+    dueDate: dueDate ?? this.dueDate,
+    recurrence: recurrence ?? this.recurrence,
+    installmentTotal: installmentTotal.present
+        ? installmentTotal.value
+        : this.installmentTotal,
+    installmentsPaid: installmentsPaid ?? this.installmentsPaid,
+    recurrenceEndDate: recurrenceEndDate.present
+        ? recurrenceEndDate.value
+        : this.recurrenceEndDate,
+    dueDayOfMonth: dueDayOfMonth.present
+        ? dueDayOfMonth.value
+        : this.dueDayOfMonth,
+    reminderDaysBefore: reminderDaysBefore.present
+        ? reminderDaysBefore.value
+        : this.reminderDaysBefore,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Bill copyWithCompanion(BillsCompanion data) {
+    return Bill(
+      id: data.id.present ? data.id.value : this.id,
+      cloudId: data.cloudId.present ? data.cloudId.value : this.cloudId,
+      name: data.name.present ? data.name.value : this.name,
+      estimatedAmount: data.estimatedAmount.present
+          ? data.estimatedAmount.value
+          : this.estimatedAmount,
+      category: data.category.present ? data.category.value : this.category,
+      isFixedNeed: data.isFixedNeed.present
+          ? data.isFixedNeed.value
+          : this.isFixedNeed,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      recurrence: data.recurrence.present
+          ? data.recurrence.value
+          : this.recurrence,
+      installmentTotal: data.installmentTotal.present
+          ? data.installmentTotal.value
+          : this.installmentTotal,
+      installmentsPaid: data.installmentsPaid.present
+          ? data.installmentsPaid.value
+          : this.installmentsPaid,
+      recurrenceEndDate: data.recurrenceEndDate.present
+          ? data.recurrenceEndDate.value
+          : this.recurrenceEndDate,
+      dueDayOfMonth: data.dueDayOfMonth.present
+          ? data.dueDayOfMonth.value
+          : this.dueDayOfMonth,
+      reminderDaysBefore: data.reminderDaysBefore.present
+          ? data.reminderDaysBefore.value
+          : this.reminderDaysBefore,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Bill(')
+          ..write('id: $id, ')
+          ..write('cloudId: $cloudId, ')
+          ..write('name: $name, ')
+          ..write('estimatedAmount: $estimatedAmount, ')
+          ..write('category: $category, ')
+          ..write('isFixedNeed: $isFixedNeed, ')
+          ..write('notes: $notes, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('recurrence: $recurrence, ')
+          ..write('installmentTotal: $installmentTotal, ')
+          ..write('installmentsPaid: $installmentsPaid, ')
+          ..write('recurrenceEndDate: $recurrenceEndDate, ')
+          ..write('dueDayOfMonth: $dueDayOfMonth, ')
+          ..write('reminderDaysBefore: $reminderDaysBefore, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    cloudId,
+    name,
+    estimatedAmount,
+    category,
+    isFixedNeed,
+    notes,
+    dueDate,
+    recurrence,
+    installmentTotal,
+    installmentsPaid,
+    recurrenceEndDate,
+    dueDayOfMonth,
+    reminderDaysBefore,
+    reminderEnabled,
+    status,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Bill &&
+          other.id == this.id &&
+          other.cloudId == this.cloudId &&
+          other.name == this.name &&
+          other.estimatedAmount == this.estimatedAmount &&
+          other.category == this.category &&
+          other.isFixedNeed == this.isFixedNeed &&
+          other.notes == this.notes &&
+          other.dueDate == this.dueDate &&
+          other.recurrence == this.recurrence &&
+          other.installmentTotal == this.installmentTotal &&
+          other.installmentsPaid == this.installmentsPaid &&
+          other.recurrenceEndDate == this.recurrenceEndDate &&
+          other.dueDayOfMonth == this.dueDayOfMonth &&
+          other.reminderDaysBefore == this.reminderDaysBefore &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class BillsCompanion extends UpdateCompanion<Bill> {
+  final Value<int> id;
+  final Value<String?> cloudId;
+  final Value<String> name;
+  final Value<int> estimatedAmount;
+  final Value<String> category;
+  final Value<bool> isFixedNeed;
+  final Value<String?> notes;
+  final Value<DateTime> dueDate;
+  final Value<String> recurrence;
+  final Value<int?> installmentTotal;
+  final Value<int> installmentsPaid;
+  final Value<DateTime?> recurrenceEndDate;
+  final Value<int?> dueDayOfMonth;
+  final Value<int?> reminderDaysBefore;
+  final Value<bool> reminderEnabled;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const BillsCompanion({
+    this.id = const Value.absent(),
+    this.cloudId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.estimatedAmount = const Value.absent(),
+    this.category = const Value.absent(),
+    this.isFixedNeed = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.recurrence = const Value.absent(),
+    this.installmentTotal = const Value.absent(),
+    this.installmentsPaid = const Value.absent(),
+    this.recurrenceEndDate = const Value.absent(),
+    this.dueDayOfMonth = const Value.absent(),
+    this.reminderDaysBefore = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  BillsCompanion.insert({
+    this.id = const Value.absent(),
+    this.cloudId = const Value.absent(),
+    required String name,
+    required int estimatedAmount,
+    required String category,
+    required bool isFixedNeed,
+    this.notes = const Value.absent(),
+    required DateTime dueDate,
+    required String recurrence,
+    this.installmentTotal = const Value.absent(),
+    this.installmentsPaid = const Value.absent(),
+    this.recurrenceEndDate = const Value.absent(),
+    this.dueDayOfMonth = const Value.absent(),
+    this.reminderDaysBefore = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    required String status,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : name = Value(name),
+       estimatedAmount = Value(estimatedAmount),
+       category = Value(category),
+       isFixedNeed = Value(isFixedNeed),
+       dueDate = Value(dueDate),
+       recurrence = Value(recurrence),
+       status = Value(status),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<Bill> custom({
+    Expression<int>? id,
+    Expression<String>? cloudId,
+    Expression<String>? name,
+    Expression<int>? estimatedAmount,
+    Expression<String>? category,
+    Expression<bool>? isFixedNeed,
+    Expression<String>? notes,
+    Expression<DateTime>? dueDate,
+    Expression<String>? recurrence,
+    Expression<int>? installmentTotal,
+    Expression<int>? installmentsPaid,
+    Expression<DateTime>? recurrenceEndDate,
+    Expression<int>? dueDayOfMonth,
+    Expression<int>? reminderDaysBefore,
+    Expression<bool>? reminderEnabled,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (name != null) 'name': name,
+      if (estimatedAmount != null) 'estimated_amount': estimatedAmount,
+      if (category != null) 'category': category,
+      if (isFixedNeed != null) 'is_fixed_need': isFixedNeed,
+      if (notes != null) 'notes': notes,
+      if (dueDate != null) 'due_date': dueDate,
+      if (recurrence != null) 'recurrence': recurrence,
+      if (installmentTotal != null) 'installment_total': installmentTotal,
+      if (installmentsPaid != null) 'installments_paid': installmentsPaid,
+      if (recurrenceEndDate != null) 'recurrence_end_date': recurrenceEndDate,
+      if (dueDayOfMonth != null) 'due_day_of_month': dueDayOfMonth,
+      if (reminderDaysBefore != null)
+        'reminder_days_before': reminderDaysBefore,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  BillsCompanion copyWith({
+    Value<int>? id,
+    Value<String?>? cloudId,
+    Value<String>? name,
+    Value<int>? estimatedAmount,
+    Value<String>? category,
+    Value<bool>? isFixedNeed,
+    Value<String?>? notes,
+    Value<DateTime>? dueDate,
+    Value<String>? recurrence,
+    Value<int?>? installmentTotal,
+    Value<int>? installmentsPaid,
+    Value<DateTime?>? recurrenceEndDate,
+    Value<int?>? dueDayOfMonth,
+    Value<int?>? reminderDaysBefore,
+    Value<bool>? reminderEnabled,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return BillsCompanion(
+      id: id ?? this.id,
+      cloudId: cloudId ?? this.cloudId,
+      name: name ?? this.name,
+      estimatedAmount: estimatedAmount ?? this.estimatedAmount,
+      category: category ?? this.category,
+      isFixedNeed: isFixedNeed ?? this.isFixedNeed,
+      notes: notes ?? this.notes,
+      dueDate: dueDate ?? this.dueDate,
+      recurrence: recurrence ?? this.recurrence,
+      installmentTotal: installmentTotal ?? this.installmentTotal,
+      installmentsPaid: installmentsPaid ?? this.installmentsPaid,
+      recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
+      dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
+      reminderDaysBefore: reminderDaysBefore ?? this.reminderDaysBefore,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (cloudId.present) {
+      map['cloud_id'] = Variable<String>(cloudId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (estimatedAmount.present) {
+      map['estimated_amount'] = Variable<int>(estimatedAmount.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (isFixedNeed.present) {
+      map['is_fixed_need'] = Variable<bool>(isFixedNeed.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (recurrence.present) {
+      map['recurrence'] = Variable<String>(recurrence.value);
+    }
+    if (installmentTotal.present) {
+      map['installment_total'] = Variable<int>(installmentTotal.value);
+    }
+    if (installmentsPaid.present) {
+      map['installments_paid'] = Variable<int>(installmentsPaid.value);
+    }
+    if (recurrenceEndDate.present) {
+      map['recurrence_end_date'] = Variable<DateTime>(recurrenceEndDate.value);
+    }
+    if (dueDayOfMonth.present) {
+      map['due_day_of_month'] = Variable<int>(dueDayOfMonth.value);
+    }
+    if (reminderDaysBefore.present) {
+      map['reminder_days_before'] = Variable<int>(reminderDaysBefore.value);
+    }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BillsCompanion(')
+          ..write('id: $id, ')
+          ..write('cloudId: $cloudId, ')
+          ..write('name: $name, ')
+          ..write('estimatedAmount: $estimatedAmount, ')
+          ..write('category: $category, ')
+          ..write('isFixedNeed: $isFixedNeed, ')
+          ..write('notes: $notes, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('recurrence: $recurrence, ')
+          ..write('installmentTotal: $installmentTotal, ')
+          ..write('installmentsPaid: $installmentsPaid, ')
+          ..write('recurrenceEndDate: $recurrenceEndDate, ')
+          ..write('dueDayOfMonth: $dueDayOfMonth, ')
+          ..write('reminderDaysBefore: $reminderDaysBefore, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4648,6 +5846,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BudgetLimitsTable budgetLimits = $BudgetLimitsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $PreferencesTable preferences = $PreferencesTable(this);
+  late final $BillsTable bills = $BillsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4660,6 +5859,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     budgetLimits,
     categories,
     preferences,
+    bills,
   ];
 }
 
@@ -4685,6 +5885,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<DateTime?> survivalModeActivatedAt,
       Value<int?> partialOnboardingStep,
       Value<int?> partialOnboardingAt,
+      Value<int> billReminderDaysBefore,
+      Value<int> billReminderHour,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -4708,6 +5910,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<DateTime?> survivalModeActivatedAt,
       Value<int?> partialOnboardingStep,
       Value<int?> partialOnboardingAt,
+      Value<int> billReminderDaysBefore,
+      Value<int> billReminderHour,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -4816,6 +6020,16 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get partialOnboardingAt => $composableBuilder(
     column: $table.partialOnboardingAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get billReminderDaysBefore => $composableBuilder(
+    column: $table.billReminderDaysBefore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get billReminderHour => $composableBuilder(
+    column: $table.billReminderHour,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4928,6 +6142,16 @@ class $$AppSettingsTableOrderingComposer
     column: $table.partialOnboardingAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get billReminderDaysBefore => $composableBuilder(
+    column: $table.billReminderDaysBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get billReminderHour => $composableBuilder(
+    column: $table.billReminderHour,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -5032,6 +6256,16 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.partialOnboardingAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get billReminderDaysBefore => $composableBuilder(
+    column: $table.billReminderDaysBefore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get billReminderHour => $composableBuilder(
+    column: $table.billReminderHour,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -5085,6 +6319,8 @@ class $$AppSettingsTableTableManager
                 Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
                 Value<int?> partialOnboardingStep = const Value.absent(),
                 Value<int?> partialOnboardingAt = const Value.absent(),
+                Value<int> billReminderDaysBefore = const Value.absent(),
+                Value<int> billReminderHour = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locale: locale,
@@ -5106,6 +6342,8 @@ class $$AppSettingsTableTableManager
                 survivalModeActivatedAt: survivalModeActivatedAt,
                 partialOnboardingStep: partialOnboardingStep,
                 partialOnboardingAt: partialOnboardingAt,
+                billReminderDaysBefore: billReminderDaysBefore,
+                billReminderHour: billReminderHour,
               ),
           createCompanionCallback:
               ({
@@ -5129,6 +6367,8 @@ class $$AppSettingsTableTableManager
                 Value<DateTime?> survivalModeActivatedAt = const Value.absent(),
                 Value<int?> partialOnboardingStep = const Value.absent(),
                 Value<int?> partialOnboardingAt = const Value.absent(),
+                Value<int> billReminderDaysBefore = const Value.absent(),
+                Value<int> billReminderHour = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locale: locale,
@@ -5150,6 +6390,8 @@ class $$AppSettingsTableTableManager
                 survivalModeActivatedAt: survivalModeActivatedAt,
                 partialOnboardingStep: partialOnboardingStep,
                 partialOnboardingAt: partialOnboardingAt,
+                billReminderDaysBefore: billReminderDaysBefore,
+                billReminderHour: billReminderHour,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -5406,6 +6648,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int?> goalId,
+      Value<int?> sourceBillId,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -5422,6 +6665,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int?> goalId,
+      Value<int?> sourceBillId,
       Value<int> rowid,
     });
 
@@ -5491,6 +6735,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<int> get goalId => $composableBuilder(
     column: $table.goalId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceBillId => $composableBuilder(
+    column: $table.sourceBillId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5563,6 +6812,11 @@ class $$TransactionsTableOrderingComposer
     column: $table.goalId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get sourceBillId => $composableBuilder(
+    column: $table.sourceBillId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -5609,6 +6863,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get goalId =>
       $composableBuilder(column: $table.goalId, builder: (column) => column);
+
+  GeneratedColumn<int> get sourceBillId => $composableBuilder(
+    column: $table.sourceBillId,
+    builder: (column) => column,
+  );
 }
 
 class $$TransactionsTableTableManager
@@ -5654,6 +6913,7 @@ class $$TransactionsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int?> goalId = const Value.absent(),
+                Value<int?> sourceBillId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 txId: txId,
@@ -5668,6 +6928,7 @@ class $$TransactionsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 goalId: goalId,
+                sourceBillId: sourceBillId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5684,6 +6945,7 @@ class $$TransactionsTableTableManager
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int?> goalId = const Value.absent(),
+                Value<int?> sourceBillId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 txId: txId,
@@ -5698,6 +6960,7 @@ class $$TransactionsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 goalId: goalId,
+                sourceBillId: sourceBillId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6865,6 +8128,458 @@ typedef $$PreferencesTableProcessedTableManager =
       Preference,
       PrefetchHooks Function()
     >;
+typedef $$BillsTableCreateCompanionBuilder =
+    BillsCompanion Function({
+      Value<int> id,
+      Value<String?> cloudId,
+      required String name,
+      required int estimatedAmount,
+      required String category,
+      required bool isFixedNeed,
+      Value<String?> notes,
+      required DateTime dueDate,
+      required String recurrence,
+      Value<int?> installmentTotal,
+      Value<int> installmentsPaid,
+      Value<DateTime?> recurrenceEndDate,
+      Value<int?> dueDayOfMonth,
+      Value<int?> reminderDaysBefore,
+      Value<bool> reminderEnabled,
+      required String status,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$BillsTableUpdateCompanionBuilder =
+    BillsCompanion Function({
+      Value<int> id,
+      Value<String?> cloudId,
+      Value<String> name,
+      Value<int> estimatedAmount,
+      Value<String> category,
+      Value<bool> isFixedNeed,
+      Value<String?> notes,
+      Value<DateTime> dueDate,
+      Value<String> recurrence,
+      Value<int?> installmentTotal,
+      Value<int> installmentsPaid,
+      Value<DateTime?> recurrenceEndDate,
+      Value<int?> dueDayOfMonth,
+      Value<int?> reminderDaysBefore,
+      Value<bool> reminderEnabled,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$BillsTableFilterComposer extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get estimatedAmount => $composableBuilder(
+    column: $table.estimatedAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFixedNeed => $composableBuilder(
+    column: $table.isFixedNeed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrence => $composableBuilder(
+    column: $table.recurrence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentTotal => $composableBuilder(
+    column: $table.installmentTotal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentsPaid => $composableBuilder(
+    column: $table.installmentsPaid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dueDayOfMonth => $composableBuilder(
+    column: $table.dueDayOfMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderDaysBefore => $composableBuilder(
+    column: $table.reminderDaysBefore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BillsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cloudId => $composableBuilder(
+    column: $table.cloudId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get estimatedAmount => $composableBuilder(
+    column: $table.estimatedAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFixedNeed => $composableBuilder(
+    column: $table.isFixedNeed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recurrence => $composableBuilder(
+    column: $table.recurrence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get installmentTotal => $composableBuilder(
+    column: $table.installmentTotal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get installmentsPaid => $composableBuilder(
+    column: $table.installmentsPaid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dueDayOfMonth => $composableBuilder(
+    column: $table.dueDayOfMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderDaysBefore => $composableBuilder(
+    column: $table.reminderDaysBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BillsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get cloudId =>
+      $composableBuilder(column: $table.cloudId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get estimatedAmount => $composableBuilder(
+    column: $table.estimatedAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFixedNeed => $composableBuilder(
+    column: $table.isFixedNeed,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrence => $composableBuilder(
+    column: $table.recurrence,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get installmentTotal => $composableBuilder(
+    column: $table.installmentTotal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get installmentsPaid => $composableBuilder(
+    column: $table.installmentsPaid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dueDayOfMonth => $composableBuilder(
+    column: $table.dueDayOfMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderDaysBefore => $composableBuilder(
+    column: $table.reminderDaysBefore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$BillsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BillsTable,
+          Bill,
+          $$BillsTableFilterComposer,
+          $$BillsTableOrderingComposer,
+          $$BillsTableAnnotationComposer,
+          $$BillsTableCreateCompanionBuilder,
+          $$BillsTableUpdateCompanionBuilder,
+          (Bill, BaseReferences<_$AppDatabase, $BillsTable, Bill>),
+          Bill,
+          PrefetchHooks Function()
+        > {
+  $$BillsTableTableManager(_$AppDatabase db, $BillsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BillsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BillsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BillsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> cloudId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> estimatedAmount = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<bool> isFixedNeed = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> dueDate = const Value.absent(),
+                Value<String> recurrence = const Value.absent(),
+                Value<int?> installmentTotal = const Value.absent(),
+                Value<int> installmentsPaid = const Value.absent(),
+                Value<DateTime?> recurrenceEndDate = const Value.absent(),
+                Value<int?> dueDayOfMonth = const Value.absent(),
+                Value<int?> reminderDaysBefore = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => BillsCompanion(
+                id: id,
+                cloudId: cloudId,
+                name: name,
+                estimatedAmount: estimatedAmount,
+                category: category,
+                isFixedNeed: isFixedNeed,
+                notes: notes,
+                dueDate: dueDate,
+                recurrence: recurrence,
+                installmentTotal: installmentTotal,
+                installmentsPaid: installmentsPaid,
+                recurrenceEndDate: recurrenceEndDate,
+                dueDayOfMonth: dueDayOfMonth,
+                reminderDaysBefore: reminderDaysBefore,
+                reminderEnabled: reminderEnabled,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> cloudId = const Value.absent(),
+                required String name,
+                required int estimatedAmount,
+                required String category,
+                required bool isFixedNeed,
+                Value<String?> notes = const Value.absent(),
+                required DateTime dueDate,
+                required String recurrence,
+                Value<int?> installmentTotal = const Value.absent(),
+                Value<int> installmentsPaid = const Value.absent(),
+                Value<DateTime?> recurrenceEndDate = const Value.absent(),
+                Value<int?> dueDayOfMonth = const Value.absent(),
+                Value<int?> reminderDaysBefore = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                required String status,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => BillsCompanion.insert(
+                id: id,
+                cloudId: cloudId,
+                name: name,
+                estimatedAmount: estimatedAmount,
+                category: category,
+                isFixedNeed: isFixedNeed,
+                notes: notes,
+                dueDate: dueDate,
+                recurrence: recurrence,
+                installmentTotal: installmentTotal,
+                installmentsPaid: installmentsPaid,
+                recurrenceEndDate: recurrenceEndDate,
+                dueDayOfMonth: dueDayOfMonth,
+                reminderDaysBefore: reminderDaysBefore,
+                reminderEnabled: reminderEnabled,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BillsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BillsTable,
+      Bill,
+      $$BillsTableFilterComposer,
+      $$BillsTableOrderingComposer,
+      $$BillsTableAnnotationComposer,
+      $$BillsTableCreateCompanionBuilder,
+      $$BillsTableUpdateCompanionBuilder,
+      (Bill, BaseReferences<_$AppDatabase, $BillsTable, Bill>),
+      Bill,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6883,4 +8598,6 @@ class $AppDatabaseManager {
       $$CategoriesTableTableManager(_db, _db.categories);
   $$PreferencesTableTableManager get preferences =>
       $$PreferencesTableTableManager(_db, _db.preferences);
+  $$BillsTableTableManager get bills =>
+      $$BillsTableTableManager(_db, _db.bills);
 }

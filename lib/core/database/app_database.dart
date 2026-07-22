@@ -63,6 +63,11 @@ class AppSettings extends Table {
   // Partial onboarding state — untuk fitur "Lanjut nanti" (schemaVersion 9)
   IntColumn get partialOnboardingStep => integer().nullable()();
   IntColumn get partialOnboardingAt => integer().nullable()(); // epoch millis
+  // Pengingat tagihan (A1 Tagihan, schemaVersion 14) — berapa hari sebelum
+  // jatuh tempo notifikasi dikirim, dan jam berapa (24h, waktu lokal device).
+  IntColumn get billReminderDaysBefore =>
+      integer().withDefault(const Constant(1))();
+  IntColumn get billReminderHour => integer().withDefault(const Constant(9))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -93,6 +98,9 @@ class Transactions extends Table {
   DateTimeColumn get updatedAt => dateTime()();
   // Link ke tujuan tabungan (nullable) — schemaVersion 4
   IntColumn get goalId => integer().nullable()();
+  // Link balik ke tagihan asal (nullable) — transaksi hasil "Tandai Lunas"
+  // tagihan (A1 Tagihan, schemaVersion 14).
+  IntColumn get sourceBillId => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {txId};
@@ -178,6 +186,32 @@ class Preferences extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Tagihan berulang (kos/listrik/wifi/cicilan) — A1 Tagihan (schemaVersion 14).
+/// F1 ini HANYA schema; DAO/domain/UI dibangun di fase selanjutnya.
+class Bills extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // Identitas cloud (doc ID Firestore) — nullable, diisi saat sinkron ke cloud.
+  TextColumn get cloudId => text().nullable()();
+  TextColumn get name => text()();
+  IntColumn get estimatedAmount => integer()();
+  TextColumn get category => text()();
+  BoolColumn get isFixedNeed => boolean()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get dueDate => dateTime()();
+  TextColumn get recurrence => text()();
+  // Cicilan: total tenor & progres bayar. Null = bukan cicilan (tagihan biasa).
+  IntColumn get installmentTotal => integer().nullable()();
+  IntColumn get installmentsPaid => integer().withDefault(const Constant(0))();
+  DateTimeColumn get recurrenceEndDate => dateTime().nullable()();
+  IntColumn get dueDayOfMonth => integer().nullable()();
+  IntColumn get reminderDaysBefore => integer().nullable()();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(true))();
+  TextColumn get status => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 
 @DriftDatabase(
@@ -189,13 +223,14 @@ class Preferences extends Table {
     BudgetLimits,
     Categories,
     Preferences,
+    Bills,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -215,6 +250,10 @@ class AppDatabase extends _$AppDatabase {
       // dengan jalur upgrade — pull remote tak boleh menduplikasi goal.
       await m.database.customStatement(
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_firestore_id ON goals (firestore_id)',
+      );
+      // Index bantu query watchActive (A1 Tagihan): filter status + sort due_date.
+      await m.database.customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_bills_status_due ON bills (status, due_date)',
       );
     },
     beforeOpen: (details) async {
@@ -428,6 +467,45 @@ class AppDatabase extends _$AppDatabase {
         );
         await m.database.customStatement(
           'CREATE UNIQUE INDEX IF NOT EXISTS idx_goals_firestore_id ON goals (firestore_id)',
+        );
+      }
+      if (from < 14) {
+        // A1 Tagihan: tabel bills + link balik dari transaksi + setting
+        // pengingat. Raw SQL — Drift typed createTable/addColumn tidak dipakai
+        // di jalur upgrade (konsisten dengan pola migrasi sebelumnya).
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS bills (
+            id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+            cloud_id              TEXT,
+            name                  TEXT NOT NULL,
+            estimated_amount      INTEGER NOT NULL,
+            category              TEXT NOT NULL,
+            is_fixed_need         INTEGER NOT NULL,
+            notes                 TEXT,
+            due_date              INTEGER NOT NULL,
+            recurrence            TEXT NOT NULL,
+            installment_total     INTEGER,
+            installments_paid     INTEGER NOT NULL DEFAULT 0,
+            recurrence_end_date   INTEGER,
+            due_day_of_month      INTEGER,
+            reminder_days_before  INTEGER,
+            reminder_enabled      INTEGER NOT NULL DEFAULT 1,
+            status                TEXT NOT NULL,
+            created_at            INTEGER NOT NULL,
+            updated_at            INTEGER NOT NULL
+          )
+        ''');
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_bills_status_due ON bills (status, due_date)',
+        );
+        await m.database.customStatement(
+          'ALTER TABLE transactions ADD COLUMN source_bill_id INTEGER',
+        );
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN bill_reminder_days_before INTEGER NOT NULL DEFAULT 1',
+        );
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN bill_reminder_hour INTEGER NOT NULL DEFAULT 9',
         );
       }
     },

@@ -18,11 +18,36 @@ const _createGoalsV12 = '''
   )
 ''';
 
+// DB nyata pra-v14 SELALU punya tabel transactions & app_settings (skema
+// dasar sejak v1). Fixture yang menyeberang ke v14 wajib memuatnya agar
+// migrasi from<14 (ALTER TABLE transactions/app_settings, A1 Tagihan) tak
+// gagal "no such table" — pola yang sama seperti _createGoalsV12 di atas.
+const _createTransactionsPreV14 = '''
+  CREATE TABLE transactions (
+    tx_id TEXT NOT NULL PRIMARY KEY,
+    amount INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    type TEXT NOT NULL,
+    note TEXT,
+    date INTEGER NOT NULL,
+    is_fixed INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    goal_id INTEGER
+  )
+''';
+const _createAppSettingsMinimal =
+    'CREATE TABLE app_settings (id INTEGER PRIMARY KEY)';
+
 void main() {
   test('migrasi 12→13: kolom firestore_id ditambah + backfill 32-hex unik', () async {
     final raw = sqlite3.openInMemory();
     raw.execute('PRAGMA user_version = 12');
     raw.execute(_createGoalsV12);
+    raw.execute(_createTransactionsPreV14);
+    raw.execute(_createAppSettingsMinimal);
     raw.execute(
       "INSERT INTO goals (title, target_amount, target_date, is_completed, created_at, updated_at) "
       "VALUES ('Pulang kampung', 1500000, 1798675200, 0, 1750000000, 1750000000)",
@@ -59,6 +84,8 @@ void main() {
     final raw = sqlite3.openInMemory();
     raw.execute('PRAGMA user_version = 12');
     raw.execute(_createGoalsV12);
+    raw.execute(_createTransactionsPreV14);
+    raw.execute(_createAppSettingsMinimal);
 
     final db = AppDatabase(NativeDatabase.opened(raw));
     expect(await db.select(db.goals).get(), isEmpty); // tak melempar

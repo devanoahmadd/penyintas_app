@@ -22,6 +22,28 @@ const _createGoalsPreV13 = '''
   )
 ''';
 
+// DB nyata pra-v14 SELALU punya tabel transactions (skema dasar sejak v1,
+// goal_id ditambah di from<4, tak berubah lagi sampai v13). Fixture yang
+// menyeberang ke v14 wajib memuatnya agar migrasi from<14 (ALTER TABLE
+// transactions ADD source_bill_id) tak gagal "no such table: transactions"
+// — pola yang sama seperti goals/categories di atas (A1 Tagihan).
+const _createTransactionsPreV14 = '''
+  CREATE TABLE transactions (
+    tx_id TEXT NOT NULL PRIMARY KEY,
+    amount INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    type TEXT NOT NULL,
+    note TEXT,
+    date INTEGER NOT NULL,
+    is_fixed INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    synced_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    goal_id INTEGER
+  )
+''';
+
 void main() {
   late AppDatabase db;
 
@@ -134,6 +156,7 @@ void main() {
         )
       ''');
         raw.execute(_createGoalsPreV13);
+        raw.execute(_createTransactionsPreV14);
         raw.execute(
           'INSERT INTO app_settings '
           '(id, monthly_income, payment_date, fixed_expenses, rent_expense, '
@@ -226,6 +249,8 @@ void main() {
         final raw = sqlite3.openInMemory();
         raw.execute(createV11Categories);
         raw.execute(_createGoalsPreV13);
+        raw.execute(_createTransactionsPreV14);
+        raw.execute('CREATE TABLE app_settings (id INTEGER PRIMARY KEY)');
         raw.execute('PRAGMA user_version = 11');
 
         // Buka AppDatabase di atas DB v11 → migrasi 11→12 re-seed kategori.
@@ -259,6 +284,8 @@ void main() {
         final raw = sqlite3.openInMemory();
         raw.execute(createV11Categories);
         raw.execute(_createGoalsPreV13);
+        raw.execute(_createTransactionsPreV14);
+        raw.execute('CREATE TABLE app_settings (id INTEGER PRIMARY KEY)');
         // Sudah ada 'food' (kasus DB yang seed-nya jalan via jalur onUpgrade<7).
         raw.execute(
           "INSERT INTO categories (slug, label_key, is_built_in, is_limitable, "
