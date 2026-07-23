@@ -15,6 +15,7 @@ class TransactionModel {
     required this.updatedAt,
     this.note,
     this.goalId,
+    this.sourceBillId,
   });
 
   final String id;
@@ -29,6 +30,10 @@ class TransactionModel {
   final DateTime updatedAt;
   final int? goalId;
 
+  /// Link balik ke tagihan asal — PK lokal murni, TIDAK dikirim ke Firestore
+  /// (lihat `fromFirestore`/`toFirestore`: sengaja tidak menyentuh field ini).
+  final int? sourceBillId;
+
   TransactionEntity toEntity() => TransactionEntity(
     id: id,
     amount: amount,
@@ -41,6 +46,7 @@ class TransactionModel {
     createdAt: createdAt,
     updatedAt: updatedAt,
     goalId: goalId,
+    sourceBillId: sourceBillId,
   );
 
   static TransactionModel fromEntity(TransactionEntity e) => TransactionModel(
@@ -55,6 +61,7 @@ class TransactionModel {
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
     goalId: e.goalId,
+    sourceBillId: e.sourceBillId,
   );
 
   static TransactionModel fromDrift(Transaction row) => TransactionModel(
@@ -69,6 +76,7 @@ class TransactionModel {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     goalId: row.goalId,
+    sourceBillId: row.sourceBillId,
   );
 
   TransactionsCompanion toDriftCompanion() => TransactionsCompanion(
@@ -83,6 +91,7 @@ class TransactionModel {
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),
     goalId: Value(goalId),
+    sourceBillId: Value(sourceBillId),
   );
 
   static TransactionModel fromFirestore(Map<String, dynamic> data) =>
@@ -126,6 +135,7 @@ class TransactionModel {
     createdAt: createdAt,
     updatedAt: updatedAt,
     goalId: goalId,
+    sourceBillId: sourceBillId,
   );
 
   static String _categoryFromString(String s) {

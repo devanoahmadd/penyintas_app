@@ -13,6 +13,7 @@ class TransactionEntity extends Equatable {
     required this.updatedAt,
     this.note,
     this.goalId,
+    this.sourceBillId,
   });
 
   final String id;
@@ -29,6 +30,11 @@ class TransactionEntity extends Equatable {
   /// Link ke Goals.id — null jika tidak dikaitkan ke tujuan tabungan.
   final int? goalId;
 
+  /// Link balik ke tagihan asal — null jika transaksi bukan hasil "Tandai
+  /// Lunas" tagihan (A1 Tagihan). PK lokal murni, TIDAK disinkron ke
+  /// Firestore (int lokal tak bermakna lintas-device).
+  final int? sourceBillId;
+
   @override
   List<Object?> get props => [
     id,
@@ -42,6 +48,7 @@ class TransactionEntity extends Equatable {
     createdAt,
     updatedAt,
     goalId,
+    sourceBillId,
   ];
 }
 
