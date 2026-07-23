@@ -14,6 +14,7 @@ import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/add_transaction_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/delete_transaction_usecase.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -28,8 +29,10 @@ class MockDeleteBillUseCase extends Mock implements DeleteBillUseCase {}
 
 class MockBillRepository extends Mock implements BillRepository {}
 
-class MockAddTransactionUseCase extends Mock
-    implements AddTransactionUseCase {}
+class MockAddTransactionUseCase extends Mock implements AddTransactionUseCase {}
+
+class MockDeleteTransactionUseCase extends Mock
+    implements DeleteTransactionUseCase {}
 
 class FakeBillModel extends Fake implements BillModel {}
 
@@ -122,6 +125,7 @@ void main() {
   late MockDeleteBillUseCase mockDeleteBill;
   late MockBillRepository mockBillRepository;
   late MockAddTransactionUseCase mockAddTransaction;
+  late MockDeleteTransactionUseCase mockDeleteTransaction;
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
@@ -138,6 +142,7 @@ void main() {
     mockDeleteBill = MockDeleteBillUseCase();
     mockBillRepository = MockBillRepository();
     mockAddTransaction = MockAddTransactionUseCase();
+    mockDeleteTransaction = MockDeleteTransactionUseCase();
   });
 
   BillsBloc buildBloc() => BillsBloc(
@@ -147,6 +152,7 @@ void main() {
     deleteBill: mockDeleteBill,
     billRepository: mockBillRepository,
     addTransaction: mockAddTransaction,
+    deleteTransaction: mockDeleteTransaction,
   );
 
   group('BillsSubscribed', () {
@@ -289,9 +295,9 @@ void main() {
         ),
       ),
       verify: (_) {
-        final captured = verify(
-          () => mockAddTransaction(captureAny()),
-        ).captured.single as TransactionEntity;
+        final captured =
+            verify(() => mockAddTransaction(captureAny())).captured.single
+                as TransactionEntity;
         expect(captured.amount, 800000);
         expect(captured.category, 'housing');
         expect(captured.type, TransactionType.expense);
@@ -402,9 +408,9 @@ void main() {
         ),
       ),
       verify: (_) {
-        final captured = verify(
-          () => mockAddTransaction(captureAny()),
-        ).captured.single as TransactionEntity;
+        final captured =
+            verify(() => mockAddTransaction(captureAny())).captured.single
+                as TransactionEntity;
         expect(captured.isFixed, true);
         expect(captured.category, 'internet');
       },
@@ -481,6 +487,169 @@ void main() {
             .having((s) => s.status, 'status', BillsStatus.success)
             .having((s) => s.lastUndo?.txId, 'undo.txId', isNull),
       ],
+    );
+
+    // Fold-in (Minor 3.2 #3): transaksi gagal → abort SEBELUM advance.
+    blocTest<BillsBloc, BillsState>(
+      'transaksi gagal (non-opt-out) → applyBillPayment TIDAK dipanggil + failure',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockBillRepository.getBillById(any()),
+        ).thenAnswer((_) async => Right(_makeBill(id: 7)));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('boom')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: true,
+          optOutTransaction: false,
+        ),
+      ),
+      expect: () => [
+        isA<BillsState>().having(
+          (s) => s.status,
+          'status',
+          BillsStatus.failure,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        );
+      },
+    );
+  });
+
+  group('BillPaymentUndone', () {
+    void stubRestore() {
+      when(
+        () => mockBillRepository.restoreBillPayment(
+          id: any(named: 'id'),
+          dueDate: any(named: 'dueDate'),
+          installmentsPaid: any(named: 'installmentsPaid'),
+          status: any(named: 'status'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
+    }
+
+    blocTest<BillsBloc, BillsState>(
+      'undo bulanan: restore PERSIS nilai snapshot (anchor 31 Jan) + hapus '
+      'transaksi + clear lastUndo',
+      build: buildBloc,
+      seed: () => BillsState(
+        status: BillsStatus.success,
+        lastUndo: UndoSnapshot(
+          billId: 1,
+          dueDate: DateTime(2026, 1, 31),
+          installmentsPaid: 0,
+          status: BillStatus.active,
+          txId: 'tx-1',
+        ),
+      ),
+      setUp: () {
+        stubRestore();
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillPaymentUndone(
+          UndoSnapshot(
+            billId: 1,
+            dueDate: DateTime(2026, 1, 31),
+            installmentsPaid: 0,
+            status: BillStatus.active,
+            txId: 'tx-1',
+          ),
+        ),
+      ),
+      expect: () => [
+        isA<BillsState>()
+            .having((s) => s.status, 'status', BillsStatus.success)
+            .having((s) => s.lastUndo, 'lastUndo cleared', isNull),
+      ],
+      verify: (_) {
+        // dueDate EKSAK = snapshot (bukan hitung mundur — anchor 31 Jan utuh).
+        verify(
+          () => mockBillRepository.restoreBillPayment(
+            id: 1,
+            dueDate: DateTime(2026, 1, 31),
+            installmentsPaid: 0,
+            status: BillStatus.active,
+          ),
+        ).called(1);
+        verify(() => mockDeleteTransaction('tx-1')).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'undo angsuran terakhir (completed→active): restore status active dari '
+      'snapshot (bukan recompute)',
+      build: buildBloc,
+      setUp: () {
+        stubRestore();
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillPaymentUndone(
+          UndoSnapshot(
+            billId: 2,
+            dueDate: DateTime(2026, 3, 10),
+            installmentsPaid: 2,
+            status: BillStatus.active,
+            txId: 'tx-9',
+          ),
+        ),
+      ),
+      verify: (_) {
+        verify(
+          () => mockBillRepository.restoreBillPayment(
+            id: 2,
+            dueDate: DateTime(2026, 3, 10),
+            installmentsPaid: 2,
+            status: BillStatus.active,
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'undo opt-out (txId null): restore dipanggil, deleteTransaction TIDAK',
+      build: buildBloc,
+      setUp: stubRestore,
+      act: (bloc) => bloc.add(
+        BillPaymentUndone(
+          UndoSnapshot(
+            billId: 3,
+            dueDate: DateTime(2026, 8, 5),
+            installmentsPaid: 0,
+            status: BillStatus.active,
+          ),
+        ),
+      ),
+      verify: (_) {
+        verify(
+          () => mockBillRepository.restoreBillPayment(
+            id: 3,
+            dueDate: DateTime(2026, 8, 5),
+            installmentsPaid: 0,
+            status: BillStatus.active,
+          ),
+        ).called(1);
+        verifyNever(() => mockDeleteTransaction(any()));
+      },
     );
   });
 }

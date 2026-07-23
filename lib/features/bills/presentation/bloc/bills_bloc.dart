@@ -15,6 +15,7 @@ import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/add_transaction_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/delete_transaction_usecase.dart';
 import 'package:uuid/uuid.dart';
 
 part 'bills_event.dart';
@@ -28,18 +29,21 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     required DeleteBillUseCase deleteBill,
     required BillRepository billRepository,
     required AddTransactionUseCase addTransaction,
+    required DeleteTransactionUseCase deleteTransaction,
   }) : _watchActiveBills = watchActiveBills,
        _createBill = createBill,
        _updateBill = updateBill,
        _deleteBill = deleteBill,
        _billRepository = billRepository,
        _addTransaction = addTransaction,
+       _deleteTransaction = deleteTransaction,
        super(const BillsState()) {
     on<BillsSubscribed>(_onSubscribed, transformer: restartable());
     on<BillAdded>(_onAdded);
     on<BillUpdated>(_onUpdated);
     on<BillDeleted>(_onDeleted);
     on<BillMarkedPaid>(_onMarkedPaid);
+    on<BillPaymentUndone>(_onPaymentUndone);
   }
 
   final WatchActiveBillsUseCase _watchActiveBills;
@@ -48,6 +52,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   final DeleteBillUseCase _deleteBill;
   final BillRepository _billRepository;
   final AddTransactionUseCase _addTransaction;
+  final DeleteTransactionUseCase _deleteTransaction;
 
   static const _uuid = Uuid();
 
@@ -118,8 +123,20 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     BillMarkedPaid event,
     Emitter<BillsState> emit,
   ) async {
-    // 1. SNAPSHOT bill SEBELUM payment (untuk undo).
+    // 1. SNAPSHOT bill SEBELUM payment (untuk undo). Bedakan error baca DB
+    // (forward Failure asli) dari kasus bill memang tak ada (Right(null)).
     final billResult = await _billRepository.getBillById(event.billId);
+    if (billResult.isLeft()) {
+      emit(
+        state.copyWith(
+          status: BillsStatus.failure,
+          failure: billResult.swap().getOrElse(
+            () => const CacheFailure('Gagal memuat tagihan.'),
+          ),
+        ),
+      );
+      return;
+    }
     final bill = billResult.fold((_) => null, (b) => b);
     if (bill == null) {
       emit(
@@ -157,7 +174,9 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
         emit(
           state.copyWith(
             status: BillsStatus.failure,
-            failure: const CacheFailure('Gagal mencatat transaksi.'),
+            failure: txnResult.swap().getOrElse(
+              () => const CacheFailure('Gagal mencatat transaksi.'),
+            ),
           ),
         );
         return; // JANGAN advance tanpa transaksi tersimpan.
@@ -179,7 +198,9 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       emit(
         state.copyWith(
           status: BillsStatus.failure,
-          failure: const CacheFailure('Gagal memperbarui tagihan.'),
+          failure: applyResult.swap().getOrElse(
+            () => const CacheFailure('Gagal memperbarui tagihan.'),
+          ),
         ),
       );
       return;
@@ -199,5 +220,56 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
         ),
       ),
     );
+  }
+
+  /// "Batal lunas" / undo (spec §6.5). Restore state bill PERSIS dari snapshot
+  /// (BUKAN recompute/hitung mundur — anchor akhir-bulan tak boleh geser), lalu
+  /// hapus transaksi yang dibuat saat lunas (bila ada; opt-out → txId null →
+  /// skip). Reschedule notif menyusul di Task 6.2.
+  Future<void> _onPaymentUndone(
+    BillPaymentUndone event,
+    Emitter<BillsState> emit,
+  ) async {
+    final snap = event.snapshot;
+
+    // 1. RESTORE state bill PERSIS dari snapshot (bukan recompute).
+    final restoreResult = await _billRepository.restoreBillPayment(
+      id: snap.billId,
+      dueDate: snap.dueDate,
+      installmentsPaid: snap.installmentsPaid,
+      status: snap.status,
+    );
+    if (restoreResult.isLeft()) {
+      emit(
+        state.copyWith(
+          status: BillsStatus.failure,
+          failure: restoreResult.swap().getOrElse(
+            () => const CacheFailure('Gagal membatalkan pembayaran.'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 2. Hapus transaksi bila ada (opt-out → txId null → skip).
+    final txId = snap.txId;
+    if (txId != null) {
+      final delResult = await _deleteTransaction(txId);
+      if (delResult.isLeft()) {
+        emit(
+          state.copyWith(
+            status: BillsStatus.failure,
+            failure: delResult.swap().getOrElse(
+              () => const CacheFailure('Gagal menghapus transaksi.'),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // 3. Reschedule notif → Task 6.2 (belum di sini).
+    // 4. Clear lastUndo + success. Daftar aktif refresh via stream watchActive.
+    emit(state.copyWith(status: BillsStatus.success, clearUndo: true));
   }
 }

@@ -77,5 +77,13 @@ final class BillMarkedPaid extends BillsEvent {
   ];
 }
 
-// NOTE: BillPaymentUndone (Task 3.3) SENGAJA belum dideklarasikan di sini —
-// di luar scope Task 3.2.
+/// "Batal lunas" / undo (spec §6.5): restore state bill PERSIS dari snapshot
+/// (BUKAN recompute/hitung mundur) + hapus transaksi bila ada (txId != null).
+final class BillPaymentUndone extends BillsEvent {
+  const BillPaymentUndone(this.snapshot);
+
+  final UndoSnapshot snapshot;
+
+  @override
+  List<Object?> get props => [snapshot];
+}

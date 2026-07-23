@@ -28,6 +28,15 @@ abstract class BillRepository {
     required BillStatus newStatus,
   });
 
+  /// Undo pembayaran (§6.5): tulis balik nilai PERSIS dari snapshot (BUKAN
+  /// recompute/hitung mundur). Mirror [applyBillPayment], lokal-first.
+  Future<Either<Failure, void>> restoreBillPayment({
+    required int id,
+    required DateTime dueDate,
+    required int installmentsPaid,
+    required BillStatus status,
+  });
+
   /// Hydrate bill dari Firestore SEKALI saat tabel lokal kosong
   /// (reinstall / ganti device / login akun lama) — pull-all-on-first-sync.
   /// Return jumlah bill yang dipulihkan (0 bila lokal berisi/offline/remote

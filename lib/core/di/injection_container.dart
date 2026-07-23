@@ -587,6 +587,7 @@ void _initBills() {
       deleteBill: sl(),
       billRepository: sl(),
       addTransaction: sl(),
+      deleteTransaction: sl(),
     ),
   );
 

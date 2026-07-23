@@ -156,6 +156,27 @@ class BillRepositoryImpl implements BillRepository {
   }
 
   @override
+  Future<Either<Failure, void>> restoreBillPayment({
+    required int id,
+    required DateTime dueDate,
+    required int installmentsPaid,
+    required BillStatus status,
+  }) async {
+    try {
+      await _local.restorePayment(
+        id: id,
+        dueDate: dueDate,
+        installmentsPaid: installmentsPaid,
+        status: status,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s, 'restoreBillPayment');
+      return Left(CacheFailure('Gagal membatalkan pembayaran tagihan.'));
+    }
+  }
+
+  @override
   Future<Either<Failure, int>> syncBillsFromRemote() async {
     try {
       if (await _local.hasAnyBills()) return const Right(0);
