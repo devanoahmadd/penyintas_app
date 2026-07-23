@@ -27,6 +27,13 @@ abstract class TransactionLocalDataSource {
     required Map<String, dynamic> data,
     required SyncOperation operation,
   });
+
+  /// Ambil semua transaksi yang bersumber dari bill [billId] (untuk enqueue
+  /// remote-delete sebelum hapus lokal).
+  Future<List<TransactionModel>> getBySourceBillId(int billId);
+
+  /// Hapus semua transaksi yang bersumber dari bill [billId] (undo tagihan, K2).
+  Future<void> deleteBySourceBillId(int billId);
 }
 
 class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
@@ -144,4 +151,18 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
           createdAt: Value(DateTime.now()),
         ),
       );
+
+  @override
+  Future<List<TransactionModel>> getBySourceBillId(int billId) async {
+    final rows = await (_db.select(_db.transactions)
+          ..where((t) => t.sourceBillId.equals(billId)))
+        .get();
+    return rows.map(TransactionModel.fromDrift).toList();
+  }
+
+  @override
+  Future<void> deleteBySourceBillId(int billId) =>
+      (_db.delete(_db.transactions)
+            ..where((t) => t.sourceBillId.equals(billId)))
+          .go();
 }

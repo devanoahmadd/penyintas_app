@@ -19,4 +19,8 @@ abstract class TransactionRepository {
   /// Konsumen reaktif (mis. BudgetLimitsBloc) memakai ini untuk memicu
   /// recompute agar angka turunan (spent per kategori) tidak basi.
   Stream<void> watchTransactionChanges();
+
+  /// Hapus semua transaksi yang bersumber dari bill [billId] + enqueue remote
+  /// delete tiap transaksi (undo tagihan). Local-first, pola `deleteTransaction`.
+  Future<Either<Failure, void>> deleteTransactionsBySourceBill(int billId);
 }

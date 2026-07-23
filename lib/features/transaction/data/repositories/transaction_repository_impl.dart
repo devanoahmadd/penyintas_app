@@ -184,4 +184,46 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Stream<void> watchTransactionChanges() => _local.watchTransactionChanges();
+
+  @override
+  Future<Either<Failure, void>> deleteTransactionsBySourceBill(
+    int billId,
+  ) async {
+    try {
+      // Ambil txId target DULU (sebelum delete) untuk enqueue remote delete.
+      final targets = await _local.getBySourceBillId(billId);
+      await _local.deleteBySourceBillId(billId);
+
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return const Right(null);
+
+      for (final model in targets) {
+        final path = 'users/$uid/transactions/${model.id}';
+        if (await _networkInfo.isConnected) {
+          try {
+            await _remote.deleteTransaction(model.id);
+          } catch (e, stack) {
+            _logError(e, stack);
+            await _local.addToSyncQueue(
+              itemId: model.id,
+              collectionPath: path,
+              data: {},
+              operation: SyncOperation.delete,
+            );
+          }
+        } else {
+          await _local.addToSyncQueue(
+            itemId: model.id,
+            collectionPath: path,
+            data: {},
+            operation: SyncOperation.delete,
+          );
+        }
+      }
+      return const Right(null);
+    } catch (e, stack) {
+      _logError(e, stack);
+      return const Left(CacheFailure());
+    }
+  }
 }
