@@ -124,6 +124,15 @@ import 'package:penyintas_app/features/goal/domain/usecases/link_transaction_use
 import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.dart';
 import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_usecase.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_local_datasource.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_remote_datasource.dart';
+import 'package:penyintas_app/features/bills/data/repositories/bill_repository_impl.dart';
+import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/create_bill_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/delete_bill_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/sync_bills_from_remote_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
@@ -178,6 +187,7 @@ Future<void> init({required AppDatabase db}) async {
   _initReport();
   _initSurvival();
   _initGoal();
+  _initBills();
   _initAppLock();
 }
 
@@ -562,6 +572,32 @@ void _initGoal() {
 
   sl.registerLazySingleton<GoalRemoteDatasource>(
     () => GoalRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+}
+
+void _initBills() {
+  // Tanpa BLoC — BillsBloc belum ada (Task 3.1). Hanya repo + usecase.
+  sl.registerLazySingleton(() => CreateBillUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateBillUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteBillUseCase(sl()));
+  sl.registerLazySingleton(() => WatchActiveBillsUseCase(sl()));
+  sl.registerLazySingleton(() => SyncBillsFromRemoteUseCase(sl()));
+
+  sl.registerLazySingleton<BillRepository>(
+    () => BillRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      networkInfo: sl(),
+      auth: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<BillLocalDatasource>(
+    () => BillLocalDatasourceImpl(sl()),
+  );
+
+  sl.registerLazySingleton<BillRemoteDatasource>(
+    () => BillRemoteDatasourceImpl(auth: sl(), firestore: sl()),
   );
 }
 
