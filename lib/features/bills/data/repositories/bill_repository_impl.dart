@@ -124,6 +124,38 @@ class BillRepositoryImpl implements BillRepository {
   }
 
   @override
+  Future<Either<Failure, BillEntity?>> getBillById(int id) async {
+    try {
+      final bill = await _local.findEntityById(id);
+      return Right(bill);
+    } catch (e, s) {
+      _logError(e, s, 'getBillById');
+      return Left(CacheFailure('Gagal memuat tagihan.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> applyBillPayment({
+    required int id,
+    required DateTime newDueDate,
+    required int newInstallmentsPaid,
+    required BillStatus newStatus,
+  }) async {
+    try {
+      await _local.applyPayment(
+        id: id,
+        newDueDate: newDueDate,
+        newInstallmentsPaid: newInstallmentsPaid,
+        newStatus: newStatus,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s, 'applyBillPayment');
+      return Left(CacheFailure('Gagal memperbarui tagihan.'));
+    }
+  }
+
+  @override
   Future<Either<Failure, int>> syncBillsFromRemote() async {
     try {
       if (await _local.hasAnyBills()) return const Right(0);

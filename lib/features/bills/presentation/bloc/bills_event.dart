@@ -40,5 +40,42 @@ final class BillDeleted extends BillsEvent {
   List<Object?> get props => [id];
 }
 
-// NOTE: BillMarkedPaid (Task 3.2) & BillPaymentUndone (Task 3.3) SENGAJA
-// belum dideklarasikan di sini — di luar scope Task 3.1.
+/// "Tandai lunas" (spec §5): snapshot → transaksi (kecuali opt-out) →
+/// advance progres + roll-forward dueDate + stop-check → persist → UndoSnapshot.
+final class BillMarkedPaid extends BillsEvent {
+  const BillMarkedPaid({
+    required this.billId,
+    required this.actualAmount,
+    required this.paidDate,
+    required this.includeAsFixed,
+    required this.optOutTransaction,
+  });
+
+  /// PK lokal bill yang dibayar.
+  final int billId;
+
+  /// Nominal aktual yang dibayar (bisa beda dari estimasi bill).
+  final int actualAmount;
+
+  /// Tanggal pembayaran — dipakai sebagai `date` transaksi.
+  final DateTime paidDate;
+
+  /// Catat transaksi sebagai kebutuhan tetap (decoupling §4.2: dari EVENT,
+  /// BUKAN derive dari `category == 'fixed'`).
+  final bool includeAsFixed;
+
+  /// Bila true: TIDAK membuat transaksi (advance bill tetap jalan).
+  final bool optOutTransaction;
+
+  @override
+  List<Object?> get props => [
+    billId,
+    actualAmount,
+    paidDate,
+    includeAsFixed,
+    optOutTransaction,
+  ];
+}
+
+// NOTE: BillPaymentUndone (Task 3.3) SENGAJA belum dideklarasikan di sini —
+// di luar scope Task 3.2.

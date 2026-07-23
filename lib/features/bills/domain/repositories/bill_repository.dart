@@ -15,6 +15,19 @@ abstract class BillRepository {
 
   Future<Either<Failure, void>> deleteBill(int id);
 
+  /// Ambil satu bill sebagai entity by id lokal (null bila tak dikenal).
+  /// Dipakai orkestrasi "tandai lunas" untuk snapshot state SEBELUM payment.
+  Future<Either<Failure, BillEntity?>> getBillById(int id);
+
+  /// Persist mutasi pasca pembayaran (roll-forward): dueDate + progres
+  /// cicilan + status sekaligus. Lokal-first (tak push remote di sini).
+  Future<Either<Failure, void>> applyBillPayment({
+    required int id,
+    required DateTime newDueDate,
+    required int newInstallmentsPaid,
+    required BillStatus newStatus,
+  });
+
   /// Hydrate bill dari Firestore SEKALI saat tabel lokal kosong
   /// (reinstall / ganti device / login akun lama) — pull-all-on-first-sync.
   /// Return jumlah bill yang dipulihkan (0 bila lokal berisi/offline/remote

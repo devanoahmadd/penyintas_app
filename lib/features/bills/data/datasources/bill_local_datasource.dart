@@ -15,6 +15,11 @@ abstract class BillLocalDatasource {
   /// Snapshot row → model untuk push remote (null bila id tak dikenal).
   Future<BillModel?> findById(int id);
 
+  /// Ambil satu bill sebagai **entity domain** by id lokal (null bila tak
+  /// dikenal). Beda dari [findById] yang mengembalikan BillModel tanpa id
+  /// lokal — dipakai orkestrasi "tandai lunas" yang butuh id + progres.
+  Future<BillEntity?> findEntityById(int id);
+
   /// Insert bill baru + generate UUID v4 sebagai cloudId bila model belum
   /// membawa satu. Return id lokal autoincrement — dipakai jadwal notif.
   Future<int> createBill(BillModel model);
@@ -103,6 +108,14 @@ class BillLocalDatasourceImpl implements BillLocalDatasource {
       _db.bills,
     )..where((b) => b.id.equals(id))).getSingleOrNull();
     return row == null ? null : BillModel.fromRow(row);
+  }
+
+  @override
+  Future<BillEntity?> findEntityById(int id) async {
+    final row = await (_db.select(
+      _db.bills,
+    )..where((b) => b.id.equals(id))).getSingleOrNull();
+    return row == null ? null : _rowToEntity(row);
   }
 
   @override
