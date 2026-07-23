@@ -33,23 +33,20 @@ BillEntity _makeBill({
 
 void main() {
   group('markBillPaid — bulanan biasa (tanpa tenor)', () {
-    test(
-      'installmentsPaid++ , dueDate maju 1 bulan, status tetap active',
-      () {
-        final bill = _makeBill(
-          recurrence: Recurrence.monthly,
-          dueDayOfMonth: 25,
-          installmentsPaid: 0,
-          dueDate: DateTime(2026, 7, 25),
-        );
+    test('installmentsPaid++ , dueDate maju 1 bulan, status tetap active', () {
+      final bill = _makeBill(
+        recurrence: Recurrence.monthly,
+        dueDayOfMonth: 25,
+        installmentsPaid: 0,
+        dueDate: DateTime(2026, 7, 25),
+      );
 
-        final advance = markBillPaid(bill: bill);
+      final advance = markBillPaid(bill: bill);
 
-        expect(advance.newInstallmentsPaid, 1);
-        expect(advance.newDueDate, DateTime(2026, 8, 25));
-        expect(advance.newStatus, BillStatus.active);
-      },
-    );
+      expect(advance.newInstallmentsPaid, 1);
+      expect(advance.newDueDate, DateTime(2026, 8, 25));
+      expect(advance.newStatus, BillStatus.active);
+    });
   });
 
   group('markBillPaid — tenor N habis (stop-check exact ==)', () {
@@ -121,21 +118,18 @@ void main() {
       expect(advance.newStatus, BillStatus.completed);
     });
 
-    test(
-      'newDueDate masih di dalam recurrenceEndDate => tetap active',
-      () {
-        final bill = _makeBill(
-          recurrence: Recurrence.monthly,
-          dueDayOfMonth: 25,
-          dueDate: DateTime(2026, 7, 25),
-          recurrenceEndDate: DateTime(2026, 12, 31),
-        );
+    test('newDueDate masih di dalam recurrenceEndDate => tetap active', () {
+      final bill = _makeBill(
+        recurrence: Recurrence.monthly,
+        dueDayOfMonth: 25,
+        dueDate: DateTime(2026, 7, 25),
+        recurrenceEndDate: DateTime(2026, 12, 31),
+      );
 
-        final advance = markBillPaid(bill: bill);
+      final advance = markBillPaid(bill: bill);
 
-        expect(advance.newDueDate, DateTime(2026, 8, 25));
-        expect(advance.newStatus, BillStatus.active);
-      },
-    );
+      expect(advance.newDueDate, DateTime(2026, 8, 25));
+      expect(advance.newStatus, BillStatus.active);
+    });
   });
 }
