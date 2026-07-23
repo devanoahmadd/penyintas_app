@@ -133,6 +133,7 @@ import 'package:penyintas_app/features/bills/domain/usecases/delete_bill_usecase
 import 'package:penyintas_app/features/bills/domain/usecases/sync_bills_from_remote_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
+import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
@@ -576,7 +577,17 @@ void _initGoal() {
 }
 
 void _initBills() {
-  // Tanpa BLoC — BillsBloc belum ada (Task 3.1). Hanya repo + usecase.
+  // Singleton — instance yang sama dipakai di seluruh layar Tagihan
+  // (mirror pola GoalBloc di _initGoal).
+  sl.registerLazySingleton(
+    () => BillsBloc(
+      watchActiveBills: sl(),
+      createBill: sl(),
+      updateBill: sl(),
+      deleteBill: sl(),
+    ),
+  );
+
   sl.registerLazySingleton(() => CreateBillUseCase(sl()));
   sl.registerLazySingleton(() => UpdateBillUseCase(sl()));
   sl.registerLazySingleton(() => DeleteBillUseCase(sl()));
