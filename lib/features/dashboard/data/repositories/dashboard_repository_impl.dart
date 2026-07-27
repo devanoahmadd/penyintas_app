@@ -117,23 +117,36 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
     final dailyBudget = (safeMonthlyBudget / effectiveDays).floor();
 
+    // Transaksi tagihan (isFixed) dikecualikan dari semua akumulator
+    // pengeluaran — tagihan sudah diwakili settings.fixedExpenses di formula
+    // budget, jadi menghitungnya lagi = double-count (spec §7).
     final spentToday = todayTxns
-        .where((t) => t.type == TransactionType.expense)
+        .where((t) => t.type == TransactionType.expense && !t.isFixed)
         .fold(0, (sum, t) => sum + t.amount);
 
     // #25: exclude kategori fixed — sudah diwakili oleh settings.fixedExpenses di formula budget
     final totalSpentThisMonth = monthTxns
         .where(
-          (t) => t.type == TransactionType.expense && t.category != 'fixed',
+          (t) =>
+              t.type == TransactionType.expense &&
+              t.category != 'fixed' &&
+              !t.isFixed,
         )
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
 
-    final last7Expense = last7Txns
-        .where((t) => t.type == TransactionType.expense)
-        .fold(0, (sum, t) => sum + t.amount);
-    final avgDailySpend = last7Txns.isEmpty
+    // Transaksi operasional = expense NON-tagihan. Tagihan (isFixed) sudah
+    // diwakili settings.fixedExpenses di formula budget — ikut menghitungnya
+    // di burn-rate = double-count → DTL jatuh (spec §7).
+    final last7Operational = last7Txns
+        .where((t) => t.type == TransactionType.expense && !t.isFixed)
+        .toList();
+    final last7Expense = last7Operational.fold(0, (sum, t) => sum + t.amount);
+    // Guard memakai daftar OPERASIONAL (bukan last7Txns mentah): riwayat yang
+    // hanya berisi tagihan = tak ada sinyal belanja operasional → fallback
+    // konservatif dailyBudget, sama seperti riwayat kosong.
+    final avgDailySpend = last7Operational.isEmpty
         ? (dailyBudget > 0 ? dailyBudget.toDouble() : 0.0)
         : last7Expense / 7.0;
 

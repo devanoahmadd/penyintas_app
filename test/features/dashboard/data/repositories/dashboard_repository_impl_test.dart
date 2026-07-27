@@ -34,6 +34,7 @@ void main() {
     required String category,
     TransactionType type = TransactionType.expense,
     DateTime? date,
+    bool isFixed = false,
   }) {
     final d = date ?? DateTime.now();
     return TransactionEntity(
@@ -42,7 +43,7 @@ void main() {
       category: category,
       type: type,
       date: d,
-      isFixed: false,
+      isFixed: isFixed,
       isSynced: false,
       createdAt: d,
       updatedAt: d,
@@ -290,6 +291,186 @@ void main() {
       final result = await repo.watchDashboard().first;
       final entity = result.getOrElse(() => throw Exception());
       expect(entity.status, BudgetStatus.danger);
+    });
+  });
+
+  group('_compute — kecualikan transaksi isFixed (tagihan) — spec §7', () {
+    // Tagihan sudah diwakili settings.fixedExpenses (500.000) di formula
+    // budget. Kalau transaksinya ikut dihitung di akumulator pengeluaran →
+    // double-count: burn-rate melonjak → Days-to-Live jatuh drastis.
+    test(
+      'burn-rate: tagihan tidak masuk penyebut avgDailySpend & DTL tidak jatuh',
+      () async {
+        // 6 transaksi operasional kecil (total 120.000) + 1 tagihan besar.
+        final operational = List.generate(
+          6,
+          (i) => makeTxn(
+            id: 'op$i',
+            amount: 20000,
+            category: 'food',
+            date: DateTime.now().subtract(Duration(days: i)),
+          ),
+        );
+        final bill = makeTxn(
+          id: 'bill1',
+          amount: 1500000,
+          category: 'fixed',
+          isFixed: true,
+          date: DateTime.now().subtract(const Duration(days: 2)),
+        );
+
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async => Right([...operational, bill]));
+
+        final result = await repo.watchDashboard().first;
+        final entity = result.getOrElse(() => throw Exception());
+
+        // Hanya 120.000 operasional yang jadi penyebut burn-rate.
+        expect(
+          entity.avgDailySpend,
+          closeTo(120000 / 7, 0.0001),
+          reason:
+              'tagihan isFixed tidak boleh masuk penyebut burn-rate; '
+              'kalau ikut → (120.000 + 1.500.000) / 7 = 231.428,57',
+        );
+
+        // safeMonthlyBudget = 2.200.000; totalSpentThisMonth = 120.000 →
+        // totalRemaining = 2.080.000. DTL = floor(2.080.000 / 17.142,857) = 121.
+        expect(
+          entity.totalSpentThisMonth,
+          120000,
+          reason: 'tagihan tidak masuk pengeluaran bulan ini',
+        );
+        expect(
+          entity.daysToLive,
+          121,
+          reason:
+              'DTL tidak boleh jatuh; kalau tagihan ikut burn-rate DTL anjlok '
+              'ke floor(2.080.000 / 231.428,57) = 8',
+        );
+      },
+    );
+
+    test('decoupling: isFixed=true dgn category non-"fixed" tetap dikecualikan '
+        'dari ketiga akumulator', () async {
+      final operational = makeTxn(id: 'op1', amount: 20000, category: 'food');
+      // Tagihan internet — category BUKAN 'fixed', jadi hanya filter
+      // !t.isFixed yang bisa mengecualikannya.
+      final bill = makeTxn(
+        id: 'bill-internet',
+        amount: 900000,
+        category: 'internet',
+        isFixed: true,
+      );
+
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(Right([operational, bill])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([operational, bill]));
+
+      final result = await repo.watchDashboard().first;
+      final entity = result.getOrElse(() => throw Exception());
+
+      expect(
+        entity.spentToday,
+        20000,
+        reason: 'filter harus memakai isFixed, bukan category == "fixed"',
+      );
+      expect(entity.totalSpentThisMonth, 20000);
+      expect(entity.avgDailySpend, closeTo(20000 / 7, 0.0001));
+    });
+
+    test('spentToday mengecualikan transaksi tagihan', () async {
+      final operational = makeTxn(id: 'op1', amount: 50000, category: 'food');
+      final bill = makeTxn(
+        id: 'bill1',
+        amount: 800000,
+        category: 'fixed',
+        isFixed: true,
+      );
+
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(Right([operational, bill])));
+
+      final result = await repo.watchDashboard().first;
+      final entity = result.getOrElse(() => throw Exception());
+
+      expect(entity.spentToday, 50000);
+      expect(
+        entity.remainingToday,
+        entity.dailyBudget - 50000,
+        reason: 'bar "sisa hari ini" tidak boleh tergerus tagihan',
+      );
+    });
+
+    test('totalSpentThisMonth mengecualikan transaksi tagihan', () async {
+      final operational = makeTxn(id: 'op1', amount: 100000, category: 'food');
+      final bill = makeTxn(
+        id: 'bill-internet',
+        amount: 900000,
+        category: 'internet',
+        isFixed: true,
+      );
+
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([operational, bill]));
+
+      final result = await repo.watchDashboard().first;
+      final entity = result.getOrElse(() => throw Exception());
+
+      expect(entity.totalSpentThisMonth, 100000);
+    });
+
+    test('riwayat 7 hari yang hanya berisi tagihan → fallback konservatif '
+        'dailyBudget (bukan 0.0)', () async {
+      final bill = makeTxn(
+        id: 'bill1',
+        amount: 1200000,
+        category: 'fixed',
+        isFixed: true,
+      );
+
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([bill]));
+
+      final result = await repo.watchDashboard().first;
+      final entity = result.getOrElse(() => throw Exception());
+
+      expect(
+        entity.avgDailySpend,
+        entity.dailyBudget.toDouble(),
+        reason:
+            'tak ada sinyal belanja operasional → fallback dailyBudget, '
+            'bukan 0.0 yang bikin DTL optimistis penuh',
+      );
+      expect(entity.avgDailySpend, greaterThan(0));
     });
   });
 
