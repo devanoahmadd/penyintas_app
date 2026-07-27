@@ -27,9 +27,15 @@ class GetBudgetOverviewUseCase {
       final limit = params.limits
           .where((l) => l.category == cat.slug && l.isEnabled)
           .firstOrNull;
+      // Transaksi tagihan (isFixed) TIDAK memenuhi limit kategori — tagihan
+      // sudah dianggarkan terpisah lewat fixedExpenses (spec §7: tagihan wifi
+      // tak boleh menjebol limit kategori "internet").
       final spent = params.currentPeriodTransactions
           .where(
-            (t) => t.category == cat.slug && t.type == TransactionType.expense,
+            (t) =>
+                t.category == cat.slug &&
+                t.type == TransactionType.expense &&
+                !t.isFixed,
           )
           .fold(0, (sum, t) => sum + t.amount);
 

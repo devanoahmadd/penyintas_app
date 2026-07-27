@@ -41,17 +41,18 @@ final _settings = BudgetSettingsEntity(
 // emergencyFundMonthly = 500_000
 // totalSpendable = 5_000_000 - 1_500_000 - 500_000 = 3_000_000
 
-TransactionEntity _tx(String cat, int amount) => TransactionEntity(
-  id: 'tx_${cat}_$amount',
-  amount: amount,
-  category: cat,
-  type: TransactionType.expense,
-  date: DateTime(2026, 5, 15),
-  isFixed: false,
-  isSynced: false,
-  createdAt: DateTime(2026, 5, 15),
-  updatedAt: DateTime(2026, 5, 15),
-);
+TransactionEntity _tx(String cat, int amount, {bool isFixed = false}) =>
+    TransactionEntity(
+      id: 'tx_${cat}_$amount',
+      amount: amount,
+      category: cat,
+      type: TransactionType.expense,
+      date: DateTime(2026, 5, 15),
+      isFixed: isFixed,
+      isSynced: false,
+      createdAt: DateTime(2026, 5, 15),
+      updatedAt: DateTime(2026, 5, 15),
+    );
 
 final _foodLimit = BudgetLimitEntity(
   id: 1,
@@ -275,5 +276,35 @@ void main() {
     expect(result.dailyBurnRate, 0.0);
     expect(result.projectedOperationalDays, null);
     expect(result.paceStatus, null);
+  });
+
+  test('tagihan isFixed tidak memenuhi limit kategori (spec §7: wifi tak '
+      'menjebol limit internet)', () {
+    // 1 pengeluaran operasional internet 50.000 + 1 tagihan wifi 300.000
+    // (isFixed=true). Hanya yang operasional boleh dihitung ke limit.
+    final internetLimit = BudgetLimitEntity(
+      id: 2,
+      category: 'internet',
+      limitAmount: 200000,
+      cycleType: BudgetCycle.monthly,
+      isEnabled: true,
+      updatedAt: DateTime(2026, 5, 1),
+    );
+    final result = usecase(
+      params(
+        limits: [internetLimit],
+        txns: [_tx('internet', 50000), _tx('internet', 300000, isFixed: true)],
+      ),
+    );
+    final internet = result.categoryItems.firstWhere(
+      (i) => i.category.slug == 'internet',
+    );
+    // Spent hanya yang isFixed=false (50.000), bukan total (350.000)
+    expect(internet.spentAmount, 50000);
+    expect(internet.limitAmount, 200000);
+    expect(internet.usagePct, closeTo(0.25, 0.001));
+    // 50k/200k = 25% → status masih safe
+    expect(internet.status, BudgetStatus.safe);
+    expect(result.overallStatus, BudgetStatus.safe);
   });
 }
