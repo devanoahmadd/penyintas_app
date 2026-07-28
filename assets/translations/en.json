@@ -458,5 +458,14 @@
   "bills_form_error_due_date": "Pick the due date first.",
   "bills_form_error_tenor_count": "Enter how many times this bill repeats.",
   "bills_form_error_tenor_end_date": "Pick the last date of the repetition.",
-  "bills_form_save_failed": "Couldn't save the bill. Give it another try."
+  "bills_form_save_failed": "Couldn't save the bill. Give it another try.",
+  "bills_paid_title": "Mark as Paid",
+  "bills_paid_amount_label": "Amount you paid",
+  "bills_paid_amount_note": "Original estimate {amount}",
+  "bills_paid_date_label": "Payment date",
+  "bills_paid_optout_label": "I already logged this myself",
+  "bills_paid_optout_hint": "The bill still gets marked paid, but no new transaction is created.",
+  "bills_paid_submit": "Confirm Payment",
+  "bills_paid_error_amount": "Enter the amount you paid first.",
+  "bills_paid_failed": "Couldn't mark it as paid. Give it another try."
 }

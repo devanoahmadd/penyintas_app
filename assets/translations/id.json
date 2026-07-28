@@ -458,5 +458,14 @@
   "bills_form_error_due_date": "Pilih tanggal jatuh temponya dulu.",
   "bills_form_error_tenor_count": "Isi berapa kali tagihan ini berulang.",
   "bills_form_error_tenor_end_date": "Pilih tanggal terakhir perulangannya.",
-  "bills_form_save_failed": "Gagal menyimpan tagihan. Coba lagi, ya."
+  "bills_form_save_failed": "Gagal menyimpan tagihan. Coba lagi, ya.",
+  "bills_paid_title": "Tandai Lunas",
+  "bills_paid_amount_label": "Nominal yang kamu bayar",
+  "bills_paid_amount_note": "Perkiraan awal {amount}",
+  "bills_paid_date_label": "Tanggal bayar",
+  "bills_paid_optout_label": "Sudah saya catat manual",
+  "bills_paid_optout_hint": "Tagihan tetap ditandai lunas, tapi transaksi baru tidak dibuat.",
+  "bills_paid_submit": "Konfirmasi Pembayaran",
+  "bills_paid_error_amount": "Isi dulu nominal yang kamu bayar, ya.",
+  "bills_paid_failed": "Gagal menandai lunas. Coba lagi, ya."
 }

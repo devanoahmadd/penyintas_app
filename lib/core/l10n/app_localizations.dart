@@ -613,6 +613,18 @@ class AppLocalizations {
   String get billsFormErrorTenorEndDate =>
       _t('bills_form_error_tenor_end_date');
   String get billsFormSaveFailed => _t('bills_form_save_failed');
+
+  // ── Tandai lunas (A1, Task 5.3) ──
+  String get billsPaidTitle => _t('bills_paid_title');
+  String get billsPaidAmountLabel => _t('bills_paid_amount_label');
+  String billsPaidAmountNote(String amount) =>
+      _t('bills_paid_amount_note').replaceAll('{amount}', amount);
+  String get billsPaidDateLabel => _t('bills_paid_date_label');
+  String get billsPaidOptOutLabel => _t('bills_paid_optout_label');
+  String get billsPaidOptOutHint => _t('bills_paid_optout_hint');
+  String get billsPaidSubmit => _t('bills_paid_submit');
+  String get billsPaidErrorAmount => _t('bills_paid_error_amount');
+  String get billsPaidFailed => _t('bills_paid_failed');
 }
 
 class _AppLocalizationsDelegate

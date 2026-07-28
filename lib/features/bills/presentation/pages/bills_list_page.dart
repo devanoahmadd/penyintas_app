@@ -9,6 +9,7 @@ import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/add_edit_bill_sheet.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/mark_bill_paid_sheet.dart';
 
 /// Urutan tampilan daftar tagihan (spec §5):
 /// tagihan TERLAMBAT naik ke atas, sisanya urut `dueDate` menaik.
@@ -51,6 +52,18 @@ class _BillsListPageState extends State<BillsListPage> {
       builder: (_) => BlocProvider.value(
         value: context.read<BillsBloc>(),
         child: const AddEditBillSheet(),
+      ),
+    );
+  }
+
+  void _openMarkPaidSheet(BillEntity bill) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<BillsBloc>(),
+        child: MarkBillPaidSheet(bill: bill),
       ),
     );
   }
@@ -123,12 +136,19 @@ class _BillsListPageState extends State<BillsListPage> {
                     itemCount: bills.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (_, i) => BillItem(
-                      bill: bills[i],
-                      todayStart: todayStart,
-                      // Sheet detail/aksi menyusul di Task 5.3.
-                      onTap: null,
-                    ),
+                    itemBuilder: (_, i) {
+                      final bill = bills[i];
+                      // Tagihan yang sudah tamat tidak bisa ditandai lunas
+                      // lagi — baris dibiarkan non-interaktif.
+                      final canMarkPaid = bill.status != BillStatus.completed;
+                      return BillItem(
+                        bill: bill,
+                        todayStart: todayStart,
+                        onTap: canMarkPaid
+                            ? () => _openMarkPaidSheet(bill)
+                            : null,
+                      );
+                    },
                   ),
                 );
               },
