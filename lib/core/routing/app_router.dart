@@ -27,6 +27,8 @@ import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_detail_page.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_list_page.dart';
+import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/bills/presentation/pages/bills_list_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/saya_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/profile_edit_page.dart';
 import 'package:penyintas_app/features/transaction/presentation/pages/transaction_list_page.dart';
@@ -138,6 +140,18 @@ GoRouter createAppRouter() => GoRouter(
           },
         ),
       ],
+    ),
+    GoRoute(
+      path: '/bills',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        // BlocProvider.value karena BillsBloc adalah singleton — jangan
+        // di-close saat route di-pop (mirror pola /goals)
+        child: BlocProvider.value(
+          value: sl<BillsBloc>(),
+          child: const BillsListPage(),
+        ),
+      ),
     ),
     GoRoute(
       path: '/budget',

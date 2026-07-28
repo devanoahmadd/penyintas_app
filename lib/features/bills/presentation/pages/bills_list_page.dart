@@ -1,0 +1,201 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
+import 'package:penyintas_app/core/theme/app_colors.dart';
+import 'package:penyintas_app/core/theme/app_spacing.dart';
+import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
+
+/// Urutan tampilan daftar tagihan (spec §5):
+/// tagihan TERLAMBAT naik ke atas, sisanya urut `dueDate` menaik.
+///
+/// Sengaja tidak bergantung pada urutan yang datang dari stream — halaman ini
+/// yang memegang kontrak urutan tampilan.
+List<BillEntity> sortBillsForDisplay(
+  List<BillEntity> bills,
+  DateTime todayStart,
+) {
+  final sorted = [...bills];
+  sorted.sort((a, b) {
+    final aOverdue = a.isOverdue(todayStart);
+    final bOverdue = b.isOverdue(todayStart);
+    if (aOverdue != bOverdue) return aOverdue ? -1 : 1;
+    return a.dueDate.compareTo(b.dueDate);
+  });
+  return sorted;
+}
+
+class BillsListPage extends StatefulWidget {
+  const BillsListPage({super.key});
+
+  @override
+  State<BillsListPage> createState() => _BillsListPageState();
+}
+
+class _BillsListPageState extends State<BillsListPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<BillsBloc>().add(const BillsSubscribed());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final todayStart = startOfDay(DateTime.now());
+
+    return BlocListener<BillsBloc, BillsState>(
+      // Side-effect (snackbar undo) menyusul di Task 5.4.
+      listenWhen: (prev, curr) => prev.lastUndo != curr.lastUndo,
+      listener: (context, state) {},
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              floating: true,
+              backgroundColor: bgColor,
+              title: Text(
+                context.l10n.billsTitle,
+                style: AppTextStyles.h3.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              centerTitle: false,
+            ),
+            BlocBuilder<BillsBloc, BillsState>(
+              builder: (context, state) {
+                if (state.status == BillsStatus.initial ||
+                    state.status == BillsStatus.loading) {
+                  return const SliverFillRemaining(
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  );
+                }
+
+                if (state.status == BillsStatus.failure) {
+                  return SliverFillRemaining(
+                    child: _ErrorBody(
+                      message: context.l10n.billsError,
+                      onRetry: () => context.read<BillsBloc>().add(
+                        const BillsSubscribed(),
+                      ),
+                    ),
+                  );
+                }
+
+                final bills = sortBillsForDisplay(state.bills, todayStart);
+
+                if (bills.isEmpty) {
+                  return SliverFillRemaining(child: _EmptyBody(isDark: isDark));
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.xxxl,
+                  ),
+                  sliver: SliverList.separated(
+                    itemCount: bills.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (_, i) => BillItem(
+                      bill: bills[i],
+                      todayStart: todayStart,
+                      // Sheet detail/aksi menyusul di Task 5.3.
+                      onTap: null,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          // Sheet "Tambah Tagihan" menyusul di Task 5.2.
+          onPressed: () {},
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add),
+          label: Text(
+            context.l10n.billsAdd,
+            style: AppTextStyles.label.copyWith(color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Error state ──────────────────────────────────────────────────────────────
+
+class _ErrorBody extends StatelessWidget {
+  const _ErrorBody({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              style: AppTextStyles.body.copyWith(color: mutedColor),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            OutlinedButton(onPressed: onRetry, child: Text(context.l10n.retry)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Empty state ──────────────────────────────────────────────────────────────
+
+class _EmptyBody extends StatelessWidget {
+  const _EmptyBody({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 48, color: mutedColor),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              context.l10n.billsEmpty,
+              style: AppTextStyles.body.copyWith(color: mutedColor),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

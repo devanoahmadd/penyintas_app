@@ -557,6 +557,18 @@ class AppLocalizations {
   String get applockBiometricReason => _t('applock_biometric_reason');
   String get applockVerifyToDisable => _t('applock_verify_to_disable');
   String get applockChangeCurrent => _t('applock_change_current');
+
+  // ── Tagihan (A1, Task 5.1) ──
+  String get billsTitle => _t('bills_title');
+  String get billsEmpty => _t('bills_empty');
+  String get billsAdd => _t('bills_add');
+  String get billsError => _t('bills_error');
+  String get billsStatusOverdue => _t('bills_status_overdue');
+  String get billsStatusUpcoming => _t('bills_status_upcoming');
+  String get billsStatusDone => _t('bills_status_done');
+  String billsInstallmentProgress(int x, int n) => _t(
+    'bills_installment_progress',
+  ).replaceAll('{x}', '$x').replaceAll('{n}', '$n');
 }
 
 class _AppLocalizationsDelegate

@@ -410,5 +410,13 @@
   "applock_forgot_confirm": "Keluar",
   "applock_biometric_reason": "Buka Penyintas",
   "applock_verify_to_disable": "Masukkan PIN untuk mematikan kunci",
-  "applock_change_current": "PIN saat ini"
+  "applock_change_current": "PIN saat ini",
+  "bills_title": "Tagihan",
+  "bills_empty": "Belum ada tagihan. Tambah kos, listrik, atau wifi biar tak lupa.",
+  "bills_add": "Tambah Tagihan",
+  "bills_error": "Gagal memuat tagihan. Periksa koneksi, lalu coba lagi.",
+  "bills_status_overdue": "Terlambat",
+  "bills_status_upcoming": "Akan datang",
+  "bills_status_done": "Selesai",
+  "bills_installment_progress": "Cicilan ke-{x} dari {n}"
 }
