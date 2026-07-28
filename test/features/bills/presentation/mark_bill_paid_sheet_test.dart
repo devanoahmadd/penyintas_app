@@ -384,9 +384,19 @@ void main() {
     expect(find.text('buka'), findsOneWidget);
   });
 
-  // ── Milestone (pakai ulang stop-check fungsi murni markBillPaid) ──────────
+  // ── Milestone dipindah ke halaman daftar (Task 5.4) ───────────────────────
+  //
+  // Sampai Task 5.3 sheet ini menampilkan `MilestoneToast` sendiri. Task 5.4
+  // menyatukan perayaan + tawaran "Urungkan" jadi SATU snackbar milik
+  // `BillsListPage`, karena `MilestoneToast.show` memanggil
+  // `hideCurrentSnackBar()` — dua surface saling menggusur dan yang hilang
+  // justru undo, jaring pengaman pengguna.
+  //
+  // Dua test lama ("MilestoneToast tampil" / "TANPA MilestoneToast") diganti
+  // penjaga di bawah: sheet WAJIB diam. Pasangannya (isi & aksi snackbar) ada
+  // di `bills_list_page_test.dart` grup "snackbar undo".
 
-  testWidgets('sukses & tagihan masih berjalan → MilestoneToast tampil', (
+  testWidgets('sukses → sheet TIDAK menampilkan surface apa pun sendiri', (
     tester,
   ) async {
     await pumpSheet(tester, bill: billBerjalan());
@@ -396,29 +406,27 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byType(MilestoneToast), findsOneWidget);
-    expect(find.text(l10n.milestoneCopy), findsOneWidget);
+    expect(
+      find.byType(MilestoneToast),
+      findsNothing,
+      reason: 'perayaan kini digabung ke snackbar undo di BillsListPage',
+    );
+    expect(find.text(l10n.milestoneCopy), findsNothing);
   });
 
-  testWidgets(
-    'sukses & tagihan selesai (sekali jalan) → TANPA MilestoneToast',
-    (tester) async {
-      await pumpSheet(tester, bill: billSekaliJalan());
-      await tapSubmit(tester);
+  testWidgets('sukses & tagihan sekali jalan → sheet tetap diam', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billSekaliJalan());
+    await tapSubmit(tester);
 
-      stateController.add(const BillsState(status: BillsStatus.success));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(
-        find.byType(MilestoneToast),
-        findsNothing,
-        reason:
-            'tagihan yang sudah tamat bukan "satu ruas dilalui" — stop-check '
-            'markBillPaid menandainya completed',
-      );
-    },
-  );
+    expect(find.byType(MilestoneToast), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
+  });
 
   // ── Aksesibilitas & tema ──────────────────────────────────────────────────
 

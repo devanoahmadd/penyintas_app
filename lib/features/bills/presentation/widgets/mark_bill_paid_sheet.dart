@@ -11,9 +11,7 @@ import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
-import 'package:penyintas_app/features/bills/domain/usecases/mark_bill_paid_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
-import 'package:penyintas_app/widgets/common/milestone_toast.dart';
 
 /// Sheet konfirmasi "tandai lunas" (spec §6.3).
 ///
@@ -69,14 +67,6 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       0;
 
   bool get _amountInvalid => _amount <= 0;
-
-  /// Apakah tagihan masih berjalan SETELAH pembayaran ini.
-  ///
-  /// Sengaja memakai ulang fungsi murni [markBillPaid] — stop-check
-  /// (tenor habis / lewat batas perulangan / sekali-jalan) sudah teruji di
-  /// domain, jadi UI TIDAK menulis ulang kondisinya.
-  bool get _masihBerjalan =>
-      markBillPaid(bill: widget.bill).newStatus == BillStatus.active;
 
   // ── Pemilih tanggal ───────────────────────────────────────────────────────
 
@@ -157,12 +147,11 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       listener: (context, state) {
         if (!_isSubmitting) return;
         if (state.status == BillsStatus.success) {
-          // Toast ditampilkan SEBELUM pop: `ScaffoldMessenger` yang ditemukan
-          // dari context sheet adalah milik MaterialApp (di atas Navigator),
-          // jadi snackbar tetap hidup setelah sheet tertutup.
-          if (_masihBerjalan) {
-            MilestoneToast.show(context, l10n.milestoneCopy);
-          }
+          // Sheet TIDAK menampilkan surface apa pun di sini. Perayaan +
+          // tawaran "Urungkan" digabung jadi SATU snackbar milik halaman
+          // daftar (Task 5.4): dua surface akan saling menggusur karena
+          // `MilestoneToast.show` memanggil `hideCurrentSnackBar()`, dan yang
+          // hilang justru undo — jaring pengaman pengguna.
           Navigator.of(context).pop();
         } else if (state.status == BillsStatus.failure) {
           setState(() => _isSubmitting = false);

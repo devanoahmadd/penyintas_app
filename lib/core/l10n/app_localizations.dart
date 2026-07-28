@@ -625,6 +625,12 @@ class AppLocalizations {
   String get billsPaidSubmit => _t('bills_paid_submit');
   String get billsPaidErrorAmount => _t('bills_paid_error_amount');
   String get billsPaidFailed => _t('bills_paid_failed');
+
+  // ── Snackbar hasil pembayaran + undo (A1, Task 5.4) ──
+  /// Dipakai saat tagihan sudah tamat; kalau masih berjalan yang tampil
+  /// [milestoneCopy].
+  String get billsPaidDone => _t('bills_paid_done');
+  String get billsUndo => _t('bills_undo');
 }
 
 class _AppLocalizationsDelegate

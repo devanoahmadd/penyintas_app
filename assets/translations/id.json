@@ -467,5 +467,7 @@
   "bills_paid_optout_hint": "Tagihan tetap ditandai lunas, tapi transaksi baru tidak dibuat.",
   "bills_paid_submit": "Konfirmasi Pembayaran",
   "bills_paid_error_amount": "Isi dulu nominal yang kamu bayar, ya.",
-  "bills_paid_failed": "Gagal menandai lunas. Coba lagi, ya."
+  "bills_paid_failed": "Gagal menandai lunas. Coba lagi, ya.",
+  "bills_paid_done": "Tagihan ini sudah lunas semua.",
+  "bills_undo": "Urungkan"
 }

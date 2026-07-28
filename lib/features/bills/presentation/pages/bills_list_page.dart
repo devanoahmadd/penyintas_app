@@ -68,6 +68,46 @@ class _BillsListPageState extends State<BillsListPage> {
     );
   }
 
+  /// Satu snackbar untuk DUA maksud: merayakan pembayaran DAN menyediakan
+  /// jaring pengaman "Urungkan".
+  ///
+  /// Sengaja tidak memakai `MilestoneToast.show` dari sheet: toast itu
+  /// memanggil `hideCurrentSnackBar()`, sehingga bila keduanya tampil, yang
+  /// tergusur justru snackbar undo — jaring pengaman pengguna.
+  void _showUndoSnackBar(BuildContext context, BillsState state) {
+    final snapshot = state.lastUndo!;
+    final l10n = context.l10n;
+    final bloc = context.read<BillsBloc>();
+
+    // `watchActiveBills` hanya mengalirkan tagihan AKTIF, jadi masih-tidaknya
+    // bill di daftar hidup adalah penanda paling akurat bahwa tagihan belum
+    // tamat — lebih tepercaya daripada menghitung ulang dari snapshot lama.
+    final masihBerjalan = state.bills.any((b) => b.id == snapshot.billId);
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            masihBerjalan ? l10n.milestoneCopy : l10n.billsPaidDone,
+            style: AppTextStyles.body.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          // Cukup lama untuk sempat membaca DAN menekan "Urungkan".
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: l10n.billsUndo,
+            textColor: Colors.white,
+            onPressed: () => bloc.add(BillPaymentUndone(snapshot)),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -76,9 +116,13 @@ class _BillsListPageState extends State<BillsListPage> {
     final todayStart = startOfDay(DateTime.now());
 
     return BlocListener<BillsBloc, BillsState>(
-      // Side-effect (snackbar undo) menyusul di Task 5.4.
       listenWhen: (prev, curr) => prev.lastUndo != curr.lastUndo,
-      listener: (context, state) {},
+      listener: (context, state) {
+        // Undo yang sudah dipakai membuat bloc meng-clear `lastUndo` → tak ada
+        // yang perlu ditawarkan lagi.
+        if (state.lastUndo == null) return;
+        _showUndoSnackBar(context, state);
+      },
       child: Scaffold(
         backgroundColor: bgColor,
         body: CustomScrollView(

@@ -281,4 +281,102 @@ void main() {
     expect(find.text('Kos Bu Tini'), findsOneWidget);
     expect(find.text(l10n.billsStatusOverdue.toUpperCase()), findsOneWidget);
   });
+
+  // ── Snackbar hasil pembayaran + Undo (Task 5.4) ─────────────────────────────
+  //
+  // SATU snackbar saja untuk kedua maksud (perayaan + jaring pengaman undo):
+  // `MilestoneToast.show` memanggil `hideCurrentSnackBar()`, jadi kalau sheet
+  // ikut menampilkan toast, snackbar Undo-lah yang tergusur.
+  group('snackbar undo', () {
+    final snapshot = UndoSnapshot(
+      billId: 7,
+      dueDate: todayStart.subtract(const Duration(days: 30)),
+      installmentsPaid: 3,
+      status: BillStatus.active,
+      txId: 'tx-abc',
+    );
+
+    /// State awal SENGAJA tanpa `lastUndo` — `listenWhen` hanya lolos kalau
+    /// `lastUndo` benar-benar BERUBAH.
+    void stubUndo(BillsState next) {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(next),
+        initialState: const BillsState(status: BillsStatus.success),
+      );
+    }
+
+    BillsState stateWithUndo({required List<BillEntity> bills}) => BillsState(
+      status: BillsStatus.success,
+      bills: bills,
+      lastUndo: snapshot,
+    );
+
+    testWidgets(
+      'tagihan masih berjalan (masih ada di daftar aktif) → snackbar milestone',
+      (tester) async {
+        stubUndo(
+          stateWithUndo(
+            bills: [
+              buildBill(
+                id: 7,
+                name: 'Wifi Indihome',
+                dueDate: todayStart.add(const Duration(days: 3)),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpWidget(harness());
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(l10n.milestoneCopy), findsOneWidget);
+        expect(find.text(l10n.billsUndo), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tagihan sudah tamat (lenyap dari daftar aktif) → snackbar lunas semua',
+      (tester) async {
+        // `watchActiveBills` hanya mengalirkan bill aktif, jadi hilangnya bill
+        // dari `state.bills` = penanda tagihan sudah selesai sepenuhnya.
+        stubUndo(stateWithUndo(bills: const []));
+        await tester.pumpWidget(harness());
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(l10n.billsPaidDone), findsOneWidget);
+        expect(find.text(l10n.milestoneCopy), findsNothing);
+        expect(find.text(l10n.billsUndo), findsOneWidget);
+      },
+    );
+
+    testWidgets('tap "Urungkan" mengirim BillPaymentUndone dengan snapshot '
+        'yang persis sama', (tester) async {
+      stubUndo(
+        stateWithUndo(
+          bills: [
+            buildBill(
+              id: 7,
+              name: 'Wifi Indihome',
+              dueDate: todayStart.add(const Duration(days: 3)),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+      // Selama animasi masuk, snackbar masih dibungkus IgnorePointer —
+      // tap-nya meleset kalau tidak ditunggu sampai diam.
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.tap(find.text(l10n.billsUndo));
+      await tester.pump();
+
+      verify(() => bloc.add(BillPaymentUndone(snapshot))).called(1);
+    });
+  });
 }

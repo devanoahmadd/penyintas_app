@@ -467,5 +467,7 @@
   "bills_paid_optout_hint": "The bill still gets marked paid, but no new transaction is created.",
   "bills_paid_submit": "Confirm Payment",
   "bills_paid_error_amount": "Enter the amount you paid first.",
-  "bills_paid_failed": "Couldn't mark it as paid. Give it another try."
+  "bills_paid_failed": "Couldn't mark it as paid. Give it another try.",
+  "bills_paid_done": "This bill is fully paid off.",
+  "bills_undo": "Undo"
 }
