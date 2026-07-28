@@ -6,6 +6,7 @@ import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/add_edit_bill_sheet.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 
@@ -40,6 +41,18 @@ class _BillsListPageState extends State<BillsListPage> {
   void initState() {
     super.initState();
     context.read<BillsBloc>().add(const BillsSubscribed());
+  }
+
+  void _openAddSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<BillsBloc>(),
+        child: const AddEditBillSheet(),
+      ),
+    );
   }
 
   @override
@@ -123,8 +136,7 @@ class _BillsListPageState extends State<BillsListPage> {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          // Sheet "Tambah Tagihan" menyusul di Task 5.2.
-          onPressed: () {},
+          onPressed: _openAddSheet,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           icon: const Icon(Icons.add),

@@ -569,6 +569,50 @@ class AppLocalizations {
   String billsInstallmentProgress(int x, int n) => _t(
     'bills_installment_progress',
   ).replaceAll('{x}', '$x').replaceAll('{n}', '$n');
+
+  // ── Form tagihan (A1, Task 5.2) ──
+  String get billsFormAddTitle => _t('bills_form_add_title');
+  String get billsFormEditTitle => _t('bills_form_edit_title');
+  String get billsFormNameLabel => _t('bills_form_name_label');
+  String get billsFormNameHint => _t('bills_form_name_hint');
+  String get billsFormAmountLabel => _t('bills_form_amount_label');
+  String get billsFormAmountHint => _t('bills_form_amount_hint');
+  String get billsFormCategoryLabel => _t('bills_form_category_label');
+  String get billsFormDueDateLabel => _t('bills_form_due_date_label');
+  String get billsFormDueDateHint => _t('bills_form_due_date_hint');
+  String get billsFormRecurrenceLabel => _t('bills_form_recurrence_label');
+  String get billsRecurrenceNone => _t('bills_recurrence_none');
+  String get billsRecurrenceMonthly => _t('bills_recurrence_monthly');
+  String get billsRecurrenceYearly => _t('bills_recurrence_yearly');
+  String get billsFormTenorLabel => _t('bills_form_tenor_label');
+  String get billsTenorUnlimited => _t('bills_tenor_unlimited');
+  String get billsTenorCount => _t('bills_tenor_count');
+  String get billsTenorEndDate => _t('bills_tenor_end_date');
+  String get billsFormTenorCountLabel => _t('bills_form_tenor_count_label');
+  String get billsFormTenorCountHint => _t('bills_form_tenor_count_hint');
+  String get billsFormTenorEndDateLabel =>
+      _t('bills_form_tenor_end_date_label');
+  String get billsFormTenorEndDateHint => _t('bills_form_tenor_end_date_hint');
+  String get billsFormFixedLabel => _t('bills_form_fixed_label');
+  String get billsFormFixedHint => _t('bills_form_fixed_hint');
+  String get billsFormReminderLabel => _t('bills_form_reminder_label');
+  String get billsReminderDefault => _t('bills_reminder_default');
+  String get billsReminderD3 => _t('bills_reminder_d3');
+  String get billsReminderD1 => _t('bills_reminder_d1');
+  String get billsReminderDayOf => _t('bills_reminder_day_of');
+  String get billsReminderOff => _t('bills_reminder_off');
+  String get billsFormNotesLabel => _t('bills_form_notes_label');
+  String get billsFormNotesOptional => _t('bills_form_notes_optional');
+  String get billsFormNotesHint => _t('bills_form_notes_hint');
+  String get billsFormRequired => _t('bills_form_required');
+  String get billsFormErrorName => _t('bills_form_error_name');
+  String get billsFormErrorAmount => _t('bills_form_error_amount');
+  String get billsFormErrorCategory => _t('bills_form_error_category');
+  String get billsFormErrorDueDate => _t('bills_form_error_due_date');
+  String get billsFormErrorTenorCount => _t('bills_form_error_tenor_count');
+  String get billsFormErrorTenorEndDate =>
+      _t('bills_form_error_tenor_end_date');
+  String get billsFormSaveFailed => _t('bills_form_save_failed');
 }
 
 class _AppLocalizationsDelegate
