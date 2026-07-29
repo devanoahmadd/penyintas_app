@@ -17,6 +17,22 @@ abstract class NotificationLocalDatasource {
     required String body,
     String? payload,
   });
+
+  /// Jadwalkan satu pengingat tagihan pada [scheduledDate] (waktu lokal).
+  ///
+  /// Sekali-jalan (bukan berulang harian) — pemanggil bertanggung jawab
+  /// menjadwalkan ulang setelah tagihan bergulir ke periode berikutnya.
+  /// [id] harus deterministik per tagihan agar bisa dibatalkan/ditimpa.
+  Future<void> scheduleBillReminder({
+    required int id,
+    required DateTime scheduledDate,
+    required String title,
+    required String body,
+    String? payload,
+  });
+
+  /// Batalkan pengingat tagihan ber-[id].
+  Future<void> cancelBillReminder(int id);
 }
 
 class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
@@ -31,6 +47,12 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
   // defaultImportance, alert butuh high.
   static const _alertChannelId = 'penyintas_alerts';
   static const _alertChannelName = 'Peringatan Anggaran';
+
+  // Channel khusus pengingat tagihan. Terpisah dari dua channel di atas supaya
+  // pengguna bisa membisukan pengingat tagihan saja tanpa kehilangan peringatan
+  // anggaran (importance channel Android 8+ immutable setelah dibuat).
+  static const _billsChannelId = 'penyintas_bills';
+  static const _billsChannelName = 'Pengingat Tagihan';
 
   // ID band 1000–1999 agar tak pernah bentrok reminder (id=1) & multi-kategori
   // menumpuk seperti perilaku notif background.
@@ -152,4 +174,41 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
       payload: payload,
     );
   }
+
+  @override
+  Future<void> scheduleBillReminder({
+    required int id,
+    required DateTime scheduledDate,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _billsChannelId,
+          _billsChannelName,
+          channelDescription: 'Pengingat menjelang jatuh tempo tagihan.',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      // TANPA matchDateTimeComponents — pengingat tagihan sekali-jalan,
+      // bukan pengulangan harian seperti scheduleDailyReminder.
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> cancelBillReminder(int id) => _plugin.cancel(id: id);
 }

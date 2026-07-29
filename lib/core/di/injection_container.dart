@@ -125,6 +125,7 @@ import 'package:penyintas_app/features/goal/domain/usecases/load_goals_usecase.d
 import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_usecase.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_local_datasource.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_scheduler.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_remote_datasource.dart';
 import 'package:penyintas_app/features/bills/data/repositories/bill_repository_impl.dart';
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
@@ -612,6 +613,11 @@ void _initBills() {
 
   sl.registerLazySingleton<BillRemoteDatasource>(
     () => BillRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+
+  // Penjadwal pengingat tagihan — pemanggilnya di-wire terpisah (Task 6.2).
+  sl.registerLazySingleton<BillReminderScheduler>(
+    () => BillReminderSchedulerImpl(sl()),
   );
 }
 
