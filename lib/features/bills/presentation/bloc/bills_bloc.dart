@@ -5,6 +5,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_scheduler.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/data/models/bill_model.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
@@ -30,6 +32,8 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     required BillRepository billRepository,
     required AddTransactionUseCase addTransaction,
     required DeleteTransactionUseCase deleteTransaction,
+    required BillReminderScheduler reminderScheduler,
+    required BillReminderSettingsDatasource reminderSettings,
   }) : _watchActiveBills = watchActiveBills,
        _createBill = createBill,
        _updateBill = updateBill,
@@ -37,6 +41,8 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
        _billRepository = billRepository,
        _addTransaction = addTransaction,
        _deleteTransaction = deleteTransaction,
+       _reminderScheduler = reminderScheduler,
+       _reminderSettings = reminderSettings,
        super(const BillsState()) {
     on<BillsSubscribed>(_onSubscribed, transformer: restartable());
     on<BillAdded>(_onAdded);
@@ -53,6 +59,8 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   final BillRepository _billRepository;
   final AddTransactionUseCase _addTransaction;
   final DeleteTransactionUseCase _deleteTransaction;
+  final BillReminderScheduler _reminderScheduler;
+  final BillReminderSettingsDatasource _reminderSettings;
 
   static const _uuid = Uuid();
 
@@ -60,6 +68,40 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     try {
       FirebaseCrashlytics.instance.recordError(e, s);
     } catch (_) {}
+  }
+
+  /// Reschedule pengingat dari daftar bill aktif TERKINI (Task 6.2) — BUKAN
+  /// `state.bills`, yang saat handler ini jalan mungkin belum ter-refresh via
+  /// stream `watchActiveBills` (race async). Non-fatal: kegagalan jadwal
+  /// TIDAK boleh menggagalkan operasi bill yang sudah sukses — dibungkus
+  /// try/catch, jangan emit failure karenanya.
+  Future<void> _reschedule() async {
+    try {
+      final result = await _watchActiveBills(const NoParams()).first;
+      final bills = result.fold((_) => null, (list) => list);
+      if (bills == null) return; // gagal baca → skip diam-diam
+      final settings = await _reminderSettings.read();
+      await _reminderScheduler.rescheduleAll(
+        bills,
+        globalDaysBefore: settings.daysBefore,
+        globalHour: settings.hour,
+      );
+    } catch (e, s) {
+      _log(e, s);
+    }
+  }
+
+  /// Batalkan pengingat SATU bill secara EKSPLISIT (F3) — dipakai saat bill
+  /// keluar dari `activeBills` (dihapus, atau mark-paid → completed) sehingga
+  /// [_reschedule] TAK BISA membatalkan notif lamanya (bill itu sudah tak ada
+  /// di snapshot yang dibaca [_reschedule]) → tanpa ini notif jadi yatim.
+  /// Non-fatal, sama seperti [_reschedule].
+  Future<void> _cancelReminder(int billId) async {
+    try {
+      await _reminderScheduler.cancelFor(billId);
+    } catch (e, s) {
+      _log(e, s);
+    }
   }
 
   Future<void> _onSubscribed(
@@ -89,26 +131,33 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
 
   Future<void> _onAdded(BillAdded event, Emitter<BillsState> emit) async {
     final result = await _createBill(event.bill);
-    result.fold(
-      (f) => emit(state.copyWith(status: BillsStatus.failure, failure: f)),
-      (_) {},
+    await result.fold(
+      (f) async =>
+          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+      // sukses: stream watchActive akan re-emit daftar terbaru otomatis;
+      // reschedule (Task 6.2) pakai snapshot terkini agar bill baru ikut.
+      (_) => _reschedule(),
     );
-    // sukses: stream watchActive akan re-emit daftar terbaru otomatis.
   }
 
   Future<void> _onUpdated(BillUpdated event, Emitter<BillsState> emit) async {
     final result = await _updateBill(event.bill);
-    result.fold(
-      (f) => emit(state.copyWith(status: BillsStatus.failure, failure: f)),
-      (_) {},
+    await result.fold(
+      (f) async =>
+          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+      (_) => _reschedule(),
     );
   }
 
   Future<void> _onDeleted(BillDeleted event, Emitter<BillsState> emit) async {
     final result = await _deleteBill(event.id);
-    result.fold(
-      (f) => emit(state.copyWith(status: BillsStatus.failure, failure: f)),
-      (_) {},
+    await result.fold(
+      (f) async =>
+          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+      // F3: bill terhapus TIDAK ADA lagi di activeBills → rescheduleAll TAK
+      // BISA membatalkan notif lamanya. cancelFor EKSPLISIT wajib, kalau
+      // tidak notif jadi yatim (tetap tampil utk bill yang sudah dihapus).
+      (_) => _cancelReminder(event.id),
     );
   }
 
@@ -117,8 +166,8 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   /// 2. buat transaksi (kecuali opt-out) — id uuid = txId snapshot (F9);
   /// 3-5. hitung next-state (MURNI via `markBillPaid`);
   /// 6. persist mutasi bill;
+  /// 6b. reschedule notif (Task 6.2) — lihat langkah di bawah;
   /// 7. simpan UndoSnapshot = state lama.
-  /// Reschedule notif menyusul di Task 6.2.
   Future<void> _onMarkedPaid(
     BillMarkedPaid event,
     Emitter<BillsState> emit,
@@ -206,6 +255,16 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       return;
     }
 
+    // 6b. Reschedule notif (Task 6.2) dgn daftar bill aktif TERKINI (dueDate
+    // sudah roll-forward pasca applyBillPayment di atas). F3: bila bill ini
+    // JADI completed, ia keluar dari activeBills sehingga _reschedule TAK
+    // BISA membatalkan notif lamanya sendiri → cancelFor EKSPLISIT di
+    // SAMPING reschedule, simetris dgn BillDeleted.
+    await _reschedule();
+    if (advance.newStatus == BillStatus.completed) {
+      await _cancelReminder(event.billId);
+    }
+
     // 7. UndoSnapshot = state SEBELUM payment (nilai bill yang di-snapshot di
     // langkah 1). Daftar aktif refresh otomatis via stream watchActive.
     emit(
@@ -225,7 +284,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   /// "Batal lunas" / undo (spec §6.5). Restore state bill PERSIS dari snapshot
   /// (BUKAN recompute/hitung mundur — anchor akhir-bulan tak boleh geser), lalu
   /// hapus transaksi yang dibuat saat lunas (bila ada; opt-out → txId null →
-  /// skip). Reschedule notif menyusul di Task 6.2.
+  /// skip), lalu reschedule notif (Task 6.2).
   Future<void> _onPaymentUndone(
     BillPaymentUndone event,
     Emitter<BillsState> emit,
@@ -268,7 +327,11 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       }
     }
 
-    // 3. Reschedule notif → Task 6.2 (belum di sini).
+    // 3. Reschedule notif (Task 6.2): bill kembali ke activeBills (undo
+    // completed→active ATAU restore bulanan biasa) → cukup andalkan
+    // _reschedule, TIDAK perlu cancelFor (tak ada bill yang keluar aktif).
+    await _reschedule();
+
     // 4. Clear lastUndo + success. Daftar aktif refresh via stream watchActive.
     emit(state.copyWith(status: BillsStatus.success, clearUndo: true));
   }

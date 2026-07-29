@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_scheduler.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/data/models/bill_model.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/create_bill_usecase.dart';
@@ -33,6 +35,11 @@ class MockAddTransactionUseCase extends Mock implements AddTransactionUseCase {}
 
 class MockDeleteTransactionUseCase extends Mock
     implements DeleteTransactionUseCase {}
+
+class MockBillReminderScheduler extends Mock implements BillReminderScheduler {}
+
+class MockBillReminderSettingsDatasource extends Mock
+    implements BillReminderSettingsDatasource {}
 
 class FakeBillModel extends Fake implements BillModel {}
 
@@ -126,6 +133,8 @@ void main() {
   late MockBillRepository mockBillRepository;
   late MockAddTransactionUseCase mockAddTransaction;
   late MockDeleteTransactionUseCase mockDeleteTransaction;
+  late MockBillReminderScheduler mockScheduler;
+  late MockBillReminderSettingsDatasource mockReminderSettings;
 
   setUpAll(() {
     registerFallbackValue(const NoParams());
@@ -133,6 +142,7 @@ void main() {
     registerFallbackValue(FakeTransactionEntity());
     registerFallbackValue(BillStatus.active);
     registerFallbackValue(DateTime(2026));
+    registerFallbackValue(<BillEntity>[]);
   });
 
   setUp(() {
@@ -143,6 +153,26 @@ void main() {
     mockBillRepository = MockBillRepository();
     mockAddTransaction = MockAddTransactionUseCase();
     mockDeleteTransaction = MockDeleteTransactionUseCase();
+    mockScheduler = MockBillReminderScheduler();
+    mockReminderSettings = MockBillReminderSettingsDatasource();
+
+    // Default: stream aktif kosong (dipakai `_reschedule` internal BillsBloc
+    // utk ambil snapshot bill aktif TERKINI pasca mutasi) + setting default
+    // (1, 9). Test grup 'Reschedule pengingat' meng-override sesuai kasus.
+    when(
+      () => mockWatchActiveBills(any()),
+    ).thenAnswer((_) => Stream.value(const Right(<BillEntity>[])));
+    when(
+      () => mockReminderSettings.read(),
+    ).thenAnswer((_) async => (daysBefore: 1, hour: 9));
+    when(
+      () => mockScheduler.rescheduleAll(
+        any(),
+        globalDaysBefore: any(named: 'globalDaysBefore'),
+        globalHour: any(named: 'globalHour'),
+      ),
+    ).thenAnswer((_) async {});
+    when(() => mockScheduler.cancelFor(any())).thenAnswer((_) async {});
   });
 
   BillsBloc buildBloc() => BillsBloc(
@@ -153,6 +183,8 @@ void main() {
     billRepository: mockBillRepository,
     addTransaction: mockAddTransaction,
     deleteTransaction: mockDeleteTransaction,
+    reminderScheduler: mockScheduler,
+    reminderSettings: mockReminderSettings,
   );
 
   group('BillsSubscribed', () {
@@ -589,6 +621,16 @@ void main() {
           ),
         ).called(1);
         verify(() => mockDeleteTransaction('tx-1')).called(1);
+        // Reschedule (Task 6.2): bill kembali aktif → rescheduleAll,
+        // TIDAK cancelFor (bill tsb tak dihapus/completed).
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        ).called(1);
+        verifyNever(() => mockScheduler.cancelFor(any()));
       },
     );
 
@@ -649,6 +691,237 @@ void main() {
           ),
         ).called(1);
         verifyNever(() => mockDeleteTransaction(any()));
+      },
+    );
+  });
+
+  group('Reschedule pengingat (Task 6.2)', () {
+    blocTest<BillsBloc, BillsState>(
+      'BillAdded sukses → rescheduleAll dipanggil dgn setting terkini (1, 9)',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockCreateBill(any()),
+        ).thenAnswer((_) async => const Right(1));
+      },
+      act: (bloc) => bloc.add(BillAdded(_makeBillModel())),
+      verify: (_) {
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: 1,
+            globalHour: 9,
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'BillAdded gagal → rescheduleAll TIDAK dipanggil',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockCreateBill(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('boom')));
+      },
+      act: (bloc) => bloc.add(BillAdded(_makeBillModel())),
+      verify: (_) {
+        verifyNever(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        );
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'BillUpdated sukses → rescheduleAll dipanggil',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockUpdateBill(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(BillUpdated(_makeBillModel())),
+      verify: (_) {
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      '(c) BillDeleted sukses → cancelFor(id) EKSPLISIT (F3, notif tak yatim)',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockDeleteBill(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(const BillDeleted(5)),
+      verify: (_) {
+        verify(() => mockScheduler.cancelFor(5)).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'BillDeleted gagal → cancelFor TIDAK dipanggil',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockDeleteBill(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('boom')));
+      },
+      act: (bloc) => bloc.add(const BillDeleted(5)),
+      verify: (_) {
+        verifyNever(() => mockScheduler.cancelFor(any()));
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      '(d) BillMarkedPaid → completed (tenor habis) → cancelFor(billId) '
+      'EKSPLISIT (F3, simetris dgn delete)',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(
+            _makeBill(
+              id: 7,
+              recurrence: Recurrence.monthly,
+              dueDayOfMonth: 25,
+              installmentTotal: 3,
+              installmentsPaid: 2,
+              dueDate: DateTime(2026, 7, 25),
+            ),
+          ),
+        );
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: true,
+          optOutTransaction: false,
+        ),
+      ),
+      verify: (_) {
+        verify(() => mockScheduler.cancelFor(7)).called(1);
+        // rescheduleAll TETAP dipanggil (bill lain di daftar aktif tetap
+        // harus ter-refresh; scheduler-nya sendiri idempoten).
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'BillMarkedPaid → masih active → cancelFor TIDAK dipanggil, '
+      'rescheduleAll TETAP dipanggil',
+      build: buildBloc,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(
+            _makeBill(
+              id: 7,
+              recurrence: Recurrence.monthly,
+              dueDayOfMonth: 25,
+              installmentsPaid: 0,
+              dueDate: DateTime(2026, 7, 25),
+            ),
+          ),
+        );
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: true,
+          optOutTransaction: false,
+        ),
+      ),
+      verify: (_) {
+        verifyNever(() => mockScheduler.cancelFor(any()));
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'BillPaymentUndone sukses → rescheduleAll dipanggil (bill kembali '
+      'aktif), cancelFor TIDAK dipanggil',
+      build: buildBloc,
+      setUp: () {
+        when(
+          () => mockBillRepository.restoreBillPayment(
+            id: any(named: 'id'),
+            dueDate: any(named: 'dueDate'),
+            installmentsPaid: any(named: 'installmentsPaid'),
+            status: any(named: 'status'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillPaymentUndone(
+          UndoSnapshot(
+            billId: 2,
+            dueDate: DateTime(2026, 3, 10),
+            installmentsPaid: 2,
+            status: BillStatus.active,
+            txId: 'tx-9',
+          ),
+        ),
+      ),
+      verify: (_) {
+        verify(
+          () => mockScheduler.rescheduleAll(
+            any(),
+            globalDaysBefore: any(named: 'globalDaysBefore'),
+            globalHour: any(named: 'globalHour'),
+          ),
+        ).called(1);
+        verifyNever(() => mockScheduler.cancelFor(any()));
       },
     );
   });

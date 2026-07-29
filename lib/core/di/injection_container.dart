@@ -126,6 +126,7 @@ import 'package:penyintas_app/features/goal/domain/usecases/unlink_transaction_u
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_local_datasource.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_scheduler.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_remote_datasource.dart';
 import 'package:penyintas_app/features/bills/data/repositories/bill_repository_impl.dart';
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
@@ -351,6 +352,9 @@ void _initOnboarding() {
       goalRepository: sl(),
       onboardingDs: sl(),
       prefsRepo: sl(),
+      billRepository: sl(),
+      billReminderScheduler: sl(),
+      billReminderSettings: sl(),
       onComplete: () => sl<OnboardingGuard>().resetCache(),
     ),
   );
@@ -589,6 +593,8 @@ void _initBills() {
       billRepository: sl(),
       addTransaction: sl(),
       deleteTransaction: sl(),
+      reminderScheduler: sl(),
+      reminderSettings: sl(),
     ),
   );
 
@@ -615,9 +621,17 @@ void _initBills() {
     () => BillRemoteDatasourceImpl(auth: sl(), firestore: sl()),
   );
 
-  // Penjadwal pengingat tagihan — pemanggilnya di-wire terpisah (Task 6.2).
+  // Penjadwal pengingat tagihan — dipicu bootstrap/BillsBloc/setting global
+  // (Task 6.2, lihat BootstrapCoordinator & BillReminderSettingsDatasource).
   sl.registerLazySingleton<BillReminderScheduler>(
     () => BillReminderSchedulerImpl(sl()),
+  );
+
+  // Baca/tulis setting pengingat tagihan global + titik picu rescheduleAll
+  // saat setting berubah (Task 6.2). Belum ada pemanggil UI utk
+  // updateBillReminderSettings — lihat catatan di file datasource-nya.
+  sl.registerLazySingleton<BillReminderSettingsDatasource>(
+    () => BillReminderSettingsDatasourceImpl(sl(), sl(), sl()),
   );
 }
 
