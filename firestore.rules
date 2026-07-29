@@ -57,6 +57,30 @@ service cloud.firestore {
           && request.resource.data.updatedAt is number;
       }
 
+      // Tagihan/kewajiban rutin (A1 bills). Pola goals: owner-check + validasi
+      // tipe ringan pada field inti, TANPA hasOnly (field baru tetap lolos —
+      // hindari drift permission-denied).
+      match /bills/{billId} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        // delete dipisah: saat delete request.resource.data == null,
+        // sehingga validasi tipe tak bisa (dan tak perlu) diterapkan.
+        allow delete: if request.auth != null
+          && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.estimatedAmount is number
+          && request.resource.data.estimatedAmount >= 0
+          && request.resource.data.category is string
+          && request.resource.data.dueDate is number
+          && request.resource.data.status in ['active', 'completed']
+          && request.resource.data.createdAt is number
+          && request.resource.data.updatedAt is number;
+      }
+
       // Token FCM per-device (ditulis client, dibaca+prune CF via admin SDK).
       // Pola budget_limits: owner-check + validasi tipe ringan, TANPA hasOnly
       // (hindari drift-trap; longgar by design — owner-scoped, bukan celah).
