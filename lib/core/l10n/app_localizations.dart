@@ -620,6 +620,10 @@ class AppLocalizations {
   String billsPaidAmountNote(String amount) =>
       _t('bills_paid_amount_note').replaceAll('{amount}', amount);
   String get billsPaidDateLabel => _t('bills_paid_date_label');
+
+  /// Mitigasi M1 (Task 7.4): dipakai saat kebutuhan tetap di anggaran masih
+  /// nol, sehingga tak ada potongan di muka yang bisa menaungi tagihan ini.
+  String get billsPaidFixedEmptyHint => _t('bills_paid_fixed_empty_hint');
   String get billsPaidOptOutLabel => _t('bills_paid_optout_label');
   String get billsPaidOptOutHint => _t('bills_paid_optout_hint');
   String get billsPaidSubmit => _t('bills_paid_submit');

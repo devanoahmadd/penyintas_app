@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/add_edit_bill_sheet.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/mark_bill_paid_sheet.dart';
+import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
 
 /// Urutan tampilan daftar tagihan (spec §5):
 /// tagihan TERLAMBAT naik ke atas, sisanya urut `dueDate` menaik.
@@ -56,14 +59,23 @@ class _BillsListPageState extends State<BillsListPage> {
     );
   }
 
-  void _openMarkPaidSheet(BillEntity bill) {
+  Future<void> _openMarkPaidSheet(BillEntity bill) async {
+    // Bloc dibaca SEBELUM await — setelah await, `context` tak lagi dijamin
+    // hidup (lint `use_build_context_synchronously`).
+    final bloc = context.read<BillsBloc>();
+    // M1 §4.2: prefill "kebutuhan tetap" butuh fixedExpenses; gagal → null
+    // (fail-open).
+    final int? fixedExpenses = (await sl<GetBudgetSettingsUseCase>()(
+      NoParams(),
+    )).fold((_) => null, (s) => s.fixedExpenses);
+    if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider.value(
-        value: context.read<BillsBloc>(),
-        child: MarkBillPaidSheet(bill: bill),
+        value: bloc,
+        child: MarkBillPaidSheet(bill: bill, fixedExpenses: fixedExpenses),
       ),
     );
   }

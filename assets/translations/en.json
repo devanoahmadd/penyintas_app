@@ -462,6 +462,7 @@
   "bills_paid_amount_label": "Amount you paid",
   "bills_paid_amount_note": "Original estimate {amount}",
   "bills_paid_date_label": "Payment date",
+  "bills_paid_fixed_empty_hint": "Your fixed needs are still empty, so this bill comes out of your monthly allowance.",
   "bills_paid_optout_label": "I already logged this myself",
   "bills_paid_optout_hint": "The bill still gets marked paid, but no new transaction is created.",
   "bills_paid_submit": "Confirm Payment",

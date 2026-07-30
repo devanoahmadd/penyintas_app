@@ -100,7 +100,11 @@ void main() {
     updatedAt: createdAt,
   );
 
-  Widget harness({required BillEntity bill, ThemeData? theme}) => MaterialApp(
+  Widget harness({
+    required BillEntity bill,
+    ThemeData? theme,
+    int? fixedExpenses,
+  }) => MaterialApp(
     locale: const Locale('id'),
     supportedLocales: const [Locale('id'), Locale('en')],
     localizationsDelegates: [
@@ -119,7 +123,10 @@ void main() {
                 builder: (_) => Scaffold(
                   body: BlocProvider<BillsBloc>.value(
                     value: bloc,
-                    child: MarkBillPaidSheet(bill: bill),
+                    child: MarkBillPaidSheet(
+                      bill: bill,
+                      fixedExpenses: fixedExpenses,
+                    ),
                   ),
                 ),
               ),
@@ -135,13 +142,18 @@ void main() {
     WidgetTester tester, {
     required BillEntity bill,
     ThemeData? theme,
+    // Default anggaran "sehat" — pemanggil lama tidak peduli M1, dan nilai > 0
+    // membuat prefill kembali ke perilaku polos `bill.isFixedNeed`.
+    int? fixedExpenses = 500000,
   }) async {
     // Layar tinggi supaya sheet muat tanpa banyak scroll.
     tester.view.physicalSize = const Size(600, 2200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(harness(bill: bill, theme: theme));
+    await tester.pumpWidget(
+      harness(bill: bill, theme: theme, fixedExpenses: fixedExpenses),
+    );
     // Delegate l10n resolve di frame berikutnya — tanpa pump ekstra body
     // MaterialApp belum terbangun sama sekali.
     await tester.pumpAndSettle();
@@ -308,6 +320,72 @@ void main() {
     await tapSubmit(tester);
 
     expect(captureMarkedPaid(tester).includeAsFixed, isTrue);
+  });
+
+  // ── Mitigasi M1: prefill sadar-anggaran + hint ────────────────────────────
+  //
+  // Kalau kebutuhan tetap di anggaran masih 0, tak ada potongan di muka yang
+  // menaungi tagihan ini. Menandainya "kebutuhan tetap" akan membuat
+  // transaksinya dikecualikan dari akuntansi pengeluaran — uangnya lenyap dari
+  // saldo tanpa pernah tercatat di mana pun.
+
+  group('M1 prefill (§4.2) + hint (§4.3)', () {
+    Switch fixedSwitch(WidgetTester t) =>
+        t.widget<Switch>(find.byKey(const ValueKey('bill_paid_fixed')));
+    final hint = find.byKey(const ValueKey('bill_paid_m1_hint'));
+
+    testWidgets('fixedExpenses > 0 → prefill = flag, tanpa hint', (t) async {
+      await pumpSheet(
+        t,
+        bill: billBerjalan(isFixedNeed: true),
+        fixedExpenses: 500000,
+      );
+      expect(fixedSwitch(t).value, isTrue);
+      expect(hint, findsNothing);
+    });
+
+    testWidgets(
+      'fixedExpenses == 0 + isFixedNeed → prefill DIPAKSA false + hint',
+      (t) async {
+        await pumpSheet(
+          t,
+          bill: billBerjalan(isFixedNeed: true),
+          fixedExpenses: 0,
+        );
+        expect(fixedSwitch(t).value, isFalse);
+        expect(hint, findsOneWidget);
+        expect(
+          find.textContaining('Kebutuhan tetapmu masih kosong'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'fixedExpenses == null (fetch gagal) → FAIL-OPEN ke flag, tanpa hint',
+      (t) async {
+        await pumpSheet(
+          t,
+          bill: billBerjalan(isFixedNeed: true),
+          fixedExpenses: null,
+        );
+        expect(fixedSwitch(t).value, isTrue);
+        expect(hint, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'isFixedNeed=false → prefill false, tanpa hint (tak ada kontradiksi)',
+      (t) async {
+        await pumpSheet(
+          t,
+          bill: billBerjalan(isFixedNeed: false),
+          fixedExpenses: 0,
+        );
+        expect(fixedSwitch(t).value, isFalse);
+        expect(hint, findsNothing);
+      },
+    );
   });
 
   // ── Kategori read-only ────────────────────────────────────────────────────

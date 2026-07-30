@@ -462,6 +462,7 @@
   "bills_paid_amount_label": "Nominal yang kamu bayar",
   "bills_paid_amount_note": "Perkiraan awal {amount}",
   "bills_paid_date_label": "Tanggal bayar",
+  "bills_paid_fixed_empty_hint": "Kebutuhan tetapmu masih kosong, jadi tagihan ini dihitung dari jatah bulananmu.",
   "bills_paid_optout_label": "Sudah saya catat manual",
   "bills_paid_optout_hint": "Tagihan tetap ditandai lunas, tapi transaksi baru tidak dibuat.",
   "bills_paid_submit": "Konfirmasi Pembayaran",

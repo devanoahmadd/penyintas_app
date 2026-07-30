@@ -22,9 +22,15 @@ import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 /// Kategori sengaja READ-ONLY: kategori transaksi diturunkan dari tagihan
 /// (decoupling §4.2 — hanya `isFixed` yang datang dari event).
 class MarkBillPaidSheet extends StatefulWidget {
-  const MarkBillPaidSheet({super.key, required this.bill});
+  const MarkBillPaidSheet({super.key, required this.bill, this.fixedExpenses});
 
   final BillEntity bill;
+
+  /// Total kebutuhan tetap dari BudgetSettings saat sheet dibuka.
+  /// `null` = fetch gagal → FAIL-OPEN (§4.2): prefill kembali ke flag polos —
+  /// kesalahan yang bisa diperbaiki pengguna lewat toggle lebih baik daripada
+  /// label yang tercatat diam-diam.
+  final int? fixedExpenses;
 
   @override
   State<MarkBillPaidSheet> createState() => _MarkBillPaidSheetState();
@@ -51,7 +57,14 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     // tagihan listrik jarang persis sama tiap bulan.
     _amountController.text = '${widget.bill.estimatedAmount}';
     _paidDate = startOfDay(DateTime.now());
-    _includeAsFixed = widget.bill.isFixedNeed;
+    // M1 (§4.2): saat kebutuhan tetap di anggaran masih 0, tak ada potongan di
+    // muka yang menaungi tagihan ini — prefill DIPAKSA false supaya
+    // pembayarannya benar-benar terhitung sebagai pengeluaran.
+    // `null` = fetch gagal → fail-open ke flag polos milik tagihan.
+    final fe = widget.fixedExpenses;
+    _includeAsFixed = fe == null
+        ? widget.bill.isFixedNeed
+        : widget.bill.isFixedNeed && fe > 0;
   }
 
   @override
@@ -67,6 +80,10 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       0;
 
   bool get _amountInvalid => _amount <= 0;
+
+  /// §4.3: hint hanya saat prefill DIPAKSA false padahal pengguna menandai
+  /// tagihan ini kebutuhan tetap — kontradiksi butuh penjelasan di layar.
+  bool get _showM1Hint => widget.bill.isFixedNeed && widget.fixedExpenses == 0;
 
   // ── Pemilih tanggal ───────────────────────────────────────────────────────
 
@@ -298,6 +315,16 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                         mutedColor: mutedColor,
                         onChanged: (v) => setState(() => _includeAsFixed = v),
                       ),
+                      if (_showM1Hint) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          l10n.billsPaidFixedEmptyHint,
+                          key: const ValueKey('bill_paid_m1_hint'),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: mutedColor,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
 
                       // Opt-out transaksi
