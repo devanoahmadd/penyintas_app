@@ -140,7 +140,6 @@ void main() {
       fixedExpenses: 500000,
     );
     expect(r.tiedTotal, 0);
-    expect(r, isNot(same(BillCommitments.empty)));
     expect(r.safeRemaining, 2200000);
   });
 
@@ -246,8 +245,40 @@ void main() {
   });
 
   test('value equality: dua hasil identik == (cegah rebuild storm)', () {
-    const a = BillCommitments(tiedTotal: 1, tiedFlexible: 1, safeRemaining: 1);
-    const b = BillCommitments(tiedTotal: 1, tiedFlexible: 1, safeRemaining: 1);
-    expect(a, equals(b));
+    // Dibangun via konstruktor runtime (BUKAN const) — dua ekspresi const
+    // dengan argumen sama akan dikanonikalisasi jadi objek yang SAMA secara
+    // referensi oleh compiler, sehingga EquatableMixin.== short-circuit lewat
+    // `identical(this, other)` tanpa pernah membandingkan `props`. Itu bikin
+    // test lolos walau `props` dikosongkan — tidak mengunci apa pun.
+    BillCommitments build() =>
+        BillCommitments(tiedTotal: 1, tiedFlexible: 1, safeRemaining: 1);
+    final a = build();
+    final b = build();
+    expect(identical(a, b), isFalse); // pastikan bukan objek yang sama
+    expect(a, equals(b)); // kesetaraan HARUS lewat props, bukan referensi
   });
+
+  test(
+    'value INEQUALITY: satu field beda → TIDAK sama (mengunci props lengkap)',
+    () {
+      // Test equality di atas HANYA bisa lolos vacuous (props dikosongkan/
+      // salah satu field dihapus dari daftar) selama dua instance yang
+      // dibandingkan punya nilai field yang sama persis — props yang rusak
+      // tetap menghasilkan "sama" karena kedua sisi kehilangan field yang
+      // sama. Test ini melengkapi celah itu: dua instance yang berbeda HANYA
+      // pada satu field (tiedTotal) WAJIB tidak sama — kalau field itu hilang
+      // dari `props`, assertion ini yang akan gagal duluan.
+      final a = BillCommitments(
+        tiedTotal: 1,
+        tiedFlexible: 1,
+        safeRemaining: 1,
+      );
+      final b = BillCommitments(
+        tiedTotal: 2, // satu-satunya field yang beda
+        tiedFlexible: 1,
+        safeRemaining: 1,
+      );
+      expect(a, isNot(equals(b)));
+    },
+  );
 }
