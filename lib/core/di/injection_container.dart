@@ -476,6 +476,7 @@ void _initDashboard() {
     () => DashboardRepositoryImpl(
       transactionRepository: sl(),
       budgetRepository: sl(),
+      billRepository: sl(),
       calculateDtl: sl(),
     ),
   );

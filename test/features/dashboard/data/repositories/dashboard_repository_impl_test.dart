@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/error/failures.dart';
+import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
@@ -14,9 +18,12 @@ class MockTransactionRepository extends Mock implements TransactionRepository {}
 
 class MockBudgetRepository extends Mock implements BudgetRepository {}
 
+class MockBillRepository extends Mock implements BillRepository {}
+
 void main() {
   late MockTransactionRepository mockTxRepo;
   late MockBudgetRepository mockBudget;
+  late MockBillRepository mockBills;
   late DashboardRepositoryImpl repo;
 
   // Settings: income 3_000_000, fixed 500_000, emergency 10% → safeMonthly = 2_200_000
@@ -50,15 +57,45 @@ void main() {
     );
   }
 
+  // Jatuh tempo default = HARI INI. Dengan paymentDate = 1, hari ini selalu
+  // lebih awal dari gajian berikutnya (tanggal 1 bulan depan), jadi bill-nya
+  // pasti "terikat" di hari apa pun test dijalankan. "Besok" polos pecah di
+  // akhir bulan: 31 Juli + 1 hari = 1 Agustus = TEPAT hari gajian, dan
+  // horizon calculateTiedMoney memakai `<` (bill di hari gajian tidak terikat).
+  BillEntity makeBill({
+    int id = 1,
+    required int amount,
+    required bool isFixedNeed,
+    DateTime? dueDate,
+  }) => BillEntity(
+    id: id,
+    name: 'Bill $id',
+    estimatedAmount: amount,
+    category: 'fixed',
+    isFixedNeed: isFixedNeed,
+    dueDate: dueDate ?? DateTime.now(),
+    recurrence: Recurrence.monthly,
+    installmentsPaid: 0,
+    reminderEnabled: false,
+    status: BillStatus.active,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+
   setUp(() {
     mockTxRepo = MockTransactionRepository();
     mockBudget = MockBudgetRepository();
+    mockBills = MockBillRepository();
     repo = DashboardRepositoryImpl(
       transactionRepository: mockTxRepo,
       budgetRepository: mockBudget,
+      billRepository: mockBills,
       calculateDtl: const CalculateDaysToLiveUseCase(),
     );
 
+    when(
+      () => mockBills.watchActiveBills(),
+    ).thenAnswer((_) => Stream.value(const Right(<BillEntity>[])));
     when(
       () => mockBudget.getBudgetSettings(),
     ).thenAnswer((_) async => Right(settings));
@@ -515,6 +552,200 @@ void main() {
         (f) => expect(f, isA<CacheFailure>()),
         (_) => fail('Expected Left'),
       );
+    });
+  });
+
+  group('BillCommitments di dashboard (P1 §5)', () {
+    test('bill non-tetap due sebelum gajian → tiedFlexible terisi & '
+        'safeRemaining turun', () async {
+      when(() => mockBills.watchActiveBills()).thenAnswer(
+        (_) =>
+            Stream.value(Right([makeBill(amount: 200000, isFixedNeed: false)])),
+      );
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+
+      final entity = (await repo.watchDashboard().firstWhere(
+        (e) => e.fold((_) => false, (r) => r.billCommitments.tiedTotal > 0),
+      )).getOrElse(() => throw StateError('Left'));
+      expect(entity.billCommitments.tiedFlexible, 200000);
+      expect(entity.billCommitments.safeRemaining, 2200000 - 200000);
+    });
+
+    test('B2 pra-clamp: anggaran jebol → entity.totalRemaining=0 TAPI '
+        'safeRemaining dihitung dari nilai MENTAH', () async {
+      // spent 2.5jt > safeMonthly 2.2jt → mentah = -300rb.
+      final overspend = makeTxn(id: 'o1', amount: 2500000, category: 'food');
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(
+        () => mockTxRepo.getTransactions(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        ),
+      ).thenAnswer((_) async => Right([overspend]));
+      when(() => mockBills.watchActiveBills()).thenAnswer(
+        (_) =>
+            Stream.value(Right([makeBill(amount: 100000, isFixedNeed: false)])),
+      );
+
+      final entity = (await repo.watchDashboard().firstWhere(
+        (e) => e.fold((_) => false, (r) => r.billCommitments.tiedTotal > 0),
+      )).getOrElse(() => throw StateError('Left'));
+      expect(entity.totalRemaining, 0); // clamp UI tetap
+      expect(entity.billCommitments.safeRemaining, -400000); // -300rb - 100rb
+    });
+
+    test('§5.1: event bills BARU memicu recompute (emisi tambahan)', () async {
+      final billsCtrl =
+          StreamController<Either<Failure, List<BillEntity>>>.broadcast();
+      when(
+        () => mockBills.watchActiveBills(),
+      ).thenAnswer((_) => billsCtrl.stream);
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+
+      final emissions = <int>[];
+      final sub = repo.watchDashboard().listen(
+        (e) =>
+            e.fold((_) {}, (r) => emissions.add(r.billCommitments.tiedTotal)),
+      );
+
+      await pumpEventQueue();
+      billsCtrl.add(Right([makeBill(amount: 150000, isFixedNeed: false)]));
+      await pumpEventQueue();
+
+      expect(emissions, [0, 150000]); // tx-event dulu, lalu recompute krn bills
+      await sub.cancel();
+      await billsCtrl.close();
+    });
+
+    test(
+      '§5.1 recompute SERIAL: hasil lambat-basi TIDAK menimpa hasil baru',
+      () async {
+        final txCtrl =
+            StreamController<
+              Either<Failure, List<TransactionEntity>>
+            >.broadcast();
+        final billsCtrl =
+            StreamController<Either<Failure, List<BillEntity>>>.broadcast();
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => txCtrl.stream);
+        when(
+          () => mockBills.watchActiveBills(),
+        ).thenAnswer((_) => billsCtrl.stream);
+
+        // Recompute #1 (2 query pertama) DITAHAN dan kelak mengembalikan data
+        // LAMA (spent 100rb); query berikutnya instan dengan data BARU (200rb).
+        // Tanpa serialisasi: #2 selesai duluan (200rb), lalu #1 menimpanya
+        // dengan 100rb basi → emisi terakhir salah.
+        final tahan = Completer<void>();
+        final lama = makeTxn(id: 'lama', amount: 100000, category: 'food');
+        final baru = makeTxn(id: 'baru', amount: 200000, category: 'food');
+        var panggilan = 0;
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async {
+          panggilan++;
+          if (panggilan <= 2) {
+            await tahan.future;
+            return Right([lama]);
+          }
+          return Right([baru]);
+        });
+
+        final spentEmisi = <int>[];
+        final sub = repo.watchDashboard().listen(
+          (e) => e.fold((_) {}, (r) => spentEmisi.add(r.totalSpentThisMonth)),
+        );
+
+        txCtrl.add(const Right([])); // memicu recompute #1 (tertahan)
+        await pumpEventQueue();
+        billsCtrl.add(const Right([])); // event kedua SAAT #1 masih berjalan
+        await pumpEventQueue();
+        tahan.complete(); // #1 selesai → putaran dirty membaca data baru
+        await pumpEventQueue();
+
+        expect(
+          spentEmisi.last,
+          200000,
+        ); // emisi TERAKHIR = data terbaru, bukan basi
+        await sub.cancel();
+        await txCtrl.close();
+        await billsCtrl.close();
+      },
+    );
+
+    test(
+      '§5.1 close: recompute in-flight pasca-cancel TIDAK melempar/menimbun',
+      () async {
+        final txCtrl =
+            StreamController<
+              Either<Failure, List<TransactionEntity>>
+            >.broadcast();
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => txCtrl.stream);
+        when(
+          () => mockBills.watchActiveBills(),
+        ).thenAnswer((_) => Stream.value(const Right(<BillEntity>[])));
+
+        final tahan = Completer<void>();
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async {
+          await tahan.future;
+          return const Right(<TransactionEntity>[]);
+        });
+
+        final sub = repo.watchDashboard().listen((_) {});
+        txCtrl.add(const Right([])); // recompute mulai, tertahan di query
+        await pumpEventQueue();
+
+        await sub.cancel(); // onCancel: cancel subs + controller.close()
+        tahan.complete(); // query selesai SETELAH close
+        await pumpEventQueue(); // guard isClosed → tanpa StateError, tanpa buffer
+
+        await txCtrl.close();
+      },
+    );
+
+    test('§5.1 onCancel: KEDUA subscription dibatalkan', () async {
+      final txCtrl =
+          StreamController<
+            Either<Failure, List<TransactionEntity>>
+          >.broadcast();
+      final billsCtrl =
+          StreamController<Either<Failure, List<BillEntity>>>.broadcast();
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => txCtrl.stream);
+      when(
+        () => mockBills.watchActiveBills(),
+      ).thenAnswer((_) => billsCtrl.stream);
+
+      final sub = repo.watchDashboard().listen((_) {});
+      await pumpEventQueue();
+      expect(txCtrl.hasListener, isTrue);
+      expect(billsCtrl.hasListener, isTrue);
+
+      await sub.cancel();
+      await pumpEventQueue();
+      expect(txCtrl.hasListener, isFalse);
+      expect(billsCtrl.hasListener, isFalse);
+
+      await txCtrl.close();
+      await billsCtrl.close();
     });
   });
 }

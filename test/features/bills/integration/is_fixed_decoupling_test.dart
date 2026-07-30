@@ -13,6 +13,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_overview_usecase.dart';
@@ -26,6 +28,11 @@ import 'package:penyintas_app/features/transaction/domain/repositories/transacti
 class MockTransactionRepository extends Mock implements TransactionRepository {}
 
 class MockBudgetRepository extends Mock implements BudgetRepository {}
+
+/// Task 7.2b: `DashboardRepositoryImpl` kini menggabungkan stream tagihan.
+/// Mock ini murni WIRING — stream-nya selalu kosong supaya kontrak yang
+/// dikunci file ini (decoupling `isFixed`) tidak berubah sedikit pun.
+class MockBillRepository extends Mock implements BillRepository {}
 
 /// Helper bersama — bikin [TransactionEntity] tanpa boilerplate id/tanggal.
 TransactionEntity _txn({
@@ -202,6 +209,7 @@ void main() {
   group('dashboard: feed transaksi TETAP menampilkan tagihan', () {
     late MockTransactionRepository mockTxRepo;
     late MockBudgetRepository mockBudget;
+    late MockBillRepository mockBills;
     late DashboardRepositoryImpl repo;
 
     final settings = BudgetSettingsEntity(
@@ -215,12 +223,17 @@ void main() {
     setUp(() {
       mockTxRepo = MockTransactionRepository();
       mockBudget = MockBudgetRepository();
+      mockBills = MockBillRepository();
       repo = DashboardRepositoryImpl(
         transactionRepository: mockTxRepo,
         budgetRepository: mockBudget,
+        billRepository: mockBills,
         calculateDtl: const CalculateDaysToLiveUseCase(),
       );
 
+      when(
+        () => mockBills.watchActiveBills(),
+      ).thenAnswer((_) => Stream.value(const Right(<BillEntity>[])));
       when(
         () => mockBudget.getBudgetSettings(),
       ).thenAnswer((_) async => Right(settings));

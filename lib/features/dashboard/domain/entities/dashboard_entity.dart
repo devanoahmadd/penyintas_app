@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/calculate_bill_commitments.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 
 enum BudgetStatus { safe, caution, danger }
@@ -18,6 +19,7 @@ class DashboardEntity extends Equatable {
     required this.lastUpdated,
     required this.todayTransactions,
     required this.emergencyFundMonthly,
+    this.billCommitments = BillCommitments.empty,
   });
 
   final int dailyBudget;
@@ -35,6 +37,10 @@ class DashboardEntity extends Equatable {
   // Cicilan bulanan ke dana darurat (income × emergencyFundPct)
   final int emergencyFundMonthly;
 
+  /// P1 §3 — uang terikat/sisa aman. Default empty agar konstruksi test lama
+  /// tetap kompilasi; repo WAJIB mengisinya (dikunci test §8.5).
+  final BillCommitments billCommitments;
+
   @override
   List<Object> get props => [
     dailyBudget,
@@ -49,5 +55,6 @@ class DashboardEntity extends Equatable {
     status,
     todayTransactions, // lastUpdated sengaja tidak di-include — bukan equality signal
     emergencyFundMonthly,
+    billCommitments,
   ];
 }

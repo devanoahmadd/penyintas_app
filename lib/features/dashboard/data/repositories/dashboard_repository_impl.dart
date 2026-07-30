@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:dartz/dartz.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
+import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/calculate_bill_commitments.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:penyintas_app/features/dashboard/domain/usecases/calculate_days_to_live_usecase.dart';
@@ -14,13 +19,16 @@ class DashboardRepositoryImpl implements DashboardRepository {
   DashboardRepositoryImpl({
     required TransactionRepository transactionRepository,
     required BudgetRepository budgetRepository,
+    required BillRepository billRepository,
     required CalculateDaysToLiveUseCase calculateDtl,
   }) : _transactions = transactionRepository,
        _budget = budgetRepository,
+       _bills = billRepository,
        _calcDtl = calculateDtl;
 
   final TransactionRepository _transactions;
   final BudgetRepository _budget;
+  final BillRepository _bills;
   final CalculateDaysToLiveUseCase _calcDtl;
 
   // Cache settings — jarang berubah, tidak perlu fetch setiap stream event (#33)
@@ -34,26 +42,38 @@ class DashboardRepositoryImpl implements DashboardRepository {
     } catch (_) {}
   }
 
+  /// Dashboard = gabungan dua sumber realtime: transaksi hari ini DAN tagihan
+  /// aktif (P1 §5.1). Dipakai `StreamController` manual, bukan `async*`, karena
+  /// `await for` hanya bisa menunggu SATU stream.
   @override
-  Stream<Either<Failure, DashboardEntity>> watchDashboard() async* {
-    await for (final todayResult in _transactions.watchTodayTransactions()) {
-      try {
-        final todayTxns = todayResult.fold(
-          (l) => <TransactionEntity>[],
-          (r) => r,
-        );
+  Stream<Either<Failure, DashboardEntity>> watchDashboard() {
+    late StreamController<Either<Failure, DashboardEntity>> controller;
+    StreamSubscription<Either<Failure, List<TransactionEntity>>>? txSub;
+    StreamSubscription<Either<Failure, List<BillEntity>>>? billSub;
 
+    var todayTxns = <TransactionEntity>[];
+    var activeBills = <BillEntity>[];
+    // Paritas perilaku lama: emisi pertama menunggu transaksi; bills menyusul.
+    var txReady = false;
+    // Serialisasi (busy + dirty): burst event di-coalesce, urutan emisi
+    // terjamin, dan putaran terakhir SELALU membaca data terbaru.
+    var running = false;
+    var dirty = false;
+
+    Future<void> recomputeOnce() async {
+      if (controller.isClosed) return;
+      try {
         _cachedSettings ??= (await _budget.getBudgetSettings()).fold(
           (_) => null,
           (s) => s,
         );
         final settings = _cachedSettings;
-
         if (settings == null) {
-          yield const Left(
-            CacheFailure('Pengaturan anggaran tidak ditemukan.'),
+          if (controller.isClosed) return;
+          controller.add(
+            const Left(CacheFailure('Pengaturan anggaran tidak ditemukan.')),
           );
-          continue;
+          return;
         }
 
         final now = DateTime.now();
@@ -68,7 +88,6 @@ class DashboardRepositoryImpl implements DashboardRepository {
           _transactions.getTransactions(from: cycleBegin, to: cycleFinish),
           _transactions.getTransactions(from: sevenDaysAgo, to: now),
         ]);
-
         final monthTxns = monthResult.fold(
           (l) => <TransactionEntity>[],
           (r) => r,
@@ -78,22 +97,67 @@ class DashboardRepositoryImpl implements DashboardRepository {
           (r) => r,
         );
 
+        if (controller.isClosed) return; // cancel bisa terjadi selama await
         // Teruskan `now` yang sama ke _compute agar remainingDaysInCycle
         // konsisten dengan cycleBegin/cycleFinish (fix finding #2).
-        yield Right<Failure, DashboardEntity>(
-          _compute(
-            settings: settings,
-            now: now,
-            todayTxns: todayTxns,
-            monthTxns: monthTxns,
-            last7Txns: last7Txns,
+        controller.add(
+          Right(
+            _compute(
+              settings: settings,
+              now: now,
+              todayTxns: todayTxns,
+              monthTxns: monthTxns,
+              last7Txns: last7Txns,
+              activeBills: activeBills,
+            ),
           ),
         );
       } catch (e, stack) {
         _logError(e, stack);
-        yield const Left(UnknownFailure());
+        if (controller.isClosed) return;
+        controller.add(const Left(UnknownFailure()));
       }
     }
+
+    Future<void> recompute() async {
+      if (running) {
+        dirty = true; // data berubah saat putaran berjalan → ulang setelahnya
+        return;
+      }
+      running = true;
+      try {
+        do {
+          dirty = false;
+          await recomputeOnce();
+        } while (dirty && !controller.isClosed);
+      } finally {
+        running = false;
+      }
+    }
+
+    controller = StreamController<Either<Failure, DashboardEntity>>(
+      onListen: () {
+        txSub = _transactions.watchTodayTransactions().listen((either) {
+          todayTxns = either.fold((_) => <TransactionEntity>[], (r) => r);
+          txReady = true;
+          recompute();
+        });
+        // Kontrak calculateTiedMoney: hanya bill ACTIVE — watchActiveBills
+        // sudah menjaminnya di datasource.
+        billSub = _bills.watchActiveBills().listen((either) {
+          activeBills = either.fold((_) => <BillEntity>[], (r) => r);
+          if (txReady) recompute();
+        });
+      },
+      onCancel: () async {
+        await txSub?.cancel();
+        await billSub?.cancel();
+        // In-flight recompute dijaga guard `isClosed` — tidak ada add()
+        // yang ter-buffer diam-diam setelah titik ini.
+        await controller.close();
+      },
+    );
+    return controller.stream;
   }
 
   DashboardEntity _compute({
@@ -102,6 +166,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
     required List<TransactionEntity> todayTxns,
     required List<TransactionEntity> monthTxns,
     required List<TransactionEntity> last7Txns,
+    required List<BillEntity> activeBills,
   }) {
     final remainingDays = remainingDaysInCycle(settings.paymentDate, now: now);
     // #38: fallback ke panjang siklus penuh berikutnya, bukan hardcode 30
@@ -131,6 +196,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
+
+    // P1 §3: PRA-clamp (B2) + today ternormalisasi (satu `now`, aturan #4).
+    final commitments = calculateBillCommitments(
+      activeBills: activeBills,
+      today: startOfDay(now),
+      paymentDate: settings.paymentDate,
+      totalRemaining: totalRemaining,
+      fixedExpenses: settings.fixedExpenses,
+    );
 
     // Transaksi operasional = expense NON-tagihan. Tagihan (isFixed) sudah
     // diwakili settings.fixedExpenses di formula budget — ikut menghitungnya
@@ -182,6 +256,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
       lastUpdated: DateTime.now(),
       todayTransactions: recentTxns,
       emergencyFundMonthly: emergencyFund,
+      billCommitments: commitments,
     );
   }
 }
