@@ -71,8 +71,10 @@ void main() {
   });
 
   group('_compute — totalSpentThisMonth', () {
-    test('excludes fixed-category expenses (fix #25)', () async {
-      final fixedTxn = makeTxn(id: 'f1', amount: 400000, category: 'fixed');
+    test('bill txn (category fixed, isFixed=false) MASUK totalSpentThisMonth '
+        '(P1 §4.1 — menggantikan fix #25)', () async {
+      // Transaksi hasil bayar tagihan dgn includeAsFixed=false (jalur M1):
+      final billTxn = makeTxn(id: 'f1', amount: 400000, category: 'fixed');
       final foodTxn = makeTxn(id: 'f2', amount: 50000, category: 'food');
 
       when(
@@ -83,17 +85,40 @@ void main() {
           from: any(named: 'from'),
           to: any(named: 'to'),
         ),
-      ).thenAnswer((_) async => Right([fixedTxn, foodTxn]));
+      ).thenAnswer((_) async => Right([billTxn, foodTxn]));
 
       final result = await repo.watchDashboard().first;
+      final entity = result.getOrElse(() => throw StateError('Left'));
 
-      final entity = result.getOrElse(() => throw Exception('Expected Right'));
-      expect(
-        entity.totalSpentThisMonth,
-        50000,
-        reason: 'fixed-category txn must be excluded from totalSpentThisMonth',
-      );
+      // 400rb + 50rb dua-duanya masuk — kategori tak lagi jadi proxy.
+      expect(entity.totalSpentThisMonth, 450000);
+      expect(entity.totalRemaining, 2200000 - 450000);
     });
+
+    test(
+      'transaksi manual kategori fixed (isFixed=true) TETAP dikecualikan',
+      () async {
+        final manualFixed = makeTxn(
+          id: 'm1',
+          amount: 300000,
+          category: 'fixed',
+          isFixed: true,
+        );
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async => Right([manualFixed]));
+
+        final result = await repo.watchDashboard().first;
+        final entity = result.getOrElse(() => throw StateError('Left'));
+        expect(entity.totalSpentThisMonth, 0);
+      },
+    );
 
     test(
       'income-type transactions do not affect totalSpentThisMonth',

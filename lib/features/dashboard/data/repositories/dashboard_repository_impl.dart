@@ -124,14 +124,10 @@ class DashboardRepositoryImpl implements DashboardRepository {
         .where((t) => t.type == TransactionType.expense && !t.isFixed)
         .fold(0, (sum, t) => sum + t.amount);
 
-    // #25: exclude kategori fixed — sudah diwakili oleh settings.fixedExpenses di formula budget
+    // #25 digantikan P1 §4.1: `isFixed` satu-satunya penentu (decoupling penuh) —
+    // klausa kategori lama membuang transaksi bill ber-includeAsFixed=false.
     final totalSpentThisMonth = monthTxns
-        .where(
-          (t) =>
-              t.type == TransactionType.expense &&
-              t.category != 'fixed' &&
-              !t.isFixed,
-        )
+        .where((t) => t.type == TransactionType.expense && !t.isFixed)
         .fold(0, (sum, t) => sum + t.amount);
 
     final totalRemaining = safeMonthlyBudget - totalSpentThisMonth;
