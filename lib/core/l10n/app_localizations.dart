@@ -365,8 +365,8 @@ class AppLocalizations {
       _t('dashboard_bento_survival_badge');
   String get dashboardBentoSurvivalSub => _t('dashboard_bento_survival_sub');
   String get dashboardBentoBillsLabel => _t('dashboard_bento_bills_label');
+  // Copy jujur saat tidak ada tagihan aktif — lihat `BillsBentoTile` (Task 7.1).
   String get dashboardBentoBillsSub => _t('dashboard_bento_bills_sub');
-  String get dashboardBentoBillsBadge => _t('dashboard_bento_bills_badge');
   String get dashboardBentoGoalsSub => _t('dashboard_bento_goals_sub');
   String get dashboardBentoScanLabel => _t('dashboard_bento_scan_label');
   String get dashboardBentoScanSub => _t('dashboard_bento_scan_sub');
@@ -631,6 +631,13 @@ class AppLocalizations {
   /// [milestoneCopy].
   String get billsPaidDone => _t('bills_paid_done');
   String get billsUndo => _t('bills_undo');
+
+  // ── Tile Tagihan di dashboard (A1, Task 7.1) ──
+  /// Relatif jatuh tempo saat persis hari ini (bukan "Terlambat" — belum
+  /// lewat; bukan `daysLeft(0)` — "0 hari lagi" janggal dibaca).
+  String get billsDueToday => _t('bills_due_today');
+  String billsUpcomingCount(int n) =>
+      _t('bills_upcoming_count').replaceAll('{n}', '$n');
 }
 
 class _AppLocalizationsDelegate

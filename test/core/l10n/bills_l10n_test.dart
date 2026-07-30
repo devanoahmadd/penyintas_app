@@ -93,6 +93,9 @@ void main() {
     // Snackbar hasil pembayaran + undo (Task 5.4)
     'bills_paid_done',
     'bills_undo',
+    // Tile Tagihan di dashboard (Task 7.1)
+    'bills_due_today',
+    'bills_upcoming_count',
   ];
 
   /// Key TANPA prefiks `bills_` yang tetap dipakai layar Tagihan — kalau
@@ -131,6 +134,7 @@ void main() {
     const withPlaceholder = {
       'bills_installment_progress': ['{x}', '{n}'],
       'bills_paid_amount_note': ['{amount}'],
+      'bills_upcoming_count': ['{n}'],
     };
     withPlaceholder.forEach((key, tokens) {
       for (final token in tokens) {

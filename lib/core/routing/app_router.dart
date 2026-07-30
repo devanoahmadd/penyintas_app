@@ -86,6 +86,12 @@ GoRouter createAppRouter() => GoRouter(
             ),
             // F-D6: lazySingleton — .value agar snooze tetap hidup lintas-remount
             BlocProvider.value(value: sl<TimezoneReconciliationCubit>()),
+            // Task 7.1: tile Tagihan butuh BillsBloc di scope dashboard.
+            // Aman di-dispatch ulang tiap masuk route — handler BillsSubscribed
+            // pakai transformer restartable() (subscription lama dibatalkan).
+            BlocProvider.value(
+              value: sl<BillsBloc>()..add(const BillsSubscribed()),
+            ),
           ],
           child: const DashboardPage(),
         ),

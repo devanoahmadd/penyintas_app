@@ -243,8 +243,7 @@
   "dashboard_bento_survival_badge": "AI",
   "dashboard_bento_survival_sub": "3 saving tips waiting",
   "dashboard_bento_bills_label": "Bills",
-  "dashboard_bento_bills_sub": "Electricity · 3 days left",
-  "dashboard_bento_bills_badge": "2 JT",
+  "dashboard_bento_bills_sub": "No bills yet",
   "dashboard_bento_goals_sub": "3 active",
   "dashboard_bento_scan_label": "Scan Receipt",
   "dashboard_bento_scan_sub": "OCR",
@@ -469,5 +468,7 @@
   "bills_paid_error_amount": "Enter the amount you paid first.",
   "bills_paid_failed": "Couldn't mark it as paid. Give it another try.",
   "bills_paid_done": "This bill is fully paid off.",
-  "bills_undo": "Undo"
+  "bills_undo": "Undo",
+  "bills_due_today": "Due today",
+  "bills_upcoming_count": "{n} upcoming"
 }

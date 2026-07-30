@@ -22,6 +22,8 @@ import 'package:penyintas_app/features/transaction/domain/entities/transaction_e
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
 import 'package:penyintas_app/widgets/common/email_verification_banner.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/bills_bento_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
@@ -700,89 +702,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Bento — Featured tile ─────────────────────────────────────────────────
-
-class _BentoFeatTile extends StatelessWidget {
-  const _BentoFeatTile({
-    required this.bg,
-    required this.icon,
-    required this.label,
-    required this.sub,
-    required this.badge,
-    required this.onTap,
-  });
-
-  final Color bg;
-  final IconData icon;
-  final String label;
-  final String sub;
-  final String badge;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 116),
-          padding: const EdgeInsets.all(AppSpacing.md2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 26, color: Colors.white),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      badge,
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontSize: 10,
-                        letterSpacing: 0.12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppTextStyles.h3.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white.withValues(alpha: 0.92),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Bento — Quick tile ────────────────────────────────────────────────────
 
 class _BentoQuickTile extends StatelessWidget {
@@ -882,7 +801,7 @@ class _BentoGrid extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _BentoFeatTile(
+              child: BentoFeatTile(
                 bg: AppColors.warn,
                 icon: Icons.lightbulb_outline_rounded,
                 label: l10n.dashboardBentoSurvivalLabel,
@@ -892,16 +811,9 @@ class _BentoGrid extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm2),
-            Expanded(
-              child: _BentoFeatTile(
-                bg: AppColors.primary,
-                icon: Icons.receipt_long_outlined,
-                label: l10n.dashboardBentoBillsLabel,
-                sub: l10n.dashboardBentoBillsSub,
-                badge: l10n.dashboardBentoBillsBadge,
-                onTap: () => _comingSoon(context),
-              ),
-            ),
+            // Task 7.1: tile hidup, data nyata dari BillsBloc — lihat
+            // BillsBentoTile.
+            const Expanded(child: BillsBentoTile()),
           ],
         ),
         const SizedBox(height: AppSpacing.sm2),

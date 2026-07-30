@@ -243,8 +243,7 @@
   "dashboard_bento_survival_badge": "AI",
   "dashboard_bento_survival_sub": "3 tips hemat menunggu",
   "dashboard_bento_bills_label": "Tagihan",
-  "dashboard_bento_bills_sub": "Listrik · 3 hari lagi",
-  "dashboard_bento_bills_badge": "2 JT",
+  "dashboard_bento_bills_sub": "Belum ada tagihan",
   "dashboard_bento_goals_sub": "3 aktif",
   "dashboard_bento_scan_label": "Scan Struk",
   "dashboard_bento_scan_sub": "OCR",
@@ -469,5 +468,7 @@
   "bills_paid_error_amount": "Isi dulu nominal yang kamu bayar, ya.",
   "bills_paid_failed": "Gagal menandai lunas. Coba lagi, ya.",
   "bills_paid_done": "Tagihan ini sudah lunas semua.",
-  "bills_undo": "Urungkan"
+  "bills_undo": "Urungkan",
+  "bills_due_today": "Jatuh tempo hari ini",
+  "bills_upcoming_count": "{n} akan datang"
 }
