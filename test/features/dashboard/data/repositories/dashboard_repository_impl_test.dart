@@ -720,6 +720,48 @@ void main() {
       },
     );
 
+    // Paritas perilaku lama: pada `await for`, error event dari stream sumber
+    // merambat keluar generator `async*` → DashboardBloc menangkapnya di
+    // `onError` → DashboardError. Dengan StreamController manual, `listen()`
+    // tanpa `onError` membuang error itu ke zone: stream dashboard tak emit
+    // apa-apa, tak error, tak pernah close → BLoC tersangkut DashboardLoading
+    // SELAMANYA (spinner abadi, tanpa jalur pulih).
+    test('error stream transaksi → dashboard emit Left (bukan hilang '
+        'diam-diam ke zone)', () async {
+      when(() => mockTxRepo.watchTodayTransactions()).thenAnswer(
+        (_) => Stream<Either<Failure, List<TransactionEntity>>>.error(
+          Exception('DB tertutup'),
+        ),
+      );
+
+      final result = await repo.watchDashboard().first;
+
+      expect(result.isLeft(), isTrue);
+      result.fold(
+        (f) => expect(f, isA<UnknownFailure>()),
+        (_) => fail('Error stream sumber WAJIB jadi Left, bukan Right'),
+      );
+    });
+
+    test('error stream bills → dashboard emit Left (bukan hilang '
+        'diam-diam ke zone)', () async {
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+      when(() => mockBills.watchActiveBills()).thenAnswer(
+        (_) => Stream<Either<Failure, List<BillEntity>>>.error(
+          Exception('DB tertutup'),
+        ),
+      );
+
+      final result = await repo.watchDashboard().firstWhere((e) => e.isLeft());
+
+      result.fold(
+        (f) => expect(f, isA<UnknownFailure>()),
+        (_) => fail('Error stream sumber WAJIB jadi Left, bukan Right'),
+      );
+    });
+
     test('§5.1 onCancel: KEDUA subscription dibatalkan', () async {
       final txCtrl =
           StreamController<

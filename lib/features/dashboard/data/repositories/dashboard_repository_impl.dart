@@ -135,19 +135,34 @@ class DashboardRepositoryImpl implements DashboardRepository {
       }
     }
 
+    // Error event salah satu stream sumber → satu Left di stream dashboard.
+    // Guard `isClosed` sama seperti jalur add() lainnya.
+    void teruskanError(Object e, StackTrace stack) {
+      _logError(e, stack);
+      if (controller.isClosed) return;
+      controller.add(const Left(UnknownFailure()));
+    }
+
     controller = StreamController<Either<Failure, DashboardEntity>>(
       onListen: () {
-        txSub = _transactions.watchTodayTransactions().listen((either) {
-          todayTxns = either.fold((_) => <TransactionEntity>[], (r) => r);
-          txReady = true;
-          recompute();
-        });
+        txSub = _transactions.watchTodayTransactions().listen(
+          (either) {
+            todayTxns = either.fold((_) => <TransactionEntity>[], (r) => r);
+            txReady = true;
+            recompute();
+          },
+          // Paritas `await for` lama: error event stream sumber merambat ke
+          // stream dashboard, JANGAN dibuang ke zone. Tanpa ini stream tak
+          // emit, tak error, tak pernah close → BLoC tersangkut
+          // DashboardLoading selamanya (spinner abadi tanpa jalur pulih).
+          onError: teruskanError,
+        );
         // Kontrak calculateTiedMoney: hanya bill ACTIVE — watchActiveBills
         // sudah menjaminnya di datasource.
         billSub = _bills.watchActiveBills().listen((either) {
           activeBills = either.fold((_) => <BillEntity>[], (r) => r);
           if (txReady) recompute();
-        });
+        }, onError: teruskanError);
       },
       onCancel: () async {
         await txSub?.cancel();
