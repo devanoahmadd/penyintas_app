@@ -423,7 +423,11 @@ void _initCategory() {
 
 void _initBudget() {
   sl.registerFactory(
-    () => BudgetSettingsBloc(getBudgetSettings: sl(), saveBudgetSettings: sl()),
+    () => BudgetSettingsBloc(
+      getBudgetSettings: sl(),
+      saveBudgetSettings: sl(),
+      dashboardRepository: sl(),
+    ),
   );
   sl.registerLazySingleton(
     () => BudgetLimitsBloc(

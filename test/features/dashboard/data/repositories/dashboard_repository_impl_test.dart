@@ -789,5 +789,49 @@ void main() {
       await txCtrl.close();
       await billsCtrl.close();
     });
+
+    test(
+      '§5.2: invalidateSettingsCache MEMICU recompute dgn settings BARU',
+      () async {
+        final settingsBaru = BudgetSettingsEntity(
+          monthlyIncome: 3000000,
+          paymentDate: 1,
+          otherFixedExpense: 0, // FE 500rb → 0
+          emergencyFundPct: 0.10,
+          createdAt: DateTime(2026, 5, 1),
+        );
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
+        when(() => mockBills.watchActiveBills()).thenAnswer(
+          (_) => Stream.value(
+            Right([makeBill(amount: 500000, isFixedNeed: true)]),
+          ),
+        );
+
+        final emissions = <int>[];
+        final sub = repo.watchDashboard().listen(
+          (e) => e.fold(
+            (_) {},
+            (r) => emissions.add(r.billCommitments.tiedFlexible),
+          ),
+        );
+        await pumpEventQueue();
+
+        // FE 500rb → bill fixed TIDAK flexible; setelah FE=0, M1 → flexible.
+        when(
+          () => mockBudget.getBudgetSettings(),
+        ).thenAnswer((_) async => Right(settingsBaru));
+        repo.invalidateSettingsCache();
+        await pumpEventQueue();
+
+        expect(emissions.first, 0);
+        expect(
+          emissions.last,
+          500000,
+        ); // recompute terpicu + nilai segar terpakai
+        await sub.cancel();
+      },
+    );
   });
 }

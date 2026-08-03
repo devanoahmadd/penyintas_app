@@ -8,12 +8,15 @@ import 'package:penyintas_app/features/budget/domain/entities/budget_settings_en
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_settings_bloc.dart';
+import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 
 class MockGetBudgetSettingsUseCase extends Mock
     implements GetBudgetSettingsUseCase {}
 
 class MockSaveBudgetSettingsUseCase extends Mock
     implements SaveBudgetSettingsUseCase {}
+
+class MockDashboardRepository extends Mock implements DashboardRepository {}
 
 class FakeBudgetSettingsEntity extends Fake implements BudgetSettingsEntity {}
 
@@ -31,13 +34,17 @@ void main() {
   late BudgetSettingsBloc bloc;
   late MockGetBudgetSettingsUseCase mockGet;
   late MockSaveBudgetSettingsUseCase mockSave;
+  late MockDashboardRepository mockDashboardRepo;
 
   setUp(() {
     mockGet = MockGetBudgetSettingsUseCase();
     mockSave = MockSaveBudgetSettingsUseCase();
+    mockDashboardRepo = MockDashboardRepository();
+    when(() => mockDashboardRepo.invalidateSettingsCache()).thenReturn(null);
     bloc = BudgetSettingsBloc(
       getBudgetSettings: mockGet,
       saveBudgetSettings: mockSave,
+      dashboardRepository: mockDashboardRepo,
     );
   });
 
@@ -101,6 +108,34 @@ void main() {
         const BudgetSettingsSaving(),
         const BudgetSettingsError('Gagal simpan.'),
       ],
+    );
+
+    blocTest<BudgetSettingsBloc, BudgetSettingsState>(
+      'B4/§5.2: save sukses → invalidateSettingsCache dipanggil sekali',
+      build: () {
+        when(() => mockSave(any())).thenAnswer((_) async => const Right(null));
+        return bloc;
+      },
+      seed: () => BudgetSettingsLoaded(_tSettings),
+      act: (b) => b.add(SaveBudgetSettings(_tSettings)),
+      verify: (_) {
+        verify(() => mockDashboardRepo.invalidateSettingsCache()).called(1);
+      },
+    );
+
+    blocTest<BudgetSettingsBloc, BudgetSettingsState>(
+      'B4/§5.2: save gagal → invalidateSettingsCache TIDAK dipanggil',
+      build: () {
+        when(
+          () => mockSave(any()),
+        ).thenAnswer((_) async => const Left(ServerFailure('Gagal simpan.')));
+        return bloc;
+      },
+      seed: () => BudgetSettingsLoaded(_tSettings),
+      act: (b) => b.add(SaveBudgetSettings(_tSettings)),
+      verify: (_) {
+        verifyNever(() => mockDashboardRepo.invalidateSettingsCache());
+      },
     );
   });
 }

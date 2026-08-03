@@ -5,6 +5,7 @@ import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/save_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 
 part 'budget_settings_event.dart';
 part 'budget_settings_state.dart';
@@ -14,8 +15,10 @@ class BudgetSettingsBloc
   BudgetSettingsBloc({
     required GetBudgetSettingsUseCase getBudgetSettings,
     required SaveBudgetSettingsUseCase saveBudgetSettings,
+    required DashboardRepository dashboardRepository,
   }) : _get = getBudgetSettings,
        _save = saveBudgetSettings,
+       _dashboard = dashboardRepository,
        super(const BudgetSettingsInitial()) {
     on<LoadBudgetSettings>(_onLoad, transformer: droppable());
     on<SaveBudgetSettings>(_onSave, transformer: sequential());
@@ -23,6 +26,7 @@ class BudgetSettingsBloc
 
   final GetBudgetSettingsUseCase _get;
   final SaveBudgetSettingsUseCase _save;
+  final DashboardRepository _dashboard;
 
   Future<void> _onLoad(
     LoadBudgetSettings event,
@@ -42,9 +46,11 @@ class BudgetSettingsBloc
   ) async {
     emit(const BudgetSettingsSaving());
     final result = await _save(event.settings);
-    result.fold(
-      (failure) => emit(BudgetSettingsError(failure.message)),
-      (_) => emit(const BudgetSettingsSaved()),
-    );
+    result.fold((failure) => emit(BudgetSettingsError(failure.message)), (_) {
+      emit(const BudgetSettingsSaved());
+      // B4/§5.2: settings baru tersimpan → cache dashboard basi (mis. pivot
+      // M1 fixedExpenses) HARUS dibuang & stream aktif disegarkan sekarang.
+      _dashboard.invalidateSettingsCache();
+    });
   }
 }

@@ -34,7 +34,23 @@ class DashboardRepositoryImpl implements DashboardRepository {
   // Cache settings — jarang berubah, tidak perlu fetch setiap stream event (#33)
   BudgetSettingsEntity? _cachedSettings;
 
-  void invalidateSettingsCache() => _cachedSettings = null;
+  // B4/§5.2: registry closure `recompute` milik setiap stream dashboard yang
+  // sedang di-listen. Didaftarkan di `onListen`, dilepas di `onCancel` —
+  // tanpa ini invalidateSettingsCache() tidak tahu stream mana yang harus
+  // disegarkan (recompute() sebelumnya cuma closure lokal, tak terjangkau
+  // dari luar watchDashboard()).
+  final Set<Future<void> Function()> _activeRecomputes = {};
+
+  @override
+  void invalidateSettingsCache() {
+    _cachedSettings = null;
+    // Salin ke List dulu — recompute() bisa memicu onCancel (mis. listener
+    // membatalkan diri di tengah rebuild), yang memodifikasi _activeRecomputes
+    // saat kita masih iterasi di atasnya (concurrent modification).
+    for (final recompute in List.of(_activeRecomputes)) {
+      recompute();
+    }
+  }
 
   static void _logError(Object e, StackTrace stack) {
     try {
@@ -145,6 +161,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
     controller = StreamController<Either<Failure, DashboardEntity>>(
       onListen: () {
+        // Daftarkan closure recompute milik stream INI ke registry class-level
+        // agar invalidateSettingsCache() bisa menjangkaunya dari luar.
+        _activeRecomputes.add(recompute);
         txSub = _transactions.watchTodayTransactions().listen(
           (either) {
             todayTxns = either.fold((_) => <TransactionEntity>[], (r) => r);
@@ -165,6 +184,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
         }, onError: teruskanError);
       },
       onCancel: () async {
+        // Lepas dari registry LEBIH DULU — sebelum cancel subscription/close
+        // controller. Kalau invalidateSettingsCache() dipanggil bersamaan,
+        // ia tidak boleh lagi menemukan closure ini (dicegah struktural,
+        // bukan cuma mengandalkan guard isClosed di recomputeOnce()).
+        _activeRecomputes.remove(recompute);
         await txSub?.cancel();
         await billSub?.cancel();
         // In-flight recompute dijaga guard `isClosed` — tidak ada add()
