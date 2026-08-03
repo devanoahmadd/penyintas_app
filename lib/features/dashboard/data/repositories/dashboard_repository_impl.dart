@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dartz/dartz.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
