@@ -471,5 +471,13 @@
   "bills_paid_done": "This bill is fully paid off.",
   "bills_undo": "Undo",
   "bills_due_today": "Due today",
-  "bills_upcoming_count": "{n} upcoming"
+  "bills_upcoming_count": "{n} upcoming",
+  "dashboard_tied_eyebrow": "BEFORE PAYDAY",
+  "dashboard_tied_eyebrow_info": "BILLS BEFORE PAYDAY",
+  "dashboard_tied_safe_label": "Safe to spend",
+  "dashboard_tied_detail_flexible": "tied to bills",
+  "dashboard_tied_detail_budgeted": "already set aside",
+  "dashboard_tied_info_suffix": "already set aside from your fixed needs.",
+  "dashboard_tied_negative_hint": "Your bills exceed this month's remaining budget. Let's see what can be adjusted.",
+  "dashboard_tied_nudge": "Your fixed bills are larger than the fixed needs you budgeted. Worth a look."
 }

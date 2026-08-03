@@ -471,5 +471,13 @@
   "bills_paid_done": "Tagihan ini sudah lunas semua.",
   "bills_undo": "Urungkan",
   "bills_due_today": "Jatuh tempo hari ini",
-  "bills_upcoming_count": "{n} akan datang"
+  "bills_upcoming_count": "{n} akan datang",
+  "dashboard_tied_eyebrow": "SEBELUM GAJIAN",
+  "dashboard_tied_eyebrow_info": "TAGIHAN SEBELUM GAJIAN",
+  "dashboard_tied_safe_label": "Aman dipakai",
+  "dashboard_tied_detail_flexible": "terikat tagihan",
+  "dashboard_tied_detail_budgeted": "sudah dianggarkan",
+  "dashboard_tied_info_suffix": "sudah dianggarkan dari kebutuhan tetapmu.",
+  "dashboard_tied_negative_hint": "Tagihanmu melebihi sisa anggaran bulan ini. Yuk, cek mana yang bisa diatur ulang.",
+  "dashboard_tied_nudge": "Tagihan tetapmu lebih besar dari kebutuhan tetap yang kamu anggarkan. Cek lagi, yuk."
 }

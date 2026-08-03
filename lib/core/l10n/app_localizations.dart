@@ -642,6 +642,24 @@ class AppLocalizations {
   String get billsDueToday => _t('bills_due_today');
   String billsUpcomingCount(int n) =>
       _t('bills_upcoming_count').replaceAll('{n}', '$n');
+
+  // ── Baris uang terikat / sisa aman di kartu saldo (P1, Task 7.2c) ──
+  /// Eyebrow varian B & C — menandai HORIZON waktu (kini → gajian), bukan
+  /// nama besaran baru. Lihat catatan "risiko tiga-nama" di TiedMoneyRow.
+  String get dashboardTiedEyebrow => _t('dashboard_tied_eyebrow');
+
+  /// Eyebrow varian A (semua tagihan sudah dianggarkan) — di varian ini
+  /// tidak ada besaran turunan yang ditampilkan, jadi eyebrow-nya sendiri
+  /// yang menyebut subjeknya.
+  String get dashboardTiedEyebrowInfo => _t('dashboard_tied_eyebrow_info');
+  String get dashboardTiedSafeLabel => _t('dashboard_tied_safe_label');
+  String get dashboardTiedDetailFlexible =>
+      _t('dashboard_tied_detail_flexible');
+  String get dashboardTiedDetailBudgeted =>
+      _t('dashboard_tied_detail_budgeted');
+  String get dashboardTiedInfoSuffix => _t('dashboard_tied_info_suffix');
+  String get dashboardTiedNegativeHint => _t('dashboard_tied_negative_hint');
+  String get dashboardTiedNudge => _t('dashboard_tied_nudge');
 }
 
 class _AppLocalizationsDelegate

@@ -11,6 +11,7 @@ import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/tied_money_row.dart';
 import 'package:penyintas_app/features/dashboard/domain/entities/dashboard_entity.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
@@ -511,6 +512,14 @@ class _SaldoCardState extends State<_SaldoCard> {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
+
+          // Baris uang terikat / sisa aman (P1). Jarak atas & garis pemisah
+          // dimiliki widget-nya sendiri supaya saat tak ada tagihan sebelum
+          // gajian jejaknya benar-benar nol — tanpa celah gantung di kartu.
+          TiedMoneyRow(
+            commitments: widget.entity.billCommitments,
+            hidden: _hidden,
+          ),
 
           // Timestamp + Detail link
           Row(
