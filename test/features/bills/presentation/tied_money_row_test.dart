@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
+import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/calculate_bill_commitments.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/tied_money_row.dart';
 
@@ -57,10 +58,21 @@ void main() {
     tiedFlexible: 200000,
     safeRemaining: 2000000,
   );
-  // C: sisa aman negatif — TIDAK di-clamp, harus tampil apa adanya.
+  // C "normal": sisa aman negatif TAPI saldo kartu belum ter-clamp.
+  // Saldo pra-clamp = safeRemaining + tiedFlexible = −400.000 + 900.000
+  // = 500.000 ≥ 0 → kartu merender Rp 500.000, jadi 500.000 − 900.000 =
+  // −400.000 masih bisa dibaca ulang. Nominal turunan sah tampil.
   const varianC = BillCommitments(
     tiedTotal: 900000,
     tiedFlexible: 900000,
+    safeRemaining: -400000,
+  );
+  // C "ter-clamp": saldo pra-clamp = −400.000 + 100.000 = −300.000 < 0 →
+  // kartu merender `totalRemaining` yang sudah di-clamp jadi Rp 0. Di layar
+  // 0 − 100.000 ≠ −400.000, jadi baris ini WAJIB berhenti mengklaim turunan.
+  const varianCTerClamp = BillCommitments(
+    tiedTotal: 300000,
+    tiedFlexible: 100000,
     safeRemaining: -400000,
   );
   // Nudge §6.2 — tagihan tetap > kebutuhan tetap yang dianggarkan.
@@ -128,6 +140,38 @@ void main() {
     theme: theme,
   );
 
+  /// Harness tanpa router — untuk test yang perlu MENGUBAH prop antar frame
+  /// (toggle privasi) atau mengutak-atik `MediaQuery`. Callback navigasi
+  /// `TiedMoneyRow` baru dievaluasi saat ditap, jadi `GoRouter` tak perlu.
+  Widget plainHarness(
+    Widget child, {
+    double width = 360,
+    TextScaler textScaler = TextScaler.noScaling,
+  }) => MaterialApp(
+    locale: const Locale('id'),
+    supportedLocales: const [Locale('id'), Locale('en')],
+    localizationsDelegates: [
+      _SyncL10nDelegate(l10n),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: Scaffold(
+          body: SizedBox(
+            width: width,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [child],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
   testWidgets('aturan sembunyi #1: tiedTotal==0 → tidak dirender', (
     tester,
   ) async {
@@ -148,7 +192,7 @@ void main() {
       await tester.pumpWidget(harness(varianA));
       await tester.pumpAndSettle();
 
-      expect(find.text('TAGIHAN SEBELUM GAJIAN'), findsOneWidget);
+      expect(find.text('Tagihan sebelum gajian'), findsOneWidget);
       expect(find.textContaining('Rp 500.000'), findsOneWidget);
       expect(
         find.textContaining('sudah dianggarkan dari kebutuhan tetapmu'),
@@ -169,7 +213,7 @@ void main() {
     await tester.pumpWidget(harness(varianB));
     await tester.pumpAndSettle();
 
-    expect(find.text('SEBELUM GAJIAN'), findsOneWidget);
+    expect(find.text('Sebelum gajian'), findsOneWidget);
     expect(find.text('Aman dipakai'), findsOneWidget);
     expect(find.text('Rp 2.000.000'), findsOneWidget);
 
@@ -199,22 +243,60 @@ void main() {
     expect(find.textContaining('sudah dianggarkan'), findsNothing);
   });
 
-  testWidgets('varian C: nominal −Rp 400.000 + ikon + hint hangat', (
-    tester,
-  ) async {
-    await tester.pumpWidget(harness(varianC));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'varian C saldo TIDAK ter-clamp: nominal −Rp 400.000 TETAP tampil + '
+    'ikon + hint hangat',
+    (tester) async {
+      await tester.pumpWidget(harness(varianC));
+      await tester.pumpAndSettle();
 
-    // Negatif TIDAK di-clamp jadi 0 — angkanya jujur.
-    expect(find.text('−Rp 400.000'), findsOneWidget);
-    // Penanda kedua di samping warna (jangan andalkan warna saja).
-    expect(find.byKey(negativeIconKey), findsOneWidget);
-    expect(
-      find.textContaining('Yuk, cek mana yang bisa diatur ulang'),
-      findsOneWidget,
-    );
-    expect(find.text('Aman dipakai'), findsOneWidget);
-  });
+      // Saldo pra-clamp 500.000 ≥ 0 → kartu merender angka yang sama dengan
+      // yang dipakai menghitung, jadi turunannya bisa dibaca ulang. Negatif
+      // TIDAK di-clamp jadi 0 — angkanya jujur.
+      expect(find.text('−Rp 400.000'), findsOneWidget);
+      // Penanda kedua di samping warna (jangan andalkan warna saja).
+      expect(find.byKey(negativeIconKey), findsOneWidget);
+      expect(
+        find.textContaining('Yuk, cek mana yang bisa diatur ulang'),
+        findsOneWidget,
+      );
+      expect(find.text('Aman dipakai'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'varian C saldo TER-CLAMP: nominal turunan DITAHAN, ikon + hint tetap',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(harness(varianCTerClamp));
+      await tester.pumpAndSettle();
+
+      // Kartu merender totalRemaining yang sudah di-clamp ke Rp 0. Kalau
+      // "Aman dipakai −Rp 400.000" ikut tampil, pengguna melihat
+      // 0 − 100.000 = −400.000 — turunan yang harfiah salah (spec §6.1).
+      expect(find.text('−Rp 400.000'), findsNothing);
+      expect(find.textContaining('400.000'), findsNothing);
+      expect(find.text('Aman dipakai'), findsNothing);
+
+      // Statusnya tetap terbaca, hangat, dengan penanda non-warna.
+      expect(find.byKey(negativeIconKey), findsOneWidget);
+      expect(
+        find.textContaining('Yuk, cek mana yang bisa diatur ulang'),
+        findsOneWidget,
+      );
+      // Fakta yang masih benar tetap ditampilkan apa adanya.
+      expect(find.textContaining('Rp 100.000'), findsOneWidget);
+      expect(find.text('Sebelum gajian'), findsOneWidget);
+
+      // Klaim yang ditahan di layar tidak boleh balik lewat pembaca layar.
+      final node = tester.getSemantics(find.byKey(mainKey));
+      expect(node.label, isNot(contains('400.000')));
+      expect(node.label, isNot(contains(l10n.dashboardTiedSafeLabel)));
+      expect(node.label, contains(l10n.dashboardTiedNegativeHint));
+
+      handle.dispose();
+    },
+  );
 
   testWidgets('aturan sembunyi #2: hidden=true → SEMUA nominal jadi Rp •••••• '
       'dan Semantics tidak memuat angka', (tester) async {
@@ -231,7 +313,7 @@ void main() {
 
     // Struktur baris tetap: status boleh terlihat, angkanya tidak.
     expect(find.text('Aman dipakai'), findsOneWidget);
-    expect(find.text('SEBELUM GAJIAN'), findsOneWidget);
+    expect(find.text('Sebelum gajian'), findsOneWidget);
     expect(find.textContaining('terikat tagihan'), findsOneWidget);
 
     // Kebocoran lewat pembaca layar = kebocoran juga.
@@ -323,5 +405,89 @@ void main() {
 
     final nominal = tester.widget<Text>(find.text('−Rp 400.000'));
     expect(nominal.style?.color, AppColors.warn);
+  });
+
+  testWidgets(
+    'sembunyi INSTAN: nominal lama tidak tertinggal setelah tombol mata '
+    'ditekan',
+    (tester) async {
+      final hiddenVN = ValueNotifier<bool>(false);
+      addTearDown(hiddenVN.dispose);
+
+      await tester.pumpWidget(
+        plainHarness(
+          ValueListenableBuilder<bool>(
+            valueListenable: hiddenVN,
+            builder: (context, isHidden, _) =>
+                TiedMoneyRow(commitments: varianB, hidden: isHidden),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Rp 2.000.000'), findsOneWidget);
+
+      // Tombol mata ditekan → saldo utama kartu hilang SEKETIKA. Baris ini
+      // wajib ikut: `AnimatedSwitcher` menahan child lama di tree dan
+      // mem-fade-out-nya, jadi tanpa penanganan khusus nominal masih terbaca
+      // ~200 ms setelah pengguna minta disembunyikan.
+      hiddenVN.value = true;
+      await tester.pump(const Duration(milliseconds: 1));
+
+      expect(find.text('Rp 2.000.000'), findsNothing);
+      expect(find.textContaining('2.000.000'), findsNothing);
+      expect(find.textContaining('200.000'), findsNothing);
+      expect(find.textContaining('500.000'), findsNothing);
+    },
+  );
+
+  testWidgets('skala teks 2.0 di lebar sempit: tidak ada overflow', (
+    tester,
+  ) async {
+    // Lebar produksi tersempit ≈ 360 − 32 (sliver) − 36 (padding kartu).
+    await tester.pumpWidget(
+      plainHarness(
+        const TiedMoneyRow(commitments: varianB, hidden: false),
+        width: 292,
+        textScaler: const TextScaler.linear(2.0),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // Teks tetap utuh — wrap, bukan ellipsis.
+    expect(find.text('Aman dipakai'), findsOneWidget);
+    expect(find.text('Rp 2.000.000'), findsOneWidget);
+  });
+
+  testWidgets('frasa horizon TIDAK memakai register eyebrow "nama besaran"', (
+    tester,
+  ) async {
+    await tester.pumpWidget(harness(varianB));
+    await tester.pumpAndSettle();
+
+    // Register kanonik "nama besaran" di kartu ini = `AppTextStyles.caption`
+    // (JetBrains Mono 12sp, letterSpacing 0.8) + string UPPERCASE — dipakai
+    // "SALDO TERKINI". Kalau frasa horizon ikut memakainya, dalam satu kartu
+    // ada DUA eyebrow tak terbedakan dan horizon terbaca sebagai besaran
+    // ketiga (dilarang spec §6.1).
+    expect(
+      l10n.dashboardTiedEyebrow,
+      isNot(equals(l10n.dashboardTiedEyebrow.toUpperCase())),
+      reason: 'frasa horizon harus sentence case, bukan UPPERCASE',
+    );
+    expect(
+      l10n.dashboardTiedEyebrowInfo,
+      isNot(equals(l10n.dashboardTiedEyebrowInfo.toUpperCase())),
+    );
+
+    final horizon = tester.widget<Text>(find.text(l10n.dashboardTiedEyebrow));
+    expect(horizon.style?.fontFamily, isNot(AppTextStyles.caption.fontFamily));
+    expect(horizon.style?.fontFamily, AppTextStyles.bodySmall.fontFamily);
+    expect(
+      horizon.style?.letterSpacing,
+      isNot(AppTextStyles.caption.letterSpacing),
+    );
   });
 }

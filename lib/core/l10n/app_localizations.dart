@@ -644,13 +644,16 @@ class AppLocalizations {
       _t('bills_upcoming_count').replaceAll('{n}', '$n');
 
   // ── Baris uang terikat / sisa aman di kartu saldo (P1, Task 7.2c) ──
-  /// Eyebrow varian B & C — menandai HORIZON waktu (kini → gajian), bukan
-  /// nama besaran baru. Lihat catatan "risiko tiga-nama" di TiedMoneyRow.
+  /// Frasa horizon varian B & C — menandai HORIZON waktu (kini → gajian),
+  /// bukan nama besaran baru. Sengaja SENTENCE CASE: register eyebrow
+  /// mono-UPPERCASE sudah dipakai kartu untuk "SALDO TERKINI" dan di aplikasi
+  /// ini menandakan "nama besaran". Lihat catatan "risiko tiga-nama" di
+  /// TiedMoneyRow — jangan kembalikan ke huruf besar semua.
   String get dashboardTiedEyebrow => _t('dashboard_tied_eyebrow');
 
-  /// Eyebrow varian A (semua tagihan sudah dianggarkan) — di varian ini
-  /// tidak ada besaran turunan yang ditampilkan, jadi eyebrow-nya sendiri
-  /// yang menyebut subjeknya.
+  /// Frasa horizon varian A (semua tagihan sudah dianggarkan) — di varian ini
+  /// tidak ada besaran turunan yang ditampilkan, jadi frasanya sendiri yang
+  /// menyebut subjeknya. Sentence case, alasan sama seperti di atas.
   String get dashboardTiedEyebrowInfo => _t('dashboard_tied_eyebrow_info');
   String get dashboardTiedSafeLabel => _t('dashboard_tied_safe_label');
   String get dashboardTiedDetailFlexible =>
