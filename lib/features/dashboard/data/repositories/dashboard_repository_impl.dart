@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dartz/dartz.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:meta/meta.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
@@ -40,6 +41,14 @@ class DashboardRepositoryImpl implements DashboardRepository {
   // disegarkan (recompute() sebelumnya cuma closure lokal, tak terjangkau
   // dari luar watchDashboard()).
   final Set<Future<void> Function()> _activeRecomputes = {};
+
+  /// Jumlah stream dashboard hidup yang terdaftar untuk recompute.
+  /// Diekspos untuk test: kebocoran registry tidak punya gejala lain yang
+  /// teramati — guard `isClosed` menelan efek closure yang basi (recompute
+  /// pulang sebelum menyentuh apa pun yang bisa di-`verify`), jadi tanpa
+  /// pintu ini tidak ada cara membedakan registry bersih dari yang bocor.
+  @visibleForTesting
+  int get debugActiveRecomputeCount => _activeRecomputes.length;
 
   @override
   void invalidateSettingsCache() {

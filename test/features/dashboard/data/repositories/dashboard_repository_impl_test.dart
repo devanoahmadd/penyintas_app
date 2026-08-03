@@ -833,5 +833,53 @@ void main() {
         await sub.cancel();
       },
     );
+
+    // Review round 1 (Minor dinaikkan): pelepasan `_activeRecomputes.remove`
+    // di onCancel tidak punya gejala observable lain — guard `isClosed`
+    // menelan efek closure basi sebelum menyentuh apa pun yang bisa
+    // di-`verify`. Satu-satunya cara mendiskriminasi registry bersih vs
+    // bocor adalah mengintip ukurannya langsung.
+    test('§5.2 registry: debugActiveRecomputeCount 0→1 saat listen, 0 lagi '
+        'setelah cancel (bukti registry tak bocor)', () async {
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+
+      expect(repo.debugActiveRecomputeCount, 0);
+
+      final sub = repo.watchDashboard().listen((_) {});
+      await pumpEventQueue();
+      expect(repo.debugActiveRecomputeCount, 1);
+
+      await sub.cancel();
+      await pumpEventQueue();
+      expect(
+        repo.debugActiveRecomputeCount,
+        0,
+        reason:
+            'onCancel WAJIB melepas closure dari registry — kalau tidak, '
+            'registry menumpuk sepanjang umur lazy-singleton',
+      );
+    });
+
+    test('§5.2 registry: dua listener independen — cancel satu TIDAK melepas '
+        'yang lain', () async {
+      when(
+        () => mockTxRepo.watchTodayTransactions(),
+      ).thenAnswer((_) => Stream.value(const Right([])));
+
+      final subA = repo.watchDashboard().listen((_) {});
+      final subB = repo.watchDashboard().listen((_) {});
+      await pumpEventQueue();
+      expect(repo.debugActiveRecomputeCount, 2);
+
+      await subA.cancel();
+      await pumpEventQueue();
+      expect(repo.debugActiveRecomputeCount, 1);
+
+      await subB.cancel();
+      await pumpEventQueue();
+      expect(repo.debugActiveRecomputeCount, 0);
+    });
   });
 }
