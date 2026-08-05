@@ -21,7 +21,9 @@ class EditTransactionBloc
            type: initial.type,
            note: initial.note ?? '',
            date: initial.date,
+           isFixed: initial.isFixed,
            selectedGoalId: initial.goalId,
+           sourceBillId: initial.sourceBillId,
          ),
        ) {
     on<EditAmountChanged>(_onAmountChanged);
@@ -111,11 +113,12 @@ class EditTransactionBloc
       type: s.type,
       note: s.note.isEmpty ? null : s.note,
       date: s.date,
-      isFixed: s.category == 'fixed',
+      isFixed: s.isFixed,
       isSynced: false,
       createdAt: s.originalCreatedAt,
       updatedAt: DateTime.now(),
       goalId: s.type == TransactionType.income ? s.selectedGoalId : null,
+      sourceBillId: s.sourceBillId,
     );
 
     final result = await _updateTransaction(entity);

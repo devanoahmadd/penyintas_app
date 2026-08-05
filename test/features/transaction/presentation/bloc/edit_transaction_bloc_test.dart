@@ -12,6 +12,28 @@ class MockUpdateTransactionUseCase extends Mock
 
 class FakeTransactionEntity extends Fake implements TransactionEntity {}
 
+/// Helper lokal test (d): salinan entity dengan `isFixed=false`.
+/// `TransactionEntity` tidak punya `copyWith`, jadi dibangun ulang eksplisit.
+///
+/// `this.id` ditulis eksplisit: dartz mengekspor fungsi top-level `id<A>(A)`
+/// yang menutupi `id` milik entity di dalam badan extension ini.
+extension on TransactionEntity {
+  TransactionEntity copyWithIsFixedFalse() => TransactionEntity(
+    id: this.id,
+    amount: amount,
+    category: category,
+    type: type,
+    note: note,
+    date: date,
+    isFixed: false,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    goalId: goalId,
+    sourceBillId: sourceBillId,
+  );
+}
+
 void main() {
   late MockUpdateTransactionUseCase mockUpdate;
 
@@ -180,6 +202,105 @@ void main() {
         expect(entity.id, 'tx-001');
         expect(entity.createdAt, DateTime(2026, 5, 28));
       },
+    );
+  });
+
+  // ── C1: state adalah proyeksi lossy dari entity ────────────────────────
+  //
+  // `_onSubmit` merekonstruksi TransactionEntity dari state. Dua field
+  // entity tidak pernah masuk state, jadi rekonstruksinya menebak:
+  // `isFixed` diturunkan ulang dari kategori, `sourceBillId` hilang jadi
+  // null. Karena `updateTransaction` menulis companion PENUH
+  // (transaction_local_datasource.dart:49), null itu ditulis balik sebagai
+  // NULL — bukan dilewati.
+  group('C1 — isFixed & sourceBillId bertahan lewat edit', () {
+    TransactionEntity capturedEntity() {
+      final captured = verify(() => mockUpdate(captureAny())).captured;
+      return captured.first as TransactionEntity;
+    }
+
+    EditTransactionBloc buildFrom(TransactionEntity initial) =>
+        EditTransactionBloc(updateTransaction: mockUpdate, initial: initial);
+
+    final billTxn = TransactionEntity(
+      id: 'tx-bill',
+      amount: 800000,
+      category: 'fixed',
+      type: TransactionType.expense,
+      date: DateTime(2026, 8, 1),
+      isFixed: false, // opt-out sadar di sheet bayar tagihan
+      isSynced: false,
+      createdAt: DateTime(2026, 8, 1),
+      updatedAt: DateTime(2026, 8, 1),
+      sourceBillId: 42,
+    );
+
+    final internetTxn = TransactionEntity(
+      id: 'tx-internet',
+      amount: 300000,
+      category: 'internet', // BUKAN 'fixed'
+      type: TransactionType.expense,
+      date: DateTime(2026, 8, 2),
+      isFixed: true, // dianggarkan di muka
+      isSynced: false,
+      createdAt: DateTime(2026, 8, 2),
+      updatedAt: DateTime(2026, 8, 2),
+    );
+
+    blocTest<EditTransactionBloc, EditTransactionState>(
+      '(a) category="fixed" + isFixed=false → tersimpan TETAP false '
+      '(tanpa ini, saldo naik kembali sebesar yang sudah dibelanjakan)',
+      build: () => buildFrom(billTxn),
+      setUp: () {
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (b) => b.add(const SubmitEdit()),
+      verify: (_) => expect(capturedEntity().isFixed, isFalse),
+    );
+
+    blocTest<EditTransactionBloc, EditTransactionState>(
+      '(b) category="internet" + isFixed=true → tersimpan TETAP true',
+      build: () => buildFrom(internetTxn),
+      setUp: () {
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (b) => b.add(const SubmitEdit()),
+      verify: (_) => expect(capturedEntity().isFixed, isTrue),
+    );
+
+    blocTest<EditTransactionBloc, EditTransactionState>(
+      '(c) sourceBillId bertahan setelah edit (mengunci link undo K1/K2)',
+      build: () => buildFrom(billTxn),
+      setUp: () {
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (b) {
+        b.add(const EditAmountChanged(850000));
+        b.add(const SubmitEdit());
+      },
+      verify: (_) => expect(capturedEntity().sourceBillId, 42),
+    );
+
+    blocTest<EditTransactionBloc, EditTransactionState>(
+      '(d) mengganti kategori ke "fixed" TIDAK menyalakan isFixed — '
+      'pengguna mengganti label, bukan menyatakan sudah dianggarkan di muka',
+      build: () => buildFrom(internetTxn.copyWithIsFixedFalse()),
+      setUp: () {
+        when(
+          () => mockUpdate(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (b) {
+        b.add(const EditCategorySelected('fixed'));
+        b.add(const SubmitEdit());
+      },
+      verify: (_) => expect(capturedEntity().isFixed, isFalse),
     );
   });
 }

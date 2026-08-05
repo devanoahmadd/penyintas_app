@@ -13,7 +13,9 @@ final class EditTransactionInProgress extends EditTransactionState {
     required this.type,
     required this.note,
     required this.date,
+    required this.isFixed,
     this.selectedGoalId,
+    this.sourceBillId,
   });
 
   final String originalId;
@@ -25,8 +27,20 @@ final class EditTransactionInProgress extends EditTransactionState {
   final DateTime date;
   final int? selectedGoalId;
 
+  /// C1 — dibawa apa adanya dari entity awal, TIDAK pernah diturunkan ulang
+  /// dari kategori dan TIDAK bisa diubah event apa pun. `isFixed` adalah
+  /// pernyataan akuntansi ("sudah diwakili fixedExpenses di muka"), bukan
+  /// label kategori; tidak ada UI untuk menyatakannya saat mengedit.
+  final bool isFixed;
+
+  /// C1 — link balik ke tagihan asal (undo K1/K2). Hilang dari state berarti
+  /// hilang dari DB, karena updateTransaction menulis companion PENUH.
+  final int? sourceBillId;
+
   bool get isValid => amount > 0 && amount <= 100000000;
 
+  /// `isFixed` dan `sourceBillId` sengaja TIDAK punya parameter di sini —
+  /// menyediakannya sama dengan membuka kembali pintu yang C1 tutup.
   EditTransactionInProgress copyWith({
     int? amount,
     String? category,
@@ -42,9 +56,11 @@ final class EditTransactionInProgress extends EditTransactionState {
     type: type ?? this.type,
     note: note ?? this.note,
     date: date ?? this.date,
+    isFixed: isFixed,
     selectedGoalId: identical(selectedGoalId, _kEditSentinel)
         ? this.selectedGoalId
         : selectedGoalId as int?,
+    sourceBillId: sourceBillId,
   );
 
   @override
@@ -56,7 +72,9 @@ final class EditTransactionInProgress extends EditTransactionState {
     type,
     note,
     date,
+    isFixed,
     selectedGoalId,
+    sourceBillId,
   ];
 }
 
