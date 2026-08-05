@@ -258,27 +258,59 @@ void main() {
     expect(a, equals(b)); // kesetaraan HARUS lewat props, bukan referensi
   });
 
-  test(
-    'value INEQUALITY: satu field beda → TIDAK sama (mengunci props lengkap)',
-    () {
-      // Test equality di atas HANYA bisa lolos vacuous (props dikosongkan/
-      // salah satu field dihapus dari daftar) selama dua instance yang
-      // dibandingkan punya nilai field yang sama persis — props yang rusak
-      // tetap menghasilkan "sama" karena kedua sisi kehilangan field yang
-      // sama. Test ini melengkapi celah itu: dua instance yang berbeda HANYA
-      // pada satu field (tiedTotal) WAJIB tidak sama — kalau field itu hilang
-      // dari `props`, assertion ini yang akan gagal duluan.
-      final a = BillCommitments(
-        tiedTotal: 1,
-        tiedFlexible: 1,
-        safeRemaining: 1,
-      );
+  // Test equality di atas HANYA bisa lolos vacuous (props dikosongkan/salah
+  // satu field dihapus dari daftar) selama dua instance yang dibandingkan
+  // punya nilai field yang sama persis — props yang rusak tetap menghasilkan
+  // "sama" karena kedua sisi kehilangan field yang sama. Grup ini menutup
+  // celah itu untuk SETIAP field di `props`, bukan hanya `tiedTotal`.
+  group('value INEQUALITY per-field (mengunci props lengkap)', () {
+    BillCommitments base() => BillCommitments(
+      tiedTotal: 1,
+      tiedFlexible: 1,
+      safeRemaining: 1,
+      nudgeBudgetMismatch: false,
+    );
+
+    test('tiedTotal beda → TIDAK sama', () {
       final b = BillCommitments(
         tiedTotal: 2, // satu-satunya field yang beda
         tiedFlexible: 1,
         safeRemaining: 1,
+        nudgeBudgetMismatch: false,
       );
-      expect(a, isNot(equals(b)));
-    },
-  );
+      expect(base(), isNot(equals(b)));
+    });
+
+    test('tiedFlexible beda → TIDAK sama', () {
+      final b = BillCommitments(
+        tiedTotal: 1,
+        tiedFlexible: 2, // satu-satunya field yang beda
+        safeRemaining: 1,
+        nudgeBudgetMismatch: false,
+      );
+      expect(base(), isNot(equals(b)));
+    });
+
+    test('safeRemaining beda → TIDAK sama '
+        '(kalau lepas dari props: angka "Aman dipakai" MEMBEKU di layar '
+        'karena BLoC men-dedup emisi — tidak crash, tidak ada log)', () {
+      final b = BillCommitments(
+        tiedTotal: 1,
+        tiedFlexible: 1,
+        safeRemaining: 2, // satu-satunya field yang beda
+        nudgeBudgetMismatch: false,
+      );
+      expect(base(), isNot(equals(b)));
+    });
+
+    test('nudgeBudgetMismatch beda → TIDAK sama', () {
+      final b = BillCommitments(
+        tiedTotal: 1,
+        tiedFlexible: 1,
+        safeRemaining: 1,
+        nudgeBudgetMismatch: true, // satu-satunya field yang beda
+      );
+      expect(base(), isNot(equals(b)));
+    });
+  });
 }
