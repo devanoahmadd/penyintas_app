@@ -13,6 +13,7 @@ import 'package:penyintas_app/features/bills/domain/repositories/bill_repository
 import 'package:penyintas_app/features/bills/domain/usecases/create_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/delete_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/mark_bill_paid_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/represented_by_fixed_expenses.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
@@ -210,8 +211,13 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
         category: bill.category,
         type: TransactionType.expense,
         date: event.paidDate,
-        // decoupling: isFixed dari EVENT, BUKAN derive category=='fixed'.
-        isFixed: event.includeAsFixed,
+        // decoupling: isFixed dari EVENT, BUKAN derive category=='fixed' —
+        // lalu DISEMPITKAN oleh bentuk tagihan.
+        // Monoton menurun: hanya bisa MEMATIKAN, tak pernah menyalakan.
+        // Paruh `fixedExpenses > 0` sengaja TIDAK diulang di sini — itu milik
+        // gerbang M1 di AddTransactionUseCase, yang punya akses BudgetSettings.
+        // Menuliskannya lagi di sini = salinan kedua aturan M1.
+        isFixed: event.includeAsFixed && representedByFixedExpenses(bill),
         isSynced: false,
         createdAt: now,
         updatedAt: now,

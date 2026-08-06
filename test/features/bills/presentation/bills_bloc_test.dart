@@ -1013,5 +1013,72 @@ void main() {
         expect(entity.isFixed, isFalse);
       },
     );
+
+    group('tabel kebenaran isFixed — jalur BillMarkedPaid', () {
+      // Oracle ditulis LITERAL, diturunkan dari spec §6.1.
+      // DILARANG memanggil coveredUpfront() di sini: oracle yang memakai fungsi
+      // produksi membandingkan fungsi dengan dirinya sendiri dan tetap hijau
+      // walau aturannya salah.
+      for (final isFixedNeed in [true, false]) {
+        for (final recurrence in Recurrence.values) {
+          for (final fixedExpenses in [0, 500000]) {
+            for (final includeAsFixed in [true, false]) {
+              final expected =
+                  includeAsFixed &&
+                  isFixedNeed &&
+                  recurrence == Recurrence.monthly &&
+                  fixedExpenses > 0;
+
+              blocTest<BillsBloc, BillsState>(
+                'isFixedNeed=$isFixedNeed recurrence=${recurrence.name} '
+                'fixedExpenses=$fixedExpenses includeAsFixed=$includeAsFixed '
+                '→ isFixed=$expected',
+                build: buildBlocWithRealUsecase,
+                setUp: () {
+                  when(() => mockBillRepository.getBillById(any())).thenAnswer(
+                    (_) async => Right(
+                      tBill.copyWith(
+                        isFixedNeed: isFixedNeed,
+                        recurrence: recurrence,
+                      ),
+                    ),
+                  );
+                  when(() => mockBudget.getBudgetSettings()).thenAnswer(
+                    (_) async => Right(
+                      BudgetSettingsEntity(
+                        monthlyIncome: 3000000,
+                        paymentDate: 25,
+                        emergencyFundPct: 0.10,
+                        // fixedExpenses adalah getter = jumlah breakdown.
+                        rentExpense: fixedExpenses,
+                        createdAt: DateTime(2026, 1, 1),
+                      ),
+                    ),
+                  );
+                },
+                act: (bloc) => bloc.add(
+                  BillMarkedPaid(
+                    billId: tBill.id,
+                    actualAmount: 800000,
+                    paidDate: DateTime(2026, 8, 5),
+                    includeAsFixed: includeAsFixed,
+                    // WAJIB false. Kalau true, tak ada transaksi yang dibuat dan
+                    // test ini tak menguji apa pun.
+                    optOutTransaction: false,
+                  ),
+                ),
+                verify: (_) {
+                  final captured = verify(
+                    () => mockTxRepo.addTransaction(captureAny()),
+                  ).captured;
+                  final entity = captured.first as TransactionEntity;
+                  expect(entity.isFixed, expected);
+                },
+              );
+            }
+          }
+        }
+      }
+    });
   });
 }
