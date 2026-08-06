@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/calculate_tied_money.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/represented_by_fixed_expenses.dart';
 
 /// Hasil P1 "Pivot Flag" (spec §3): tiga angka + flag nudge §6.2.
 ///
@@ -53,22 +54,12 @@ BillCommitments calculateBillCommitments({
   required int totalRemaining,
   required int fixedExpenses,
 }) {
-  // SATU predikat, dipakai KEDUA aturan di bawah (M1 dan nudge §6.2).
+  // Aturan "diwakili fixedExpenses" beserta seluruh alasan historisnya kini
+  // tinggal di `represented_by_fixed_expenses.dart`. Baca doc-comment di sana
+  // sebelum menyentuh baris mana pun di bawah ini.
   //
-  // `fixedExpenses` adalah rencana PER-BULAN, jadi premi tahunan dan tagihan
-  // sekali-jalan TIDAK tercakup olehnya — keduanya tak boleh dianggap "sudah
-  // dianggarkan". Sebelum penyatuan ini, `bebas()` mengabaikan `recurrence`
-  // sementara aturan nudge membatasinya ke bulanan; tagihan tahunan
-  // ber-isFixedNeed lolos DUA jaring sekaligus dan layar mengklaim "sudah
-  // dianggarkan" untuk uang yang tak diwakili apa pun.
-  //
-  // JANGAN pisah lagi jadi dua ekspresi — dua salinan aturan yang bebas
-  // menyimpang adalah akar bug ini, bukan gejalanya.
-  bool diwakiliFixedExpenses(BillEntity b) =>
-      b.isFixedNeed && b.recurrence == Recurrence.monthly;
-
   // Pivot M1 (spec §3): tanpa potongan di muka, semua bill "bebas".
-  bool bebas(BillEntity b) => !diwakiliFixedExpenses(b) || fixedExpenses == 0;
+  bool bebas(BillEntity b) => !coveredUpfront(b, fixedExpenses);
 
   final semua = calculateTiedMoney(
     activeBills: activeBills,
@@ -85,7 +76,7 @@ BillCommitments calculateBillCommitments({
 
   // §6.2: toleransi 0 (strictly greater).
   final fixedMonthly = activeBills
-      .where(diwakiliFixedExpenses)
+      .where(representedByFixedExpenses)
       .fold(0, (sum, b) => sum + b.estimatedAmount);
 
   return BillCommitments(
