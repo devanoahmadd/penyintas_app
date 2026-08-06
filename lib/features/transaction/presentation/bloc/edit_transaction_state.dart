@@ -14,8 +14,8 @@ final class EditTransactionInProgress extends EditTransactionState {
     required this.note,
     required this.date,
     required this.isFixed,
+    required this.sourceBillId,
     this.selectedGoalId,
-    this.sourceBillId,
   });
 
   final String originalId;

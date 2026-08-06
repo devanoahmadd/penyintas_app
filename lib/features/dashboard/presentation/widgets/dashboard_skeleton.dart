@@ -126,7 +126,7 @@ class _SkeletonDtlCard extends StatelessWidget {
 }
 
 // ── Saldo Card ────────────────────────────────────────────────────────────
-// Mirrors _SaldoCard: label + balance + timestamp ≈ 100dp
+// Mirrors SaldoCard (widgets/saldo_card.dart): label + balance + timestamp ≈ 100dp
 
 class _SkeletonSaldoCard extends StatelessWidget {
   const _SkeletonSaldoCard();

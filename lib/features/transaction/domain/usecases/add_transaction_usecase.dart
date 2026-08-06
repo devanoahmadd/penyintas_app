@@ -5,7 +5,11 @@ import 'package:penyintas_app/features/budget/domain/repositories/budget_reposit
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
 
-/// Titik cekik tunggal jalur tulis transaksi (spec Fase 8 §2.5).
+/// Titik cekik tunggal jalur **pembuatan** transaksi (spec Fase 8 §2.5) —
+/// bukan seluruh jalur tulis. `UpdateTransactionUseCase`
+/// (`update_transaction_usecase.dart:12-13`) adalah penulis kolom `isFixed`
+/// kedua, dan sengaja TIDAK digating (spec §2.4): menggating edit akan
+/// membalik angka bulan lalu saat `fixedExpenses` sudah berubah.
 ///
 /// Dua pemanggil di seluruh aplikasi: `bills_bloc.dart:221` dan
 /// `add_transaction_bloc.dart:166`. Invariant M1 ditegakkan DI SINI, bukan
