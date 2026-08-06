@@ -65,7 +65,7 @@ class TiedMoneyRow extends StatelessWidget {
   /// dari sini, jadi mode sembunyi mustahil bocor lewat salah satu saja.
   String _rp(BuildContext context, int v) => hidden
       ? context.l10n.dashboardBalanceHidden
-      : (v < 0 ? '−${formatRupiah(-v)}' : formatRupiah(v));
+      : (v < 0 ? '− ${formatRupiah(-v)}' : formatRupiah(v));
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +175,7 @@ class TiedMoneyRow extends StatelessWidget {
   ///
   /// Kartu menampilkan `DashboardEntity.totalRemaining` yang sudah di-clamp,
   /// sementara `safeRemaining` dihitung dari nilai PRA-clamp. Saat pengguna
-  /// over-spend keduanya berdampingan sebagai "Rp 0" dan "−Rp 400.000" —
+  /// over-spend keduanya berdampingan sebagai "Rp 0" dan "− Rp 400.000" —
   /// pengurangannya harfiah salah dan janji "besaran turunan" (spec §6.1)
   /// bohong. Di kondisi itu baris ini berhenti mengklaim turunan.
   ///
@@ -363,8 +363,14 @@ class TiedMoneyRow extends StatelessWidget {
     required Color alertColor,
     required bool withIcon,
   }) {
+    // `_balanceClamped` (≡ raw < 0) berarti saldo sudah jebol SEBELUM tagihan
+    // dikurangkan → penyebabnya belanja umum, bukan tagihan. Karena
+    // `tiedFlexible >= 0`, raw < 0 selalu menyiratkan safeRemaining < 0,
+    // jadi kedua cabang di bawah menutup semua kasus — tak ada state ketiga.
     final text = Text(
-      l10n.dashboardTiedNegativeHint,
+      _balanceClamped
+          ? l10n.dashboardTiedNegativeHintSpending
+          : l10n.dashboardTiedNegativeHint,
       style: AppTextStyles.bodySmall.copyWith(color: alertColor),
     );
     if (!withIcon) return text;
@@ -473,9 +479,11 @@ class TiedMoneyRow extends StatelessWidget {
     if (balanceClamped) {
       // Nominal turunan tidak dirender → pembaca layar pun tidak boleh
       // mendengarnya, kalau tidak klaim yang salah itu balik lewat pintu
-      // belakang.
+      // belakang. Kunci hint mengikuti cabang yang sama dengan `_negativeHint`
+      // — kalau hanya teks visual yang diubah, pembaca layar tetap mendengar
+      // tuduhan ke tagihan.
       return '${l10n.dashboardTiedEyebrow}. $detailText. '
-          '${l10n.dashboardTiedNegativeHint}';
+          '${l10n.dashboardTiedNegativeHintSpending}';
     }
     final base =
         '${l10n.dashboardTiedEyebrow}. '

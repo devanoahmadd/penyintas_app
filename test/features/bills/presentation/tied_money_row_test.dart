@@ -253,7 +253,7 @@ void main() {
       // Saldo pra-clamp 500.000 ≥ 0 → kartu merender angka yang sama dengan
       // yang dipakai menghitung, jadi turunannya bisa dibaca ulang. Negatif
       // TIDAK di-clamp jadi 0 — angkanya jujur.
-      expect(find.text('−Rp 400.000'), findsOneWidget);
+      expect(find.text('− Rp 400.000'), findsOneWidget);
       // Penanda kedua di samping warna (jangan andalkan warna saja).
       expect(find.byKey(negativeIconKey), findsOneWidget);
       expect(
@@ -272,16 +272,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Kartu merender totalRemaining yang sudah di-clamp ke Rp 0. Kalau
-      // "Aman dipakai −Rp 400.000" ikut tampil, pengguna melihat
+      // "Aman dipakai − Rp 400.000" ikut tampil, pengguna melihat
       // 0 − 100.000 = −400.000 — turunan yang harfiah salah (spec §6.1).
-      expect(find.text('−Rp 400.000'), findsNothing);
+      expect(find.text('− Rp 400.000'), findsNothing);
       expect(find.textContaining('400.000'), findsNothing);
       expect(find.text('Aman dipakai'), findsNothing);
 
-      // Statusnya tetap terbaca, hangat, dengan penanda non-warna.
+      // Statusnya tetap terbaca, hangat, dengan penanda non-warna. Saldo
+      // sudah jebol SEBELUM tagihan dikurangkan (raw < 0) → penyebabnya
+      // belanja umum, bukan tagihan (M6), jadi hint yang tampil adalah
+      // varian belanja.
       expect(find.byKey(negativeIconKey), findsOneWidget);
       expect(
-        find.textContaining('Yuk, cek mana yang bisa diatur ulang'),
+        find.textContaining('Yuk, lihat lagi sebelum tagihan berikutnya'),
         findsOneWidget,
       );
       // Fakta yang masih benar tetap ditampilkan apa adanya.
@@ -292,7 +295,7 @@ void main() {
       final node = tester.getSemantics(find.byKey(mainKey));
       expect(node.label, isNot(contains('400.000')));
       expect(node.label, isNot(contains(l10n.dashboardTiedSafeLabel)));
-      expect(node.label, contains(l10n.dashboardTiedNegativeHint));
+      expect(node.label, contains(l10n.dashboardTiedNegativeHintSpending));
 
       handle.dispose();
     },
@@ -393,7 +396,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final nominal = tester.widget<Text>(find.text('−Rp 400.000'));
+    final nominal = tester.widget<Text>(find.text('− Rp 400.000'));
     expect(nominal.style?.color, AppColors.expenseDark);
   });
 
@@ -403,7 +406,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final nominal = tester.widget<Text>(find.text('−Rp 400.000'));
+    final nominal = tester.widget<Text>(find.text('− Rp 400.000'));
     expect(nominal.style?.color, AppColors.warn);
   });
 
@@ -488,6 +491,53 @@ void main() {
     expect(
       horizon.style?.letterSpacing,
       isNot(AppTextStyles.caption.letterSpacing),
+    );
+  });
+
+  // ── M6: hint negatif menunjuk penyebab yang BENAR ──────────────────────
+  //
+  // Copy lama selalu menuduh tagihan. Tapi saat saldo sudah jebol SEBELUM
+  // tagihan dikurangkan (raw < 0 → kartu meng-clamp ke Rp 0), penyebabnya
+  // belanja umum. Widget membedakannya lewat `_balanceClamped` — getter yang
+  // SAMA yang sudah dipakai untuk menahan nominal turunan, jadi kedua
+  // keputusan itu tak bisa menyimpang satu sama lain.
+  group('M6 — hint negatif menunjuk penyebab yang benar', () {
+    testWidgets('(a) raw < 0 (ter-clamp) → copy menunjuk BELANJA', (
+      tester,
+    ) async {
+      await tester.pumpWidget(harness(varianCTerClamp));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.dashboardTiedNegativeHintSpending), findsOneWidget);
+      expect(find.text(l10n.dashboardTiedNegativeHint), findsNothing);
+    });
+
+    testWidgets('(b) raw >= 0 & safeRemaining < 0 → copy menunjuk TAGIHAN', (
+      tester,
+    ) async {
+      await tester.pumpWidget(harness(varianC));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.dashboardTiedNegativeHint), findsOneWidget);
+      expect(find.text(l10n.dashboardTiedNegativeHintSpending), findsNothing);
+    });
+
+    testWidgets(
+      '(c) raw < 0 → label Semantics JUGA memakai copy belanja. Tanpa ini, '
+      'pengguna awas melihat copy benar sementara pengguna pembaca layar '
+      'tetap mendengar tuduhan ke tagihan — dan janji kelas widget ini '
+      '("label dirakit dari string yang SAMA dengan yang dirender") pecah',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(harness(varianCTerClamp));
+        await tester.pumpAndSettle();
+
+        final node = tester.getSemantics(find.byKey(mainKey));
+        expect(node.label, contains(l10n.dashboardTiedNegativeHintSpending));
+        expect(node.label, isNot(contains(l10n.dashboardTiedNegativeHint)));
+
+        handle.dispose();
+      },
     );
   });
 }

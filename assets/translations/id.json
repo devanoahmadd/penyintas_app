@@ -479,5 +479,6 @@
   "dashboard_tied_detail_budgeted": "sudah dianggarkan",
   "dashboard_tied_info_suffix": "sudah dianggarkan dari kebutuhan tetapmu.",
   "dashboard_tied_negative_hint": "Tagihanmu melebihi sisa anggaran bulan ini. Yuk, cek mana yang bisa diatur ulang.",
+  "dashboard_tied_negative_hint_spending": "Belanja bulan ini sudah melewati anggaranmu. Yuk, lihat lagi sebelum tagihan berikutnya.",
   "dashboard_tied_nudge": "Tagihan tetapmu lebih besar dari kebutuhan tetap yang kamu anggarkan. Cek lagi, yuk."
 }

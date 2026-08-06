@@ -662,6 +662,8 @@ class AppLocalizations {
       _t('dashboard_tied_detail_budgeted');
   String get dashboardTiedInfoSuffix => _t('dashboard_tied_info_suffix');
   String get dashboardTiedNegativeHint => _t('dashboard_tied_negative_hint');
+  String get dashboardTiedNegativeHintSpending =>
+      _t('dashboard_tied_negative_hint_spending');
   String get dashboardTiedNudge => _t('dashboard_tied_nudge');
 }
 

@@ -9,15 +9,21 @@ abstract class Failure extends Equatable {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure([super.message = 'Terjadi kesalahan pada server.']);
+  const ServerFailure([
+    super.message = 'Server sedang bermasalah. Coba lagi sebentar lagi.',
+  ]);
 }
 
 class CacheFailure extends Failure {
-  const CacheFailure([super.message = 'Gagal membaca data lokal.']);
+  const CacheFailure([
+    super.message = 'Data di perangkatmu belum bisa dibaca. Coba lagi ya.',
+  ]);
 }
 
 class AuthFailure extends Failure {
-  const AuthFailure([super.message = 'Autentikasi gagal.']);
+  const AuthFailure([
+    super.message = 'Kami belum bisa memverifikasi akunmu. Coba masuk lagi.',
+  ]);
 }
 
 class NetworkFailure extends Failure {
@@ -27,11 +33,13 @@ class NetworkFailure extends Failure {
 }
 
 class ValidationFailure extends Failure {
-  const ValidationFailure([super.message = 'Data tidak valid.']);
+  const ValidationFailure([
+    super.message = 'Ada isian yang belum pas. Cek lagi sebentar.',
+  ]);
 }
 
 class UnknownFailure extends Failure {
   const UnknownFailure([
-    super.message = 'Terjadi kesalahan yang tidak diketahui.',
+    super.message = 'Ada yang tidak beres. Coba muat ulang sebentar lagi.',
   ]);
 }

@@ -479,5 +479,6 @@
   "dashboard_tied_detail_budgeted": "already set aside",
   "dashboard_tied_info_suffix": "already set aside from your fixed needs.",
   "dashboard_tied_negative_hint": "Your bills exceed this month's remaining budget. Let's see what can be adjusted.",
+  "dashboard_tied_negative_hint_spending": "This month's spending has passed your budget. Let's take a look before the next bill.",
   "dashboard_tied_nudge": "Your fixed bills are larger than the fixed needs you budgeted. Worth a look."
 }
