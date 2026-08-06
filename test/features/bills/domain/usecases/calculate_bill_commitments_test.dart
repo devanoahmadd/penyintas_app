@@ -313,4 +313,126 @@ void main() {
       expect(base(), isNot(equals(b)));
     });
   });
+
+  // ── I2: cakupan recurrence disatukan antara dua aturan ─────────────────
+  //
+  // `fixedExpenses` adalah rencana PER-BULAN. Premi tahunan dan tagihan
+  // sekali-jalan tidak tercakup olehnya, jadi keduanya TIDAK boleh dianggap
+  // "sudah dianggarkan" — walau ber-isFixedNeed.
+  group('I2 — hanya tagihan BULANAN yang diwakili fixedExpenses', () {
+    test('(a) yearly + isFixedNeed + fixedExpenses>0 → masuk tiedFlexible '
+        'sehingga safeRemaining BERKURANG', () {
+      final r = calculateBillCommitments(
+        activeBills: [
+          makeBill(
+            estimatedAmount: 1200000,
+            isFixedNeed: true,
+            recurrence: Recurrence.yearly,
+            dueDate: DateTime(2026, 8, 10),
+          ),
+        ],
+        today: today,
+        paymentDate: 25,
+        totalRemaining: 2200000,
+        fixedExpenses: 500000,
+      );
+      expect(r.tiedFlexible, 1200000);
+      expect(r.safeRemaining, 2200000 - 1200000);
+    });
+
+    test('(b) yearly + isFixedNeed → nudge TETAP false (salah satuan)', () {
+      final r = calculateBillCommitments(
+        activeBills: [
+          makeBill(
+            estimatedAmount: 1200000,
+            isFixedNeed: true,
+            recurrence: Recurrence.yearly,
+            dueDate: DateTime(2026, 8, 10),
+          ),
+        ],
+        today: today,
+        paymentDate: 25,
+        totalRemaining: 2200000,
+        fixedExpenses: 500000,
+      );
+      expect(r.nudgeBudgetMismatch, isFalse);
+    });
+
+    test('(c) none (sekali-jalan) + isFixedNeed → sama seperti (a)', () {
+      final r = calculateBillCommitments(
+        activeBills: [
+          makeBill(
+            estimatedAmount: 700000,
+            isFixedNeed: true,
+            recurrence: Recurrence.none,
+            dueDate: DateTime(2026, 8, 10),
+          ),
+        ],
+        today: today,
+        paymentDate: 25,
+        totalRemaining: 2200000,
+        fixedExpenses: 500000,
+      );
+      expect(r.tiedFlexible, 700000);
+      expect(r.safeRemaining, 2200000 - 700000);
+    });
+
+    test('(d) REGRESI GUARD: monthly + isFixedNeed + fixedExpenses>0 → '
+        'TIDAK masuk tiedFlexible (perilaku lama harus tetap)', () {
+      final r = calculateBillCommitments(
+        activeBills: [
+          makeBill(
+            estimatedAmount: 500000,
+            isFixedNeed: true,
+            recurrence: Recurrence.monthly,
+            dueDate: DateTime(2026, 8, 10),
+          ),
+        ],
+        today: today,
+        paymentDate: 25,
+        totalRemaining: 2200000,
+        fixedExpenses: 500000,
+      );
+      expect(r.tiedFlexible, 0);
+      expect(r.tiedTotal, 500000);
+      expect(r.safeRemaining, 2200000);
+    });
+
+    test('(e) invariant partisi tetap: tiedFixed = tiedTotal − tiedFlexible '
+        'dan tidak pernah negatif', () {
+      final r = calculateBillCommitments(
+        activeBills: [
+          makeBill(
+            id: 1,
+            estimatedAmount: 1200000,
+            isFixedNeed: true,
+            recurrence: Recurrence.yearly,
+            dueDate: DateTime(2026, 8, 10),
+          ),
+          makeBill(
+            id: 2,
+            estimatedAmount: 500000,
+            isFixedNeed: true,
+            recurrence: Recurrence.monthly,
+            dueDate: DateTime(2026, 8, 12),
+          ),
+          makeBill(
+            id: 3,
+            estimatedAmount: 200000,
+            isFixedNeed: false,
+            recurrence: Recurrence.monthly,
+            dueDate: DateTime(2026, 8, 14),
+          ),
+        ],
+        today: today,
+        paymentDate: 25,
+        totalRemaining: 3000000,
+        fixedExpenses: 500000,
+      );
+      expect(r.tiedTotal, 1900000);
+      expect(r.tiedFlexible, 1400000); // tahunan 1.2jt + bebas 200rb
+      expect(r.tiedFixed, 500000);
+      expect(r.tiedFixed, greaterThanOrEqualTo(0));
+    });
+  });
 }

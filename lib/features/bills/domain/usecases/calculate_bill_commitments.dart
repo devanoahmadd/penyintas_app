@@ -53,8 +53,22 @@ BillCommitments calculateBillCommitments({
   required int totalRemaining,
   required int fixedExpenses,
 }) {
+  // SATU predikat, dipakai KEDUA aturan di bawah (M1 dan nudge §6.2).
+  //
+  // `fixedExpenses` adalah rencana PER-BULAN, jadi premi tahunan dan tagihan
+  // sekali-jalan TIDAK tercakup olehnya — keduanya tak boleh dianggap "sudah
+  // dianggarkan". Sebelum penyatuan ini, `bebas()` mengabaikan `recurrence`
+  // sementara aturan nudge membatasinya ke bulanan; tagihan tahunan
+  // ber-isFixedNeed lolos DUA jaring sekaligus dan layar mengklaim "sudah
+  // dianggarkan" untuk uang yang tak diwakili apa pun.
+  //
+  // JANGAN pisah lagi jadi dua ekspresi — dua salinan aturan yang bebas
+  // menyimpang adalah akar bug ini, bukan gejalanya.
+  bool diwakiliFixedExpenses(BillEntity b) =>
+      b.isFixedNeed && b.recurrence == Recurrence.monthly;
+
   // Pivot M1 (spec §3): tanpa potongan di muka, semua bill "bebas".
-  bool bebas(BillEntity b) => !b.isFixedNeed || fixedExpenses == 0;
+  bool bebas(BillEntity b) => !diwakiliFixedExpenses(b) || fixedExpenses == 0;
 
   final semua = calculateTiedMoney(
     activeBills: activeBills,
@@ -69,10 +83,9 @@ BillCommitments calculateBillCommitments({
     balance: totalRemaining,
   );
 
-  // §6.2: HANYA recurrence bulanan — tahunan/tenor salah satuan terhadap
-  // fixedExpenses (rencana per-bulan); toleransi 0 (strictly greater).
+  // §6.2: toleransi 0 (strictly greater).
   final fixedMonthly = activeBills
-      .where((b) => b.isFixedNeed && b.recurrence == Recurrence.monthly)
+      .where(diwakiliFixedExpenses)
       .fold(0, (sum, b) => sum + b.estimatedAmount);
 
   return BillCommitments(
