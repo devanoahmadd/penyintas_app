@@ -158,6 +158,57 @@ void main() {
     );
 
     test(
+      '(g) KARAKTERISASI: transaksi manual kategori "fixed" di LUAR breakdown '
+      'lenyap dari totalSpentThisMonth — kebocoran under-count (spec §2.3 '
+      'arah 2). fixedExpenses 800rb hanya mewakili kos; listrik 150rb tidak '
+      'diwakili apa pun, tapi tetap dibuang dari akumulator',
+      () async {
+        // KARAKTERISASI, bukan perilaku yang diinginkan (spec §2.3 arah 2).
+        // Bila test ini pecah: kemungkinan besar seseorang menutup pintu
+        // manual (toggle isFixed eksplisit, roadmap §5) — itu KABAR BAIK.
+        // Hapus test ini dan gantikan dengan assertion perilaku baru;
+        // JANGAN longgarkan expect().
+        final settingsKosSaja = BudgetSettingsEntity(
+          monthlyIncome: 3000000,
+          paymentDate: 1,
+          emergencyFundPct: 0.10,
+          createdAt: DateTime(2026, 5, 1),
+          rentExpense: 800000, // fixedExpenses = 800rb, isinya KOS saja
+        );
+        final listrik = makeTxn(
+          id: 'g1',
+          amount: 150000,
+          category: 'fixed',
+          isFixed: true, // add_transaction_bloc.dart:159 menyalakannya
+        );
+
+        when(
+          () => mockBudget.getBudgetSettings(),
+        ).thenAnswer((_) async => Right(settingsKosSaja));
+        when(
+          () => mockTxRepo.watchTodayTransactions(),
+        ).thenAnswer((_) => Stream.value(const Right([])));
+        when(
+          () => mockTxRepo.getTransactions(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+          ),
+        ).thenAnswer((_) async => Right([listrik]));
+
+        final result = await repo.watchDashboard().first;
+        final entity = result.getOrElse(() => throw StateError('Left'));
+
+        expect(
+          entity.totalSpentThisMonth,
+          0,
+          reason:
+              'gate M1 global tidak menutup ini; penutupnya = toggle '
+              'eksplisit di pintu manual (roadmap §5)',
+        );
+      },
+    );
+
+    test(
       'income-type transactions do not affect totalSpentThisMonth',
       () async {
         final incomeTxn = makeTxn(

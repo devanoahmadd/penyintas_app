@@ -14,7 +14,10 @@ import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/budget/domain/entities/budget_settings_entity.dart';
+import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
+import 'package:penyintas_app/features/transaction/domain/repositories/transaction_repository.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/add_transaction_usecase.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/delete_transaction_usecase.dart';
 
@@ -40,6 +43,10 @@ class MockBillReminderScheduler extends Mock implements BillReminderScheduler {}
 
 class MockBillReminderSettingsDatasource extends Mock
     implements BillReminderSettingsDatasource {}
+
+class MockTransactionRepository extends Mock implements TransactionRepository {}
+
+class MockBudgetRepository extends Mock implements BudgetRepository {}
 
 class FakeBillModel extends Fake implements BillModel {}
 
@@ -922,6 +929,88 @@ void main() {
           ),
         ).called(1);
         verifyNever(() => mockScheduler.cancelFor(any()));
+      },
+    );
+  });
+
+  // ── (f) INTEGRASI: gerbang M1 di jalur tagihan, usecase ASLI ───────────
+  //
+  // Semua test lain di file ini memakai `MockAddTransactionUseCase`, jadi
+  // gerbang M1 di dalam usecase tidak pernah dieksekusi. Grup ini merangkai
+  // AddTransactionUseCase yang SEBENARNYA supaya kontrak "isFixed dimatikan
+  // saat tak ada potongan di muka" terkunci ujung-ke-ujung — bukan hanya di
+  // unit test usecase yang tak menyentuh BillsBloc.
+  group('(f) gerbang M1 berlaku lewat BillsBloc (usecase asli)', () {
+    late MockTransactionRepository mockTxRepo;
+    late MockBudgetRepository mockBudget;
+
+    final tBill = _makeBill();
+
+    setUp(() {
+      mockTxRepo = MockTransactionRepository();
+      mockBudget = MockBudgetRepository();
+      when(
+        () => mockTxRepo.addTransaction(any()),
+      ).thenAnswer((_) async => const Right(null));
+      when(
+        () => mockBillRepository.getBillById(any()),
+      ).thenAnswer((_) async => Right(tBill));
+      when(
+        () => mockBillRepository.applyBillPayment(
+          id: any(named: 'id'),
+          newDueDate: any(named: 'newDueDate'),
+          newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+          newStatus: any(named: 'newStatus'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
+    });
+
+    BillsBloc buildBlocWithRealUsecase() => BillsBloc(
+      watchActiveBills: mockWatchActiveBills,
+      createBill: mockCreateBill,
+      updateBill: mockUpdateBill,
+      deleteBill: mockDeleteBill,
+      billRepository: mockBillRepository,
+      addTransaction: AddTransactionUseCase(mockTxRepo, mockBudget),
+      deleteTransaction: mockDeleteTransaction,
+      reminderScheduler: mockScheduler,
+      reminderSettings: mockReminderSettings,
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'includeAsFixed=true tapi fixedExpenses==0 → transaksi tersimpan '
+      'isFixed=false (tanpa gerbang ini, 800rb lenyap dari totalSpentThisMonth '
+      'padahal tak ada potongan di muka yang mewakilinya)',
+      build: buildBlocWithRealUsecase,
+      setUp: () {
+        when(() => mockBudget.getBudgetSettings()).thenAnswer(
+          (_) async => Right(
+            BudgetSettingsEntity(
+              monthlyIncome: 3000000,
+              paymentDate: 25,
+              emergencyFundPct: 0.10,
+              createdAt: DateTime(2026, 1, 1),
+              // fixedExpenses = 0 → semua breakdown nol (default)
+            ),
+          ),
+        );
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: tBill.id,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 8, 5),
+          includeAsFixed: true,
+          optOutTransaction: false, // WAJIB false — kalau true, tak ada
+          // transaksi yang dibuat dan test ini tak menguji apa pun
+        ),
+      ),
+      verify: (_) {
+        final captured = verify(
+          () => mockTxRepo.addTransaction(captureAny()),
+        ).captured;
+        final entity = captured.first as TransactionEntity;
+        expect(entity.isFixed, isFalse);
       },
     );
   });

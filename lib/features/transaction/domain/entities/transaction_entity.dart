@@ -35,6 +35,25 @@ class TransactionEntity extends Equatable {
   /// Firestore (int lokal tak bermakna lintas-device).
   final int? sourceBillId;
 
+  /// Sengaja HANYA `isFixed` yang bisa diubah — entity domain ini tidak butuh
+  /// `copyWith` umum, dan menambah parameter lain membuka jalan mutasi yang
+  /// tak ada pemakainya (YAGNI). Satu-satunya pemakai: gerbang invariant M1
+  /// di `AddTransactionUseCase`.
+  TransactionEntity copyWith({bool? isFixed}) => TransactionEntity(
+    id: id,
+    amount: amount,
+    category: category,
+    type: type,
+    note: note,
+    date: date,
+    isFixed: isFixed ?? this.isFixed,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    goalId: goalId,
+    sourceBillId: sourceBillId,
+  );
+
   @override
   List<Object?> get props => [
     id,

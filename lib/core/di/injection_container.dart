@@ -368,7 +368,7 @@ void _initTransaction() {
     () => TransactionListBloc(getTransactions: sl(), deleteTransaction: sl()),
   );
 
-  sl.registerLazySingleton(() => AddTransactionUseCase(sl()));
+  sl.registerLazySingleton(() => AddTransactionUseCase(sl(), sl()));
   sl.registerLazySingleton(() => GetTransactionsUseCase(sl()));
   sl.registerLazySingleton(() => WatchTodayTransactionsUseCase(sl()));
   sl.registerLazySingleton(() => DeleteTransactionUseCase(sl()));
