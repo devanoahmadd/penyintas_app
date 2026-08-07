@@ -11,6 +11,7 @@ import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/represented_by_fixed_expenses.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 
 /// Sheet konfirmasi "tandai lunas" (spec §6.3).
@@ -27,9 +28,10 @@ class MarkBillPaidSheet extends StatefulWidget {
   final BillEntity bill;
 
   /// Total kebutuhan tetap dari BudgetSettings saat sheet dibuka.
-  /// `null` = fetch gagal → FAIL-OPEN (§4.2): prefill kembali ke flag polos —
-  /// kesalahan yang bisa diperbaiki pengguna lewat toggle lebih baik daripada
-  /// label yang tercatat diam-diam.
+  /// `null` = fetch gagal → FAIL-OPEN, tapi HANYA pada paruh anggaran: bentuk
+  /// tagihan dan flag-nya tetap ditegakkan karena keduanya diketahui tanpa
+  /// fetch. Kalau anggaran ternyata nol, gerbang M1 di `AddTransactionUseCase`
+  /// tetap jadi jaring terakhir.
   final int? fixedExpenses;
 
   @override
@@ -60,11 +62,15 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     // M1 (§4.2): saat kebutuhan tetap di anggaran masih 0, tak ada potongan di
     // muka yang menaungi tagihan ini — prefill DIPAKSA false supaya
     // pembayarannya benar-benar terhitung sebagai pengeluaran.
-    // `null` = fetch gagal → fail-open ke flag polos milik tagihan.
+    // `null` = fetch gagal → fail-open HANYA pada paruh anggaran. Bentuk
+    // tagihan dan flag-nya tetap ditegakkan karena keduanya diketahui tanpa
+    // fetch — bukan kembali ke flag polos milik tagihan.
     final fe = widget.fixedExpenses;
     _includeAsFixed = fe == null
-        ? widget.bill.isFixedNeed
-        : widget.bill.isFixedNeed && fe > 0;
+        // fail-open: HANYA paruh anggaran yang dilonggarkan. Bentuk tagihan dan
+        // flag-nya diketahui tanpa fetch, jadi tak ada alasan melupakannya.
+        ? representedByFixedExpenses(widget.bill)
+        : coveredUpfront(widget.bill, fe);
   }
 
   @override
@@ -81,9 +87,24 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
 
   bool get _amountInvalid => _amount <= 0;
 
-  /// §4.3: hint hanya saat prefill DIPAKSA false padahal pengguna menandai
-  /// tagihan ini kebutuhan tetap — kontradiksi butuh penjelasan di layar.
-  bool get _showM1Hint => widget.bill.isFixedNeed && widget.fixedExpenses == 0;
+  /// §4.3: hint hanya saat prefill DIPAKSA false padahal tagihan ini memang
+  /// TERWAKILI jenisnya — kontradiksi butuh penjelasan di layar.
+  /// Disempitkan ke predikat bersama: tanpa itu, `yearly + isFixedNeed + fe==0`
+  /// menampilkan hint terkunci DAN hint ini sekaligus.
+  bool get _showM1Hint =>
+      representedByFixedExpenses(widget.bill) && widget.fixedExpenses == 0;
+
+  /// Toggle tak berlaku untuk tagihan yang tak terwakili `fixedExpenses`.
+  bool get _fixedLocked => !representedByFixedExpenses(widget.bill);
+
+  /// Presedensi: alasan BENTUK menang atas alasan FLAG, karena
+  /// `yearly && !isFixedNeed` memenuhi keduanya dan hanya alasan flag yang
+  /// punya jalan keluar. Menampilkan yang bisa diperbaiki lebih dulu akan
+  /// mengirim pengguna mengerjakan sesuatu yang tak menolongnya.
+  String _lockedHint(AppLocalizations l10n) =>
+      widget.bill.recurrence == Recurrence.monthly
+      ? l10n.billsPaidFixedNotFlaggedHint
+      : l10n.billsPaidFixedNonMonthlyHint;
 
   // ── Pemilih tanggal ───────────────────────────────────────────────────────
 
@@ -146,6 +167,9 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
     final surfaceColor = isDark
         ? AppColors.surfaceDark
         : AppColors.surfaceLight;
@@ -308,11 +332,15 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                         switchKey: const ValueKey('bill_paid_fixed'),
                         value: _includeAsFixed,
                         label: l10n.billsFormFixedLabel,
-                        hint: l10n.billsFormFixedHint,
+                        hint: _fixedLocked
+                            ? _lockedHint(l10n)
+                            : l10n.billsFormFixedHint,
                         panelColor: panelColor,
                         borderColor: borderColor,
                         textColor: textColor,
                         mutedColor: mutedColor,
+                        hintColor: _fixedLocked ? textSoftColor : null,
+                        enabled: !_fixedLocked,
                         onChanged: (v) => setState(() => _includeAsFixed = v),
                       ),
                       if (_showM1Hint) ...[
@@ -704,6 +732,8 @@ class _ToggleTile extends StatelessWidget {
     required this.textColor,
     required this.mutedColor,
     required this.onChanged,
+    this.enabled = true,
+    this.hintColor,
   });
 
   final Key tileKey;
@@ -717,61 +747,95 @@ class _ToggleTile extends StatelessWidget {
   final Color mutedColor;
   final ValueChanged<bool> onChanged;
 
+  /// `false` = kontrol TAK BERLAKU untuk tagihan ini — bukan "mati sementara".
+  /// Read-only, bukan disabled: label sengaja TIDAK dipudarkan. Memudarkannya
+  /// menjatuhkan kontras label di bawah AA pada KEDUA tema (light lebih dulu:
+  /// 16,05:1 → 3,28:1 pada alpha 0,5). Yang dipudarkan hanya switch-nya.
+  final bool enabled;
+
+  /// Warna baris hint. Default `mutedColor`. Tile terkunci mengirim `textSoft*`
+  /// karena hint-nya jadi SATU-SATUNYA penjelasan kenapa kontrol itu mati —
+  /// `mutedDark` di atas `surfaceAltDark` hanya 3,51:1 (gagal AA teks kecil).
+  final Color? hintColor;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      key: tileKey,
-      color: panelColor,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: () => onChanged(!value),
+    // MergeSemantics TANPA SYARAT: label + hint + state switch diumumkan
+    // sebagai satu node di SEMUA state. Memasangnya kondisional membuat bentuk
+    // pengumuman screen-reader berubah-ubah untuk kontrol yang sama.
+    return MergeSemantics(
+      child: Material(
+        key: tileKey,
+        color: panelColor,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: borderColor),
-          ),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+        child: InkWell(
+          onTap: enabled ? () => onChanged(!value) : null,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: borderColor),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: AppTextStyles.label.copyWith(
-                          fontSize: 13,
-                          color: textColor,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 56),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: AppTextStyles.label.copyWith(
+                            fontSize: 13,
+                            color: textColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        hint,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontSize: 12,
-                          height: 1.35,
-                          color: mutedColor,
+                        const SizedBox(height: 2),
+                        Text(
+                          hint,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: hintColor ?? mutedColor,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Switch(
-                  key: switchKey,
-                  value: value,
-                  onChanged: onChanged,
-                  activeThumbColor: Colors.white,
-                  activeTrackColor: AppColors.primary,
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.sm),
+                  Switch(
+                    key: switchKey,
+                    value: value,
+                    onChanged: enabled ? onChanged : null,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppColors.primary,
+                    // Warna mati dipaksa lewat WidgetStatePropertyAll supaya
+                    // state `disabled` Material tidak menimpanya dengan abu-abu
+                    // default yang di luar palet.
+                    thumbColor: enabled
+                        ? null
+                        : WidgetStatePropertyAll(mutedColor),
+                    trackColor: enabled
+                        ? null
+                        : WidgetStatePropertyAll(borderColor),
+                    // Outline WAJIB ikut dipaksa. `border*` di atas panel
+                    // `surfaceAlt*` cuma 1,07:1 (dark) / 1,28:1 (light) — track
+                    // sendirian LENYAP ke dalam panel dan yang tersisa di layar
+                    // hanya titik thumb mengambang, bukan "switch yang mati".
+                    // `muted*` mengembalikan bentuknya: 3,51:1 (dark) / 4,65:1
+                    // (light), lulus ambang 3:1 komponen non-teks.
+                    trackOutlineColor: enabled
+                        ? null
+                        : WidgetStatePropertyAll(mutedColor),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

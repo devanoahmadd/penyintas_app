@@ -595,6 +595,12 @@ class AppLocalizations {
   String get billsFormTenorEndDateHint => _t('bills_form_tenor_end_date_hint');
   String get billsFormFixedLabel => _t('bills_form_fixed_label');
   String get billsFormFixedHint => _t('bills_form_fixed_hint');
+
+  /// Dipakai form tagihan saat `recurrence != monthly` — hint lama menjanjikan
+  /// "bukan potong jatah harian kamu", dan itu tidak benar untuk tagihan
+  /// non-bulanan.
+  String get billsFormFixedHintNonMonthly =>
+      _t('bills_form_fixed_hint_non_monthly');
   String get billsFormReminderLabel => _t('bills_form_reminder_label');
   String get billsReminderDefault => _t('bills_reminder_default');
   String get billsReminderD3 => _t('bills_reminder_d3');
@@ -624,6 +630,18 @@ class AppLocalizations {
   /// Mitigasi M1 (Task 7.4): dipakai saat kebutuhan tetap di anggaran masih
   /// nol, sehingga tak ada potongan di muka yang bisa menaungi tagihan ini.
   String get billsPaidFixedEmptyHint => _t('bills_paid_fixed_empty_hint');
+
+  /// Sheet bayar, toggle TERKUNCI karena bentuk tagihan: `fixedExpenses`
+  /// berbasis bulan, jadi tagihan tahunan/sekali-jalan tak pernah terwakili.
+  /// Tak ada tindakan pengguna yang mengubah ini — jangan tawarkan jalan keluar.
+  String get billsPaidFixedNonMonthlyHint =>
+      _t('bills_paid_fixed_non_monthly_hint');
+
+  /// Sheet bayar, toggle TERKUNCI karena flag tagihan mati. BEDA dari yang di
+  /// atas: di sini pengguna PUNYA jalan keluar (nyalakan flag di form tagihan),
+  /// jadi copy-nya menyebutkannya.
+  String get billsPaidFixedNotFlaggedHint =>
+      _t('bills_paid_fixed_not_flagged_hint');
   String get billsPaidOptOutLabel => _t('bills_paid_optout_label');
   String get billsPaidOptOutHint => _t('bills_paid_optout_hint');
   String get billsPaidSubmit => _t('bills_paid_submit');

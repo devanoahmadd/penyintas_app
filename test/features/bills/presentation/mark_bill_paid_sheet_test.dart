@@ -65,6 +65,7 @@ void main() {
     int estimatedAmount = 750000,
     bool isFixedNeed = false,
     String category = 'internet',
+    Recurrence recurrence = Recurrence.monthly,
   }) => BillEntity(
     id: 7,
     cloudId: 'cloud-7',
@@ -73,7 +74,7 @@ void main() {
     category: category,
     isFixedNeed: isFixedNeed,
     dueDate: DateTime(2026, 8, 10),
-    recurrence: Recurrence.monthly,
+    recurrence: recurrence,
     installmentTotal: 12,
     installmentsPaid: 3,
     dueDayOfMonth: 10,
@@ -142,8 +143,10 @@ void main() {
     WidgetTester tester, {
     required BillEntity bill,
     ThemeData? theme,
-    // Default anggaran "sehat" — pemanggil lama tidak peduli M1, dan nilai > 0
-    // membuat prefill kembali ke perilaku polos `bill.isFixedNeed`.
+    // Default anggaran "sehat" — pemanggil lama tidak peduli M1. Nilai > 0
+    // hanya melepas paruh anggaran: untuk tagihan BULANAN prefill jadi
+    // `bill.isFixedNeed`, tapi tagihan non-bulanan tetap terkunci OFF berapa
+    // pun nilainya.
     int? fixedExpenses = 500000,
   }) async {
     // Layar tinggi supaya sheet muat tanpa banyak scroll.
@@ -311,15 +314,21 @@ void main() {
   testWidgets('toggle kebutuhan tetap bisa diubah → payload ikut berubah', (
     tester,
   ) async {
-    await pumpSheet(tester, bill: billBerjalan(isFixedNeed: false));
+    // Tagihan yang toggle-nya BERHAK hidup: bulanan + ditandai + anggaran ada.
+    // Arahnya ON→OFF — opt-out sadar, perilaku yang gerbang M1 lindungi.
+    await pumpSheet(
+      tester,
+      bill: billBerjalan(isFixedNeed: true),
+      fixedExpenses: 500000,
+    );
 
-    expect(switchValue(tester, 'bill_paid_fixed'), isFalse);
-    await tapKey(tester, 'bill_paid_fixed');
     expect(switchValue(tester, 'bill_paid_fixed'), isTrue);
+    await tapKey(tester, 'bill_paid_fixed');
+    expect(switchValue(tester, 'bill_paid_fixed'), isFalse);
 
     await tapSubmit(tester);
 
-    expect(captureMarkedPaid(tester).includeAsFixed, isTrue);
+    expect(captureMarkedPaid(tester).includeAsFixed, isFalse);
   });
 
   // ── Mitigasi M1: prefill sadar-anggaran + hint ────────────────────────────
@@ -341,6 +350,7 @@ void main() {
         fixedExpenses: 500000,
       );
       expect(fixedSwitch(t).value, isTrue);
+      expect(fixedSwitch(t).onChanged, isNotNull);
       expect(hint, findsNothing);
     });
 
@@ -353,6 +363,7 @@ void main() {
           fixedExpenses: 0,
         );
         expect(fixedSwitch(t).value, isFalse);
+        expect(fixedSwitch(t).onChanged, isNotNull);
         expect(hint, findsOneWidget);
         expect(
           find.textContaining('Kebutuhan tetapmu masih kosong'),
@@ -375,7 +386,7 @@ void main() {
     );
 
     testWidgets(
-      'isFixedNeed=false → prefill false, tanpa hint (tak ada kontradiksi)',
+      'monthly tanpa flag → prefill false, toggle TERKUNCI + hint "belum ditandai"',
       (t) async {
         await pumpSheet(
           t,
@@ -383,9 +394,125 @@ void main() {
           fixedExpenses: 0,
         );
         expect(fixedSwitch(t).value, isFalse);
+        expect(fixedSwitch(t).onChanged, isNull);
+        expect(
+          find.textContaining('belum ditandai kebutuhan tetap'),
+          findsOneWidget,
+        );
+        // Hint M1 tetap TIDAK muncul — alasannya bentuk/flag, bukan anggaran.
         expect(hint, findsNothing);
       },
     );
+  });
+
+  group('Toggle terkunci untuk tagihan tak terwakili (spec §5.1)', () {
+    Switch fixedSwitch(WidgetTester t) =>
+        t.widget<Switch>(find.byKey(const ValueKey('bill_paid_fixed')));
+    final hintM1 = find.byKey(const ValueKey('bill_paid_m1_hint'));
+
+    testWidgets('(a) yearly + isFixedNeed + fe>0 → OFF dan TERKUNCI', (
+      t,
+    ) async {
+      await pumpSheet(
+        t,
+        bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+        fixedExpenses: 500000,
+      );
+      expect(fixedSwitch(t).value, isFalse);
+      expect(fixedSwitch(t).onChanged, isNull);
+    });
+
+    testWidgets('(b) yearly → hint bentuk tagihan, hint normal hilang', (
+      t,
+    ) async {
+      await pumpSheet(
+        t,
+        bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+        fixedExpenses: 500000,
+      );
+      expect(find.textContaining('dihitung per bulan'), findsOneWidget);
+      expect(
+        find.textContaining('bukan potong jatah harian kamu'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('(d) fe == null (fetch gagal) + yearly → tetap OFF', (t) async {
+      await pumpSheet(
+        t,
+        bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+        fixedExpenses: null,
+      );
+      expect(fixedSwitch(t).value, isFalse);
+      expect(fixedSwitch(t).onChanged, isNull);
+    });
+
+    testWidgets(
+      '(f) tile terkunci: tak punya aksi tap, tap tak mengubah apa pun',
+      (t) async {
+        await pumpSheet(
+          t,
+          bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+          fixedExpenses: 500000,
+        );
+
+        // PRASYARAT — jangan hapus meski terasa tumpang-tindih dengan (a).
+        // Tanpa baris ini test lolos lewat jalan yang salah: pra-perbaikan
+        // prefill masih ON, tap menjadikannya OFF, dan assertion sesudah tap
+        // ikut hijau padahal tile-nya masih bisa ditekan.
+        expect(
+          fixedSwitch(t).value,
+          isFalse,
+          reason: 'prefill harus sudah OFF',
+        );
+
+        // `verifyNever(() => bloc.add(any()))` SENGAJA tidak dipakai: tile ini
+        // tak pernah menyentuh BLoC di state mana pun — ia hanya `setState` —
+        // jadi assertion itu hampa di kedua arah. Yang membedakan tile terkunci
+        // dari tile hidup adalah `onTap`.
+        final tile = t.widget<InkWell>(
+          find
+              .descendant(
+                of: find.byKey(const ValueKey('bill_paid_fixed_row')),
+                matching: find.byType(InkWell),
+              )
+              .first,
+        );
+        expect(tile.onTap, isNull);
+
+        await tapKey(t, 'bill_paid_fixed_row');
+        expect(fixedSwitch(t).value, isFalse);
+      },
+    );
+
+    testWidgets(
+      '(g) yearly + isFixedNeed + fe==0 → hint terkunci, BUKAN hint M1',
+      (t) async {
+        await pumpSheet(
+          t,
+          bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+          fixedExpenses: 0,
+        );
+        expect(find.textContaining('dihitung per bulan'), findsOneWidget);
+        expect(hintM1, findsNothing);
+      },
+    );
+
+    testWidgets('(i) yearly TANPA flag → alasan BENTUK menang atas alasan FLAG', (
+      t,
+    ) async {
+      // Irisan yang jadi alasan adanya presedensi: kedua alasan kunci
+      // berlaku sekaligus. Alasan BENTUK tak punya jalan keluar, alasan FLAG
+      // punya — menawarkan yang bisa diperbaiki lebih dulu mengirim pengguna
+      // menyalakan flag pada tagihan tahunan, yang tak menolongnya sama sekali.
+      await pumpSheet(
+        t,
+        bill: billBerjalan(isFixedNeed: false, recurrence: Recurrence.yearly),
+        fixedExpenses: 500000,
+      );
+      expect(find.textContaining('dihitung per bulan'), findsOneWidget);
+      expect(find.textContaining('belum ditandai'), findsNothing);
+    });
   });
 
   // ── Kategori read-only ────────────────────────────────────────────────────
