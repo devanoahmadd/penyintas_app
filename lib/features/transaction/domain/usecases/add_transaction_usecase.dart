@@ -11,7 +11,7 @@ import 'package:penyintas_app/features/transaction/domain/repositories/transacti
 /// kedua, dan sengaja TIDAK digating (spec §2.4): menggating edit akan
 /// membalik angka bulan lalu saat `fixedExpenses` sudah berubah.
 ///
-/// Dua pemanggil di seluruh aplikasi: `bills_bloc.dart:221` dan
+/// Dua pemanggil di seluruh aplikasi: `bills_bloc.dart:227` dan
 /// `add_transaction_bloc.dart:166`. Invariant M1 ditegakkan DI SINI, bukan
 /// per-BLoC, karena invariant domain yang dijaga di lapisan presentasi
 /// selalu punya pintu ke-N+1 — Fase 7 sudah membuktikannya di repo ini.

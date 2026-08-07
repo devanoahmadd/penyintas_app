@@ -575,7 +575,7 @@ void main() {
         );
 
         // Toggle SENGAJA tidak dikunci di form — flag = niat pengguna (spec §3).
-        // Hanya ada satu Switch di seluruh file ini (`:1084`), jadi finder-nya
+        // Hanya ada satu Switch di seluruh file ini (`:1092`), jadi finder-nya
         // tak ambigu.
         final sw = tester.widget<Switch>(find.byType(Switch));
         expect(

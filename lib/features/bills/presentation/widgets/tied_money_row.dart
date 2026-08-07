@@ -10,11 +10,13 @@ import 'package:penyintas_app/features/bills/domain/usecases/calculate_bill_comm
 
 /// Baris "uang terikat / sisa aman" — dipasang DI DALAM kartu saldo.
 ///
-/// Di sinilah pivot flag P1 terlihat oleh pengguna: tagihan ber-`isFixedNeed`
-/// sudah dipotong di muka lewat `fixedExpenses` sehingga hanya DITAMPILKAN,
-/// sedangkan tagihan bebas benar-benar MENGURANGI sisa saldo. Tanpa
-/// pemisahan ini uang yang sama terhitung dua kali dan pengguna melihat
-/// uangnya lenyap ganda.
+/// Di sinilah pivot flag P1 terlihat oleh pengguna: tagihan yang BULANAN,
+/// ber-`isFixedNeed`, DAN `fixedExpenses > 0` sudah dipotong di muka
+/// (`coveredUpfront` — lihat `represented_by_fixed_expenses.dart`) sehingga
+/// hanya DITAMPILKAN, sedangkan tagihan bebas — termasuk tagihan tahunan
+/// ber-`isFixedNeed` — benar-benar MENGURANGI sisa saldo. Tanpa pemisahan
+/// ini uang yang sama terhitung dua kali dan pengguna melihat uangnya
+/// lenyap ganda.
 ///
 /// ## Risiko tiga-nama (spec §6.1)
 ///

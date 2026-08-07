@@ -297,16 +297,17 @@ void main() {
     expect(
       event.includeAsFixed,
       isTrue,
-      reason: 'toggle kebutuhan tetap diprefill dari bill.isFixedNeed',
+      reason:
+          'toggle kebutuhan tetap diprefill ON: bulanan + ditandai + '
+          'anggaran ada (coveredUpfront)',
     );
     expect(event.optOutTransaction, isFalse);
   });
 
   // ── Toggle kebutuhan tetap ────────────────────────────────────────────────
 
-  testWidgets('toggle kebutuhan tetap diprefill dari bill.isFixedNeed', (
-    tester,
-  ) async {
+  testWidgets('toggle kebutuhan tetap diprefill ON saat bulanan + ditandai + '
+      'anggaran ada', (tester) async {
     await pumpSheet(tester, bill: billBerjalan(isFixedNeed: true));
     expect(switchValue(tester, 'bill_paid_fixed'), isTrue);
   });
