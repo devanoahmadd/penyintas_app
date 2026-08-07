@@ -619,7 +619,15 @@ class _AddEditBillSheetState extends State<AddEditBillSheet> {
                       _FixedNeedToggle(
                         value: _isFixedNeed,
                         label: l10n.billsFormFixedLabel,
-                        hint: l10n.billsFormFixedHint,
+                        // Hint lama menjanjikan "bukan potong jatah harian
+                        // kamu" — tidak benar untuk tagihan non-bulanan, yang
+                        // sejak gelombang ini SELALU dihitung sebagai
+                        // pengeluaran saat dibayar. Toggle-nya tetap hidup:
+                        // `isFixedNeed` adalah pernyataan NIAT pengguna,
+                        // penyempitannya terjadi di titik pakai.
+                        hint: _recurrence == Recurrence.monthly
+                            ? l10n.billsFormFixedHint
+                            : l10n.billsFormFixedHintNonMonthly,
                         panelColor: panelColor,
                         borderColor: borderColor,
                         textColor: textColor,

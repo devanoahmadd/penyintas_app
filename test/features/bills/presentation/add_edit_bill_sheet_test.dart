@@ -532,4 +532,59 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text(l10n.billsFormAddTitle), findsOneWidget);
   });
+
+  // ── Hint kebutuhan tetap jujur per recurrence (spec §5.6) ─────────────────
+  //
+  // Hint lama menjanjikan "bukan potong jatah harian kamu". Untuk tagihan
+  // non-bulanan janji itu TIDAK benar: `fixedExpenses` berbasis bulan, jadi
+  // pembayarannya SELALU dihitung sebagai pengeluaran. Toggle-nya tetap hidup
+  // — `isFixedNeed` adalah pernyataan NIAT pengguna (spec §3), penyempitannya
+  // terjadi di titik pakai, bukan di form ini.
+
+  group('hint kebutuhan tetap mengikuti recurrence (spec §5.6)', () {
+    // Substring, bukan string penuh: keduanya cukup khas untuk tak bertabrakan
+    // dengan teks lain di layar, dan tak ikut pecah kalau tanda baca digeser.
+    final hintBulanan = find.textContaining('bukan potong jatah harian kamu');
+    final hintNonBulanan = find.textContaining(
+      'kebutuhan tetap di anggaranmu berbasis bulan',
+    );
+
+    testWidgets(
+      'monthly (default) → hint lama, hint non-bulanan TIDAK muncul',
+      (tester) async {
+        await pumpSheet(tester);
+
+        expect(hintBulanan, findsOneWidget);
+        expect(hintNonBulanan, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'yearly → hint non-bulanan menggantikan hint lama, toggle tetap hidup',
+      (tester) async {
+        await pumpSheet(tester);
+        await tapLabel(tester, l10n.billsRecurrenceYearly);
+
+        expect(hintNonBulanan, findsOneWidget);
+        expect(
+          hintBulanan,
+          findsNothing,
+          reason:
+              'janji "bukan potong jatah harian" tidak boleh tersisa di tagihan '
+              'yang justru SELALU dihitung sebagai pengeluaran',
+        );
+
+        // Toggle SENGAJA tidak dikunci di form — flag = niat pengguna (spec §3).
+        // Hanya ada satu Switch di seluruh file ini (`:1084`), jadi finder-nya
+        // tak ambigu.
+        final sw = tester.widget<Switch>(find.byType(Switch));
+        expect(
+          sw.onChanged,
+          isNotNull,
+          reason:
+              'form tagihan BUKAN tempat penyempitan — itu tugas sheet bayar',
+        );
+      },
+    );
+  });
 }
