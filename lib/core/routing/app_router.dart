@@ -280,6 +280,16 @@ Future<String?> redirectForAuthedUser(String location) async {
 /// cast exception di depan mata pengguna.
 String? billEditGuard(Object? extra) => extra is BillEntity ? null : '/bills';
 
+/// Callback `redirect` untuk rute ubah tagihan.
+///
+/// Diangkat jadi fungsi tingkat-atas bernama — bukan closure inline — supaya
+/// test bisa mengunci IDENTITASNYA (`same(billEditRedirect)`), bukan sekadar
+/// memastikan `redirect` tidak null. Closure inline lolos dari mutasi seperti
+/// `redirect: (context, state) => null`: keberadaannya tetap non-null, tapi
+/// isinya sudah berhenti memanggil `billEditGuard` sama sekali.
+String? billEditRedirect(BuildContext context, GoRouterState state) =>
+    billEditGuard(state.extra);
+
 /// Subtree rute Tagihan.
 ///
 /// DIEKSTRAK dari daftar `routes:` supaya bentuknya bisa diuji tanpa
@@ -330,8 +340,10 @@ GoRoute buildBillsRoute() => GoRoute(
       // tanpa penjaga ia adalah cast exception.
       //
       // Logikanya tinggal di `billEditGuard` — fungsi murni tingkat-atas —
-      // supaya bisa diuji tanpa membangun GoRouterState [Audit B4].
-      redirect: (context, state) => billEditGuard(state.extra),
+      // supaya bisa diuji tanpa membangun GoRouterState [Audit B4]. Callback
+      // ini sendiri diangkat jadi `billEditRedirect` (bukan closure inline)
+      // supaya test bisa mengunci identitasnya, bukan cuma keberadaannya.
+      redirect: billEditRedirect,
       builder: (context, state) => MultiBlocProvider(
         providers: [
           BlocProvider.value(value: sl<BillsBloc>()),

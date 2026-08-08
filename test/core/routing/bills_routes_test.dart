@@ -63,6 +63,14 @@ void main() {
         isNotNull,
         reason: 'tanpa penjaga, deep-link ke /bills/7/edit = cast exception',
       );
+      expect(
+        anak[1].redirect,
+        same(billEditRedirect),
+        reason:
+            'mengunci IDENTITAS callback, bukan cuma keberadaannya — '
+            'redirect: (context, state) => null tetap non-null tapi sudah '
+            'berhenti memanggil billEditGuard',
+      );
     });
   });
 
