@@ -661,6 +661,61 @@ class AppLocalizations {
   String billsUpcomingCount(int n) =>
       _t('bills_upcoming_count').replaceAll('{n}', '$n');
 
+  // ── Gelombang perbaikan Tagihan (spec Rev 3 §6.2) ──
+  String get billsFormAmountNote => _t('bills_form_amount_note');
+  String get billsFormCategoryNote => _t('bills_form_category_note');
+
+  String billsFormDueDateMonthlyNote(int day) =>
+      _t('bills_form_due_date_monthly_note').replaceAll('{day}', '$day');
+
+  /// [month] adalah nama bulan yang SUDAH dilokalkan (`DateFormat('MMMM')`),
+  /// bukan angka. Urutan `{day}`/`{month}` sengaja berbeda antara ID dan EN.
+  String billsFormDueDateYearlyNote(int day, String month) =>
+      _t('bills_form_due_date_yearly_note')
+          .replaceAll('{day}', '$day')
+          .replaceAll('{month}', month);
+
+  String get billsTenorUnlimitedNote => _t('bills_tenor_unlimited_note');
+  String get billsTenorCountNote => _t('bills_tenor_count_note');
+  String get billsTenorEndDateNote => _t('bills_tenor_end_date_note');
+
+  /// Hanya untuk `n >= 2` — nilai 0/1/3 punya kunci chipnya sendiri supaya
+  /// bentuk jamak sisi EN tetap benar ("1 day before", bukan "1 days before").
+  String billsReminderNDaysBefore(int n) =>
+      _t('bills_reminder_n_days_before').replaceAll('{n}', '$n');
+
+  String get billsReminderCustomLabel => _t('bills_reminder_custom_label');
+
+  /// [n] selalu >= 1 — pemanggil tak pernah menggambar barisnya saat selisih 0.
+  ///
+  /// `n == 1` memakai kunci terpisah, bukan kunci berplaceholder: sisi EN
+  /// "You paid 1 days early." salah, dan bayar sehari lebih awal justru kasus
+  /// paling umum — bukan kasus tepi yang boleh dibulatkan. Pola ini sama
+  /// dengan yang dipakai chip pengingat ([billsReminderNDaysBefore]).
+  String billsPaidDateEarly(int n) => n == 1
+      ? _t('bills_paid_date_early_one')
+      : _t('bills_paid_date_early').replaceAll('{n}', '$n');
+
+  String billsPaidDateLate(int n) => n == 1
+      ? _t('bills_paid_date_late_one')
+      : _t('bills_paid_date_late').replaceAll('{n}', '$n');
+
+  String get billsFormDiscardTitle => _t('bills_form_discard_title');
+  String get billsFormDiscardBody => _t('bills_form_discard_body');
+  String get billsFormDiscardConfirm => _t('bills_form_discard_confirm');
+  String get billsFormDiscardCancel => _t('bills_form_discard_cancel');
+
+  String get billsFixedHelpTitle => _t('bills_fixed_help_title');
+  String get billsFixedHelpBody1 => _t('bills_fixed_help_body_1');
+  String get billsFixedHelpBody2 => _t('bills_fixed_help_body_2');
+  String get billsFixedHelpLockedTitle => _t('bills_fixed_help_locked_title');
+  String get billsFixedHelpLockedBody => _t('bills_fixed_help_locked_body');
+
+  /// Label pembaca layar untuk tombol (?). Nilainya kebetulan sama dengan
+  /// [billsFixedHelpTitle], tapi kuncinya terpisah: yang satu dibaca mata,
+  /// yang satu dibaca pembaca layar, dan keduanya bisa berubah sendiri-sendiri.
+  String get billsFixedHelpA11y => _t('bills_fixed_help_a11y');
+
   // ── Baris uang terikat / sisa aman di kartu saldo (P1, Task 7.2c) ──
   /// Frasa horizon varian B & C — menandai HORIZON waktu (kini → gajian),
   /// bukan nama besaran baru. Sengaja SENTENCE CASE: register eyebrow

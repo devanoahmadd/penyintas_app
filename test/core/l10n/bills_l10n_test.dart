@@ -96,6 +96,45 @@ void main() {
     // Tile Tagihan di dashboard (Task 7.1)
     'bills_due_today',
     'bills_upcoming_count',
+    // ── Gelombang perbaikan 2026-08-08 (spec Rev 3 §6.2) ──
+    // Catatan bersyarat di form
+    'bills_form_amount_note',
+    'bills_form_category_note',
+    'bills_form_due_date_monthly_note',
+    'bills_form_due_date_yearly_note',
+    // Catatan chip tenor
+    'bills_tenor_unlimited_note',
+    'bills_tenor_count_note',
+    'bills_tenor_end_date_note',
+    // Chip pengingat
+    'bills_reminder_n_days_before',
+    'bills_reminder_custom_label',
+    // Baris selisih tanggal di sheet bayar
+    'bills_paid_date_early',
+    'bills_paid_date_late',
+    'bills_paid_date_early_one',
+    'bills_paid_date_late_one',
+    // Dialog buang-perubahan (D15)
+    'bills_form_discard_title',
+    'bills_form_discard_body',
+    'bills_form_discard_confirm',
+    'bills_form_discard_cancel',
+    // Sheet bantuan "kebutuhan tetap"
+    'bills_fixed_help_title',
+    'bills_fixed_help_body_1',
+    'bills_fixed_help_body_2',
+    'bills_fixed_help_locked_title',
+    'bills_fixed_help_locked_body',
+    'bills_fixed_help_a11y',
+    // ── Lubang lama, ditemukan audit 2026-08-08 [Audit S4] ──
+    // Keempatnya SUDAH ada di kedua JSON dan sudah punya getter; yang hilang
+    // hanya penjaganya. Menghapusnya dari kedua berkas hari ini tidak
+    // menggagalkan satu test pun — persis celah yang daftar ini ada untuk
+    // menutupnya.
+    'bills_form_fixed_hint_non_monthly',
+    'bills_paid_fixed_empty_hint',
+    'bills_paid_fixed_non_monthly_hint',
+    'bills_paid_fixed_not_flagged_hint',
   ];
 
   /// Key TANPA prefiks `bills_` yang tetap dipakai layar Tagihan — kalau
@@ -135,6 +174,11 @@ void main() {
       'bills_installment_progress': ['{x}', '{n}'],
       'bills_paid_amount_note': ['{amount}'],
       'bills_upcoming_count': ['{n}'],
+      'bills_form_due_date_monthly_note': ['{day}'],
+      'bills_form_due_date_yearly_note': ['{day}', '{month}'],
+      'bills_reminder_n_days_before': ['{n}'],
+      'bills_paid_date_early': ['{n}'],
+      'bills_paid_date_late': ['{n}'],
     };
     withPlaceholder.forEach((key, tokens) {
       for (final token in tokens) {
@@ -150,5 +194,28 @@ void main() {
         );
       }
     });
+  });
+
+  test('kunci selisih tanggal tunggal tidak memakai bentuk jamak', () {
+    for (final k in ['bills_paid_date_early_one', 'bills_paid_date_late_one']) {
+      expect(
+        en[k] as String,
+        isNot(contains('days')),
+        reason: '"$k" adalah bentuk TUNGGAL — "1 days" salah',
+      );
+      expect(en[k] as String, contains('1 day'));
+    }
+  });
+
+  test('catatan tanggal bulanan EN bebas sufiks ordinal mati', () {
+    // Bukan `contains('th')` polos — kata "month" sendiri mengandung "th",
+    // jadi assertion sesempit itu merah bahkan untuk nilai yang BENAR.
+    // Yang diuji adalah sufiks ordinal menempel ke placeholder ("{day}th"),
+    // sesuai cacat yang dijelaskan di reason di bawah.
+    expect(
+      en['bills_form_due_date_monthly_note'] as String,
+      isNot(contains('{day}th')),
+      reason: '"The {day}th" menghasilkan "The 1th"/"The 3th"/"The 21th"',
+    );
   });
 }
