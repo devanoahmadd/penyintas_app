@@ -13,6 +13,7 @@ import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/represented_by_fixed_expenses.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/widgets/common/fixed_need_toggle_tile.dart';
 
 /// Sheet konfirmasi "tandai lunas" (spec §6.3).
 ///
@@ -327,7 +328,7 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                       const SizedBox(height: AppSpacing.md),
 
                       // Kebutuhan tetap
-                      _ToggleTile(
+                      FixedNeedToggleTile(
                         tileKey: const ValueKey('bill_paid_fixed_row'),
                         switchKey: const ValueKey('bill_paid_fixed'),
                         value: _includeAsFixed,
@@ -356,7 +357,7 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                       const SizedBox(height: AppSpacing.md),
 
                       // Opt-out transaksi
-                      _ToggleTile(
+                      FixedNeedToggleTile(
                         tileKey: const ValueKey('bill_paid_optout_row'),
                         switchKey: const ValueKey('bill_paid_optout'),
                         value: _optOutTransaction,
@@ -712,130 +713,6 @@ class _DateField extends StatelessWidget {
                   style: AppTextStyles.body.copyWith(color: textColor),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ToggleTile extends StatelessWidget {
-  const _ToggleTile({
-    required this.tileKey,
-    required this.switchKey,
-    required this.value,
-    required this.label,
-    required this.hint,
-    required this.panelColor,
-    required this.borderColor,
-    required this.textColor,
-    required this.mutedColor,
-    required this.onChanged,
-    this.enabled = true,
-    this.hintColor,
-  });
-
-  final Key tileKey;
-  final Key switchKey;
-  final bool value;
-  final String label;
-  final String hint;
-  final Color panelColor;
-  final Color borderColor;
-  final Color textColor;
-  final Color mutedColor;
-  final ValueChanged<bool> onChanged;
-
-  /// `false` = kontrol TAK BERLAKU untuk tagihan ini — bukan "mati sementara".
-  /// Read-only, bukan disabled: label sengaja TIDAK dipudarkan. Memudarkannya
-  /// menjatuhkan kontras label di bawah AA pada KEDUA tema (light lebih dulu:
-  /// 16,05:1 → 3,28:1 pada alpha 0,5). Yang dipudarkan hanya switch-nya.
-  final bool enabled;
-
-  /// Warna baris hint. Default `mutedColor`. Tile terkunci mengirim `textSoft*`
-  /// karena hint-nya jadi SATU-SATUNYA penjelasan kenapa kontrol itu mati —
-  /// `mutedDark` di atas `surfaceAltDark` hanya 3,51:1 (gagal AA teks kecil).
-  final Color? hintColor;
-
-  @override
-  Widget build(BuildContext context) {
-    // MergeSemantics TANPA SYARAT: label + hint + state switch diumumkan
-    // sebagai satu node di SEMUA state. Memasangnya kondisional membuat bentuk
-    // pengumuman screen-reader berubah-ubah untuk kontrol yang sama.
-    return MergeSemantics(
-      child: Material(
-        key: tileKey,
-        color: panelColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          onTap: enabled ? () => onChanged(!value) : null,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: borderColor),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 56),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label,
-                          style: AppTextStyles.label.copyWith(
-                            fontSize: 13,
-                            color: textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          hint,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: hintColor ?? mutedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Switch(
-                    key: switchKey,
-                    value: value,
-                    onChanged: enabled ? onChanged : null,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: AppColors.primary,
-                    // Warna mati dipaksa lewat WidgetStatePropertyAll supaya
-                    // state `disabled` Material tidak menimpanya dengan abu-abu
-                    // default yang di luar palet.
-                    thumbColor: enabled
-                        ? null
-                        : WidgetStatePropertyAll(mutedColor),
-                    trackColor: enabled
-                        ? null
-                        : WidgetStatePropertyAll(borderColor),
-                    // Outline WAJIB ikut dipaksa. `border*` di atas panel
-                    // `surfaceAlt*` cuma 1,07:1 (dark) / 1,28:1 (light) — track
-                    // sendirian LENYAP ke dalam panel dan yang tersisa di layar
-                    // hanya titik thumb mengambang, bukan "switch yang mati".
-                    // `muted*` mengembalikan bentuknya: 3,51:1 (dark) / 4,65:1
-                    // (light), lulus ambang 3:1 komponen non-teks.
-                    trackOutlineColor: enabled
-                        ? null
-                        : WidgetStatePropertyAll(mutedColor),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
