@@ -27,7 +27,9 @@ import 'package:penyintas_app/features/goal/domain/entities/goal_entity.dart';
 import 'package:penyintas_app/features/goal/presentation/bloc/goal_bloc.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_detail_page.dart';
 import 'package:penyintas_app/features/goal/presentation/pages/goal_list_page.dart';
+import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 import 'package:penyintas_app/features/bills/presentation/pages/bills_list_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/saya_page.dart';
 import 'package:penyintas_app/features/profile/presentation/pages/profile_edit_page.dart';
@@ -147,18 +149,7 @@ GoRouter createAppRouter() => GoRouter(
         ),
       ],
     ),
-    GoRoute(
-      path: '/bills',
-      pageBuilder: (context, state) => NoTransitionPage(
-        key: state.pageKey,
-        // BlocProvider.value karena BillsBloc adalah singleton — jangan
-        // di-close saat route di-pop (mirror pola /goals)
-        child: BlocProvider.value(
-          value: sl<BillsBloc>(),
-          child: const BillsListPage(),
-        ),
-      ),
-    ),
+    buildBillsRoute(),
     GoRoute(
       path: '/budget',
       pageBuilder: (context, state) => NoTransitionPage(
@@ -277,3 +268,79 @@ Future<String?> redirectForAuthedUser(String location) async {
       return null;
   }
 }
+
+/// Penjaga `extra` untuk rute ubah tagihan.
+///
+/// Fungsi murni, bukan closure di dalam `GoRoute`, supaya bisa diuji tanpa
+/// membangun `GoRouterState` (konstruktornya tak ditujukan untuk pemakaian
+/// langsung). Mengembalikan null = boleh lanjut; string = belokkan ke sana.
+///
+/// `extra` yang bukan [BillEntity] hanya terjadi pada deep-link atau
+/// restorasi proses — tapi tanpa penjaga ini, keduanya berakhir sebagai
+/// cast exception di depan mata pengguna.
+String? billEditGuard(Object? extra) => extra is BillEntity ? null : '/bills';
+
+/// Subtree rute Tagihan.
+///
+/// DIEKSTRAK dari daftar `routes:` supaya bentuknya bisa diuji tanpa
+/// `createAppRouter()` — router penuh menyeret `FirebaseAuth.instance` dan
+/// seluruh `injection_container` ke dalam widget test.
+GoRoute buildBillsRoute() => GoRoute(
+  path: '/bills',
+  pageBuilder: (context, state) => NoTransitionPage(
+    key: state.pageKey,
+    // BlocProvider.value karena BillsBloc adalah singleton — jangan
+    // di-close saat route di-pop (mirror pola /goals).
+    //
+    // CategoryBloc ikut dipasang DI SINI, bukan hanya di rute form:
+    // baris daftar menggambar ikon kategori (spec §4.3), dan pemetaan
+    // slug → iconSlug hanya bisa dibaca dari bloc ini. Rute anak di
+    // go_router TIDAK mewarisi provider induk — itu milik ShellRoute —
+    // jadi tiap rute memasang providernya sendiri.
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: sl<BillsBloc>()),
+        BlocProvider(
+          create: (_) => sl<CategoryBloc>()..add(const LoadCategories()),
+        ),
+      ],
+      child: const BillsListPage(),
+    ),
+  ),
+  routes: [
+    GoRoute(
+      path: 'new',
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: sl<BillsBloc>()),
+          BlocProvider(
+            create: (_) => sl<CategoryBloc>()..add(const LoadCategories()),
+          ),
+        ],
+        child: const BillFormPage(),
+      ),
+    ),
+    GoRoute(
+      path: ':id/edit',
+      // Penjaga `extra` DI SINI, bukan di dalam `builder`. Menavigasi dari
+      // dalam builder adalah navigasi-saat-build: ia menjadwalkan
+      // perubahan rute selagi pohon rute sedang dibangun. `redirect`
+      // berjalan sebelum ada yang dibangun, jadi tak ada yang perlu
+      // dibatalkan. Kasus ini hanya terjadi pada deep-link/restore, tapi
+      // tanpa penjaga ia adalah cast exception.
+      //
+      // Logikanya tinggal di `billEditGuard` — fungsi murni tingkat-atas —
+      // supaya bisa diuji tanpa membangun GoRouterState [Audit B4].
+      redirect: (context, state) => billEditGuard(state.extra),
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: sl<BillsBloc>()),
+          BlocProvider(
+            create: (_) => sl<CategoryBloc>()..add(const LoadCategories()),
+          ),
+        ],
+        child: BillFormPage(bill: state.extra as BillEntity),
+      ),
+    ),
+  ],
+);
