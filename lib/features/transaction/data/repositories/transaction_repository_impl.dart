@@ -185,6 +185,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Stream<void> watchTransactionChanges() => _local.watchTransactionChanges();
 
+  /// Implementasi lengkap: hapus lokal + antre hapus remote.
+  ///
+  /// NOL PEMANGGIL secara sengaja (D7) — bukan pekerjaan yang tertinggal.
+  /// Lihat [DeleteTransactionsBySourceBillUseCase] untuk alasannya.
   @override
   Future<Either<Failure, void>> deleteTransactionsBySourceBill(
     int billId,
