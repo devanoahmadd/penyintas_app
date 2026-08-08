@@ -69,4 +69,37 @@ void main() {
       expect(CategoryMetadata.iconFromSlug('xyz'), Icons.grid_view_outlined);
     });
   });
+
+  group('prettifySlug', () {
+    test('garis bawah jadi spasi, huruf pertama kapital', () {
+      expect(CategoryMetadata.prettifySlug('kursus_bahasa'), 'Kursus bahasa');
+    });
+
+    test('satu kata tetap dikapitalkan', () {
+      expect(CategoryMetadata.prettifySlug('laundry'), 'Laundry');
+    });
+
+    test('tiga penggal digabung dengan spasi', () {
+      expect(
+        CategoryMetadata.prettifySlug('les_privat_anak'),
+        'Les privat anak',
+      );
+    });
+
+    test('hanya huruf pertama yang dikapitalkan — sisanya apa adanya', () {
+      expect(CategoryMetadata.prettifySlug('wifi_rumah'), 'Wifi rumah');
+    });
+
+    test('slug kosong tidak melempar', () {
+      expect(CategoryMetadata.prettifySlug(''), '');
+    });
+
+    test('garis bawah beruntun tidak menghasilkan spasi ganda', () {
+      expect(CategoryMetadata.prettifySlug('a__b'), 'A b');
+    });
+
+    test('garis bawah di ujung tidak menyisakan spasi menggantung', () {
+      expect(CategoryMetadata.prettifySlug('_kos_'), 'Kos');
+    });
+  });
 }

@@ -40,6 +40,22 @@ class CategoryMetadata {
     return slug;
   }
 
+  /// Rapikan slug jadi label yang bisa dibaca — untuk kategori yang sudah
+  /// TERHAPUS, sehingga tak ada [CategoryEntity] yang tersisa untuk dibaca
+  /// `labelOverride`-nya (spec §5.3, kategori yatim).
+  ///
+  /// `kursus_bahasa` → `Kursus bahasa`. Hanya huruf pertama seluruh kalimat
+  /// yang dikapitalkan — bukan tiap kata — supaya hasilnya terbaca sebagai
+  /// nama, bukan judul.
+  static String prettifySlug(String slug) {
+    final kata = slug
+        .split('_')
+        .where((p) => p.isNotEmpty)
+        .join(' ');
+    if (kata.isEmpty) return '';
+    return kata[0].toUpperCase() + kata.substring(1);
+  }
+
   static String _fromLabelKey(String key, AppLocalizations l10n) =>
       switch (key) {
         'category_food' => l10n.categoryFood,
