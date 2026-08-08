@@ -424,7 +424,7 @@ void main() {
 
       // Income awal = 2.500.000 → hapus semua digit via back key (7 kali)
       // Back key (_BackIcon) dirender sebagai CustomPaint ukuran 22×22.
-      // applyOnboardingKey: 2500000→250000→25000→2500→250→25→2→0
+      // applyAmountKey: 2500000→250000→25000→2500→250→25→2→0
       final backKey = find.byWidgetPredicate(
         (w) => w is CustomPaint && w.size == const Size(22, 22),
       );

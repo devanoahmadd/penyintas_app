@@ -6,7 +6,7 @@ import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 
 // ── applyKey — port dari onb-cplus-atoms.jsx ─────────────────────────────────
-int applyOnboardingKey(int current, String key) {
+int applyAmountKey(int current, String key) {
   if (key == 'back') return current ~/ 10;
   if (key == '000') {
     final n = current * 1000;
@@ -32,21 +32,40 @@ const _kKeys = [
   'back',
 ];
 
-class OnboardingKeypad extends StatefulWidget {
-  const OnboardingKeypad({
+/// Keypad angka untuk field **uang**.
+///
+/// Dipromosikan dari onboarding (spec §3.3) supaya layar lain bisa memakainya.
+/// Semantiknya uang: ada tombol `000` dan batas `999999999` — jangan dipakai
+/// untuk hitungan cacah seperti jumlah cicilan. PIN punya keypad sendiri
+/// (`pin_keypad.dart`): panjang tetap, tanpa format ribuan.
+///
+/// **Kontrak tata letak:** tinggi tombol diturunkan dari lebar layar dikurangi
+/// [horizontalPadding]. Pemanggil WAJIB memberi padding horizontal total yang
+/// sama dengan nilai itu — kalau tidak, tombolnya tak lagi setinggi 48dp.
+class AmountKeypad extends StatefulWidget {
+  const AmountKeypad({
     super.key,
     required this.onKey,
     required this.isDark,
+    this.horizontalPadding = 48,
   });
 
   final void Function(String key) onKey;
   final bool isDark;
 
+  /// Total padding horizontal yang dipasang PEMANGGIL di kiri+kanan keypad.
+  ///
+  /// Dipakai `_calcAspect` untuk menghitung lebar kolom, dan dari lebar itu
+  /// tinggi tombol. Salah nilai → tombol tak lagi 48dp dan jaminan hit target
+  /// patah diam-diam. Bawaan `48` = `AppSpacing.xl` kiri + kanan, persis yang
+  /// dipakai onboarding.
+  final double horizontalPadding;
+
   @override
-  State<OnboardingKeypad> createState() => _OnboardingKeypadState();
+  State<AmountKeypad> createState() => _AmountKeypadState();
 }
 
-class _OnboardingKeypadState extends State<OnboardingKeypad> {
+class _AmountKeypadState extends State<AmountKeypad> {
   void _handleTap(String key) {
     HapticFeedback.lightImpact();
     widget.onKey(key);
@@ -84,8 +103,8 @@ class _OnboardingKeypadState extends State<OnboardingKeypad> {
   double _calcAspect(BuildContext context) {
     // Target height = 48dp (Android Material minimum tap target)
     final screenW = MediaQuery.of(context).size.width;
-    // Available width = screen minus padding (2×24) minus 2 gaps (7×2)
-    final availW = screenW - 48 - 14;
+    // Available width = layar minus padding pemanggil minus 2 gap (7×2)
+    final availW = screenW - widget.horizontalPadding - 14;
     final colW = availW / 3;
     return colW / 48;
   }

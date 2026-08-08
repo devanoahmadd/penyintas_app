@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
-import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
+import 'package:penyintas_app/widgets/common/amount_keypad.dart';
 
 /// Delegate sinkron — l10n di-preload sekali di setUpAll (`rootBundle` hang
 /// bila dimuat async per-pump), lalu instance yang sama disuapkan lewat
@@ -31,7 +31,33 @@ Widget _pump({required bool isDark, AppLocalizations? l10n}) => MediaQuery(
     localizationsDelegates: [_SyncL10nDelegate(l10n ?? _l10n)],
     locale: Locale(l10n == null ? 'id' : 'en'),
     home: Scaffold(
-      body: OnboardingKeypad(isDark: isDark, onKey: (_) {}),
+      body: AmountKeypad(isDark: isDark, onKey: (_) {}),
+    ),
+  ),
+);
+
+// CATATAN: brief awalnya menyarankan `MediaQuery(data: MediaQueryData(...))`
+// sebagai pembungkus untuk mengendalikan lebar layar. Terbukti TIDAK bekerja:
+// `View` yang disisipkan `tester.pumpWidget` tetap membangun constraint
+// layout nyata dari `tester.view.physicalSize`, bukan dari MediaQuery yang
+// disisipkan lebih dalam di tree — override macam itu hanya mengubah nilai
+// yang dibaca `MediaQuery.of(context)`, bukan constraint GridView yang
+// sesungguhnya. Dibuktikan lewat pengukuran manual: hasilnya 108dp, bukan
+// 48dp, untuk kasus padding bawaan. Dipakai di sini idiom yang sudah mapan
+// di `onboarding_page_test.dart` (file sepupu yang disentuh task yang sama):
+// `tester.view.physicalSize` + `devicePixelRatio` — satu-satunya cara yang
+// benar-benar mengendalikan constraint nyata sekaligus nilai MediaQuery.
+Widget _pumpPad({required double padding}) => MaterialApp(
+  localizationsDelegates: [_SyncL10nDelegate(_l10n)],
+  locale: const Locale('id'),
+  home: Scaffold(
+    body: Padding(
+      padding: EdgeInsets.symmetric(horizontal: padding / 2),
+      child: AmountKeypad(
+        isDark: false,
+        onKey: (_) {},
+        horizontalPadding: padding,
+      ),
     ),
   ),
 );
@@ -43,43 +69,43 @@ void main() {
     _l10nEn = await AppLocalizations.delegate.load(const Locale('en'));
   });
 
-  group('applyOnboardingKey', () {
+  group('applyAmountKey', () {
     // --- digit append ---
-    test('0 + "5" = 5', () => expect(applyOnboardingKey(0, '5'), 5));
-    test('12 + "3" = 123', () => expect(applyOnboardingKey(12, '3'), 123));
+    test('0 + "5" = 5', () => expect(applyAmountKey(0, '5'), 5));
+    test('12 + "3" = 123', () => expect(applyAmountKey(12, '3'), 123));
     test(
       'append tidak melampaui 9 digit: 99_999_999 + "9" = 999_999_999',
-      () => expect(applyOnboardingKey(99999999, '9'), 999999999),
+      () => expect(applyAmountKey(99999999, '9'), 999999999),
     );
 
     // --- back ---
-    test('back: 123 → 12', () => expect(applyOnboardingKey(123, 'back'), 12));
-    test('back: 1 → 0', () => expect(applyOnboardingKey(1, 'back'), 0));
-    test('back: 0 → 0 (no-op)', () => expect(applyOnboardingKey(0, 'back'), 0));
+    test('back: 123 → 12', () => expect(applyAmountKey(123, 'back'), 12));
+    test('back: 1 → 0', () => expect(applyAmountKey(1, 'back'), 0));
+    test('back: 0 → 0 (no-op)', () => expect(applyAmountKey(0, 'back'), 0));
 
     // --- 000 multiply ---
-    test('000: 1 → 1000', () => expect(applyOnboardingKey(1, '000'), 1000));
+    test('000: 1 → 1000', () => expect(applyAmountKey(1, '000'), 1000));
     test(
       '000 pada 0 → 0 (no leading zero multiply)',
-      () => expect(applyOnboardingKey(0, '000'), 0),
+      () => expect(applyAmountKey(0, '000'), 0),
     );
     test(
       '000: 1_000_000 * 1000 > max → stays at 1_000_000',
-      () => expect(applyOnboardingKey(1000000, '000'), 1000000),
+      () => expect(applyAmountKey(1000000, '000'), 1000000),
     );
 
     // --- max clamp ---
     test(
       'append di max (999_999_999) + "5" → stays',
-      () => expect(applyOnboardingKey(999999999, '5'), 999999999),
+      () => expect(applyAmountKey(999999999, '5'), 999999999),
     );
     test(
       'append tepat di batas: 99_999_999 + "9" = 999_999_999',
-      () => expect(applyOnboardingKey(99999999, '9'), 999999999),
+      () => expect(applyAmountKey(99999999, '9'), 999999999),
     );
   });
 
-  group('OnboardingKeypad — surface token', () {
+  group('AmountKeypad — surface token', () {
     testWidgets('light mode: button digit menggunakan surfaceLight', (
       tester,
     ) async {
@@ -144,7 +170,7 @@ void main() {
     });
   });
 
-  group('OnboardingKeypad — a11y', () {
+  group('AmountKeypad — a11y', () {
     testWidgets('label semantics backspace ada (locale ID)', (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(_pump(isDark: false));
@@ -169,6 +195,36 @@ void main() {
       expect(find.bySemanticsLabel('Hapus'), findsNothing);
 
       handle.dispose();
+    });
+  });
+
+  group('AmountKeypad — kontrak horizontalPadding', () {
+    testWidgets('padding bawaan 48 → tombol tepat 48dp', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_pumpPad(padding: 48));
+      final size = tester.getSize(find.widgetWithText(GestureDetector, '5'));
+      expect(size.height, closeTo(48, 0.5));
+    });
+
+    testWidgets('padding 32 dengan tata letak yang cocok → TETAP 48dp', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_pumpPad(padding: 32));
+      final size = tester.getSize(find.widgetWithText(GestureDetector, '5'));
+      expect(
+        size.height,
+        closeTo(48, 0.5),
+        reason: 'aspect wajib ikut padding, bukan angka mati 48',
+      );
     });
   });
 }

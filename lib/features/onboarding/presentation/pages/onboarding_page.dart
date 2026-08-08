@@ -18,8 +18,8 @@ import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_b
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
-import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_keypad.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
+import 'package:penyintas_app/widgets/common/amount_keypad.dart';
 import '../widgets/weather_scene_widget.dart';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -831,15 +831,15 @@ class _OnboardingPageState extends State<OnboardingPage>
           _DockedPanel(
             isDark: isDark,
             surfaceAlt: surfaceAlt,
-            keypad: OnboardingKeypad(
+            keypad: AmountKeypad(
               isDark: isDark,
               onKey: (k) => setState(() {
                 // #212: first digit after preset taps starts a fresh number
                 if (_incomePresetSelected && k != 'back') {
-                  _income = applyOnboardingKey(0, k);
+                  _income = applyAmountKey(0, k);
                   _incomePresetSelected = false;
                 } else {
-                  _income = applyOnboardingKey(_income, k);
+                  _income = applyAmountKey(_income, k);
                   _incomePresetSelected = false;
                 }
               }),
@@ -1085,7 +1085,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                         onKey: (k) {
                           final id = _activeRow ?? 'kos';
                           setState(() {
-                            _exp[id] = applyOnboardingKey(_exp[id] ?? 0, k);
+                            _exp[id] = applyAmountKey(_exp[id] ?? 0, k);
                           });
                         },
                         onDone: () => setState(() {
@@ -2211,7 +2211,7 @@ class _SheetKeypad extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           // keypad
-          OnboardingKeypad(isDark: isDark, onKey: onKey),
+          AmountKeypad(isDark: isDark, onKey: onKey),
         ],
       ),
     );
