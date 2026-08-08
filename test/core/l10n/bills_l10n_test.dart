@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 
 /// Jaring parity KHUSUS fitur Tagihan (F8).
 ///
@@ -13,9 +15,17 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Sengaja baca file lewat `dart:io` (bukan `rootBundle`) supaya yang diuji
 /// adalah file sumber di repo, bukan salinan asset bundle hasil build.
+///
+/// `billsKeys` sendiri diuji DUA ARAH: test di bawah membuktikan setiap
+/// entrinya ada di JSON (arah maju), dan test "arah balik" di paling bawah
+/// membuktikan setiap key `bills_` di id.json terdaftar di `billsKeys` —
+/// tanpa arah balik, key baru yang lupa didaftarkan lolos diam-diam
+/// (persis mekanisme yang melahirkan empat lubang [Audit S4] di gelombang
+/// perbaikan 2026-08-08).
 void main() {
   late Map<String, dynamic> id;
   late Map<String, dynamic> en;
+  late AppLocalizations l10nEn;
 
   setUpAll(() {
     id =
@@ -24,6 +34,12 @@ void main() {
     en =
         json.decode(File('assets/translations/en.json').readAsStringSync())
             as Map<String, dynamic>;
+    // Dibangun langsung dari Map yang sudah di-load — tanpa rootBundle,
+    // tanpa TestWidgetsFlutterBinding — mengikuti preseden
+    // test/core/utils/category_metadata_test.dart. Memakai `en` yang sama
+    // dengan yang diuji test JSON di atas supaya method Dart diuji terhadap
+    // isi produksi yang sesungguhnya, bukan fixture tangan.
+    l10nEn = AppLocalizations(const Locale('en'), Map<String, String>.from(en));
   });
 
   /// Semua key berawalan `bills_` yang dipakai lapisan presentasi Tagihan
@@ -218,4 +234,51 @@ void main() {
       reason: '"The {day}th" menghasilkan "The 1th"/"The 3th"/"The 21th"',
     );
   });
+
+  // ── Cabang n == 1 di AppLocalizations.billsPaidDateEarly/Late (Audit T2 fix-1) ──
+  //
+  // Test JSON di atas hanya membuktikan NILAI kunci `_one` benar — tak satu
+  // pun memanggil method Dart-nya, jadi ternary `n == 1 ? ... : ...` di
+  // app_localizations.dart bisa dihapus tanpa membuat satu test pun merah.
+  // Test di bawah membangun AppLocalizations sungguhan dan memanggil
+  // method-nya supaya cabangnya benar-benar tereksekusi.
+  test('billsPaidDateEarly(1) mengambil kunci tunggal, bukan kunci jamak', () {
+    expect(l10nEn.billsPaidDateEarly(1), 'You paid 1 day early.');
+  });
+
+  test('billsPaidDateEarly(2) mengambil kunci jamak berplaceholder', () {
+    expect(l10nEn.billsPaidDateEarly(2), contains('2 days'));
+  });
+
+  test('billsPaidDateLate(1) mengambil kunci tunggal, bukan kunci jamak', () {
+    expect(l10nEn.billsPaidDateLate(1), 'You paid 1 day late.');
+  });
+
+  test('billsPaidDateLate(2) mengambil kunci jamak berplaceholder', () {
+    expect(l10nEn.billsPaidDateLate(2), contains('2 days'));
+  });
+
+  // ── Arah balik: id.json → billsKeys (Audit S4 fix-2) ──
+  //
+  // Semua test di atas beriterasi dari billsKeys ke JSON (arah maju) — kunci
+  // yang ADA di JSON tapi lupa didaftarkan ke billsKeys lolos diam-diam.
+  // Persis mekanisme yang melahirkan empat lubang [Audit S4] yang ditutup
+  // manual di gelombang perbaikan 2026-08-08. Test ini menutup arah baliknya
+  // supaya lubang kelima tak lahir dengan cara yang sama di task berikutnya.
+  test(
+    'billsKeys memuat semua key bills_ yang ada di id.json (arah balik)',
+    () {
+      final actualBillsKeys = id.keys
+          .where((k) => k.startsWith('bills_'))
+          .toSet();
+      final missing = actualBillsKeys.difference(billsKeys.toSet());
+      expect(
+        missing,
+        isEmpty,
+        reason:
+            'kunci bills_ ada di id.json tapi belum didaftarkan ke billsKeys: '
+            '$missing',
+      );
+    },
+  );
 }

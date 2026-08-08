@@ -670,10 +670,9 @@ class AppLocalizations {
 
   /// [month] adalah nama bulan yang SUDAH dilokalkan (`DateFormat('MMMM')`),
   /// bukan angka. Urutan `{day}`/`{month}` sengaja berbeda antara ID dan EN.
-  String billsFormDueDateYearlyNote(int day, String month) =>
-      _t('bills_form_due_date_yearly_note')
-          .replaceAll('{day}', '$day')
-          .replaceAll('{month}', month);
+  String billsFormDueDateYearlyNote(int day, String month) => _t(
+    'bills_form_due_date_yearly_note',
+  ).replaceAll('{day}', '$day').replaceAll('{month}', month);
 
   String get billsTenorUnlimitedNote => _t('bills_tenor_unlimited_note');
   String get billsTenorCountNote => _t('bills_tenor_count_note');
