@@ -6,17 +6,27 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/bills/data/models/bill_model.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:penyintas_app/widgets/common/amount_keypad.dart';
 
 /// Batas akhir perulangan — spec §4.1 mewajibkan MAKSIMAL SATU yang non-null.
 enum _TenorMode { unlimited, count, endDate }
 
 /// Pilihan pengingat di form. Pemetaan ke payload lihat [_reminderPayload].
 enum _ReminderMode { followSettings, d3, d1, dayOf, off }
+
+/// Bagian TERBESAR dari badan halaman yang boleh dipakai panel keypad.
+///
+/// Panel setinggi ±290dp muat nyaman di potret, tapi di lanskap ponsel (badan
+/// ±300dp) ia bersama bilah Simpan melampaui layar — Column-nya meluap 69px.
+/// Batas ini yang mencegahnya, dan yang menjamin form serta tombol Simpan
+/// selalu kebagian sisa layar. Di potret ia tak pernah tercapai.
+const _porsiMaksPanel = 0.55;
 
 /// Halaman tambah/ubah tagihan (spec §5).
 ///
@@ -71,6 +81,16 @@ class _BillFormPageState extends State<BillFormPage> {
   /// jangan memarahi pengguna sebelum ia sempat mengisi.
   bool _showErrors = false;
   bool _isSubmitting = false;
+
+  /// Panel keypad terbuka. Aturan K1 (§5.2): ia dan keyboard sistem TAK PERNAH
+  /// tampil bersamaan — halaman ini cuma punya satu bawah layar.
+  bool _keypadTerbuka = false;
+
+  /// Pegangan konteks field nominal untuk aturan K3. SENGAJA terpisah dari
+  /// `ValueKey('bill_form_amount')`: yang satu identitas widget untuk finder,
+  /// yang satu titik acuan `Scrollable.ensureVisible`. Satu `GlobalKey` tak
+  /// bisa merangkap keduanya tanpa memaksa test ikut tahu tipe internalnya.
+  final _amountFieldKey = GlobalKey();
 
   bool get _isEdit => widget.bill != null;
 
@@ -203,6 +223,46 @@ class _BillFormPageState extends State<BillFormPage> {
       if (mode != _TenorMode.count) _installmentController.clear();
       if (mode != _TenorMode.endDate) _recurrenceEndDate = null;
     });
+  }
+
+  // ── Panel keypad (aturan K1–K3, spec §5.2) ────────────────────────────────
+
+  void _bukaKeypad() {
+    // K1 arah pertama: keypad mengusir keyboard sistem.
+    FocusScope.of(context).unfocus();
+    setState(() => _keypadTerbuka = true);
+
+    // Gerbang ui-ux-pro-max — `reduced-motion` (severity HIGH): gulirannya
+    // ikut mati kalau sistem meminta gerak dikurangi.
+    final durasi = MediaQuery.of(context).disableAnimations
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+
+    // K3: field nominal digulirkan ke area yang masih terlihat, meniru
+    // perilaku bawaan Scaffold terhadap keyboard sistem.
+    //
+    // DIJADWALKAN setelah frame, bukan langsung: sebelum frame berikutnya
+    // viewport masih setinggi semula, jadi sasaran gulirnya meleset persis
+    // setinggi panel yang baru saja muncul.
+    //
+    // Bergulir, bukan melompat (`state-transition` + `duration-timing`
+    // 150–300ms, easing masuk `easeOut`) — geraknya yang memberi tahu
+    // pengguna bahwa halaman menggeser dirinya, bukan berpindah.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _amountFieldKey.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.2,
+        duration: durasi,
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _tutupKeypad() {
+    if (!_keypadTerbuka) return;
+    setState(() => _keypadTerbuka = false);
   }
 
   // ── Pemilih tanggal ───────────────────────────────────────────────────────
@@ -344,434 +404,577 @@ class _BillFormPageState extends State<BillFormPage> {
             ),
           ),
         ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1 — Nama
-                      _FieldLabel(
-                        l10n.billsFormNameLabel,
-                        isDark: isDark,
-                        required: true,
+        body: Focus(
+          // K1 arah kedua: fokus berpindah ke field teks apa pun → keypad
+          // tutup. Dipasang di akar body, bukan per-field, supaya field yang
+          // ditambah kelak ikut terjaga tanpa harus diingat.
+          //
+          // `canRequestFocus: false` + `skipTraversal: true` [Audit S12]:
+          // tanpa keduanya, node pembungkus ini ikut jadi perhentian di urutan
+          // Tab dan bisa menerima fokus sendiri — yang memicu
+          // `onFocusChange(true)` lalu menutup keypad tanpa pengguna
+          // menyentuh field mana pun. Ia harus MENDENGAR fokus, bukan ikut
+          // memperebutkannya.
+          canRequestFocus: false,
+          skipTraversal: true,
+          onFocusChange: (punyaFokus) {
+            if (punyaFokus) _tutupKeypad();
+          },
+          child: SafeArea(
+            top: false,
+            // `LayoutBuilder` dipakai untuk SATU hal: membatasi tinggi panel
+            // keypad terhadap tinggi badan halaman yang sebenarnya — lihat
+            // `_porsiMaksPanel` di bawah. `MediaQuery` tak bisa
+            // menggantikannya karena ia tak tahu tinggi AppBar & inset aman.
+            child: LayoutBuilder(
+              builder: (context, batas) => Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        key: const ValueKey('bill_form_name'),
-                        controller: _nameController,
-                        style: AppTextStyles.body.copyWith(color: textColor),
-                        maxLength: 50,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: _inputDecoration(
-                          hint: l10n.billsFormNameHint,
-                          panelColor: panelColor,
-                          borderColor: borderColor,
-                          mutedColor: mutedColor,
-                          hasError: _showErrors && _nameInvalid,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      _ErrorText(
-                        show: _showErrors && _nameInvalid,
-                        message: l10n.billsFormErrorName,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 2 — Nominal
-                      _FieldLabel(
-                        l10n.billsFormAmountLabel,
-                        isDark: isDark,
-                        required: true,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        key: const ValueKey('bill_form_amount'),
-                        controller: _amountController,
-                        style: AppTextStyles.numericSm.copyWith(
-                          fontSize: 16,
-                          color: textColor,
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: _inputDecoration(
-                          hint: l10n.billsFormAmountHint,
-                          prefixText: 'Rp ',
-                          panelColor: panelColor,
-                          borderColor: borderColor,
-                          mutedColor: mutedColor,
-                          hasError: _showErrors && _amountInvalid,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      _ErrorText(
-                        show: _showErrors && _amountInvalid,
-                        message: l10n.billsFormErrorAmount,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 3 — Kategori
-                      _FieldLabel(
-                        l10n.billsFormCategoryLabel,
-                        isDark: isDark,
-                        required: true,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      BlocBuilder<CategoryBloc, CategoryState>(
-                        builder: (context, state) {
-                          // CategoryActionLoading TIDAK terjangkau dari layar
-                          // ini — ia hanya dipancarkan create/update/delete,
-                          // sedangkan Tagihan hanya pernah mengirim
-                          // LoadCategories, dan CategoryBloc adalah factory
-                          // sehingga instance Tagihan tak menerima event
-                          // mutasi dari layar Kategori. Ia tetap ditangani
-                          // supaya switch lengkap tak terlihat seperti
-                          // kelalaian — dan ia membawa `categories`, jadi
-                          // menggambarnya sebagai placeholder justru
-                          // mengosongkan grid yang isinya ada.
-                          final daftar = switch (state) {
-                            CategoryLoaded(:final categories) => categories,
-                            CategoryActionLoading(:final categories) =>
-                              categories,
-                            _ => null,
-                          };
-
-                          if (state is CategoryError) {
-                            return _CategoryLoadError(
-                              isDark: isDark,
-                              onRetry: () => context.read<CategoryBloc>().add(
-                                const LoadCategories(),
-                              ),
-                            );
-                          }
-                          if (daftar == null) {
-                            return const _CategoryGridPlaceholder();
-                          }
-                          return BillCategoryGrid(
-                            categories: daftar,
-                            selectedSlug: _category,
-                            onSelected: _selectCategory,
-                          );
-                        },
-                      ),
-                      _ErrorText(
-                        show: _showErrors && _categoryInvalid,
-                        message: l10n.billsFormErrorCategory,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        l10n.billsFormCategoryNote,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontSize: 12,
-                          color: mutedColor,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 4 — Jatuh tempo
-                      _FieldLabel(
-                        l10n.billsFormDueDateLabel,
-                        isDark: isDark,
-                        required: true,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _DateField(
-                        fieldKey: const ValueKey('bill_form_due_date'),
-                        value: _dueDate != null
-                            ? dateFormat.format(_dueDate!)
-                            : null,
-                        hint: l10n.billsFormDueDateHint,
-                        panelColor: panelColor,
-                        borderColor: borderColor,
-                        textColor: textColor,
-                        mutedColor: mutedColor,
-                        hasError: _showErrors && _dueDateInvalid,
-                        onTap: _pickDueDate,
-                      ),
-                      _ErrorText(
-                        show: _showErrors && _dueDateInvalid,
-                        message: l10n.billsFormErrorDueDate,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 5 — Pengulangan
-                      _FieldLabel(
-                        l10n.billsFormRecurrenceLabel,
-                        isDark: isDark,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final (value, label) in <(Recurrence, String)>[
-                            (Recurrence.none, l10n.billsRecurrenceNone),
-                            (Recurrence.monthly, l10n.billsRecurrenceMonthly),
-                            (Recurrence.yearly, l10n.billsRecurrenceYearly),
-                          ])
-                            _ChoicePill(
-                              label: label,
-                              selected: _recurrence == value,
-                              panelColor: panelColor,
-                              borderColor: borderColor,
-                              textColor: textColor,
-                              onTap: () => _selectRecurrence(value),
-                            ),
-                        ],
-                      ),
-
-                      // 6 — Tenor: hanya relevan saat tagihan berulang.
-                      // Jaraknya SENGAJA satu tingkat lebih rapat (md, bukan
-                      // xl) supaya blok ini terbaca menempel pada
-                      // "Pengulangan" — mekarnya induk, bukan bagian baru.
-                      if (_isRecurring) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        _FieldLabel(l10n.billsFormTenorLabel, isDark: isDark),
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            for (final (value, label) in <(_TenorMode, String)>[
-                              (_TenorMode.unlimited, l10n.billsTenorUnlimited),
-                              (_TenorMode.count, l10n.billsTenorCount),
-                              (_TenorMode.endDate, l10n.billsTenorEndDate),
-                            ])
-                              _ChoicePill(
-                                label: label,
-                                selected: _tenorMode == value,
-                                panelColor: panelColor,
-                                borderColor: borderColor,
-                                textColor: textColor,
-                                onTap: () => _selectTenorMode(value),
-                              ),
-                          ],
-                        ),
-                        if (_tenorMode == _TenorMode.count) ...[
-                          const SizedBox(height: AppSpacing.md),
+                          // 1 — Nama
                           _FieldLabel(
-                            l10n.billsFormTenorCountLabel,
+                            l10n.billsFormNameLabel,
                             isDark: isDark,
                             required: true,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           TextField(
-                            key: const ValueKey('bill_form_installment'),
-                            controller: _installmentController,
-                            style: AppTextStyles.numericSm.copyWith(
-                              fontSize: 16,
+                            key: const ValueKey('bill_form_name'),
+                            controller: _nameController,
+                            style: AppTextStyles.body.copyWith(
                               color: textColor,
                             ),
-                            keyboardType: TextInputType.number,
-                            maxLength: 3,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
+                            maxLength: 50,
+                            textCapitalization: TextCapitalization.sentences,
                             decoration: _inputDecoration(
-                              hint: l10n.billsFormTenorCountHint,
+                              hint: l10n.billsFormNameHint,
                               panelColor: panelColor,
                               borderColor: borderColor,
                               mutedColor: mutedColor,
-                              hasError: _showErrors && _tenorCountInvalid,
+                              hasError: _showErrors && _nameInvalid,
                             ),
                             onChanged: (_) => setState(() {}),
                           ),
                           _ErrorText(
-                            show: _showErrors && _tenorCountInvalid,
-                            message: l10n.billsFormErrorTenorCount,
+                            show: _showErrors && _nameInvalid,
+                            message: l10n.billsFormErrorName,
                           ),
-                        ],
-                        if (_tenorMode == _TenorMode.endDate) ...[
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 2 — Nominal
                           _FieldLabel(
-                            l10n.billsFormTenorEndDateLabel,
+                            l10n.billsFormAmountLabel,
+                            isDark: isDark,
+                            required: true,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          _AmountDisplayField(
+                            key: const ValueKey('bill_form_amount'),
+                            fieldKey: _amountFieldKey,
+                            amount: _amount,
+                            hint: l10n.billsFormAmountHint,
+                            active: _keypadTerbuka,
+                            panelColor: panelColor,
+                            borderColor: borderColor,
+                            textColor: textColor,
+                            mutedColor: mutedColor,
+                            hasError: _showErrors && _amountInvalid,
+                            onTap: _bukaKeypad,
+                          ),
+                          _ErrorText(
+                            show: _showErrors && _amountInvalid,
+                            message: l10n.billsFormErrorAmount,
+                          ),
+                          // Catatan menetap di bawah field, bukan sekadar hint
+                          // yang lenyap begitu ada isinya (`input-helper-text`):
+                          // "kira-kira" cuma jujur kalau janji "nanti diisi yang
+                          // asli" tetap terbaca setelah angkanya masuk.
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            l10n.billsFormAmountNote,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 12,
+                              color: mutedColor,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 3 — Kategori
+                          _FieldLabel(
+                            l10n.billsFormCategoryLabel,
+                            isDark: isDark,
+                            required: true,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          BlocBuilder<CategoryBloc, CategoryState>(
+                            builder: (context, state) {
+                              // CategoryActionLoading TIDAK terjangkau dari layar
+                              // ini — ia hanya dipancarkan create/update/delete,
+                              // sedangkan Tagihan hanya pernah mengirim
+                              // LoadCategories, dan CategoryBloc adalah factory
+                              // sehingga instance Tagihan tak menerima event
+                              // mutasi dari layar Kategori. Ia tetap ditangani
+                              // supaya switch lengkap tak terlihat seperti
+                              // kelalaian — dan ia membawa `categories`, jadi
+                              // menggambarnya sebagai placeholder justru
+                              // mengosongkan grid yang isinya ada.
+                              final daftar = switch (state) {
+                                CategoryLoaded(:final categories) => categories,
+                                CategoryActionLoading(:final categories) =>
+                                  categories,
+                                _ => null,
+                              };
+
+                              if (state is CategoryError) {
+                                return _CategoryLoadError(
+                                  isDark: isDark,
+                                  onRetry: () => context
+                                      .read<CategoryBloc>()
+                                      .add(const LoadCategories()),
+                                );
+                              }
+                              if (daftar == null) {
+                                return const _CategoryGridPlaceholder();
+                              }
+                              return BillCategoryGrid(
+                                categories: daftar,
+                                selectedSlug: _category,
+                                onSelected: _selectCategory,
+                              );
+                            },
+                          ),
+                          _ErrorText(
+                            show: _showErrors && _categoryInvalid,
+                            message: l10n.billsFormErrorCategory,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            l10n.billsFormCategoryNote,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 12,
+                              color: mutedColor,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 4 — Jatuh tempo
+                          _FieldLabel(
+                            l10n.billsFormDueDateLabel,
                             isDark: isDark,
                             required: true,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           _DateField(
-                            fieldKey: const ValueKey('bill_form_end_date'),
-                            value: _recurrenceEndDate != null
-                                ? dateFormat.format(_recurrenceEndDate!)
+                            fieldKey: const ValueKey('bill_form_due_date'),
+                            value: _dueDate != null
+                                ? dateFormat.format(_dueDate!)
                                 : null,
-                            hint: l10n.billsFormTenorEndDateHint,
+                            hint: l10n.billsFormDueDateHint,
                             panelColor: panelColor,
                             borderColor: borderColor,
                             textColor: textColor,
                             mutedColor: mutedColor,
-                            hasError: _showErrors && _tenorEndDateInvalid,
-                            onTap: _pickRecurrenceEndDate,
+                            hasError: _showErrors && _dueDateInvalid,
+                            onTap: _pickDueDate,
                           ),
                           _ErrorText(
-                            show: _showErrors && _tenorEndDateInvalid,
-                            message: l10n.billsFormErrorTenorEndDate,
+                            show: _showErrors && _dueDateInvalid,
+                            message: l10n.billsFormErrorDueDate,
                           ),
-                        ],
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
+                          const SizedBox(height: AppSpacing.xl),
 
-                      // 7 — Kebutuhan tetap
-                      _FixedNeedToggle(
-                        value: _isFixedNeed,
-                        label: l10n.billsFormFixedLabel,
-                        // Hint lama menjanjikan "bukan potong jatah harian
-                        // kamu" — tidak benar untuk tagihan non-bulanan, yang
-                        // sejak gelombang ini SELALU dihitung sebagai
-                        // pengeluaran saat dibayar. Toggle-nya tetap hidup:
-                        // `isFixedNeed` adalah pernyataan NIAT pengguna,
-                        // penyempitannya terjadi di titik pakai.
-                        hint: _recurrence == Recurrence.monthly
-                            ? l10n.billsFormFixedHint
-                            : l10n.billsFormFixedHintNonMonthly,
-                        panelColor: panelColor,
-                        borderColor: borderColor,
-                        textColor: textColor,
-                        mutedColor: mutedColor,
-                        onChanged: (v) => setState(() => _isFixedNeed = v),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 8 — Pengingat
-                      _FieldLabel(l10n.billsFormReminderLabel, isDark: isDark),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final (value, label)
-                              in <(_ReminderMode, String)>[
-                                (
-                                  _ReminderMode.followSettings,
-                                  l10n.billsReminderDefault,
+                          // 5 — Pengulangan
+                          _FieldLabel(
+                            l10n.billsFormRecurrenceLabel,
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              for (final (value, label)
+                                  in <(Recurrence, String)>[
+                                    (Recurrence.none, l10n.billsRecurrenceNone),
+                                    (
+                                      Recurrence.monthly,
+                                      l10n.billsRecurrenceMonthly,
+                                    ),
+                                    (
+                                      Recurrence.yearly,
+                                      l10n.billsRecurrenceYearly,
+                                    ),
+                                  ])
+                                _ChoicePill(
+                                  label: label,
+                                  selected: _recurrence == value,
+                                  panelColor: panelColor,
+                                  borderColor: borderColor,
+                                  textColor: textColor,
+                                  onTap: () => _selectRecurrence(value),
                                 ),
-                                (_ReminderMode.d3, l10n.billsReminderD3),
-                                (_ReminderMode.d1, l10n.billsReminderD1),
-                                (_ReminderMode.dayOf, l10n.billsReminderDayOf),
-                                (_ReminderMode.off, l10n.billsReminderOff),
-                              ])
-                            _ChoicePill(
-                              label: label,
-                              selected: _reminder == value,
+                            ],
+                          ),
+
+                          // 6 — Tenor: hanya relevan saat tagihan berulang.
+                          // Jaraknya SENGAJA satu tingkat lebih rapat (md, bukan
+                          // xl) supaya blok ini terbaca menempel pada
+                          // "Pengulangan" — mekarnya induk, bukan bagian baru.
+                          if (_isRecurring) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            _FieldLabel(
+                              l10n.billsFormTenorLabel,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                for (final (value, label)
+                                    in <(_TenorMode, String)>[
+                                      (
+                                        _TenorMode.unlimited,
+                                        l10n.billsTenorUnlimited,
+                                      ),
+                                      (_TenorMode.count, l10n.billsTenorCount),
+                                      (
+                                        _TenorMode.endDate,
+                                        l10n.billsTenorEndDate,
+                                      ),
+                                    ])
+                                  _ChoicePill(
+                                    label: label,
+                                    selected: _tenorMode == value,
+                                    panelColor: panelColor,
+                                    borderColor: borderColor,
+                                    textColor: textColor,
+                                    onTap: () => _selectTenorMode(value),
+                                  ),
+                              ],
+                            ),
+                            if (_tenorMode == _TenorMode.count) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              _FieldLabel(
+                                l10n.billsFormTenorCountLabel,
+                                isDark: isDark,
+                                required: true,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              TextField(
+                                key: const ValueKey('bill_form_installment'),
+                                controller: _installmentController,
+                                style: AppTextStyles.numericSm.copyWith(
+                                  fontSize: 16,
+                                  color: textColor,
+                                ),
+                                keyboardType: TextInputType.number,
+                                maxLength: 3,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                decoration: _inputDecoration(
+                                  hint: l10n.billsFormTenorCountHint,
+                                  panelColor: panelColor,
+                                  borderColor: borderColor,
+                                  mutedColor: mutedColor,
+                                  hasError: _showErrors && _tenorCountInvalid,
+                                ),
+                                onChanged: (_) => setState(() {}),
+                              ),
+                              _ErrorText(
+                                show: _showErrors && _tenorCountInvalid,
+                                message: l10n.billsFormErrorTenorCount,
+                              ),
+                            ],
+                            if (_tenorMode == _TenorMode.endDate) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              _FieldLabel(
+                                l10n.billsFormTenorEndDateLabel,
+                                isDark: isDark,
+                                required: true,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _DateField(
+                                fieldKey: const ValueKey('bill_form_end_date'),
+                                value: _recurrenceEndDate != null
+                                    ? dateFormat.format(_recurrenceEndDate!)
+                                    : null,
+                                hint: l10n.billsFormTenorEndDateHint,
+                                panelColor: panelColor,
+                                borderColor: borderColor,
+                                textColor: textColor,
+                                mutedColor: mutedColor,
+                                hasError: _showErrors && _tenorEndDateInvalid,
+                                onTap: _pickRecurrenceEndDate,
+                              ),
+                              _ErrorText(
+                                show: _showErrors && _tenorEndDateInvalid,
+                                message: l10n.billsFormErrorTenorEndDate,
+                              ),
+                            ],
+                          ],
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 7 — Kebutuhan tetap
+                          _FixedNeedToggle(
+                            value: _isFixedNeed,
+                            label: l10n.billsFormFixedLabel,
+                            // Hint lama menjanjikan "bukan potong jatah harian
+                            // kamu" — tidak benar untuk tagihan non-bulanan, yang
+                            // sejak gelombang ini SELALU dihitung sebagai
+                            // pengeluaran saat dibayar. Toggle-nya tetap hidup:
+                            // `isFixedNeed` adalah pernyataan NIAT pengguna,
+                            // penyempitannya terjadi di titik pakai.
+                            hint: _recurrence == Recurrence.monthly
+                                ? l10n.billsFormFixedHint
+                                : l10n.billsFormFixedHintNonMonthly,
+                            panelColor: panelColor,
+                            borderColor: borderColor,
+                            textColor: textColor,
+                            mutedColor: mutedColor,
+                            onChanged: (v) => setState(() => _isFixedNeed = v),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 8 — Pengingat
+                          _FieldLabel(
+                            l10n.billsFormReminderLabel,
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              for (final (value, label)
+                                  in <(_ReminderMode, String)>[
+                                    (
+                                      _ReminderMode.followSettings,
+                                      l10n.billsReminderDefault,
+                                    ),
+                                    (_ReminderMode.d3, l10n.billsReminderD3),
+                                    (_ReminderMode.d1, l10n.billsReminderD1),
+                                    (
+                                      _ReminderMode.dayOf,
+                                      l10n.billsReminderDayOf,
+                                    ),
+                                    (_ReminderMode.off, l10n.billsReminderOff),
+                                  ])
+                                _ChoicePill(
+                                  label: label,
+                                  selected: _reminder == value,
+                                  panelColor: panelColor,
+                                  borderColor: borderColor,
+                                  textColor: textColor,
+                                  onTap: () =>
+                                      setState(() => _reminder = value),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+
+                          // 9 — Catatan
+                          _FieldLabel(
+                            l10n.billsFormNotesLabel,
+                            isDark: isDark,
+                            optionalNote: l10n.billsFormNotesOptional,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            key: const ValueKey('bill_form_notes'),
+                            controller: _notesController,
+                            style: AppTextStyles.body.copyWith(
+                              color: textColor,
+                            ),
+                            maxLength: 120,
+                            maxLines: 2,
+                            minLines: 1,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: _inputDecoration(
+                              hint: l10n.billsFormNotesHint,
                               panelColor: panelColor,
                               borderColor: borderColor,
-                              textColor: textColor,
-                              onTap: () => setState(() => _reminder = value),
+                              mutedColor: mutedColor,
+                              hasError: false,
                             ),
+                            // Catatan tak ikut validasi, tapi tetap butuh jalur
+                            // rebuild: tanpa ini, apa pun yang membaca keadaan
+                            // form (mis. penjaga "buang perubahan?") memakai nilai
+                            // basi satu ketukan.
+                            onChanged: (_) => setState(() {}),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      // 9 — Catatan
-                      _FieldLabel(
-                        l10n.billsFormNotesLabel,
-                        isDark: isDark,
-                        optionalNote: l10n.billsFormNotesOptional,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        key: const ValueKey('bill_form_notes'),
-                        controller: _notesController,
-                        style: AppTextStyles.body.copyWith(color: textColor),
-                        maxLength: 120,
-                        maxLines: 2,
-                        minLines: 1,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: _inputDecoration(
-                          hint: l10n.billsFormNotesHint,
-                          panelColor: panelColor,
-                          borderColor: borderColor,
-                          mutedColor: mutedColor,
-                          hasError: false,
-                        ),
-                        // Catatan tak ikut validasi, tapi tetap butuh jalur
-                        // rebuild: tanpa ini, apa pun yang membaca keadaan
-                        // form (mis. penjaga "buang perubahan?") memakai nilai
-                        // basi satu ketukan.
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Tombol Simpan MENEMPEL di bawah, di luar area gulir (spec
-              // §5.1). Ia harus tetap terlihat apa pun yang sedang terbuka —
-              // aturan K2 di §5.2 ditegakkan oleh posisinya di sini, bukan
-              // oleh padding. Garis rambut di atasnya menandai batas antara
-              // yang tergulir dan yang menetap.
-              Container(
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  border: Border(top: BorderSide(color: borderColor)),
-                ),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                // Kategori gagal dimuat → Simpan dimatikan. Menyimpan tagihan
-                // tanpa bisa memverifikasi kategorinya adalah menyimpan
-                // tebakan (spec §5.3).
-                //
-                // DITURUNKAN dari state, bukan disimpan di field. Field
-                // boolean di sini hanya akan jadi salinan basi yang lupa
-                // dikembalikan setelah retry berhasil [Audit T5]: pengguna
-                // menekan "Coba lagi", grid terisi penuh, dan tombol Simpan
-                // tetap mati tanpa penjelasan apa pun di layar.
-                child: BlocSelector<CategoryBloc, CategoryState, bool>(
-                  selector: (state) => state is CategoryError,
-                  builder: (context, kategoriGagal) => SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      key: const ValueKey('bill_form_submit'),
-                      onPressed: _isSubmitting || kategoriGagal
-                          ? null
-                          : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.primary.withValues(
-                          alpha: 0.4,
-                        ),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              l10n.btnSave,
-                              style: AppTextStyles.label.copyWith(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
                     ),
                   ),
-                ),
+                  // Tombol Simpan MENEMPEL di bawah, di luar area gulir (spec
+                  // §5.1). Ia harus tetap terlihat apa pun yang sedang terbuka —
+                  // aturan K2 di §5.2 ditegakkan oleh posisinya di sini, bukan
+                  // oleh padding. Garis rambut di atasnya menandai batas antara
+                  // yang tergulir dan yang menetap.
+                  Container(
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      border: Border(top: BorderSide(color: borderColor)),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    // Kategori gagal dimuat → Simpan dimatikan. Menyimpan tagihan
+                    // tanpa bisa memverifikasi kategorinya adalah menyimpan
+                    // tebakan (spec §5.3).
+                    //
+                    // DITURUNKAN dari state, bukan disimpan di field. Field
+                    // boolean di sini hanya akan jadi salinan basi yang lupa
+                    // dikembalikan setelah retry berhasil [Audit T5]: pengguna
+                    // menekan "Coba lagi", grid terisi penuh, dan tombol Simpan
+                    // tetap mati tanpa penjelasan apa pun di layar.
+                    child: BlocSelector<CategoryBloc, CategoryState, bool>(
+                      selector: (state) => state is CategoryError,
+                      builder: (context, kategoriGagal) => SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          key: const ValueKey('bill_form_submit'),
+                          onPressed: _isSubmitting || kategoriGagal
+                              ? null
+                              : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.primary
+                                .withValues(alpha: 0.4),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  l10n.btnSave,
+                                  style: AppTextStyles.label.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Urutan Column: [gulir] → [Simpan] → [keypad].
+                  //
+                  // K2 ditegakkan oleh URUTAN ini, bukan oleh perhitungan padding.
+                  // Menaruh keypad di atas Simpan, atau memakai `bottomSheet`
+                  // Scaffold, akan menutupi tombolnya.
+                  //
+                  // Ia juga anak TERAKHIR di dalam `SafeArea`, jadi inset gestur
+                  // bawah jatuh di bawah panel — bukan di antara Simpan dan
+                  // keypad (`safe-area-awareness`).
+                  if (_keypadTerbuka)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: batas.maxHeight * _porsiMaksPanel,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          // Panel input pakai `surfaceAlt*`, bukan `surface*`
+                          // (CLAUDE.md). Di terang, ia nyaris sewarna latar —
+                          // garis rambut di atasnya yang memisahkan panel dari
+                          // bilah Simpan.
+                          color: panelColor,
+                          border: Border(top: BorderSide(color: borderColor)),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          AppSpacing.sm,
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Satu-satunya jalan keluar EKSPLISIT dari panel
+                            // (gerbang ui-ux-pro-max: `escape-routes` +
+                            // `gesture-alternative`). Tanpa ini, menutup keypad
+                            // cuma bisa lewat efek samping — menyentuh field teks
+                            // lain — dan pengguna yang sudah selesai mengetik
+                            // angka tak punya cara memulihkan ruang layarnya.
+                            //
+                            // Sengaja TextButton, bukan tombol terisi: satu layar
+                            // satu CTA utama (`primary-action`), dan itu Simpan.
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                key: const ValueKey('bill_form_keypad_done'),
+                                onPressed: _tutupKeypad,
+                                // Hit target 48dp DISETEL EKSPLISIT — bawaan
+                                // TextButton 36dp, dan angka 48 dari
+                                // `MaterialTapTargetSize.padded` bergantung tema.
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(64, 48),
+                                  foregroundColor: AppColors.primary,
+                                ),
+                                child: Text(
+                                  l10n.billsFormAmountDone,
+                                  style: AppTextStyles.label.copyWith(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            // Yang MENGALAH saat panel dibatasi adalah gridnya —
+                            // digulir, bukan dipangkas — sehingga "Selesai" di
+                            // atasnya tetap terjangkau dan tinggi tombol tetap
+                            // 48dp. Di potret normal batas itu tak pernah
+                            // tercapai dan `Flexible` ini tak berefek apa pun.
+                            Flexible(
+                              child: SingleChildScrollView(
+                                child: AmountKeypad(
+                                  isDark: isDark,
+                                  // WAJIB sinkron dengan padding Container di
+                                  // atas: 24 kiri + 24 kanan. `AmountKeypad`
+                                  // menurunkan TINGGI tombol dari angka ini
+                                  // [Audit S3]. Mengubah `AppSpacing.xl` di atas
+                                  // tanpa mengubah nilai ini akan memecah hit
+                                  // target 48dp diam-diam.
+                                  horizontalPadding: AppSpacing.xl * 2,
+                                  onKey: (k) => setState(() {
+                                    _amountController.text =
+                                        '${applyAmountKey(_amount, k)}';
+                                  }),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1052,6 +1255,97 @@ class _ChoicePill extends StatelessWidget {
                 fontSize: 13,
                 color: fg,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Field nominal TANPA caret: ia bukan tempat mengetik, melainkan tombol yang
+/// membuka panel keypad dan memantulkan kembali nilai yang sudah terformat.
+///
+/// ── Keputusan keadaan aktif (gerbang ui-ux-pro-max) ────────────────────────
+///
+/// Tanpa caret, satu-satunya penanda "field ini sedang aktif" adalah
+/// garisnya. Karena itu ia ditandai DUA hal sekaligus — warna (primary) DAN
+/// tebal (2, bukan 1). Warna saja melanggar `color-not-only`: pengguna yang
+/// tak membedakan hijau dari krem hanya melihat kotak yang sama. Angka 2
+/// bukan angka baru: itu tebal `focusedBorder` bawaan Material, yang persis
+/// dipakai field teks lain di halaman ini saat mendapat fokus.
+class _AmountDisplayField extends StatelessWidget {
+  const _AmountDisplayField({
+    super.key,
+    required this.fieldKey,
+    required this.amount,
+    required this.hint,
+    required this.active,
+    required this.panelColor,
+    required this.borderColor,
+    required this.textColor,
+    required this.mutedColor,
+    required this.hasError,
+    required this.onTap,
+  });
+
+  /// Dipakai [Scrollable.ensureVisible] pada aturan K3 — lihat `_bukaKeypad`.
+  final Key fieldKey;
+  final int amount;
+  final String hint;
+  final bool active;
+  final Color panelColor;
+  final Color borderColor;
+  final Color textColor;
+  final Color mutedColor;
+  final bool hasError;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final terisi = amount > 0;
+    // `formatRupiah` sudah membawa simbol "Rp"; hint disandingkan dengan
+    // simbol yang sama supaya posisi teksnya tak bergeser saat digit pertama
+    // masuk — hanya gayanya yang berubah dari contoh redup jadi angka nyata.
+    final teks = terisi ? formatRupiah(amount) : 'Rp $hint';
+    final garis = hasError
+        ? AppColors.warn
+        : (active ? AppColors.primary : borderColor);
+
+    return Semantics(
+      button: true,
+      value: teks,
+      // `excludeSemantics` membuang seluruh semantik keturunan — TERMASUK
+      // aksi ketuk milik InkWell. Tanpa `onTap` di simpul ini, pembaca layar
+      // menemukan tombol yang tak bisa diaktifkan sama sekali.
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Material(
+        key: fieldKey,
+        color: panelColor,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: garis, width: active ? 2 : 1),
+            ),
+            child: Container(
+              // 56 > 48dp: field uang adalah sasaran ketuk sekaligus tempat
+              // angka terbesar di halaman ini.
+              constraints: const BoxConstraints(minHeight: 56),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                teks,
+                // Nominal pakai token numerik — tabular-nums sudah built-in,
+                // jadi angkanya tak bergoyang tiap digit bertambah.
+                style: terisi
+                    ? AppTextStyles.numericMd.copyWith(color: textColor)
+                    : AppTextStyles.body.copyWith(color: mutedColor),
               ),
             ),
           ),

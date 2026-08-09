@@ -577,6 +577,7 @@ class AppLocalizations {
   String get billsFormNameHint => _t('bills_form_name_hint');
   String get billsFormAmountLabel => _t('bills_form_amount_label');
   String get billsFormAmountHint => _t('bills_form_amount_hint');
+  String get billsFormAmountDone => _t('bills_form_amount_done');
   String get billsFormCategoryLabel => _t('bills_form_category_label');
   String get billsFormDueDateLabel => _t('bills_form_due_date_label');
   String get billsFormDueDateHint => _t('bills_form_due_date_hint');

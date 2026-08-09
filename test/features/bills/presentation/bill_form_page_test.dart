@@ -13,6 +13,7 @@ import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.d
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
+import 'package:penyintas_app/widgets/common/amount_keypad.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
     implements BillsBloc {}
@@ -97,6 +98,11 @@ BillEntity billContoh({
 
 /// Tagihan yang kategorinya sudah TERHAPUS — tak ada di [kategoriBawaan].
 final billBerkategoriYatim = billContoh(category: 'kursus_bahasa');
+
+/// Seberapa jauh tepi atas field nominal digulirkan keluar viewport pada test
+/// K3. Harus lebih kecil dari SETENGAH tinggi field (minimum 56) supaya titik
+/// tengahnya — yang diketuk `tester.tap` — masih berada di dalam viewport.
+const _potonganAtas = 16.0;
 
 // Delegate sinkron — rootBundle async bentrok dengan fakeAsync widget test.
 class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -286,6 +292,49 @@ void main() {
     await confirmDatePicker(tester);
   }
 
+  /// Ketuk deret digit di panel keypad yang SUDAH terbuka.
+  ///
+  /// Tombolnya dicari lewat `GestureDetector` terdekat di atas teksnya —
+  /// itulah bentuk `_KeyButton` di `amount_keypad.dart`.
+  Future<void> ketikDiKeypad(WidgetTester tester, String digit) async {
+    for (final d in digit.split('')) {
+      await tester.tap(find.widgetWithText(GestureDetector, d).first);
+      await tester.pump();
+    }
+  }
+
+  /// Kosongkan nominal lewat tombol backspace keypad.
+  ///
+  /// Backspace digambar sebagai ikon TANPA teks, jadi dicari lewat label
+  /// semantiknya — sekaligus menegaskan label itu memang terpasang.
+  /// Sepuluh ketukan selalu cukup: `applyAmountKey` membatasi 9 digit, dan
+  /// backspace pada 0 tetap 0.
+  Future<void> kosongkanNominal(WidgetTester tester) async {
+    final handle = tester.ensureSemantics();
+    final backspace = find.bySemanticsLabel(l10n.commonBackspace);
+    for (var i = 0; i < 10; i++) {
+      await tester.tap(backspace);
+      await tester.pump();
+    }
+    handle.dispose();
+  }
+
+  /// Isi nominal lewat keypad, bukan `enterText`. Field nominal tak lagi
+  /// menerima ketikan — ia membuka panel `AmountKeypad`.
+  ///
+  /// [ganti] mengosongkan nilai lama lebih dulu: keypad MENAMBAH digit ke
+  /// nilai yang sudah ada (semantik uang), jadi mode ubah harus menghapus
+  /// sebelum mengetik nilai baru.
+  Future<void> isiNominal(
+    WidgetTester tester,
+    String digit, {
+    bool ganti = false,
+  }) async {
+    await tapKey(tester, 'bill_form_amount');
+    if (ganti) await kosongkanNominal(tester);
+    await ketikDiKeypad(tester, digit);
+  }
+
   Future<void> fillBaseFields(
     WidgetTester tester, {
     String name = 'Kos Bu Tini',
@@ -293,11 +342,7 @@ void main() {
   }) async {
     await tester.enterText(find.byKey(const ValueKey('bill_form_name')), name);
     await tester.pump();
-    await tester.enterText(
-      find.byKey(const ValueKey('bill_form_amount')),
-      amount,
-    );
-    await tester.pump();
+    await isiNominal(tester, amount);
   }
 
   BillsEvent captureLastEvent(WidgetTester tester) {
@@ -597,7 +642,10 @@ void main() {
           tester.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
 
       expect(fieldText('bill_form_name'), 'Cicilan Laptop');
-      expect(fieldText('bill_form_amount'), '1200000');
+      // Nominal TIDAK lagi `TextField` — ia area tap yang menampilkan nilai
+      // sudah terformat. String penuh sengaja dikunci di sini: format Rupiah
+      // "Rp 1.245.000" adalah aturan proyek, bukan detail bebas.
+      expect(find.text('Rp 1.200.000'), findsOneWidget);
       expect(fieldText('bill_form_installment'), '12');
       expect(fieldText('bill_form_notes'), 'Transfer tiap tanggal 10');
       expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
@@ -691,11 +739,7 @@ void main() {
     (tester) async {
       stubCategoriesLoaded();
       await pumpPage(tester, bill: billBerkategoriYatim);
-      await tester.enterText(
-        find.byKey(const ValueKey('bill_form_amount')),
-        '900000',
-      );
-      await tester.pump();
+      await isiNominal(tester, '900000', ganti: true);
       await tapSubmit(tester);
 
       final event = captureLastEvent(tester) as BillUpdated;
@@ -752,6 +796,199 @@ void main() {
     await tapLabel(tester, l10n.categoryFixed);
     await tapSubmit(tester);
     expect(captureLastEvent(tester), isA<BillAdded>());
+  });
+
+  // ── Keypad nominal & aturan K1–K3 (spec §5.2) ─────────────────────────────
+
+  testWidgets('K1: menyentuh field nominal membuka keypad', (tester) async {
+    await pumpPage(tester);
+    expect(find.byType(AmountKeypad), findsNothing);
+    await tapKey(tester, 'bill_form_amount');
+    expect(find.byType(AmountKeypad), findsOneWidget);
+  });
+
+  testWidgets('K1: memfokuskan field nama MENUTUP keypad', (tester) async {
+    await pumpPage(tester);
+    await tapKey(tester, 'bill_form_amount');
+    expect(find.byType(AmountKeypad), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('bill_form_name')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AmountKeypad), findsNothing);
+  });
+
+  testWidgets('K1: membuka keypad melepas fokus field teks', (tester) async {
+    await pumpPage(tester);
+    await tester.tap(find.byKey(const ValueKey('bill_form_name')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.testTextInput.isRegistered && tester.testTextInput.isVisible,
+      isTrue,
+    );
+
+    await tapKey(tester, 'bill_form_amount');
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
+  testWidgets('K2: tombol Simpan tetap terlihat saat keypad terbuka', (
+    tester,
+  ) async {
+    // [Audit S2] Ukuran dikirim LEWAT pumpPage. Menyetel
+    // `tester.view.physicalSize` sebelum memanggilnya percuma — pumpPage
+    // menimpanya dengan 600×2200, dan test ini justru ada untuk menguji
+    // layar SEMPIT tempat keypad, Simpan, dan isi form berebut ruang.
+    await pumpPage(tester, ukuran: const Size(400, 800));
+    await tapKey(tester, 'bill_form_amount');
+    await tester.pumpAndSettle();
+
+    final tombol = find.byKey(const ValueKey('bill_form_submit'));
+    final keypad = find.byType(AmountKeypad);
+    expect(tombol, findsOneWidget);
+    expect(
+      tester.getBottomLeft(tombol).dy,
+      lessThanOrEqualTo(tester.getTopLeft(keypad).dy + 1),
+      reason: 'Simpan harus di ATAS panel keypad, bukan tertutup olehnya',
+    );
+  });
+
+  testWidgets('K3: membuka keypad menarik field nominal ke area terlihat', (
+    tester,
+  ) async {
+    await pumpPage(tester, ukuran: const Size(400, 800));
+
+    final area = find.byType(SingleChildScrollView);
+    final field = find.byKey(const ValueKey('bill_form_amount'));
+    final atasViewport = tester.getTopLeft(area).dy;
+
+    // Prasyarat: gulirkan form sampai tepi ATAS field nominal terpotong
+    // keluar viewport — persis keadaan pengguna yang menggulir ke bawah lalu
+    // berubah pikiran dan menyentuh sisa field yang masih terlihat.
+    // `jumpTo`, bukan `drag`: drag menyisakan touch-slop yang membuat jarak
+    // gulirnya tak persis, dan prasyarat ini bergantung pada angka persis.
+    //
+    // Diambil dari field nominal, bukan `find.byType(Scrollable)`: grid
+    // kategori juga sebuah Scrollable dan hidup di dalam area gulir yang sama.
+    final gulir = Scrollable.of(tester.element(field));
+    gulir.position.jumpTo(
+      tester.getTopLeft(field).dy - atasViewport + _potonganAtas,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(field).dy,
+      lessThan(atasViewport),
+      reason: 'prasyarat gagal: field belum terpotong, test ini jadi kosong',
+    );
+
+    // Ketuk LANGSUNG — bukan lewat `tapKey`, yang meng-ensureVisible duluan
+    // dan justru menghapus prasyarat di atas.
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AmountKeypad), findsOneWidget);
+    expect(
+      tester.getTopLeft(field).dy,
+      greaterThanOrEqualTo(atasViewport),
+      reason:
+          'K3: membuka keypad harus menggulirkan field nominal kembali ke '
+          'area yang terlihat, bukan meninggalkannya terpotong',
+    );
+  });
+
+  testWidgets('nominal dari keypad masuk ke payload simpan', (tester) async {
+    await pumpPage(tester);
+    await fillBaseFields(tester, amount: '750000');
+    await tapLabel(tester, l10n.categoryFixed);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    final event = captureLastEvent(tester) as BillAdded;
+    expect(event.bill.estimatedAmount, 750000);
+  });
+
+  testWidgets('field "Berapa kali?" TETAP memakai keyboard sistem, '
+      'bukan keypad', (tester) async {
+    await pumpPage(tester);
+    await tapLabel(tester, l10n.billsRecurrenceMonthly);
+    await tapLabel(tester, l10n.billsTenorCount);
+    await tester.enterText(
+      find.byKey(const ValueKey('bill_form_installment')),
+      '12',
+    );
+    await tester.pump();
+    expect(find.byType(AmountKeypad), findsNothing);
+  });
+
+  // Satu-satunya jalan keluar eksplisit dari panel (gerbang ui-ux-pro-max:
+  // `escape-routes` + `gesture-alternative`). Tanpa ini, menutup keypad hanya
+  // bisa lewat efek samping — menyentuh field teks lain.
+  testWidgets('tombol Selesai menutup panel keypad', (tester) async {
+    await pumpPage(tester);
+    await tapKey(tester, 'bill_form_amount');
+    expect(find.byType(AmountKeypad), findsOneWidget);
+
+    await tapKey(tester, 'bill_form_keypad_done');
+    expect(find.byType(AmountKeypad), findsNothing);
+  });
+
+  // `AmountKeypad` menurunkan TINGGI tombol dari `horizontalPadding` yang
+  // dikirim pemanggil [Audit S3]. Kalau padding panel di halaman ini digeser
+  // tanpa menggeser nilai itu, tombolnya menyusut di bawah 48dp tanpa satu
+  // pun error — persis jenis kerusakan yang tak terlihat mata.
+  testWidgets('tombol keypad memenuhi hit target 48dp di layar sempit', (
+    tester,
+  ) async {
+    await pumpPage(tester, ukuran: const Size(400, 800));
+    await tapKey(tester, 'bill_form_amount');
+
+    final tombol = find.widgetWithText(GestureDetector, '7').first;
+    expect(
+      tester.getSize(tombol).height,
+      greaterThanOrEqualTo(48.0),
+      reason:
+          'padding panel dan `horizontalPadding` AmountKeypad harus tetap '
+          'sinkron — kalau tidak, tinggi tombol jatuh diam-diam',
+    );
+  });
+
+  // Lanskap & mode jendela kecil: badan halaman bisa lebih pendek daripada
+  // panel + bilah Simpan. Tanpa batas tinggi panel, Column body meluap — 69px
+  // pada 800×360 saat aturan ini pertama ditulis, lengkap dengan garis
+  // kuning-hitam di layar pengguna.
+  testWidgets('panel keypad tak meluap di layar lanskap pendek', (
+    tester,
+  ) async {
+    await pumpPage(tester, ukuran: const Size(800, 360));
+    await tapKey(tester, 'bill_form_amount');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AmountKeypad), findsOneWidget);
+    // K2 tak boleh dikorbankan demi muat.
+    expect(
+      tester.getBottomLeft(find.byKey(const ValueKey('bill_form_submit'))).dy,
+      lessThanOrEqualTo(tester.getTopLeft(find.byType(AmountKeypad)).dy + 1),
+      reason: 'Simpan tetap di ATAS panel, juga saat panel dipepet',
+    );
+  });
+
+  // Field tanpa caret gampang jadi jebakan aksesibilitas: `excludeSemantics`
+  // di simpul pembungkus MEMBUANG aksi ketuk milik InkWell di bawahnya. Jari
+  // tetap bisa mengetuknya dan widget test tetap hijau — yang hilang cuma
+  // kemampuan pembaca layar mengaktifkannya.
+  testWidgets('field nominal tetap tombol yang bisa diaktifkan pembaca layar', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pumpPage(tester);
+
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('bill_form_amount'))),
+      // `isSemantics`, bukan `matchesSemantics`: yang pertama hanya memeriksa
+      // yang disebut, yang kedua menuntut SELURUH flag cocok.
+      isSemantics(isButton: true, hasTapAction: true, value: 'Rp 750.000'),
+    );
+    handle.dispose();
   });
 
   // ── Aksesibilitas & tema ──────────────────────────────────────────────────

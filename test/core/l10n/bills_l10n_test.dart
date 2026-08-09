@@ -62,6 +62,7 @@ void main() {
     'bills_form_name_hint',
     'bills_form_amount_label',
     'bills_form_amount_hint',
+    'bills_form_amount_done',
     'bills_form_category_label',
     'bills_form_due_date_label',
     'bills_form_due_date_hint',

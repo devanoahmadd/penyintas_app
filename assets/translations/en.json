@@ -425,6 +425,7 @@
   "bills_form_amount_label": "Roughly how much?",
   "bills_form_amount_hint": "750.000",
   "bills_form_amount_note": "You'll enter the real amount when you pay.",
+  "bills_form_amount_done": "Done",
   "bills_form_category_label": "Which category?",
   "bills_form_category_note": "Used for reports and budget limits.",
   "bills_form_category_load_failed": "Categories couldn't load. Check your connection.",

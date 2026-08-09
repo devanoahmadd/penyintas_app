@@ -425,6 +425,7 @@
   "bills_form_amount_label": "Kira-kira berapa?",
   "bills_form_amount_hint": "750.000",
   "bills_form_amount_note": "Nanti waktu bayar, kamu isi jumlah aslinya.",
+  "bills_form_amount_done": "Selesai",
   "bills_form_category_label": "Masuk kategori apa?",
   "bills_form_category_note": "Dipakai untuk laporan dan limit anggaran.",
   "bills_form_category_load_failed": "Kategori belum bisa dimuat. Coba periksa koneksi kamu.",
