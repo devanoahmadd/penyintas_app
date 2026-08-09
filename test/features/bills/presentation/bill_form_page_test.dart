@@ -10,9 +10,93 @@ import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
     implements BillsBloc {}
+
+class MockCategoryBloc extends MockBloc<CategoryEvent, CategoryState>
+    implements CategoryBloc {}
+
+CategoryEntity _katBawaan({
+  required int id,
+  required String slug,
+  required String labelKey,
+  int sortOrder = 10,
+}) => CategoryEntity(
+  id: id,
+  slug: slug,
+  labelKey: labelKey,
+  isBuiltIn: true,
+  isLimitable: true,
+  type: 'expense',
+  sortOrder: sortOrder,
+);
+
+/// Tujuh kategori bawaan + satu `income`, dengan `sortOrder` PERSIS seperti
+/// seed produksi (`app_database.dart:522-568`) — termasuk fakta bahwa `fixed`
+/// justru paling belakang dan `other` mendahuluinya.
+final kategoriBawaan = [
+  _katBawaan(id: 1, slug: 'food', labelKey: 'category_food', sortOrder: 0),
+  _katBawaan(
+    id: 2,
+    slug: 'transport',
+    labelKey: 'category_transport',
+    sortOrder: 1,
+  ),
+  _katBawaan(
+    id: 3,
+    slug: 'shopping',
+    labelKey: 'category_shopping',
+    sortOrder: 2,
+  ),
+  _katBawaan(id: 4, slug: 'health', labelKey: 'category_health', sortOrder: 3),
+  _katBawaan(
+    id: 5,
+    slug: 'internet',
+    labelKey: 'category_internet',
+    sortOrder: 4,
+  ),
+  _katBawaan(id: 7, slug: 'other', labelKey: 'category_other', sortOrder: 5),
+  _katBawaan(id: 6, slug: 'fixed', labelKey: 'category_fixed', sortOrder: 6),
+  const CategoryEntity(
+    id: 9,
+    slug: 'income',
+    labelKey: 'category_income',
+    isBuiltIn: true,
+    isLimitable: false,
+    type: 'income',
+    sortOrder: 7,
+  ),
+];
+
+BillEntity billContoh({
+  int id = 1,
+  String name = 'Kos Bu Tini',
+  int estimatedAmount = 750000,
+  String category = 'fixed',
+  bool isFixedNeed = true,
+  DateTime? dueDate,
+  Recurrence recurrence = Recurrence.monthly,
+}) => BillEntity(
+  id: id,
+  name: name,
+  estimatedAmount: estimatedAmount,
+  category: category,
+  isFixedNeed: isFixedNeed,
+  dueDate: dueDate ?? DateTime(2026, 8, 10),
+  recurrence: recurrence,
+  installmentsPaid: 0,
+  reminderEnabled: true,
+  status: BillStatus.active,
+  createdAt: DateTime(2026, 8, 1),
+  updatedAt: DateTime(2026, 8, 1),
+);
+
+/// Tagihan yang kategorinya sudah TERHAPUS — tak ada di [kategoriBawaan].
+final billBerkategoriYatim = billContoh(category: 'kursus_bahasa');
 
 // Delegate sinkron — rootBundle async bentrok dengan fakeAsync widget test.
 class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -33,12 +117,25 @@ void main() {
   late AppLocalizations l10n;
   late MockBillsBloc bloc;
   late StreamController<BillsState> stateController;
+  late MockCategoryBloc categoryBloc;
+  late StreamController<CategoryState> categoryController;
 
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
     // BillsEvent sealed — pakai event konkret sebagai fallback.
     registerFallbackValue(const BillsSubscribed());
+    registerFallbackValue(const LoadCategories());
   });
+
+  /// Setel keadaan awal `CategoryBloc`. Keadaan berikutnya didorong lewat
+  /// [categoryController] — itulah yang membuat jalur PULIH (gagal → retry →
+  /// berhasil) bisa dilewati sungguhan, bukan hanya keadaan akhirnya.
+  void stubKategori(CategoryState awal) {
+    whenListen(categoryBloc, categoryController.stream, initialState: awal);
+  }
+
+  void stubCategoriesLoaded() =>
+      stubKategori(CategoryLoaded(categories: kategoriBawaan));
 
   setUp(() {
     bloc = MockBillsBloc();
@@ -50,10 +147,17 @@ void main() {
       stateController.stream,
       initialState: const BillsState(status: BillsStatus.initial),
     );
+
+    categoryBloc = MockCategoryBloc();
+    categoryController = StreamController<CategoryState>.broadcast();
+    // Bawaan: kategori SUDAH termuat. Test yang menguji jendela memuat/gagal
+    // memanggil `stubKategori` sendiri sebelum `pumpPage`.
+    stubCategoriesLoaded();
   });
 
   tearDown(() {
     stateController.close();
+    categoryController.close();
   });
 
   Widget harness({BillEntity? bill, ThemeData? theme}) => MaterialApp(
@@ -79,8 +183,16 @@ void main() {
             onPressed: () => Navigator.of(ctx).push(
               MaterialPageRoute<void>(
                 // TANPA Scaffold pembungkus — BillFormPage bawa sendiri.
-                builder: (_) => BlocProvider<BillsBloc>.value(
-                  value: bloc,
+                //
+                // `.value` untuk KEDUANYA, meski di aplikasi `CategoryBloc`
+                // dipasang rute lewat `create`: test yang memiliki mock-nya
+                // sendiri harus mengendalikan siklus hidupnya, dan `create`
+                // akan menutup mock itu di tengah jalan.
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider<BillsBloc>.value(value: bloc),
+                    BlocProvider<CategoryBloc>.value(value: categoryBloc),
+                  ],
                   child: BillFormPage(bill: bill),
                 ),
               ),
@@ -102,6 +214,14 @@ void main() {
     // yang menyetel `tester.view.physicalSize` SEBELUM memanggil pumpPage
     // akan ditimpa diam-diam di sini.
     Size ukuran = const Size(600, 2200),
+    // Setel `false` saat halaman dibuka dalam keadaan yang memuat indikator
+    // berputar (mis. `CategoryLoading` → placeholder grid). `pumpAndSettle`
+    // menunggu animasi BERHENTI, dan spinner tak pernah berhenti — jendela
+    // memuat justru jadi jendela yang mustahil diuji. Ini bukan detail
+    // kosmetik: kebiasaan menyemai `CategoryLoaded` di setUp lahir dari sini,
+    // dan bersamanya cacat "sedang memuat terlihat sama dengan sudah
+    // terhapus" ikut tak pernah terlihat.
+    bool settle = true,
   }) async {
     tester.view.physicalSize = ukuran;
     tester.view.devicePixelRatio = 1.0;
@@ -112,7 +232,13 @@ void main() {
     // MaterialApp belum terbangun sama sekali.
     await tester.pumpAndSettle();
     await tester.tap(find.text('buka'));
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      // Cukup untuk menuntaskan transisi rute tanpa menunggu spinner diam.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
   }
 
   /// Tekan tombol simpan. SENGAJA tanpa `pumpAndSettle`: saat submit valid,
@@ -537,6 +663,95 @@ void main() {
 
     expect(find.byType(BillFormPage), findsNothing);
     expect(find.text('buka'), findsOneWidget);
+  });
+
+  // ── Kategori datang dari CategoryBloc (Task 8) ────────────────────────────
+
+  ElevatedButton tombolSimpan(WidgetTester tester) => tester
+      .widget<ElevatedButton>(find.byKey(const ValueKey('bill_form_submit')));
+
+  // Jendela `CategoryLoading` nyaris tak pernah tergambar di suite widget:
+  // kebiasaan menyemai `CategoryLoaded` di setUp membuatnya dilompati, dan
+  // cacat "memuat terlihat sama dengan terhapus" ikut tak pernah terlihat.
+  // Test ini SENGAJA berhenti di dalam jendela itu.
+  testWidgets('CategoryLoading TIDAK menggambar tile yatim', (tester) async {
+    stubKategori(const CategoryLoading());
+    await pumpPage(tester, bill: billBerkategoriYatim, settle: false);
+
+    expect(
+      find.text('Kursus bahasa'),
+      findsNothing,
+      reason: 'daftar kosong karena sedang memuat BUKAN kategori yang terhapus',
+    );
+    expect(find.byType(BillCategoryGrid), findsNothing);
+  });
+
+  testWidgets(
+    'mode ubah × kategori yatim × ubah nominal saja → kategori TERSIMPAN UTUH',
+    (tester) async {
+      stubCategoriesLoaded();
+      await pumpPage(tester, bill: billBerkategoriYatim);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_amount')),
+        '900000',
+      );
+      await tester.pump();
+      await tapSubmit(tester);
+
+      final event = captureLastEvent(tester) as BillUpdated;
+      expect(
+        event.bill.category,
+        'kursus_bahasa',
+        reason:
+            'kategori yang sudah terhapus tetap milik tagihan ini — mengubah '
+            'nominal tak boleh diam-diam mencabutnya',
+      );
+      expect(event.bill.estimatedAmount, 900000);
+    },
+  );
+
+  testWidgets('CategoryError menonaktifkan tombol Simpan', (tester) async {
+    stubKategori(const CategoryError('gagal'));
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await pickDueDate(tester);
+
+    expect(
+      tombolSimpan(tester).onPressed,
+      isNull,
+      reason:
+          'menyimpan tagihan tanpa bisa memverifikasi kategorinya adalah '
+          'menyimpan tebakan',
+    );
+
+    await tapSubmit(tester);
+    verifyNever(() => bloc.add(any(that: isA<BillAdded>())));
+  });
+
+  testWidgets('CategoryError → retry berhasil → Simpan HIDUP lagi', (
+    tester,
+  ) async {
+    stubKategori(const CategoryError('gagal'));
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await pickDueDate(tester);
+
+    await tapKey(tester, 'bill_form_category_retry');
+    verify(() => categoryBloc.add(any(that: isA<LoadCategories>()))).called(1);
+
+    categoryController.add(CategoryLoaded(categories: kategoriBawaan));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BillCategoryGrid), findsOneWidget);
+    expect(
+      tombolSimpan(tester).onPressed,
+      isNotNull,
+      reason: 'kegagalan yang sudah pulih tak boleh menyandera form',
+    );
+
+    await tapLabel(tester, l10n.categoryFixed);
+    await tapSubmit(tester);
+    expect(captureLastEvent(tester), isA<BillAdded>());
   });
 
   // ── Aksesibilitas & tema ──────────────────────────────────────────────────

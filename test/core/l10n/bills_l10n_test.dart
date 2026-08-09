@@ -116,6 +116,9 @@ void main() {
     // Catatan bersyarat di form
     'bills_form_amount_note',
     'bills_form_category_note',
+    // Kotak gagal-muat di grid kategori (Task 8). Sengaja terpisah dari
+    // `bills_error`: yang gagal kategorinya, bukan tagihannya.
+    'bills_form_category_load_failed',
     'bills_form_due_date_monthly_note',
     'bills_form_due_date_yearly_note',
     // Catatan chip tenor

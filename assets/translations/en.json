@@ -427,6 +427,7 @@
   "bills_form_amount_note": "You'll enter the real amount when you pay.",
   "bills_form_category_label": "Which category?",
   "bills_form_category_note": "Used for reports and budget limits.",
+  "bills_form_category_load_failed": "Categories couldn't load. Check your connection.",
   "bills_form_due_date_label": "When is it due?",
   "bills_form_due_date_hint": "Pick a date",
   "bills_form_due_date_monthly_note": "Every month on day {day}.",

@@ -2,30 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
-import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/features/bills/data/models/bill_model.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
-
-/// Kategori yang boleh dipilih untuk tagihan.
-///
-/// `income` SENGAJA dikecualikan — tagihan selalu pengeluaran, jadi memilih
-/// kategori pemasukan akan mengotori laporan saat "tandai lunas" mencatat
-/// transaksi (spec §4.2).
-const kBillCategorySlugs = <String>[
-  'fixed',
-  'food',
-  'transport',
-  'shopping',
-  'health',
-  'internet',
-  'other',
-];
+import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 /// Batas akhir perulangan — spec §4.1 mewajibkan MAKSIMAL SATU yang non-null.
 enum _TenorMode { unlimited, count, endDate }
@@ -443,33 +428,54 @@ class _BillFormPageState extends State<BillFormPage> {
                         required: true,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final slug in kBillCategorySlugs)
-                            _ChoicePill(
-                              label: CategoryMetadata.resolveLabelFromSlug(
-                                slug,
-                                AppLocalizations.of(context),
+                      BlocBuilder<CategoryBloc, CategoryState>(
+                        builder: (context, state) {
+                          // CategoryActionLoading TIDAK terjangkau dari layar
+                          // ini — ia hanya dipancarkan create/update/delete,
+                          // sedangkan Tagihan hanya pernah mengirim
+                          // LoadCategories, dan CategoryBloc adalah factory
+                          // sehingga instance Tagihan tak menerima event
+                          // mutasi dari layar Kategori. Ia tetap ditangani
+                          // supaya switch lengkap tak terlihat seperti
+                          // kelalaian — dan ia membawa `categories`, jadi
+                          // menggambarnya sebagai placeholder justru
+                          // mengosongkan grid yang isinya ada.
+                          final daftar = switch (state) {
+                            CategoryLoaded(:final categories) => categories,
+                            CategoryActionLoading(:final categories) =>
+                              categories,
+                            _ => null,
+                          };
+
+                          if (state is CategoryError) {
+                            return _CategoryLoadError(
+                              isDark: isDark,
+                              onRetry: () => context.read<CategoryBloc>().add(
+                                const LoadCategories(),
                               ),
-                              // `of()` — bukan `iconFromSlug()`: slug kategori
-                              // built-in ada di `_map`, sedangkan
-                              // `iconFromSlug` melihat namespace ikon KUSTOM
-                              // (`restaurant`/`coffee`/…) sehingga semua
-                              // kategori jatuh ke ikon grid generik.
-                              icon: CategoryMetadata.of(slug).$1,
-                              selected: _category == slug,
-                              panelColor: panelColor,
-                              borderColor: borderColor,
-                              textColor: textColor,
-                              onTap: () => _selectCategory(slug),
-                            ),
-                        ],
+                            );
+                          }
+                          if (daftar == null) {
+                            return const _CategoryGridPlaceholder();
+                          }
+                          return BillCategoryGrid(
+                            categories: daftar,
+                            selectedSlug: _category,
+                            onSelected: _selectCategory,
+                          );
+                        },
                       ),
                       _ErrorText(
                         show: _showErrors && _categoryInvalid,
                         message: l10n.billsFormErrorCategory,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        l10n.billsFormCategoryNote,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 12,
+                          color: mutedColor,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
 
@@ -714,40 +720,54 @@ class _BillFormPageState extends State<BillFormPage> {
                   AppSpacing.lg,
                   AppSpacing.lg,
                 ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    key: const ValueKey('bill_form_submit'),
-                    onPressed: _isSubmitting ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.primary.withValues(
-                        alpha: 0.4,
+                // Kategori gagal dimuat → Simpan dimatikan. Menyimpan tagihan
+                // tanpa bisa memverifikasi kategorinya adalah menyimpan
+                // tebakan (spec §5.3).
+                //
+                // DITURUNKAN dari state, bukan disimpan di field. Field
+                // boolean di sini hanya akan jadi salinan basi yang lupa
+                // dikembalikan setelah retry berhasil [Audit T5]: pengguna
+                // menekan "Coba lagi", grid terisi penuh, dan tombol Simpan
+                // tetap mati tanpa penjelasan apa pun di layar.
+                child: BlocSelector<CategoryBloc, CategoryState, bool>(
+                  selector: (state) => state is CategoryError,
+                  builder: (context, kategoriGagal) => SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      key: const ValueKey('bill_form_submit'),
+                      onPressed: _isSubmitting || kategoriGagal
+                          ? null
+                          : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.primary.withValues(
+                          alpha: 0.4,
+                        ),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
                       ),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              l10n.btnSave,
+                              style: AppTextStyles.label.copyWith(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l10n.btnSave,
-                            style: AppTextStyles.label.copyWith(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
                   ),
                 ),
               ),
@@ -891,6 +911,101 @@ class _ErrorText extends StatelessWidget {
   }
 }
 
+/// Kategori gagal dimuat. Bukan sekadar teks — ia membawa jalan keluarnya,
+/// karena tanpa kategori form ini tak bisa disimpan sama sekali.
+class _CategoryLoadError extends StatelessWidget {
+  const _CategoryLoadError({required this.isDark, required this.onRetry});
+
+  final bool isDark;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Semantics(
+      // Kotak ini menggantikan grid SETELAH halaman tergambar. Tanpa
+      // `liveRegion`, pembaca layar tak mengumumkan apa pun dan pengguna
+      // hanya menemukan tombol Simpan yang mati tanpa sebab.
+      liveRegion: true,
+      child: Container(
+        constraints: const BoxConstraints(
+          minHeight: BillCategoryGrid.tinggiTile,
+        ),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceAltDark : AppColors.surfaceAltLight,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                // BUKAN `billsError` ("Gagal memuat tagihan…") — tagihannya
+                // baik-baik saja di layar ini; yang gagal kategorinya.
+                l10n.billsFormCategoryLoadFailed,
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontSize: 12,
+                  color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            TextButton(
+              key: const ValueKey('bill_form_category_retry'),
+              onPressed: onRetry,
+              // Hit target 48dp DISETEL EKSPLISIT. Bawaan `TextButton` adalah
+              // 36dp; angka 48 hanya datang dari `MaterialTapTargetSize.padded`
+              // yang bergantung tema dan platform — terlalu rapuh untuk
+              // menopang aturan yang wajib.
+              style: TextButton.styleFrom(
+                minimumSize: const Size(64, 48),
+                foregroundColor: AppColors.primary,
+              ),
+              child: Text(
+                l10n.retry,
+                style: AppTextStyles.label.copyWith(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ruang yang DIPESAN selagi kategori dimuat.
+///
+/// Tingginya setara TIGA baris grid, bukan dua: seed produksi menyemai tujuh
+/// kategori pengeluaran, dan tujuh tile di grid tiga kolom selalu jadi tiga
+/// baris. Memesan dua baris seperti rancangan awal menyisakan lompatan ~84dp
+/// tepat saat pengguna sedang mengisi form — cara termudah membuat orang
+/// salah tekan (gerbang ui-ux-pro-max: `content-jumping`, severity HIGH).
+class _CategoryGridPlaceholder extends StatelessWidget {
+  const _CategoryGridPlaceholder();
+
+  static const _barisTerpesan = 3;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height:
+        BillCategoryGrid.tinggiTile * _barisTerpesan +
+        AppSpacing.sm * (_barisTerpesan - 1),
+    child: const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary,
+        ),
+      ),
+    ),
+  );
+}
+
 /// Chip pilihan tunggal. Selalu berteks — warna hanya penguat.
 class _ChoicePill extends StatelessWidget {
   const _ChoicePill({
@@ -900,7 +1015,6 @@ class _ChoicePill extends StatelessWidget {
     required this.borderColor,
     required this.textColor,
     required this.onTap,
-    this.icon,
   });
 
   final String label;
@@ -909,7 +1023,6 @@ class _ChoicePill extends StatelessWidget {
   final Color borderColor;
   final Color textColor;
   final VoidCallback onTap;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -933,22 +1046,13 @@ class _ChoicePill extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md2),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 16, color: fg),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-                Text(
-                  label,
-                  style: AppTextStyles.label.copyWith(
-                    fontSize: 13,
-                    color: fg,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ],
+            child: Text(
+              label,
+              style: AppTextStyles.label.copyWith(
+                fontSize: 13,
+                color: fg,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
             ),
           ),
         ),

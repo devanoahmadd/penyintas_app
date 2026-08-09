@@ -13,6 +13,7 @@ import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
@@ -75,13 +76,39 @@ void main() {
   setUp(() {
     bloc = MockBillsBloc();
     categoryBloc = MockCategoryBloc();
-    // Halaman ini belum membaca CategoryState, tapi `buildBillsRoute()`
-    // memasang CategoryBloc di ketiga node rute — jadi tiruannya wajib ada
-    // supaya `sl<CategoryBloc>()` tidak melempar saat rute dibangun.
+    // `buildBillsRoute()` memasang CategoryBloc di ketiga node rute — jadi
+    // tiruannya wajib ada supaya `sl<CategoryBloc>()` tidak melempar saat
+    // rute dibangun.
+    //
+    // Keadaan awalnya WAJIB `CategoryLoaded` sejak grid kategori masuk ke
+    // form (Task 8). `CategoryInitial` membuat form menggambar placeholder
+    // berisi indikator berputar, dan `pumpAndSettle` di test navigasi
+    // menunggu putaran itu berhenti selamanya.
     whenListen(
       categoryBloc,
       const Stream<CategoryState>.empty(),
-      initialState: const CategoryInitial(),
+      initialState: const CategoryLoaded(
+        categories: [
+          CategoryEntity(
+            id: 6,
+            slug: 'fixed',
+            labelKey: 'category_fixed',
+            isBuiltIn: true,
+            isLimitable: true,
+            type: 'expense',
+            sortOrder: 6,
+          ),
+          CategoryEntity(
+            id: 5,
+            slug: 'internet',
+            labelKey: 'category_internet',
+            isBuiltIn: true,
+            isLimitable: true,
+            type: 'expense',
+            sortOrder: 4,
+          ),
+        ],
+      ),
     );
 
     // Rute NYATA yang dipakai harness membaca kedua bloc dari GetIt.

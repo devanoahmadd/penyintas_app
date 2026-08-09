@@ -665,6 +665,15 @@ class AppLocalizations {
   String get billsFormAmountNote => _t('bills_form_amount_note');
   String get billsFormCategoryNote => _t('bills_form_category_note');
 
+  /// Kategori gagal dimuat di form tagihan.
+  ///
+  /// SENGAJA bukan `billsError` ("Gagal memuat tagihan…"): di layar ini
+  /// tagihannya baik-baik saja — yang gagal daftar kategorinya. Memakai copy
+  /// tagihan di sini akan membingungkan pengguna yang sedang menatap form
+  /// yang jelas-jelas terisi.
+  String get billsFormCategoryLoadFailed =>
+      _t('bills_form_category_load_failed');
+
   String billsFormDueDateMonthlyNote(int day) =>
       _t('bills_form_due_date_monthly_note').replaceAll('{day}', '$day');
 
