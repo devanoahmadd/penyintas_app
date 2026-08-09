@@ -1,19 +1,25 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
-import 'package:penyintas_app/features/bills/presentation/pages/bills_list_page.dart';
+import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
     implements BillsBloc {}
+
+class MockCategoryBloc extends MockBloc<CategoryEvent, CategoryState>
+    implements CategoryBloc {}
 
 // Delegate sinkron — rootBundle async bentrok dengan fakeAsync widget test.
 class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -33,6 +39,7 @@ class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
 void main() {
   late AppLocalizations l10n;
   late MockBillsBloc bloc;
+  late MockCategoryBloc categoryBloc;
 
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
@@ -67,13 +74,44 @@ void main() {
 
   setUp(() {
     bloc = MockBillsBloc();
+    categoryBloc = MockCategoryBloc();
+    // Halaman ini belum membaca CategoryState, tapi `buildBillsRoute()`
+    // memasang CategoryBloc di ketiga node rute — jadi tiruannya wajib ada
+    // supaya `sl<CategoryBloc>()` tidak melempar saat rute dibangun.
+    whenListen(
+      categoryBloc,
+      const Stream<CategoryState>.empty(),
+      initialState: const CategoryInitial(),
+    );
+
+    // Rute NYATA yang dipakai harness membaca kedua bloc dari GetIt.
+    if (sl.isRegistered<BillsBloc>()) sl.unregister<BillsBloc>();
+    if (sl.isRegistered<CategoryBloc>()) sl.unregister<CategoryBloc>();
+    sl.registerFactory<BillsBloc>(() => bloc);
+    sl.registerFactory<CategoryBloc>(() => categoryBloc);
+  });
+
+  tearDown(() {
+    if (sl.isRegistered<BillsBloc>()) sl.unregister<BillsBloc>();
+    if (sl.isRegistered<CategoryBloc>()) sl.unregister<CategoryBloc>();
   });
 
   void stub(BillsState state) {
     whenListen(bloc, Stream<BillsState>.value(state), initialState: state);
   }
 
-  Widget harness({ThemeData? theme}) => MaterialApp(
+  /// Harness memakai `buildBillsRoute()` YANG NYATA di dalam
+  /// `MaterialApp.router`.
+  ///
+  /// Sejak form tambah naik jadi halaman (T7), FAB memanggil
+  /// `context.push('/bills/new')` — tanpa `GoRouter` di atasnya, tap FAB
+  /// melempar. Dan router mini buatan tangan tak cukup: ia akan tetap hijau
+  /// walau `buildBillsRoute()` kehilangan rute anaknya. Yang dipasang di sini
+  /// adalah tabel rute produksi, jadi merusaknya membuat test ini merah.
+  GoRouter buatRouter() =>
+      GoRouter(initialLocation: '/bills', routes: [buildBillsRoute()]);
+
+  Widget harness({ThemeData? theme, GoRouter? router}) => MaterialApp.router(
     locale: const Locale('id'),
     supportedLocales: const [Locale('id'), Locale('en')],
     localizationsDelegates: [
@@ -83,10 +121,7 @@ void main() {
       GlobalCupertinoLocalizations.delegate,
     ],
     theme: theme,
-    home: BlocProvider<BillsBloc>.value(
-      value: bloc,
-      child: const BillsListPage(),
-    ),
+    routerConfig: router ?? buatRouter(),
   );
 
   testWidgets('mengirim BillsSubscribed saat halaman pertama tampil', (
@@ -377,6 +412,58 @@ void main() {
       await tester.pump();
 
       verify(() => bloc.add(BillPaymentUndone(snapshot))).called(1);
+    });
+  });
+
+  // ── Navigasi ke form (T7) ───────────────────────────────────────────────────
+  //
+  // Sejak form tambah naik jadi halaman penuh, FAB tidak lagi membuka bottom
+  // sheet melainkan MENDORONG rute `/bills/new`. Dua test di bawah memakai
+  // tabel rute produksi, bukan router tiruan.
+
+  group('navigasi form', () {
+    testWidgets('tap FAB "Tambah" mendorong /bills/new dalam mode tambah', (
+      tester,
+    ) async {
+      stub(const BillsState(status: BillsStatus.success));
+      final router = buatRouter();
+      await tester.pumpWidget(harness(router: router));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.billsAdd));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        '/bills/new',
+        reason: 'FAB harus mendorong rute, bukan membuka sheet',
+      );
+      final page = tester.widget<BillFormPage>(find.byType(BillFormPage));
+      expect(
+        page.bill,
+        isNull,
+        reason: '/bills/new tak membawa extra — selalu mode tambah',
+      );
+      expect(find.text(l10n.billsFormAddTitle), findsOneWidget);
+    });
+
+    // Menutup celah T6: `same(billEditRedirect)` mengunci REFERENSI callback,
+    // bukan isinya — mutasi yang mengubah badan `billEditRedirect` jadi
+    // `=> null` lolos di sana. Di sini penjaganya dijalankan sungguhan di
+    // dalam GoRouter yang memakai `buildBillsRoute()` nyata.
+    testWidgets('deep-link /bills/7/edit tanpa extra mendarat kembali di '
+        '/bills — form TIDAK dibangun', (tester) async {
+      stub(const BillsState(status: BillsStatus.success));
+      final router = buatRouter();
+      await tester.pumpWidget(harness(router: router));
+      await tester.pumpAndSettle();
+
+      router.push('/bills/7/edit');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BillFormPage), findsNothing);
+      expect(router.state.uri.toString(), '/bills');
+      expect(tester.takeException(), isNull);
     });
   });
 }

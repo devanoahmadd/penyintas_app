@@ -9,7 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
-import 'package:penyintas_app/features/bills/presentation/widgets/add_edit_bill_sheet.dart';
+import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
     implements BillsBloc {}
@@ -56,7 +56,7 @@ void main() {
     stateController.close();
   });
 
-  Widget harness({BillEntity? initial, ThemeData? theme}) => MaterialApp(
+  Widget harness({BillEntity? bill, ThemeData? theme}) => MaterialApp(
     locale: const Locale('id'),
     supportedLocales: const [Locale('id'), Locale('en')],
     localizationsDelegates: [
@@ -70,13 +70,18 @@ void main() {
       body: Builder(
         builder: (ctx) => Center(
           child: TextButton(
+            // Halaman DIDORONG, bukan dipasang sebagai `home`. Ini bukan
+            // sisa dari bentuk sheet — ia yang membuat `Navigator.pop`
+            // setelah simpan punya tujuan, dan yang membuat `AppBar`
+            // menggambar tombol back sehingga `tester.pageBack()` (T10)
+            // bekerja. Aplikasi nyata juga selalu mendorongnya di atas
+            // /bills [Audit S1].
             onPressed: () => Navigator.of(ctx).push(
               MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  body: BlocProvider<BillsBloc>.value(
-                    value: bloc,
-                    child: AddEditBillSheet(initial: initial),
-                  ),
+                // TANPA Scaffold pembungkus — BillFormPage bawa sendiri.
+                builder: (_) => BlocProvider<BillsBloc>.value(
+                  value: bloc,
+                  child: BillFormPage(bill: bill),
                 ),
               ),
             ),
@@ -87,17 +92,22 @@ void main() {
     ),
   );
 
-  Future<void> pumpSheet(
+  Future<void> pumpPage(
     WidgetTester tester, {
-    BillEntity? initial,
+    BillEntity? bill,
     ThemeData? theme,
+    // [Audit S2] Ukuran bisa ditimpa. Bawaannya layar tinggi supaya form
+    // panjang muat tanpa banyak scroll; test yang justru menguji kesempitan
+    // (mis. K2 di T9) mengirim ukurannya sendiri. Tanpa parameter ini, test
+    // yang menyetel `tester.view.physicalSize` SEBELUM memanggil pumpPage
+    // akan ditimpa diam-diam di sini.
+    Size ukuran = const Size(600, 2200),
   }) async {
-    // Layar tinggi supaya form panjang muat tanpa banyak scroll.
-    tester.view.physicalSize = const Size(600, 2200);
+    tester.view.physicalSize = ukuran;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(harness(initial: initial, theme: theme));
+    await tester.pumpWidget(harness(bill: bill, theme: theme));
     // Delegate l10n resolve di frame berikutnya — tanpa pump ekstra body
     // MaterialApp belum terbangun sama sekali.
     await tester.pumpAndSettle();
@@ -174,7 +184,7 @@ void main() {
   testWidgets('submit tanpa kategori → tervalidasi, BillAdded TIDAK ter-emit', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await pickDueDate(tester);
 
@@ -193,7 +203,7 @@ void main() {
 
   testWidgets('tenor mutual-exclusive: pindah "N kali" → "Sampai tanggal" '
       'meng-clear installmentTotal', (tester) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -226,7 +236,7 @@ void main() {
 
   testWidgets('tenor mutual-exclusive: pindah "Sampai tanggal" → "N kali" '
       'meng-clear recurrenceEndDate', (tester) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -258,7 +268,7 @@ void main() {
   testWidgets('pilih kategori "fixed" → toggle kebutuhan tetap otomatis ON', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
 
     expect(
       tester.widget<Switch>(find.byType(Switch)).value,
@@ -271,10 +281,34 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
   });
 
+  // Sisi LAIN dari invariant yang sama, dan sisi yang selama ini tak terkunci:
+  // "fixed" memberi DEFAULT cerdas, bukan kunci. Tanpa test ini,
+  // `_isFixedNeed = slug == 'fixed'` — yang MEMAKSA toggle mati setiap kali
+  // kategori lain dipilih — lolos seluruh suite, karena satu-satunya test
+  // toggle yang ada hanya pernah menekan "fixed".
+  testWidgets('memilih kategori lain tak memaksa toggle kebutuhan tetap mati', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+
+    await tapLabel(tester, l10n.categoryFixed);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+    await tapLabel(tester, l10n.categoryInternet);
+
+    expect(
+      tester.widget<Switch>(find.byType(Switch)).value,
+      isTrue,
+      reason:
+          'kategori "fixed" menyalakan toggle SEKALI — pilihan kategori '
+          'berikutnya tidak boleh membatalkan niat pengguna',
+    );
+  });
+
   // ── (d) Payload BillAdded ─────────────────────────────────────────────────
 
   testWidgets('BillAdded ter-emit dengan payload yang benar', (tester) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester, name: 'Wifi Indihome', amount: '350000');
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -305,7 +339,7 @@ void main() {
   testWidgets(
     'pengulangan "Sekali" → blok tenor disembunyikan & payload null',
     (tester) async {
-      await pumpSheet(tester);
+      await pumpPage(tester);
       await fillBaseFields(tester);
       await tapLabel(tester, l10n.categoryInternet);
       await pickDueDate(tester);
@@ -335,7 +369,7 @@ void main() {
   testWidgets('pengingat "Mati" → reminderEnabled false tanpa override hari', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -351,7 +385,7 @@ void main() {
   testWidgets('pengingat "H-3" → reminderEnabled true, daysBefore 3', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -367,7 +401,7 @@ void main() {
   testWidgets('pengingat "H-1" → reminderEnabled true, daysBefore 1', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -385,7 +419,7 @@ void main() {
   testWidgets('pengingat "Hari-H" → daysBefore 0 (bukan null/ikut pengaturan)', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -429,7 +463,7 @@ void main() {
         updatedAt: created,
       );
 
-      await pumpSheet(tester, initial: initial);
+      await pumpPage(tester, bill: initial);
 
       // Baca controller langsung — hint field juga di-render sebagai Text,
       // jadi find.text() bisa cocok ganda untuk nilai yang sama dengan hint.
@@ -475,7 +509,7 @@ void main() {
   testWidgets('gagal simpan → SnackBar tampil & tombol simpan aktif lagi', (
     tester,
   ) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -488,8 +522,8 @@ void main() {
     expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
   });
 
-  testWidgets('sukses simpan → sheet ditutup', (tester) async {
-    await pumpSheet(tester);
+  testWidgets('sukses simpan → halaman ditutup (rute ter-pop)', (tester) async {
+    await pumpPage(tester);
     await fillBaseFields(tester);
     await tapLabel(tester, l10n.categoryInternet);
     await pickDueDate(tester);
@@ -501,14 +535,14 @@ void main() {
     // menggantung selama indikator loading masih ikut ter-render.
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byType(AddEditBillSheet), findsNothing);
+    expect(find.byType(BillFormPage), findsNothing);
     expect(find.text('buka'), findsOneWidget);
   });
 
   // ── Aksesibilitas & tema ──────────────────────────────────────────────────
 
   testWidgets('tombol simpan & chip memenuhi hit target 48dp', (tester) async {
-    await pumpSheet(tester);
+    await pumpPage(tester);
 
     final submitSize = tester.getSize(
       find.byKey(const ValueKey('bill_form_submit')),
@@ -527,7 +561,7 @@ void main() {
   });
 
   testWidgets('dark mode render tanpa error', (tester) async {
-    await pumpSheet(tester, theme: ThemeData.dark());
+    await pumpPage(tester, theme: ThemeData.dark());
 
     expect(tester.takeException(), isNull);
     expect(find.text(l10n.billsFormAddTitle), findsOneWidget);
@@ -552,7 +586,7 @@ void main() {
     testWidgets(
       'monthly (default) → hint lama, hint non-bulanan TIDAK muncul',
       (tester) async {
-        await pumpSheet(tester);
+        await pumpPage(tester);
 
         expect(hintBulanan, findsOneWidget);
         expect(hintNonBulanan, findsNothing);
@@ -562,7 +596,7 @@ void main() {
     testWidgets(
       'yearly → hint non-bulanan menggantikan hint lama, toggle tetap hidup',
       (tester) async {
-        await pumpSheet(tester);
+        await pumpPage(tester);
         await tapLabel(tester, l10n.billsRecurrenceYearly);
 
         expect(hintNonBulanan, findsOneWidget);
@@ -575,8 +609,8 @@ void main() {
         );
 
         // Toggle SENGAJA tidak dikunci di form — flag = niat pengguna (spec §3).
-        // Hanya ada satu Switch di seluruh file ini (`:1092`), jadi finder-nya
-        // tak ambigu.
+        // Hanya ada satu Switch di seluruh halaman (di `_FixedNeedToggle`),
+        // jadi finder-nya tak ambigu.
         final sw = tester.widget<Switch>(find.byType(Switch));
         expect(
           sw.onChanged,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
@@ -8,7 +9,6 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
-import 'package:penyintas_app/features/bills/presentation/widgets/add_edit_bill_sheet.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/mark_bill_paid_sheet.dart';
@@ -47,17 +47,12 @@ class _BillsListPageState extends State<BillsListPage> {
     context.read<BillsBloc>().add(const BillsSubscribed());
   }
 
-  void _openAddSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => BlocProvider.value(
-        value: context.read<BillsBloc>(),
-        child: const AddEditBillSheet(),
-      ),
-    );
-  }
+  /// Form tambah kini HALAMAN PENUH, bukan bottom sheet (spec §5.1).
+  ///
+  /// Tanpa `extra` dan tanpa menunggu nilai balik: `BillsBloc` adalah
+  /// singleton yang sama dengan yang dipakai daftar ini, jadi tagihan baru
+  /// mengalir masuk lewat stream — bukan lewat hasil `pop`.
+  void _openForm() => context.push('/bills/new');
 
   Future<void> _openMarkPaidSheet(BillEntity bill) async {
     // Bloc dibaca SEBELUM await — setelah await, `context` tak lagi dijamin
@@ -212,7 +207,7 @@ class _BillsListPageState extends State<BillsListPage> {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openAddSheet,
+          onPressed: _openForm,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           icon: const Icon(Icons.add),
