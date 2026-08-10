@@ -240,6 +240,18 @@ class _BillFormPageState extends State<BillFormPage> {
   // ── Panel keypad (aturan K1–K3, spec §5.2) ────────────────────────────────
 
   void _bukaKeypad() {
+    // Field nominal tetap tombol hidup selagi panel terbuka — menyentuhnya
+    // lagi BUKAN transisi tertutup → terbuka, jadi ia tak boleh menyalakan
+    // ulang `_keypadKetukanPertama`. Tanpa penjaga ini, sentuhan tak sengaja
+    // di tengah mengetik membuat digit berikutnya MENGGANTI angka yang sudah
+    // diketik — hilang diam-diam, tanpa satu pun perubahan di layar yang
+    // memberi tahu bahwa keadaannya bergeser.
+    //
+    // Tombolnya sengaja tidak dimatikan saat panel terbuka: `onTap` yang jadi
+    // null akan mencabut simpul semantik tombolnya, dan pembaca layar
+    // kehilangan satu-satunya cara mengenali field ini.
+    if (_keypadTerbuka) return;
+
     // K1 arah pertama: keypad mengusir keyboard sistem.
     FocusScope.of(context).unfocus();
     setState(() {

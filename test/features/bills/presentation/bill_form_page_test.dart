@@ -1064,6 +1064,37 @@ void main() {
     expect(find.text('Rp 1.245.007'), findsOneWidget);
   });
 
+  // Sisi SEBALIKNYA dari test di bawah, dan sisi yang lebih gampang jebol:
+  // field nominal tetap tombol hidup selagi panel terbuka, jadi ia bisa
+  // disentuh lagi tanpa panel pernah tertutup. Itu BUKAN transisi
+  // tertutup → terbuka — dan tak ada satu piksel pun di layar yang berubah
+  // saat itu terjadi (border sudah aktif sebelum dan sesudah), jadi kalau
+  // penandanya ikut menyala ulang, angka yang sudah diketik hilang tanpa
+  // pengguna tahu kenapa.
+  testWidgets('menyentuh field saat panel SUDAH terbuka tak mengulang aturan '
+      'ketukan pertama', (tester) async {
+    await pumpPage(tester, bill: billContoh(estimatedAmount: 1245000));
+
+    await tapKey(tester, 'bill_form_amount');
+    // Angka SENGAJA bukan turunan 750.000 — placeholder field ini dirender
+    // sebagai "Rp 750.000", dan asersi yang bertabrakan dengannya hijau
+    // walau nilainya tak pernah berubah.
+    await ketikDiKeypad(tester, '48');
+    expect(find.text('Rp 48'), findsOneWidget);
+
+    // Sentuh lagi TANPA menutup panel lebih dulu.
+    await tapKey(tester, 'bill_form_amount');
+    await ketikDiKeypad(tester, '0');
+
+    expect(
+      find.text('Rp 480'),
+      findsOneWidget,
+      reason:
+          'sentuhan pada panel yang sudah terbuka bukan pembukaan baru — '
+          'digit sesudahnya harus MENAMBAH, bukan mengganti jadi Rp 0',
+    );
+  });
+
   testWidgets('tutup lalu buka lagi mengulang aturan ketukan pertama', (
     tester,
   ) async {
