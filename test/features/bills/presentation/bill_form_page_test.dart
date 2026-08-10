@@ -303,16 +303,14 @@ void main() {
     }
   }
 
-  /// Kosongkan nominal lewat tombol backspace keypad.
+  /// Ketuk backspace keypad [kali] kali.
   ///
   /// Backspace digambar sebagai ikon TANPA teks, jadi dicari lewat label
   /// semantiknya — sekaligus menegaskan label itu memang terpasang.
-  /// Sepuluh ketukan selalu cukup: `applyAmountKey` membatasi 9 digit, dan
-  /// backspace pada 0 tetap 0.
-  Future<void> kosongkanNominal(WidgetTester tester) async {
+  Future<void> tapBackspace(WidgetTester tester, {int kali = 1}) async {
     final handle = tester.ensureSemantics();
     final backspace = find.bySemanticsLabel(l10n.commonBackspace);
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < kali; i++) {
       await tester.tap(backspace);
       await tester.pump();
     }
@@ -322,16 +320,11 @@ void main() {
   /// Isi nominal lewat keypad, bukan `enterText`. Field nominal tak lagi
   /// menerima ketikan — ia membuka panel `AmountKeypad`.
   ///
-  /// [ganti] mengosongkan nilai lama lebih dulu: keypad MENAMBAH digit ke
-  /// nilai yang sudah ada (semantik uang), jadi mode ubah harus menghapus
-  /// sebelum mengetik nilai baru.
-  Future<void> isiNominal(
-    WidgetTester tester,
-    String digit, {
-    bool ganti = false,
-  }) async {
+  /// Tak perlu mengosongkan nilai lama lebih dulu: ketukan digit PERTAMA
+  /// sesudah panel dibuka mengganti nominal yang ada (lihat grup test
+  /// "ketukan pertama").
+  Future<void> isiNominal(WidgetTester tester, String digit) async {
     await tapKey(tester, 'bill_form_amount');
-    if (ganti) await kosongkanNominal(tester);
     await ketikDiKeypad(tester, digit);
   }
 
@@ -739,7 +732,7 @@ void main() {
     (tester) async {
       stubCategoriesLoaded();
       await pumpPage(tester, bill: billBerkategoriYatim);
-      await isiNominal(tester, '900000', ganti: true);
+      await isiNominal(tester, '900000');
       await tapSubmit(tester);
 
       final event = captureLastEvent(tester) as BillUpdated;
@@ -895,15 +888,29 @@ void main() {
     );
   });
 
-  testWidgets('nominal dari keypad masuk ke payload simpan', (tester) async {
+  testWidgets('nominal dari keypad sampai ke LAYAR dan ke payload simpan', (
+    tester,
+  ) async {
     await pumpPage(tester);
-    await fillBaseFields(tester, amount: '750000');
+    // SENGAJA bukan 750.000. Placeholder field ini dirender sebagai
+    // "Rp 750.000" juga, jadi asersi layar dengan angka itu tetap hijau
+    // walau ketukan keypad tak pernah sampai ke layar — asersinya kosong.
+    await fillBaseFields(tester, amount: '480000');
+
+    expect(
+      find.text('Rp 480.000'),
+      findsOneWidget,
+      reason:
+          'tiap ketukan keypad wajib punya jalur rebuild — tanpa itu pengguna '
+          'menekan angka dan fieldnya diam saja',
+    );
+
     await tapLabel(tester, l10n.categoryFixed);
     await pickDueDate(tester);
     await tapSubmit(tester);
 
     final event = captureLastEvent(tester) as BillAdded;
-    expect(event.bill.estimatedAmount, 750000);
+    expect(event.bill.estimatedAmount, 480000);
   });
 
   testWidgets('field "Berapa kali?" TETAP memakai keyboard sistem, '
@@ -981,14 +988,102 @@ void main() {
   ) async {
     final handle = tester.ensureSemantics();
     await pumpPage(tester);
+    final field = find.byKey(const ValueKey('bill_form_amount'));
 
     expect(
-      tester.getSemantics(find.byKey(const ValueKey('bill_form_amount'))),
+      tester.getSemantics(field),
       // `isSemantics`, bukan `matchesSemantics`: yang pertama hanya memeriksa
       // yang disebut, yang kedua menuntut SELURUH flag cocok.
-      isSemantics(isButton: true, hasTapAction: true, value: 'Rp 750.000'),
+      isSemantics(
+        isButton: true,
+        hasTapAction: true,
+        label: l10n.billsFormAmountLabel,
+        // Placeholder mendarat di `hint`, dan `value` MASIH KOSONG. Kalau
+        // placeholder diumumkan sebagai `value`, form kosong terdengar persis
+        // sama dengan form berisi Rp 750.000 — dan `TextField` lama tidak
+        // pernah begitu.
+        hint: 'Rp 750.000',
+        value: '',
+      ),
+    );
+
+    await isiNominal(tester, '480000');
+
+    expect(
+      tester.getSemantics(field),
+      isSemantics(
+        isButton: true,
+        hasTapAction: true,
+        label: l10n.billsFormAmountLabel,
+        hint: '',
+        value: 'Rp 480.000',
+      ),
     );
     handle.dispose();
+  });
+
+  // ── Ketukan pertama sesudah panel dibuka (mode ubah) ──────────────────────
+
+  testWidgets('ketukan digit pertama MENGGANTI nominal lama, bukan menambah', (
+    tester,
+  ) async {
+    await pumpPage(tester, bill: billContoh(estimatedAmount: 1245000));
+    expect(find.text('Rp 1.245.000'), findsOneWidget);
+
+    await tapKey(tester, 'bill_form_amount');
+    await ketikDiKeypad(tester, '7');
+    expect(
+      find.text('Rp 7'),
+      findsOneWidget,
+      reason:
+          'membuka Rp 1.245.000 lalu menekan "7" berarti menulis ulang, '
+          'bukan membuat Rp 12.450.007',
+    );
+
+    // Ketukan berikutnya menambah seperti biasa.
+    await ketikDiKeypad(tester, '50');
+    expect(find.text('Rp 750'), findsOneWidget);
+  });
+
+  testWidgets('backspace pada ketukan pertama tetap backspace biasa', (
+    tester,
+  ) async {
+    await pumpPage(tester, bill: billContoh(estimatedAmount: 1245000));
+    await tapKey(tester, 'bill_form_amount');
+
+    await tapBackspace(tester);
+    expect(
+      find.text('Rp 124.500'),
+      findsOneWidget,
+      reason: 'backspace menghapus satu digit — ia tidak mengosongkan semuanya',
+    );
+
+    // …dan sesudah backspace, digit menambah: pengguna jelas sedang menyunting
+    // angka yang ada, bukan menulis angka baru.
+    await ketikDiKeypad(tester, '7');
+    expect(find.text('Rp 1.245.007'), findsOneWidget);
+  });
+
+  testWidgets('tutup lalu buka lagi mengulang aturan ketukan pertama', (
+    tester,
+  ) async {
+    await pumpPage(tester, bill: billContoh(estimatedAmount: 1245000));
+
+    await tapKey(tester, 'bill_form_amount');
+    await ketikDiKeypad(tester, '7');
+    expect(find.text('Rp 7'), findsOneWidget);
+
+    await tapKey(tester, 'bill_form_keypad_done');
+    await tapKey(tester, 'bill_form_amount');
+    await ketikDiKeypad(tester, '8');
+
+    expect(
+      find.text('Rp 8'),
+      findsOneWidget,
+      reason:
+          'aturan berlaku tiap kali panel berpindah dari tertutup ke terbuka, '
+          'bukan sekali seumur halaman',
+    );
   });
 
   // ── Aksesibilitas & tema ──────────────────────────────────────────────────

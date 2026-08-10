@@ -86,6 +86,18 @@ class _BillFormPageState extends State<BillFormPage> {
   /// tampil bersamaan — halaman ini cuma punya satu bawah layar.
   bool _keypadTerbuka = false;
 
+  /// Panel baru saja dibuka dan belum satu digit pun diketuk.
+  ///
+  /// Ketukan digit PERTAMA sesudah panel terbuka MENGGANTI nominal lama, bukan
+  /// menambah di belakangnya: pengguna yang membuka Rp 1.245.000 lalu menekan
+  /// "7" bermaksud menulis ulang, bukan membuat Rp 12.450.007. Backspace TIDAK
+  /// ikut aturan ini — ia tanda pengguna sedang menyunting angka yang ada,
+  /// jadi ketukan sesudahnya menambah seperti biasa.
+  ///
+  /// Disimpan DI SINI, bukan di `applyAmountKey`: fungsi itu milik bersama
+  /// dengan onboarding, dan mengubah semantiknya akan mengubah layar lain.
+  bool _keypadKetukanPertama = false;
+
   /// Pegangan konteks field nominal untuk aturan K3. SENGAJA terpisah dari
   /// `ValueKey('bill_form_amount')`: yang satu identitas widget untuk finder,
   /// yang satu titik acuan `Scrollable.ensureVisible`. Satu `GlobalKey` tak
@@ -230,7 +242,12 @@ class _BillFormPageState extends State<BillFormPage> {
   void _bukaKeypad() {
     // K1 arah pertama: keypad mengusir keyboard sistem.
     FocusScope.of(context).unfocus();
-    setState(() => _keypadTerbuka = true);
+    setState(() {
+      _keypadTerbuka = true;
+      // Berlaku setiap kali panel BERPINDAH dari tertutup ke terbuka —
+      // termasuk buka → tutup → buka lagi.
+      _keypadKetukanPertama = true;
+    });
 
     // Gerbang ui-ux-pro-max — `reduced-motion` (severity HIGH): gulirannya
     // ikut mati kalau sistem meminta gerak dikurangi.
@@ -481,6 +498,7 @@ class _BillFormPageState extends State<BillFormPage> {
                             key: const ValueKey('bill_form_amount'),
                             fieldKey: _amountFieldKey,
                             amount: _amount,
+                            label: l10n.billsFormAmountLabel,
                             hint: l10n.billsFormAmountHint,
                             active: _keypadTerbuka,
                             panelColor: panelColor,
@@ -962,8 +980,18 @@ class _BillFormPageState extends State<BillFormPage> {
                                   // target 48dp diam-diam.
                                   horizontalPadding: AppSpacing.xl * 2,
                                   onKey: (k) => setState(() {
+                                    // Lihat `_keypadKetukanPertama`. Backspace
+                                    // dikecualikan dari "mulai angka baru",
+                                    // tapi tetap MELUNASI penandanya: sesudah
+                                    // ia ditekan, pengguna jelas sedang
+                                    // menyunting angka lama.
+                                    final dasar =
+                                        _keypadKetukanPertama && k != 'back'
+                                        ? 0
+                                        : _amount;
+                                    _keypadKetukanPertama = false;
                                     _amountController.text =
-                                        '${applyAmountKey(_amount, k)}';
+                                        '${applyAmountKey(dasar, k)}';
                                   }),
                                 ),
                               ),
@@ -1280,6 +1308,7 @@ class _AmountDisplayField extends StatelessWidget {
     super.key,
     required this.fieldKey,
     required this.amount,
+    required this.label,
     required this.hint,
     required this.active,
     required this.panelColor,
@@ -1293,6 +1322,10 @@ class _AmountDisplayField extends StatelessWidget {
   /// Dipakai [Scrollable.ensureVisible] pada aturan K3 — lihat `_bukaKeypad`.
   final Key fieldKey;
   final int amount;
+
+  /// Nama field untuk pembaca layar. Field ini tak punya caret dan tak pernah
+  /// jadi `TextField`, jadi tak ada label bawaan yang bisa diandalkan.
+  final String label;
   final String hint;
   final bool active;
   final Color panelColor;
@@ -1315,7 +1348,16 @@ class _AmountDisplayField extends StatelessWidget {
 
     return Semantics(
       button: true,
-      value: teks,
+      // Nama field DIBAWA simpul ini sendiri. `excludeSemantics` di bawah
+      // membuang semantik keturunan, jadi tanpa `label` pembaca layar hanya
+      // mendengar angka tanpa tahu angka APA.
+      label: label,
+      // Placeholder BUKAN nilai. Kalau `'Rp 750.000'` yang redup itu
+      // diumumkan sebagai `value`, form kosong terdengar PERSIS sama dengan
+      // form yang benar-benar berisi Rp 750.000 — regresi dari `TextField`
+      // lama, yang memetakan `hintText` ke `SemanticsProperties.hint`.
+      value: terisi ? teks : null,
+      hint: terisi ? null : teks,
       // `excludeSemantics` membuang seluruh semantik keturunan — TERMASUK
       // aksi ketuk milik InkWell. Tanpa `onTap` di simpul ini, pembaca layar
       // menemukan tombol yang tak bisa diaktifkan sama sekali.
