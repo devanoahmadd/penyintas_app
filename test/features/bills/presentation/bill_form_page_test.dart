@@ -1199,4 +1199,205 @@ void main() {
       },
     );
   });
+
+  // ── PopScope — buang perubahan (D15) ──────────────────────────────────────
+  //
+  // `tester.pageBack()` MUSTAHIL bekerja di harness ini: ia mencari
+  // `find.byTooltip('Back')` yang dipatok keras bahasa Inggris
+  // (`flutter_test/lib/src/widget_tester.dart:1170`), sedangkan tooltip
+  // lokal `id` adalah 'Kembali'. `tester.tap(find.byType(BackButton))`
+  // dipakai sebagai gantinya — `BackButton` memanggil `Navigator.maybePop()`,
+  // yang justru menghormati `PopScope.canPop`.
+  group('PopScope — buang perubahan (D15)', () {
+    Future<void> tekanBack(WidgetTester tester) async {
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('form bersih: back langsung menutup, tanpa dialog', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+      expect(find.byType(BillFormPage), findsNothing);
+    });
+
+    testWidgets('form berubah: back MENAHAN dan memunculkan dialog', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Kos Bu Tini',
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsOneWidget);
+      expect(find.byType(BillFormPage), findsOneWidget);
+    });
+
+    testWidgets('"Lanjut mengisi" mengembalikan ke form', (tester) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Kos',
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      await tester.tap(find.text(l10n.billsFormDiscardCancel));
+      await tester.pumpAndSettle();
+      expect(find.byType(BillFormPage), findsOneWidget);
+      expect(
+        find.text('Kos'),
+        findsOneWidget,
+        reason: 'isian tak boleh hilang saat pengguna memilih bertahan',
+      );
+    });
+
+    testWidgets('"Buang" menutup form', (tester) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Kos',
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      await tester.tap(find.text(l10n.billsFormDiscardConfirm));
+      await tester.pumpAndSettle();
+      expect(find.byType(BillFormPage), findsNothing);
+    });
+
+    testWidgets('isi lalu KOSONGKAN lagi BUKAN perubahan — tanpa dialog', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Kos',
+      );
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('bill_form_name')), '');
+      await tester.pump();
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+    });
+
+    testWidgets('mode ubah tanpa menyentuh apa pun BUKAN perubahan', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billContoh());
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+    });
+
+    testWidgets('mode ubah, nilai dikembalikan ke asal BUKAN perubahan', (
+      tester,
+    ) async {
+      final bill = billContoh();
+      await pumpPage(tester, bill: bill);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Berubah',
+      );
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        bill.name,
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+    });
+
+    testWidgets('setelah Simpan, pop TIDAK memicu dialog', (tester) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+
+      stateController.add(const BillsState(status: BillsStatus.success));
+      await tester.pump();
+      // Loncat melewati transisi pop sekali frame — `pumpAndSettle` akan
+      // menggantung selama indikator loading masih ikut ter-render.
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+      expect(find.byType(BillFormPage), findsNothing);
+    });
+
+    // ── [Audit B3] Catatan ikut dijaga ──────────────────────────────────
+    //
+    // Test ini merah tanpa `onChanged: setState(() {})` di field catatan,
+    // dan tujuh test di atas tetap hijau tanpanya — itulah kenapa ia perlu
+    // berdiri sendiri.
+    testWidgets('mengetik HANYA di Catatan tetap dihitung sebagai perubahan', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_notes')),
+        'Transfer lewat BCA, jangan lupa simpan struk',
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      expect(
+        find.text(l10n.billsFormDiscardTitle),
+        findsOneWidget,
+        reason: 'catatan panjang adalah isian yang paling mahal kalau hilang',
+      );
+    });
+
+    testWidgets('catatan yang dikembalikan kosong BUKAN perubahan', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_notes')),
+        'coba',
+      );
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_notes')),
+        '',
+      );
+      await tester.pump();
+      await tekanBack(tester);
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+    });
+
+    // ── Panel keypad terbuka dilipat dulu ─────────────────────────────────
+    //
+    // Bukan bagian dari daftar 10 test asli — tapi brief task ini eksplisit
+    // menandainya sebagai bagian dari task, bukan bonus: tanpa penjaga ini,
+    // pengguna yang cuma ingin menutup panel keypad ditawari "Buang
+    // perubahan?" untuk nominal yang justru baru saja ia ketik dengan
+    // sengaja.
+    testWidgets(
+      'keypad terbuka: back pertama melipat panel, back kedua baru menawarkan buang',
+      (tester) async {
+        await pumpPage(tester);
+        await isiNominal(tester, '480000');
+        expect(find.byType(AmountKeypad), findsOneWidget);
+
+        await tekanBack(tester);
+        expect(
+          find.byType(AmountKeypad),
+          findsNothing,
+          reason: 'back pertama melipat panel — bukan menawarkan buang',
+        );
+        expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+        expect(find.byType(BillFormPage), findsOneWidget);
+
+        await tekanBack(tester);
+        expect(
+          find.text(l10n.billsFormDiscardTitle),
+          findsOneWidget,
+          reason:
+              'back kedua, dengan panel sudah tertutup, baru menanyakan buang',
+        );
+      },
+    );
+  });
 }
