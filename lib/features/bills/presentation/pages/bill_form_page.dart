@@ -85,10 +85,33 @@ class _BillFormPageState extends State<BillFormPage> {
   /// Cap keadaan awal, diambil sekali di [initState] SETELAH prefill.
   /// D15 membandingkan NILAI, bukan "pernah menyentuh field" — mengetik lalu
   /// menghapus lagi bukan perubahan.
-  late final String _capAwal;
+  ///
+  /// SENGAJA `late`, BUKAN `late final` [Important 2, review T10 ronde 1]:
+  /// prefill yang tiba SETELAH `initState` — usecase asinkron (mis. Task 12:
+  /// `GetBillReminderSettingsUseCase` menyetel `_reminder` lewat `setState`),
+  /// `didChangeDependencies`, atau `BlocListener` yang menyemai default —
+  /// WAJIB bisa menyegarkan nilai ini lewat `_capAwal = _capSekarang;` di
+  /// titik yang sama. Tanpa itu, penjaga D15 menuduh pengguna mengubah
+  /// sesuatu yang tak pernah ia sentuh. `late final` melempar
+  /// `LateInitializationError` pada penyetelan kedua — jadi field ini
+  /// TIDAK BOLEH `final` walau hari ini baru diisi sekali.
+  late String _capAwal;
 
-  /// Simpan sudah dikirim → pop berikutnya bukan "membuang", melainkan
-  /// menutup pekerjaan yang selesai.
+  /// Diset TEPAT SEBELUM `Navigator.pop()` imperatif pada sukses simpan.
+  ///
+  /// KEJUJURAN [Important review T10, ronde 1]: pada kode saat ini flag ini
+  /// TAK PUNYA efek yang teramati. Pop di `BlocListener` adalah pop
+  /// IMPERATIF — ia tak pernah mengonsultasi `PopScope.canPop` sama sekali
+  /// (`canPop` hanya dibaca `Navigator.maybePop()`, yaitu jalur tombol back
+  /// sistem/`BackButton`). Dan pada detik flag ini diset `true`,
+  /// `_isSubmitting` SUDAH `true` sejak `_submit()` dipanggil, jadi cabang
+  /// `if (_isSubmitting) return;` di `onPopInvokedWithResult` SUDAH menelan
+  /// back apa pun isi flag ini.
+  ///
+  /// Tetap dipertahankan di `canPop` sebagai jaring pengaman MURAH kalau
+  /// suatu hari pop-sukses dipindah ke jalur yang sungguhan melewati
+  /// `canPop` (mis. dibungkus `Navigator.maybePop()`) — bukan karena ia
+  /// melindungi apa pun hari ini.
   bool _sudahDisimpan = false;
 
   /// Panel keypad terbuka. Aturan K1 (§5.2): ia dan keyboard sistem TAK PERNAH
@@ -484,9 +507,11 @@ class _BillFormPageState extends State<BillFormPage> {
       listener: (context, state) {
         if (!_isSubmitting) return;
         if (state.status == BillsStatus.success) {
-          // Tanpa `setState` — pop menyusul di baris berikutnya, dan
-          // penjaga D15 hanya perlu tahu ini BUKAN lagi "membuang perubahan"
-          // sebelum navigator sungguhan menutup halaman.
+          // `_sudahDisimpan` diset SEBELUM pop di baris berikutnya, tapi pop
+          // itu IMPERATIF — ia tak melewati `PopScope.canPop` sama sekali,
+          // jadi flag ini tak menggerbangi apa pun pada detik ini (lihat
+          // komentar jujur di deklarasinya). Jendela sukses-simpan sudah
+          // dijaga oleh `_isSubmitting` di `onPopInvokedWithResult`.
           _sudahDisimpan = true;
           Navigator.of(context).pop();
         } else if (state.status == BillsStatus.failure) {
@@ -503,17 +528,22 @@ class _BillFormPageState extends State<BillFormPage> {
         // dengan sengaja. Back kedua, dengan panel sudah tertutup, baru
         // menempuh jalur pembanding nilai di bawah.
         //
-        // `_sudahDisimpan` dan `_isSubmitting` ikut membuka kunci
-        // [Audit S13]: pengguna yang menekan Simpan lalu menekan back sebelum
-        // BLoC menjawab tak sedang "membuang perubahan" — pekerjaannya
-        // justru sedang disimpan. Menanyainya "Buang perubahan?" di detik
-        // itu adalah pertanyaan yang salah.
-        canPop:
-            _sudahDisimpan ||
-            _isSubmitting ||
-            (!_keypadTerbuka && !_adaPerubahan),
+        // `_isSubmitting` SENGAJA TIDAK ada di sini [Important 1, review
+        // T10]. Kalau ia ikut membuka kunci, `canPop` bernilai `true` selagi
+        // tagihan sedang disimpan, back mem-pop halaman SEKETIKA, state
+        // ter-dispose bersamanya, dan jawaban BLoC — sukses ATAU GAGAL —
+        // tak pernah sampai (termasuk snackbar gagal-simpan, yang jadi TAK
+        // PERNAH tampil). Back selama submit sekarang ditelan di
+        // `onPopInvokedWithResult` di bawah, bukan dibuka lewat `canPop`.
+        canPop: _sudahDisimpan || (!_keypadTerbuka && !_adaPerubahan),
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
+          // [Audit S13] Menekan Simpan lalu back sebelum BLoC menjawab BUKAN
+          // "membuang perubahan" — pekerjaannya justru sedang disimpan.
+          // Telan diam-diam, jangan tanya — dan (lihat komentar `canPop` di
+          // atas) jangan biarkan halaman ter-pop di tengah proses sama
+          // sekali, supaya jawaban BLoC yang menyusul tetap sampai ke layar.
+          if (_isSubmitting) return;
           if (_keypadTerbuka) {
             _tutupKeypad();
             return;

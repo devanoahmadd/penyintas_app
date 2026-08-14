@@ -1399,5 +1399,57 @@ void main() {
         );
       },
     );
+
+    // ── Back selagi menyimpan [Important 1, review T10 ronde 1] ──────────
+    //
+    // Sebelum perbaikan ini, `_isSubmitting` ikut membuka kunci `canPop`,
+    // jadi back di sini mem-pop halaman SEKETIKA — state ter-dispose sebelum
+    // BLoC sempat menjawab, dan jawaban gagal-simpan (snackbar) tak pernah
+    // sampai ke layar. Test ini membuktikan KEDUA sisi: back ditelan (bukan
+    // menutup halaman, bukan menawarkan dialog buang), DAN jawaban BLoC yang
+    // menyusul tetap sampai.
+    testWidgets(
+      'tekan back selagi menyimpan: back ditelan, gagal-simpan tetap '
+      'sampai ke layar',
+      (tester) async {
+        await pumpPage(tester);
+        await fillBaseFields(tester);
+        await tapLabel(tester, l10n.categoryFixed);
+        await pickDueDate(tester);
+        await tapSubmit(tester);
+
+        // Back SEBELUM BLoC menjawab — lihat komentar grup di atas.
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        // Lompati transisi pop kalau-kalau back tadi (secara keliru) tetap
+        // memulainya — `pumpAndSettle` akan menggantung selama indikator
+        // loading masih ikut ter-render.
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text(l10n.billsFormDiscardTitle),
+          findsNothing,
+          reason: 'back selagi menyimpan ditelan diam-diam, bukan ditanya',
+        );
+        expect(
+          find.byType(BillFormPage),
+          findsOneWidget,
+          reason: 'halaman tak boleh ter-pop di tengah proses simpan',
+        );
+
+        // BLoC baru menjawab GAGAL setelah back tadi ditelan.
+        stateController.add(const BillsState(status: BillsStatus.failure));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(
+          find.text(l10n.billsFormSaveFailed),
+          findsOneWidget,
+          reason:
+              'kalau back tadi sempat mem-pop halaman, BlocListener sudah '
+              'mati dan snackbar ini tak akan pernah tampil',
+        );
+      },
+    );
   });
 }
