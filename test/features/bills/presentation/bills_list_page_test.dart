@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +9,11 @@ import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/get_bill_reminder_settings_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
@@ -21,6 +25,9 @@ class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
 
 class MockCategoryBloc extends MockBloc<CategoryEvent, CategoryState>
     implements CategoryBloc {}
+
+class MockGetBillReminderSettings extends Mock
+    implements GetBillReminderSettingsUseCase {}
 
 // Delegate sinkron — rootBundle async bentrok dengan fakeAsync widget test.
 class _SyncL10nDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -41,6 +48,7 @@ void main() {
   late AppLocalizations l10n;
   late MockBillsBloc bloc;
   late MockCategoryBloc categoryBloc;
+  late MockGetBillReminderSettings reminderUsecase;
 
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
@@ -71,6 +79,7 @@ void main() {
 
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
+    registerFallbackValue(const NoParams());
   });
 
   setUp(() {
@@ -116,11 +125,28 @@ void main() {
     if (sl.isRegistered<CategoryBloc>()) sl.unregister<CategoryBloc>();
     sl.registerFactory<BillsBloc>(() => bloc);
     sl.registerFactory<CategoryBloc>(() => categoryBloc);
+
+    // Test navigasi di berkas ini benar-benar mendorong `BillFormPage`, dan
+    // sejak T12 `initState`-nya membaca setelan pengingat global lewat
+    // GetIt — tanpa tiruan ini rutenya melempar sebelum satu asersi pun
+    // berjalan.
+    reminderUsecase = MockGetBillReminderSettings();
+    if (sl.isRegistered<GetBillReminderSettingsUseCase>()) {
+      sl.unregister<GetBillReminderSettingsUseCase>();
+    }
+    sl.registerFactory<GetBillReminderSettingsUseCase>(() => reminderUsecase);
+    when(() => reminderUsecase(any())).thenAnswer(
+      (_) async =>
+          const Right<Failure, BillReminderSettings>((daysBefore: 1, hour: 9)),
+    );
   });
 
   tearDown(() {
     if (sl.isRegistered<BillsBloc>()) sl.unregister<BillsBloc>();
     if (sl.isRegistered<CategoryBloc>()) sl.unregister<CategoryBloc>();
+    if (sl.isRegistered<GetBillReminderSettingsUseCase>()) {
+      sl.unregister<GetBillReminderSettingsUseCase>();
+    }
   });
 
   void stub(BillsState state) {

@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/bills/data/models/bill_model.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/get_bill_reminder_settings_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
@@ -77,6 +80,16 @@ class _BillFormPageState extends State<BillFormPage> {
   DateTime? _recurrenceEndDate;
   bool _isFixedNeed = false;
   _ReminderMode _reminder = _ReminderMode.followSettings;
+
+  /// Nilai bawaan pengingat GLOBAL, hanya untuk DITAMPILKAN di bawah chip
+  /// "Bawaan aplikasi". Ia bukan isian form — memilih "Bawaan" tetap menyimpan
+  /// `daysBefore == null` alias "warisi bawaan global" (I5).
+  ///
+  /// null = belum tiba ATAU gagal dibaca. Keduanya diperlakukan sama: chip
+  /// Bawaan tampil tanpa baris bawah. Menampilkan "(1 hari sebelum)" sebagai
+  /// tebakan sementara berarti angkanya bisa berubah sendiri di depan mata
+  /// pengguna — hal terakhir yang boleh terjadi di layar keuangan.
+  int? _bawaanDaysBefore;
 
   /// Pesan validasi baru ditampilkan setelah percobaan simpan pertama —
   /// jangan memarahi pengguna sebelum ia sempat mengisi.
@@ -166,6 +179,61 @@ class _BillFormPageState extends State<BillFormPage> {
     // WAJIB diambil SETELAH prefill di atas — mode ubah membandingkan dengan
     // nilai widget.bill, bukan dengan form kosong [D15].
     _capAwal = _capSekarang;
+
+    // Sengaja TIDAK di-await: `initState` harus selesai seketika, dan
+    // hasilnya cuma menambah baris keterangan di chip Bawaan. Selama ia
+    // belum tiba, form sudah bisa dipakai penuh.
+    _muatBawaanPengingat();
+  }
+
+  /// Ambil setelan pengingat GLOBAL lewat lapisan domain.
+  ///
+  /// Left (gagal baca) diperlakukan SAMA dengan "belum tiba": biarkan
+  /// `_bawaanDaysBefore` null, chip Bawaan tampil tanpa baris bawah, form
+  /// tetap bisa disimpan. Tak ada gunanya menakuti pengguna dengan pesan
+  /// galat untuk keterangan yang sifatnya pelengkap.
+  Future<void> _muatBawaanPengingat() async {
+    final hasil = await sl<GetBillReminderSettingsUseCase>()(const NoParams());
+    if (!mounted) return;
+    hasil.fold(
+      (_) {},
+      (s) => setState(() {
+        _bawaanDaysBefore = s.daysBefore;
+        // Prefill yang tiba SETELAH `initState` WAJIB menyegarkan baseline
+        // D15 di titik penyetelannya — lihat komentar panjang di deklarasi
+        // `_capAwal`. Hari ini `_bawaanDaysBefore` bukan bagian dari
+        // `_capSekarang` (ia keterangan, bukan isian), jadi baris ini belum
+        // mengubah apa pun yang teramati. Ia dipasang karena INI titik
+        // masuknya prefill asinkron pertama di halaman ini: begitu ada nilai
+        // dari setelan yang ikut menyemai isian form, tanpa baris ini penjaga
+        // buang-perubahan akan menuduh pengguna mengubah sesuatu yang tak
+        // pernah ia sentuh. Sama jujurnya dengan `_sudahDisimpan` di atas:
+        // jaring pengaman murah, bukan penjaga yang sedang bekerja.
+        _capAwal = _capSekarang;
+      }),
+    );
+  }
+
+  /// Label nilai bawaan global untuk baris bawah chip "Bawaan aplikasi".
+  ///
+  /// Tiga nilai pertama sengaja memakai kunci chip yang sudah ada alih-alih
+  /// kunci berparameter, supaya bentuk jamak sisi EN tetap benar —
+  /// "1 day before", bukan "1 days before". Kunci berparameter hanya menangani
+  /// nilai tanpa chip sendiri, dan di sana n >= 2 sehingga jamaknya aman.
+  String? _labelBawaan(AppLocalizations l10n) => switch (_bawaanDaysBefore) {
+    null => null,
+    0 => l10n.billsReminderDayOf,
+    1 => l10n.billsReminderD1,
+    3 => l10n.billsReminderD3,
+    final n => l10n.billsReminderNDaysBefore(n),
+  };
+
+  /// Baris bawah chip Bawaan, sudah berkurung. null → baris itu tak digambar
+  /// sama sekali (belum tiba atau gagal dibaca). Kurungnya urusan tampilan,
+  /// jadi ia tinggal di sini dan bukan di pemetaan nilai di atas.
+  String? _sublabelBawaan(AppLocalizations l10n) {
+    final teks = _labelBawaan(l10n);
+    return teks == null ? null : '($teks)';
   }
 
   @override
@@ -987,16 +1055,47 @@ class _BillFormPageState extends State<BillFormPage> {
                               isDark: isDark,
                             ),
                             const SizedBox(height: AppSpacing.sm),
+                            // D14: "Bawaan aplikasi" BERDIRI SENDIRI di
+                            // barisnya, bukan chip pertama di deretan yang
+                            // sama. Ia bukan pilihan sejenis: empat chip di
+                            // bawah menyimpan angka, chip ini menyimpan
+                            // "ikut apa pun yang berlaku nanti". Menyandingkan
+                            // keduanya membuat perbedaan itu tak terlihat.
+                            //
+                            // D11: nilai bawaan yang sedang berlaku ditulis di
+                            // baris kedua, supaya "Bawaan aplikasi" tak lagi
+                            // jadi janji kosong yang harus dicari sendiri di
+                            // layar pengaturan.
+                            _ChoicePill(
+                              label: l10n.billsReminderDefault,
+                              sublabel: _sublabelBawaan(l10n),
+                              selected:
+                                  _reminder == _ReminderMode.followSettings,
+                              panelColor: panelColor,
+                              borderColor: borderColor,
+                              textColor: textColor,
+                              onTap: () => setState(
+                                () => _reminder = _ReminderMode.followSettings,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            // Pemisah, bukan label sejajar "Pengingat" —
+                            // karena itu ia digambar setipis catatan (12,
+                            // muted), bukan setebal label field.
+                            Text(
+                              l10n.billsReminderCustomLabel,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontSize: 12,
+                                color: mutedColor,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
                             Wrap(
                               spacing: AppSpacing.sm,
                               runSpacing: AppSpacing.sm,
                               children: [
                                 for (final (value, label)
                                     in <(_ReminderMode, String)>[
-                                      (
-                                        _ReminderMode.followSettings,
-                                        l10n.billsReminderDefault,
-                                      ),
                                       (_ReminderMode.d3, l10n.billsReminderD3),
                                       (_ReminderMode.d1, l10n.billsReminderD1),
                                       (
@@ -1461,6 +1560,12 @@ class _CategoryGridPlaceholder extends StatelessWidget {
 }
 
 /// Chip pilihan tunggal. Selalu berteks — warna hanya penguat.
+///
+/// [sublabel] menambah baris kedua yang lebih redup di dalam chip yang sama —
+/// dipakai chip "Bawaan aplikasi" untuk menyebut nilai global yang sedang
+/// berlaku (D11). Warnanya DITURUNKAN dari warna teks utama, bukan token
+/// baru: di keadaan terpilih latar chip adalah `primary`, dan warna redup
+/// mana pun dari palet teks akan tenggelam di atasnya.
 class _ChoicePill extends StatelessWidget {
   const _ChoicePill({
     required this.label,
@@ -1469,6 +1574,7 @@ class _ChoicePill extends StatelessWidget {
     required this.borderColor,
     required this.textColor,
     required this.onTap,
+    this.sublabel,
   });
 
   final String label;
@@ -1477,10 +1583,12 @@ class _ChoicePill extends StatelessWidget {
   final Color borderColor;
   final Color textColor;
   final VoidCallback onTap;
+  final String? sublabel;
 
   @override
   Widget build(BuildContext context) {
     final fg = selected ? Colors.white : textColor;
+    final teksKedua = sublabel;
 
     return Material(
       color: selected ? AppColors.primary : panelColor,
@@ -1498,15 +1606,34 @@ class _ChoicePill extends StatelessWidget {
           child: Container(
             // Hit target minimum Android 48dp.
             constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md2,
+              vertical: AppSpacing.sm,
+            ),
             alignment: Alignment.center,
-            child: Text(
-              label,
-              style: AppTextStyles.label.copyWith(
-                fontSize: 13,
-                color: fg,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.label.copyWith(
+                    fontSize: 13,
+                    color: fg,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                if (teksKedua != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    teksKedua,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontSize: 12,
+                      color: fg.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),

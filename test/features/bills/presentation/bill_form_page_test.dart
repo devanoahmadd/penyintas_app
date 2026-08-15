@@ -1,13 +1,19 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
+import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/get_bill_reminder_settings_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/pages/bill_form_page.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
@@ -20,6 +26,9 @@ class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
 
 class MockCategoryBloc extends MockBloc<CategoryEvent, CategoryState>
     implements CategoryBloc {}
+
+class MockGetBillReminderSettings extends Mock
+    implements GetBillReminderSettingsUseCase {}
 
 CategoryEntity _katBawaan({
   required int id,
@@ -134,13 +143,55 @@ void main() {
   late StreamController<BillsState> stateController;
   late MockCategoryBloc categoryBloc;
   late StreamController<CategoryState> categoryController;
+  late MockGetBillReminderSettings reminderUsecase;
 
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
     // BillsEvent sealed — pakai event konkret sebagai fallback.
     registerFallbackValue(const BillsSubscribed());
     registerFallbackValue(const LoadCategories());
+    registerFallbackValue(const NoParams());
   });
+
+  /// Jawaban langsung dari usecase setelan pengingat global.
+  ///
+  /// Parameter pertama dipertahankan `null` di semua pemanggil — penundaan
+  /// punya stub sendiri di bawah.
+  void stubReminderSettings(Duration? tunda, {int daysBefore = 1}) {
+    when(() => reminderUsecase(any())).thenAnswer(
+      (_) async => Right<Failure, BillReminderSettings>((
+        daysBefore: daysBefore,
+        hour: 9,
+      )),
+    );
+  }
+
+  /// Menahan jawaban sampai [tiba] diselesaikan test — untuk menguji keadaan
+  /// "setelan belum tiba".
+  ///
+  /// SENGAJA memakai `Completer`, bukan `Future.delayed`. `pumpAndSettle` tak
+  /// menyelesaikan timer yang tak menjadwalkan frame, jadi `Future.delayed(1s)`
+  /// masih menggantung saat test berakhir dan `flutter_test` menggagalkannya
+  /// dengan "A Timer is still pending even after the widget tree was disposed"
+  /// — kegagalan yang tak ada hubungannya dengan yang sedang diuji.
+  ///
+  /// Test WAJIB memanggil `tiba.complete(...)` sebelum selesai.
+  void stubReminderSettingsTertunda(Completer<int> tiba) {
+    when(() => reminderUsecase(any())).thenAnswer((_) async {
+      final daysBefore = await tiba.future;
+      return Right<Failure, BillReminderSettings>((
+        daysBefore: daysBefore,
+        hour: 9,
+      ));
+    });
+  }
+
+  void stubReminderSettingsFailure() {
+    when(() => reminderUsecase(any())).thenAnswer(
+      (_) async =>
+          const Left<Failure, BillReminderSettings>(CacheFailure('db mati')),
+    );
+  }
 
   /// Setel keadaan awal `CategoryBloc`. Keadaan berikutnya didorong lewat
   /// [categoryController] — itulah yang membuat jalur PULIH (gagal → retry →
@@ -168,11 +219,31 @@ void main() {
     // Bawaan: kategori SUDAH termuat. Test yang menguji jendela memuat/gagal
     // memanggil `stubKategori` sendiri sebelum `pumpPage`.
     stubCategoriesLoaded();
+
+    // `initState` halaman memanggil `sl<GetBillReminderSettingsUseCase>()`,
+    // jadi SETIAP test di berkas ini melewatinya — registrasinya harus di
+    // `setUp` level berkas, bukan per-test.
+    //
+    // Pola `unregister-kalau-terdaftar` lalu `registerFactory` meniru
+    // `verify_pin_page_test.dart:39-41`. SENGAJA BUKAN `sl.reset()`: reset
+    // mengosongkan SELURUH container, termasuk apa pun yang didaftarkan
+    // berkas lain, sehingga kegagalan satu test terasa seperti kegagalan
+    // berkas.
+    reminderUsecase = MockGetBillReminderSettings();
+    if (sl.isRegistered<GetBillReminderSettingsUseCase>()) {
+      sl.unregister<GetBillReminderSettingsUseCase>();
+    }
+    sl.registerFactory<GetBillReminderSettingsUseCase>(() => reminderUsecase);
+    // Bawaan: setelan tiba seketika dengan nilai global 1 hari sebelum.
+    stubReminderSettings(null);
   });
 
   tearDown(() {
     stateController.close();
     categoryController.close();
+    if (sl.isRegistered<GetBillReminderSettingsUseCase>()) {
+      sl.unregister<GetBillReminderSettingsUseCase>();
+    }
   });
 
   Widget harness({BillEntity? bill, ThemeData? theme}) => MaterialApp(
@@ -608,6 +679,177 @@ void main() {
       reason:
           'Hari-H harus 0; null akan tertukar dengan "ikut pengaturan global"',
     );
+  });
+
+  group('chip pengingat (D11, D14)', () {
+    testWidgets('chip Bawaan berdiri sendiri, terpisah dari empat chip lain', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      expect(find.text(l10n.billsReminderDefault), findsOneWidget);
+      expect(find.text(l10n.billsReminderCustomLabel), findsOneWidget);
+      final yBawaan = tester
+          .getTopLeft(find.text(l10n.billsReminderDefault))
+          .dy;
+      final yPemisah = tester
+          .getTopLeft(find.text(l10n.billsReminderCustomLabel))
+          .dy;
+      final yD3 = tester.getTopLeft(find.text(l10n.billsReminderD3)).dy;
+      expect(yBawaan, lessThan(yPemisah));
+      expect(yPemisah, lessThan(yD3));
+    });
+
+    testWidgets('sebelum setelan tiba, chip Bawaan TANPA baris bawah', (
+      tester,
+    ) async {
+      // Penundaan dikendalikan Completer, BUKAN `Future.delayed(1s)` — lihat
+      // catatan panjang di `stubReminderSettingsTertunda`.
+      final tiba = Completer<int>();
+      stubReminderSettingsTertunda(tiba);
+
+      await pumpPage(tester);
+      await tester.pump();
+      expect(find.text('(${l10n.billsReminderD1})'), findsNothing);
+
+      // Selesaikan sebelum test berakhir supaya tak ada Future menggantung,
+      // lalu buktikan barisnya memang MUNCUL setelah datanya tiba — satu test
+      // ini jadi mengunci kedua sisi transisinya.
+      tiba.complete(1);
+      await tester.pumpAndSettle();
+      expect(find.text('(${l10n.billsReminderD1})'), findsOneWidget);
+    });
+
+    testWidgets('setelan daysBefore=1 → baris bawah "(1 hari sebelum)"', (
+      tester,
+    ) async {
+      stubReminderSettings(null, daysBefore: 1);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('(${l10n.billsReminderD1})'), findsOneWidget);
+    });
+
+    testWidgets('setelan daysBefore=0 → "(Hari itu juga)"', (tester) async {
+      stubReminderSettings(null, daysBefore: 0);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('(${l10n.billsReminderDayOf})'), findsOneWidget);
+    });
+
+    testWidgets('setelan daysBefore=5 → kunci berparameter, bukan chip', (
+      tester,
+    ) async {
+      stubReminderSettings(null, daysBefore: 5);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('(${l10n.billsReminderNDaysBefore(5)})'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('setelan GAGAL dibaca → chip tetap ada, tanpa baris bawah, '
+        'form tetap bisa disimpan', (tester) async {
+      stubReminderSettingsFailure();
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.billsReminderDefault), findsOneWidget);
+      // Sisi negatif ini TIDAK lulus vakum: test 'daysBefore=1' di atas
+      // membuktikan baris yang sama MUNCUL pada keadaan yang membalikkannya.
+      expect(find.text('(${l10n.billsReminderD1})'), findsNothing);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+      expect(captureLastEvent(tester), isA<BillAdded>());
+    });
+
+    // ── Prefill asinkron vs penjaga buang-perubahan (D15) ─────────────────
+    //
+    // `_bawaanDaysBefore` tiba SETELAH `initState`, jadi ia tiba setelah
+    // `_capAwal` diambil. Form yang tak disentuh siapa pun tidak boleh
+    // menyodorkan dialog "Buang perubahan?" hanya karena setelan global
+    // menyusul masuk.
+    testWidgets('setelan yang tiba setelah initState tak membuat form bersih '
+        'terasa berubah', (tester) async {
+      final tiba = Completer<int>();
+      stubReminderSettingsTertunda(tiba);
+
+      await pumpPage(tester);
+      await tester.pump();
+      tiba.complete(3);
+      await tester.pumpAndSettle();
+
+      // TANPA menyentuh apa pun.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.billsFormDiscardTitle),
+        findsNothing,
+        reason:
+            'pengguna tak boleh dituduh mengubah sesuatu yang tak pernah '
+            'ia sentuh',
+      );
+      expect(find.byType(BillFormPage), findsNothing);
+    });
+
+    // ── I5: pemetaan data TIDAK bergeser ──────────────────────────────────
+
+    testWidgets('I5: memilih "Hari itu juga" menyimpan daysBefore=0, '
+        'BUKAN null', (tester) async {
+      stubReminderSettings(null, daysBefore: 1);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      await tapLabel(tester, l10n.billsReminderDayOf);
+      await tapSubmit(tester);
+
+      final event = captureLastEvent(tester) as BillAdded;
+      expect(event.bill.reminderEnabled, isTrue);
+      expect(event.bill.reminderDaysBefore, 0);
+    });
+
+    testWidgets('I5: memilih "Bawaan aplikasi" menyimpan daysBefore=null '
+        'meski nilai globalnya 1', (tester) async {
+      stubReminderSettings(null, daysBefore: 1);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      // Berangkat DULU dari Bawaan lalu kembali ke sana: tanpa langkah ini
+      // test cuma memeriksa nilai awal `_reminder` dan tak pernah menyentuh
+      // kartu Bawaan yang baru disusun ulang task ini.
+      await tapLabel(tester, l10n.billsReminderD3);
+      await tapLabel(tester, l10n.billsReminderDefault);
+      await tapSubmit(tester);
+
+      final event = captureLastEvent(tester) as BillAdded;
+      expect(event.bill.reminderEnabled, isTrue);
+      expect(
+        event.bill.reminderDaysBefore,
+        isNull,
+        reason: 'Bawaan berarti MEWARISI, bukan menyalin nilainya',
+      );
+    });
+
+    testWidgets('I5: "Jangan ingatkan" menyimpan enabled=false', (
+      tester,
+    ) async {
+      stubReminderSettings(null, daysBefore: 1);
+      await pumpPage(tester);
+      await tester.pumpAndSettle();
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      await tapLabel(tester, l10n.billsReminderOff);
+      await tapSubmit(tester);
+
+      final event = captureLastEvent(tester) as BillAdded;
+      expect(event.bill.reminderEnabled, isFalse);
+    });
   });
 
   // ── Mode edit ─────────────────────────────────────────────────────────────

@@ -132,6 +132,7 @@ import 'package:penyintas_app/features/bills/data/repositories/bill_repository_i
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/create_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/delete_bill_usecase.dart';
+import 'package:penyintas_app/features/bills/domain/usecases/get_bill_reminder_settings_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/sync_bills_from_remote_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
@@ -608,6 +609,9 @@ void _initBills() {
   sl.registerLazySingleton(() => DeleteBillUseCase(sl()));
   sl.registerLazySingleton(() => WatchActiveBillsUseCase(sl()));
   sl.registerLazySingleton(() => SyncBillsFromRemoteUseCase(sl()));
+  // Dibaca form tagihan untuk menampilkan NILAI bawaan global di chip
+  // "Bawaan aplikasi" — lewat domain, bukan datasource langsung (spec §6.5).
+  sl.registerLazySingleton(() => GetBillReminderSettingsUseCase(sl()));
 
   sl.registerLazySingleton<BillRepository>(
     () => BillRepositoryImpl(
