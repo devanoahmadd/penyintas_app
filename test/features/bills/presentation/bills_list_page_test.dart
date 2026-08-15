@@ -77,6 +77,79 @@ void main() {
     updatedAt: todayStart,
   );
 
+  // ── Fixture kategori (A.1 dari perkakas test bersama) ─────────────────────
+  //
+  // `sortOrder` di bawah MENIRU seed produksi (`app_database.dart:522-568`) —
+  // termasuk fakta bahwa `fixed` justru paling belakang dan `other`
+  // mendahuluinya.
+  CategoryEntity katBawaan({
+    required int id,
+    required String slug,
+    required String labelKey,
+    int sortOrder = 10,
+  }) => CategoryEntity(
+    id: id,
+    slug: slug,
+    labelKey: labelKey,
+    isBuiltIn: true,
+    isLimitable: true,
+    type: 'expense',
+    sortOrder: sortOrder,
+  );
+
+  CategoryEntity katKustom({
+    required String slug,
+    String? iconSlug,
+    String labelOverride = 'Kategori Kustom',
+    int id = 50,
+    int sortOrder = 100,
+  }) => CategoryEntity(
+    id: id,
+    slug: slug,
+    labelOverride: labelOverride,
+    isBuiltIn: false,
+    isLimitable: true,
+    type: 'expense',
+    sortOrder: sortOrder,
+    iconSlug: iconSlug,
+  );
+
+  /// Tujuh kategori bawaan + satu `income`, dengan `sortOrder` PERSIS seperti
+  /// seed produksi.
+  final kategoriBawaan = [
+    katBawaan(id: 1, slug: 'food', labelKey: 'category_food', sortOrder: 0),
+    katBawaan(
+      id: 2,
+      slug: 'transport',
+      labelKey: 'category_transport',
+      sortOrder: 1,
+    ),
+    katBawaan(
+      id: 3,
+      slug: 'shopping',
+      labelKey: 'category_shopping',
+      sortOrder: 2,
+    ),
+    katBawaan(id: 4, slug: 'health', labelKey: 'category_health', sortOrder: 3),
+    katBawaan(
+      id: 5,
+      slug: 'internet',
+      labelKey: 'category_internet',
+      sortOrder: 4,
+    ),
+    katBawaan(id: 7, slug: 'other', labelKey: 'category_other', sortOrder: 5),
+    katBawaan(id: 6, slug: 'fixed', labelKey: 'category_fixed', sortOrder: 6),
+    const CategoryEntity(
+      id: 9,
+      slug: 'income',
+      labelKey: 'category_income',
+      isBuiltIn: true,
+      isLimitable: false,
+      type: 'income',
+      sortOrder: 7,
+    ),
+  ];
+
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
     registerFallbackValue(const NoParams());
@@ -153,6 +226,16 @@ void main() {
     whenListen(bloc, Stream<BillsState>.value(state), initialState: state);
   }
 
+  // ── Stub `CategoryBloc` (A.2 dari perkakas test bersama) ───────────────────
+  void stubCategoriesLoaded({List<CategoryEntity> extra = const []}) {
+    final state = CategoryLoaded(categories: [...kategoriBawaan, ...extra]);
+    whenListen(
+      categoryBloc,
+      Stream<CategoryState>.value(state),
+      initialState: state,
+    );
+  }
+
   /// Harness memakai `buildBillsRoute()` YANG NYATA di dalam
   /// `MaterialApp.router`.
   ///
@@ -175,6 +258,34 @@ void main() {
     ],
     theme: theme,
     routerConfig: router ?? buatRouter(),
+  );
+
+  /// Harness `BillItem` TELANJANG (tanpa `BillsBloc`/`GoRouter`) — dipakai
+  /// test yang menguji perilaku murni widget itu sendiri (dua target tap
+  /// bersarang, hit target ⋮).
+  Future<void> pumpItem(
+    WidgetTester tester, {
+    VoidCallback? onTap,
+    VoidCallback? onMenuTap,
+  }) => tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('id'),
+      supportedLocales: const [Locale('id'), Locale('en')],
+      localizationsDelegates: [
+        _SyncL10nDelegate(l10n),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: Scaffold(
+        body: BillItem(
+          bill: buildBill(id: 1, name: 'Kos', dueDate: todayStart),
+          todayStart: todayStart,
+          onTap: onTap,
+          onMenuTap: onMenuTap,
+        ),
+      ),
+    ),
   );
 
   testWidgets('mengirim BillsSubscribed saat halaman pertama tampil', (
@@ -518,5 +629,211 @@ void main() {
       expect(router.state.uri.toString(), '/bills');
       expect(tester.takeException(), isNull);
     });
+
+    // Task 13: pintu menu (⋮) mendorong rute ubah — SEMENTARA, sampai Task
+    // 14 memasang sheet aksi (`_openActionsSheet`).
+    testWidgets('menekan ⋮ mendorong rute ubah dengan bill sebagai extra', (
+      tester,
+    ) async {
+      final kos = buildBill(id: 42, name: 'Kos Bu Tini', dueDate: todayStart);
+      stub(BillsState(status: BillsStatus.success, bills: [kos]));
+      stubCategoriesLoaded();
+      final router = buatRouter();
+      await tester.pumpWidget(harness(router: router));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('bill_item_menu_42')));
+      await tester.pumpAndSettle();
+
+      expect(router.state.uri.toString(), '/bills/42/edit');
+      final page = tester.widget<BillFormPage>(find.byType(BillFormPage));
+      expect(
+        page.bill,
+        same(kos),
+        reason:
+            'rute ubah membaca bill dari extra — instance yang SAMA, '
+            'bukan salinan, supaya penjaga billEditGuard lolos',
+      );
+    });
+  });
+
+  // ── Ikon kategori + pintu aksi ⋮ (Task 13) ──────────────────────────────────
+  group('ikon kategori + pintu aksi ⋮', () {
+    testWidgets('baris memakai ikon KATEGORI, bukan ikon tagihan seragam', (
+      tester,
+    ) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 1, name: 'Kos', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.receipt_long_outlined), findsNothing);
+    });
+
+    testWidgets('kategori kustom memakai ikon dari iconSlug', (tester) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(
+              id: 1,
+              name: 'Kursus',
+              dueDate: todayStart,
+            ).copyWith(category: 'kursus_bahasa'),
+          ],
+        ),
+      );
+      stubCategoriesLoaded(
+        extra: [katKustom(slug: 'kursus_bahasa', iconSlug: 'school')],
+      );
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.school_outlined), findsOneWidget);
+    });
+
+    testWidgets('CategoryBloc belum siap → ikon tagihan lama sebagai antara, '
+        'bukan ikon grid generik', (tester) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 1, name: 'Kos', dueDate: todayStart)],
+        ),
+      );
+      whenListen(
+        categoryBloc,
+        Stream<CategoryState>.value(const CategoryLoading()),
+        initialState: const CategoryLoading(),
+      );
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
+    });
+
+    testWidgets('ikon ⋮ tampil di tiap baris', (tester) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(id: 1, name: 'Kos', dueDate: todayStart),
+            buildBill(id: 2, name: 'Wifi', dueDate: todayStart),
+          ],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('bill_item_menu_1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('bill_item_menu_2')), findsOneWidget);
+    });
+
+    testWidgets('menekan ⋮ TIDAK ikut memicu onTap baris', (tester) async {
+      var barisDitekan = 0;
+      var menuDitekan = 0;
+      await pumpItem(
+        tester,
+        onTap: () => barisDitekan++,
+        onMenuTap: () => menuDitekan++,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('bill_item_menu_1')));
+      await tester.pumpAndSettle();
+
+      expect(menuDitekan, 1);
+      expect(barisDitekan, 0, reason: 'ketukan tak boleh menembus ke baris');
+    });
+
+    testWidgets('⋮ memenuhi hit target 48dp', (tester) async {
+      await pumpItem(tester, onMenuTap: () {});
+      await tester.pumpAndSettle();
+
+      final size = tester.getSize(
+        find.byKey(const ValueKey('bill_item_menu_1')),
+      );
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('onMenuTap null → ⋮ tidak digambar', (tester) async {
+      await pumpItem(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('bill_item_menu_1')), findsNothing);
+    });
+
+    // Menggantikan sabotase "InkResponse → GestureDetector" (mustahil merah —
+    // recognizer terdalam selalu menang arena gestur). Test ini menjaga hal
+    // yang jauh lebih penting: tagihan yang tak bisa ditandai lunas lagi
+    // TETAP punya pintu ubah/hapus. Menyamakan `onMenuTap` dengan
+    // `canMarkPaid` menghidupkan kembali persis bug yang gelombang ini ada
+    // untuk memperbaikinya.
+    testWidgets('tagihan yang cicilannya TAMAT tetap punya ⋮', (tester) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(
+              id: 1,
+              name: 'Cicilan HP',
+              dueDate: todayStart,
+              status: BillStatus.completed,
+              installmentTotal: 12,
+              installmentsPaid: 12,
+            ),
+          ],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('bill_item_menu_1')),
+        findsOneWidget,
+        reason: 'tak bisa ditandai lunas ≠ tak bisa diubah atau dihapus',
+      );
+    });
+
+    testWidgets(
+      'baris berikut tetap muat di layar 320dp dengan nominal delapan digit '
+      '[Audit S8]',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        stub(
+          BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(
+                id: 1,
+                name: 'Cicilan motor Honda Beat',
+                dueDate: todayStart,
+                estimatedAmount: 12450000,
+              ),
+            ],
+          ),
+        );
+        stubCategoriesLoaded();
+        await tester.pumpWidget(harness());
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'RenderFlex overflow di baris daftar = pita kuning-hitam',
+        );
+      },
+    );
   });
 }

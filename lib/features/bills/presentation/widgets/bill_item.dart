@@ -4,24 +4,52 @@ import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 
 /// Satu baris tagihan di daftar Tagihan.
 ///
-/// Anatomi mengikuti `TransactionItem`: ikon 36×36 · nama + caption ·
-/// nominal + chip status. Detail/aksi menyusul di Task 5.3.
+/// Anatomi mengikuti `TransactionItem`: ikon kategori 36×36 · nama + caption
+/// · nominal + chip status · pintu menu ⋮ (Task 13).
 class BillItem extends StatelessWidget {
-  const BillItem({super.key, required this.bill, this.onTap, this.todayStart});
+  const BillItem({
+    super.key,
+    required this.bill,
+    this.onTap,
+    this.onMenuTap,
+    this.todayStart,
+    this.categoryIconSlug,
+    this.categoryResolved = false,
+  });
 
   final BillEntity bill;
   final VoidCallback? onTap;
+
+  /// null → ⋮ tidak digambar. Baris tanpa pintu aksi tetap sah (mis. saat
+  /// dipakai di layar lain kelak).
+  ///
+  /// SENGAJA tidak bergantung pada bisa-tidaknya tagihan ditandai lunas
+  /// (`onTap`) — tagihan yang sudah tamat tetap harus bisa diubah/dihapus.
+  final VoidCallback? onMenuTap;
 
   /// Awal hari acuan untuk derivasi "Terlambat". Null → dihitung dari
   /// `DateTime.now()`. Halaman daftar mengirim nilai tunggal agar semua baris
   /// memakai acuan yang sama.
   final DateTime? todayStart;
+
+  /// `iconSlug` kategori bill ini, dipetakan oleh pemanggil dari CategoryBloc.
+  ///
+  /// null punya DUA arti yang sengaja tak dibedakan di sini: kategori
+  /// built-in (ikonnya dari `CategoryMetadata`), atau CategoryBloc belum
+  /// siap. Yang membedakan keduanya adalah [categoryResolved].
+  final String? categoryIconSlug;
+
+  /// `true` bila [categoryIconSlug] datang dari daftar kategori yang sudah
+  /// dimuat — bukan sekadar "belum ada nilai". Selama `false`, baris memakai
+  /// ikon tagihan lama sebagai antara.
+  final bool categoryResolved;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +108,19 @@ class BillItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppSpacing.sm),
                   ),
                   child: Icon(
-                    Icons.receipt_long_outlined,
+                    // `of()` — BUKAN `iconFromSlug(bill.category)`.
+                    // `iconFromSlug` melihat namespace ikon KUSTOM
+                    // (`restaurant`/`coffee`/…), bukan slug kategori.
+                    categoryResolved
+                        ? CategoryMetadata.of(
+                            bill.category,
+                            iconSlug: categoryIconSlug,
+                          ).$1
+                        // Antara saat CategoryBloc belum siap: ikon tagihan
+                        // lama. Ia netral dan tak pernah salah — berbeda dari
+                        // ikon grid generik yang berarti "kategori tak
+                        // dikenal".
+                        : Icons.receipt_long_outlined,
                     size: 18,
                     color: textColor,
                   ),
@@ -146,22 +186,57 @@ class BillItem extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      formatRupiah(bill.estimatedAmount),
-                      style: AppTextStyles.numericSm.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
+                // `Flexible` (bukan biarkan lebar intrinsik) — nominal 8
+                // digit di layar sempit (320dp) sudah cukup lebar sendiri
+                // untuk membuat `Row` overflow kalau kolom ini kaku [Audit
+                // S8]. Nama tagihan (Expanded di atas) sudah punya ellipsis;
+                // nominal & chip diberi jaring pengaman yang sama supaya
+                // baris tak pernah melempar RenderFlex overflow.
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatRupiah(bill.estimatedAmount),
+                        style: AppTextStyles.numericSm.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      BillStatusChip(status: status),
+                    ],
+                  ),
+                ),
+                if (onMenuTap != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  // Node semantik SENDIRI — bukan turunan yang bisa tertelan
+                  // `MergeSemantics`. Berdiri lepas dari `canMarkPaid`: pintu
+                  // ubah/hapus wajib tetap ada walau baris tak lagi bisa
+                  // ditandai lunas.
+                  Semantics(
+                    button: true,
+                    label: context.l10n.billsActionsMenuA11y,
+                    child: InkResponse(
+                      key: ValueKey('bill_item_menu_${bill.id}'),
+                      onTap: onMenuTap,
+                      radius: 24,
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Icon(
+                          Icons.more_vert_rounded,
+                          size: 20,
+                          color: mutedColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    BillStatusChip(status: status),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),

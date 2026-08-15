@@ -414,6 +414,7 @@
   "bills_empty": "No bills yet. Add rent, electricity, or wifi so nothing slips by.",
   "bills_add": "Add Bill",
   "bills_error": "Couldn't load your bills. Check your connection, then try again.",
+  "bills_actions_menu_a11y": "Bill actions",
   "bills_status_overdue": "Overdue",
   "bills_status_upcoming": "Upcoming",
   "bills_status_done": "Done",

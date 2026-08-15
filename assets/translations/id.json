@@ -414,6 +414,7 @@
   "bills_empty": "Belum ada tagihan. Tambah kos, listrik, atau wifi biar tak lupa.",
   "bills_add": "Tambah Tagihan",
   "bills_error": "Gagal memuat tagihan. Periksa koneksi, lalu coba lagi.",
+  "bills_actions_menu_a11y": "Aksi tagihan",
   "bills_status_overdue": "Terlambat",
   "bills_status_upcoming": "Akan datang",
   "bills_status_done": "Selesai",

@@ -563,6 +563,11 @@ class AppLocalizations {
   String get billsEmpty => _t('bills_empty');
   String get billsAdd => _t('bills_add');
   String get billsError => _t('bills_error');
+
+  /// Label semantik pintu menu (⋮) di tiap baris daftar tagihan (Task 13).
+  /// Pintu ini berdiri sendiri — tersedia untuk SEMUA tagihan, termasuk yang
+  /// sudah tak bisa ditandai lunas lagi.
+  String get billsActionsMenuA11y => _t('bills_actions_menu_a11y');
   String get billsStatusOverdue => _t('bills_status_overdue');
   String get billsStatusUpcoming => _t('bills_status_upcoming');
   String get billsStatusDone => _t('bills_status_done');

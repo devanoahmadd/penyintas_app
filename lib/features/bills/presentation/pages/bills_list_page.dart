@@ -13,6 +13,8 @@ import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/mark_bill_paid_sheet.dart';
 import 'package:penyintas_app/features/budget/domain/usecases/get_budget_settings_usecase.dart';
+import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
+import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 
 /// Urutan tampilan daftar tagihan (spec §5):
 /// tagihan TERLAMBAT naik ke atas, sisanya urut `dueDate` menaik.
@@ -32,6 +34,26 @@ List<BillEntity> sortBillsForDisplay(
   });
   return sorted;
 }
+
+/// Kategori yang tersedia dari sebuah [CategoryState], atau daftar kosong bila
+/// belum ada.
+///
+/// `CategoryActionLoading` ikut dianggap punya isi — ia MEMBAWA `categories`
+/// (`category_bloc.dart:40-41`), jadi memperlakukannya sebagai "belum siap"
+/// justru mengosongkan daftar yang isinya ada.
+List<CategoryEntity> kategoriDariState(CategoryState state) => switch (state) {
+  CategoryLoaded(:final categories) => categories,
+  CategoryActionLoading(:final categories) => categories,
+  _ => const [],
+};
+
+/// `true` bila [state] sudah membawa daftar kategori yang bisa dipercaya.
+///
+/// Bedanya dengan "daftar kosong" penting: daftar kosong karena belum dimuat
+/// harus memakai ikon tagihan lama sebagai antara, sedangkan daftar sudah
+/// dimuat tapi slug-nya tak ketemu memang berarti kategori tak dikenal.
+bool kategoriSudahSiap(CategoryState state) =>
+    state is CategoryLoaded || state is CategoryActionLoading;
 
 class BillsListPage extends StatefulWidget {
   const BillsListPage({super.key});
@@ -53,6 +75,13 @@ class _BillsListPageState extends State<BillsListPage> {
   /// singleton yang sama dengan yang dipakai daftar ini, jadi tagihan baru
   /// mengalir masuk lewat stream — bukan lewat hasil `pop`.
   void _openForm() => context.push('/bills/new');
+
+  /// Pintu aksi ubah/hapus tagihan (⋮ di tiap baris — Task 13).
+  ///
+  /// SEMENTARA langsung mendorong rute ubah, supaya rutenya teruji lebih
+  /// dulu — Task 14 mengganti isinya dengan sheet aksi (ubah/hapus).
+  void _openActionsSheet(BillEntity bill) =>
+      context.push('/bills/${bill.id}/edit', extra: bill);
 
   Future<void> _openMarkPaidSheet(BillEntity bill) async {
     // Bloc dibaca SEBELUM await — setelah await, `context` tak lagi dijamin
@@ -183,21 +212,40 @@ class _BillsListPageState extends State<BillsListPage> {
                     AppSpacing.lg,
                     AppSpacing.xxxl,
                   ),
-                  sliver: SliverList.separated(
-                    itemCount: bills.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (_, i) {
-                      final bill = bills[i];
-                      // Tagihan yang sudah tamat tidak bisa ditandai lunas
-                      // lagi — baris dibiarkan non-interaktif.
-                      final canMarkPaid = bill.status != BillStatus.completed;
-                      return BillItem(
-                        bill: bill,
-                        todayStart: todayStart,
-                        onTap: canMarkPaid
-                            ? () => _openMarkPaidSheet(bill)
-                            : null,
+                  sliver: BlocBuilder<CategoryBloc, CategoryState>(
+                    builder: (context, catState) {
+                      final siap = kategoriSudahSiap(catState);
+                      // Peta slug → iconSlug, dibangun sekali per rebuild —
+                      // bukan per baris. Daftar kategori pendek, tapi baris
+                      // tagihan bisa banyak, dan pencarian linear per baris
+                      // jadi O(n×m) percuma.
+                      final peta = <String, String?>{
+                        for (final c in kategoriDariState(catState))
+                          c.slug: c.iconSlug,
+                      };
+                      return SliverList.separated(
+                        itemCount: bills.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (_, i) {
+                          final bill = bills[i];
+                          // Tagihan yang sudah tamat tidak bisa ditandai
+                          // lunas lagi — baris dibiarkan non-interaktif.
+                          final canMarkPaid =
+                              bill.status != BillStatus.completed;
+                          return BillItem(
+                            bill: bill,
+                            todayStart: todayStart,
+                            categoryResolved: siap,
+                            categoryIconSlug: peta[bill.category],
+                            onTap: canMarkPaid
+                                ? () => _openMarkPaidSheet(bill)
+                                : null,
+                            // SENGAJA tidak ikut `canMarkPaid` — tagihan yang
+                            // sudah tamat tetap harus bisa diubah/dihapus.
+                            onMenuTap: () => _openActionsSheet(bill),
+                          );
+                        },
                       );
                     },
                   ),

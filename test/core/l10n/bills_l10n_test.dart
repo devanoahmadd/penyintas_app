@@ -50,6 +50,8 @@ void main() {
     'bills_empty',
     'bills_add',
     'bills_error',
+    // Pintu menu (⋮) tiap baris — Task 13
+    'bills_actions_menu_a11y',
     // Chip status & badge cicilan
     'bills_status_overdue',
     'bills_status_upcoming',
