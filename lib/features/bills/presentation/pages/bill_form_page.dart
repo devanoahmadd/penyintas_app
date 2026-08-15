@@ -101,14 +101,22 @@ class _BillFormPageState extends State<BillFormPage> {
   /// menghapus lagi bukan perubahan.
   ///
   /// SENGAJA `late`, BUKAN `late final` [Important 2, review T10 ronde 1]:
-  /// prefill yang tiba SETELAH `initState` — usecase asinkron (mis. Task 12:
-  /// `GetBillReminderSettingsUseCase` menyetel `_reminder` lewat `setState`),
-  /// `didChangeDependencies`, atau `BlocListener` yang menyemai default —
-  /// WAJIB bisa menyegarkan nilai ini lewat `_capAwal = _capSekarang;` di
-  /// titik yang sama. Tanpa itu, penjaga D15 menuduh pengguna mengubah
-  /// sesuatu yang tak pernah ia sentuh. `late final` melempar
-  /// `LateInitializationError` pada penyetelan kedua — jadi field ini
-  /// TIDAK BOLEH `final` walau hari ini baru diisi sekali.
+  /// prefill yang tiba SETELAH `initState` — usecase asinkron yang ikut
+  /// menyemai isian form, `didChangeDependencies`, atau `BlocListener` yang
+  /// menyemai default — WAJIB bisa menyegarkan nilai ini lewat
+  /// `_capAwal = _capSekarang;` di titik yang sama. Tanpa itu, penjaga D15
+  /// menuduh pengguna mengubah sesuatu yang tak pernah ia sentuh.
+  /// `late final` melempar `LateInitializationError` pada penyetelan kedua —
+  /// jadi field ini TIDAK BOLEH `final` walau hari ini baru diisi sekali.
+  ///
+  /// BATASNYA: penyegaran itu hanya perlu bila prefill menyentuh salah satu
+  /// nilai yang ikut dirangkai [_capSekarang]. Tak semua prefill asinkron
+  /// begitu — `_bawaanDaysBefore` misalnya cuma KETERANGAN yang digambar di
+  /// chip Bawaan, bukan isian, jadi kedatangannya tak pernah menggeser cap.
+  /// Jangan balik logikanya: memaksa prefill menyetel field form supaya
+  /// "penjaganya kepakai" justru merusak — menyetel `_reminder` dari setelan
+  /// global, umpamanya, membuat tagihan baru MENYALIN angka global alih-alih
+  /// mewarisinya, dan itu memecah I5.
   late String _capAwal;
 
   /// Diset TEPAT SEBELUM `Navigator.pop()` imperatif pada sukses simpan.
