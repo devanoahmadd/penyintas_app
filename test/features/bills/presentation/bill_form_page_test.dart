@@ -1520,6 +1520,20 @@ void main() {
       expect(find.text(l10n.billsTenorUnlimitedNote), findsNothing);
     });
 
+    // [Review T11 ronde 1] Cabang `endDate` bersebelahan & mirip secara
+    // sintaksis dengan cabang `count` di produksi — tanpa test arah "muncul"
+    // ini, keduanya bisa tertukar (mis. `endDate` salah dipetakan ke
+    // `billsTenorCountNote`) tanpa satu pun test yang merah.
+    testWidgets('pindah ke "Tanggalnya pasti" mengganti catatannya', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      await tapLabel(tester, l10n.billsTenorEndDate);
+      expect(find.text(l10n.billsTenorEndDateNote), findsOneWidget);
+      expect(find.text(l10n.billsTenorUnlimitedNote), findsNothing);
+      expect(find.text(l10n.billsTenorCountNote), findsNothing);
+    });
+
     testWidgets('sekali-jalan menyembunyikan seluruh blok tenor '
         'beserta catatannya', (tester) async {
       await pumpPage(tester, bill: billTanggal10Bulanan);
