@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
@@ -187,6 +188,28 @@ class _BillFormPageState extends State<BillFormPage> {
   );
 
   bool get _isRecurring => _recurrence != Recurrence.none;
+
+  /// null → tak ada catatan. Sekali-jalan tak punya pola berulang untuk
+  /// dijelaskan, dan tanggal yang belum dipilih tak punya angka untuk disebut.
+  String? _catatanTanggal(AppLocalizations l10n) {
+    final due = _dueDate;
+    if (due == null) return null;
+    return switch (_recurrence) {
+      Recurrence.monthly => l10n.billsFormDueDateMonthlyNote(due.day),
+      // `MMMM` — nama bulan penuh yang sudah dilokalkan. Ini PEMAKAI PERTAMA
+      // `MMMM` di fitur Tagihan; tiga DateFormat lain memakai `MMM` singkat.
+      // Bedanya menyeret data locale yang berbeda, jadi uji device wajib
+      // memeriksa ia berbahasa Indonesia (§11).
+      Recurrence.yearly => l10n.billsFormDueDateYearlyNote(
+        due.day,
+        DateFormat(
+          'MMMM',
+          Localizations.localeOf(context).languageCode,
+        ).format(due),
+      ),
+      Recurrence.none => null,
+    };
+  }
 
   // ── D15: buang-perubahan ─────────────────────────────────────────────────
 
@@ -761,6 +784,23 @@ class _BillFormPageState extends State<BillFormPage> {
                               show: _showErrors && _dueDateInvalid,
                               message: l10n.billsFormErrorDueDate,
                             ),
+                            // Menjawab langsung kebingungan "ini tanggal
+                            // pertama atau tanggal tiap bulan?". Sengaja
+                            // TIDAK menyebut penyesuaian bulan pendek —
+                            // `clampDayOfMonth` sudah menanganinya diam-diam,
+                            // dan menambah kalimat untuk tanggal 29-31
+                            // membebani semua pengguna demi sebagian kecil.
+                            if (_catatanTanggal(l10n) case final catatan?) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                catatan,
+                                key: const ValueKey('bill_form_due_date_note'),
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 12,
+                                  color: mutedColor,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: AppSpacing.xl),
 
                             // 5 — Pengulangan
@@ -838,6 +878,21 @@ class _BillFormPageState extends State<BillFormPage> {
                                       onTap: () => _selectTenorMode(value),
                                     ),
                                 ],
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                switch (_tenorMode) {
+                                  _TenorMode.unlimited =>
+                                    l10n.billsTenorUnlimitedNote,
+                                  _TenorMode.count => l10n.billsTenorCountNote,
+                                  _TenorMode.endDate =>
+                                    l10n.billsTenorEndDateNote,
+                                },
+                                key: const ValueKey('bill_form_tenor_note'),
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 12,
+                                  color: mutedColor,
+                                ),
                               ),
                               if (_tenorMode == _TenorMode.count) ...[
                                 const SizedBox(height: AppSpacing.md),

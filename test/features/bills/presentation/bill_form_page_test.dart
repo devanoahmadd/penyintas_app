@@ -99,6 +99,15 @@ BillEntity billContoh({
 /// Tagihan yang kategorinya sudah TERHAPUS — tak ada di [kategoriBawaan].
 final billBerkategoriYatim = billContoh(category: 'kursus_bahasa');
 
+/// Tanggal 10, berulang bulanan — sama seperti bawaan [billContoh], tapi
+/// diberi nama eksplisit supaya niat test catatan tanggal tak bergantung
+/// diam-diam pada nilai bawaan yang bisa berubah demi alasan lain (Task 11).
+final billTanggal10Bulanan = billContoh();
+
+/// Berulang tahunan, jatuh tempo 10 Agustus — dipakai menguji catatan
+/// tanggal tahunan yang menyebut tanggal DAN nama bulan (Task 11).
+final billTahunan = billContoh(recurrence: Recurrence.yearly);
+
 /// Seberapa jauh tepi atas field nominal digulirkan keluar viewport pada test
 /// K3. Harus lebih kecil dari SETENGAH tinggi field (minimum 56) supaya titik
 /// tengahnya — yang diketuk `tester.tap` — masih berada di dalam viewport.
@@ -1358,10 +1367,7 @@ void main() {
         'coba',
       );
       await tester.pump();
-      await tester.enterText(
-        find.byKey(const ValueKey('bill_form_notes')),
-        '',
-      );
+      await tester.enterText(find.byKey(const ValueKey('bill_form_notes')), '');
       await tester.pump();
       await tekanBack(tester);
       expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
@@ -1408,48 +1414,119 @@ void main() {
     // sampai ke layar. Test ini membuktikan KEDUA sisi: back ditelan (bukan
     // menutup halaman, bukan menawarkan dialog buang), DAN jawaban BLoC yang
     // menyusul tetap sampai.
-    testWidgets(
-      'tekan back selagi menyimpan: back ditelan, gagal-simpan tetap '
-      'sampai ke layar',
-      (tester) async {
-        await pumpPage(tester);
-        await fillBaseFields(tester);
-        await tapLabel(tester, l10n.categoryFixed);
-        await pickDueDate(tester);
-        await tapSubmit(tester);
+    testWidgets('tekan back selagi menyimpan: back ditelan, gagal-simpan tetap '
+        'sampai ke layar', (tester) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFixed);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
 
-        // Back SEBELUM BLoC menjawab — lihat komentar grup di atas.
-        await tester.tap(find.byType(BackButton));
-        await tester.pump();
-        // Lompati transisi pop kalau-kalau back tadi (secara keliru) tetap
-        // memulainya — `pumpAndSettle` akan menggantung selama indikator
-        // loading masih ikut ter-render.
-        await tester.pump(const Duration(seconds: 1));
+      // Back SEBELUM BLoC menjawab — lihat komentar grup di atas.
+      await tester.tap(find.byType(BackButton));
+      await tester.pump();
+      // Lompati transisi pop kalau-kalau back tadi (secara keliru) tetap
+      // memulainya — `pumpAndSettle` akan menggantung selama indikator
+      // loading masih ikut ter-render.
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(
-          find.text(l10n.billsFormDiscardTitle),
-          findsNothing,
-          reason: 'back selagi menyimpan ditelan diam-diam, bukan ditanya',
-        );
-        expect(
-          find.byType(BillFormPage),
-          findsOneWidget,
-          reason: 'halaman tak boleh ter-pop di tengah proses simpan',
-        );
+      expect(
+        find.text(l10n.billsFormDiscardTitle),
+        findsNothing,
+        reason: 'back selagi menyimpan ditelan diam-diam, bukan ditanya',
+      );
+      expect(
+        find.byType(BillFormPage),
+        findsOneWidget,
+        reason: 'halaman tak boleh ter-pop di tengah proses simpan',
+      );
 
-        // BLoC baru menjawab GAGAL setelah back tadi ditelan.
-        stateController.add(const BillsState(status: BillsStatus.failure));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+      // BLoC baru menjawab GAGAL setelah back tadi ditelan.
+      stateController.add(const BillsState(status: BillsStatus.failure));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-        expect(
-          find.text(l10n.billsFormSaveFailed),
-          findsOneWidget,
-          reason:
-              'kalau back tadi sempat mem-pop halaman, BlocListener sudah '
-              'mati dan snackbar ini tak akan pernah tampil',
-        );
-      },
-    );
+      expect(
+        find.text(l10n.billsFormSaveFailed),
+        findsOneWidget,
+        reason:
+            'kalau back tadi sempat mem-pop halaman, BlocListener sudah '
+            'mati dan snackbar ini tak akan pernah tampil',
+      );
+    });
+  });
+
+  // ── Catatan bersyarat: tanggal jatuh tempo & tenor (Task 11) ─────────────
+  group('catatan bersyarat di bawah tanggal', () {
+    testWidgets('bulanan → catatan menyebut tanggal berapa tiap bulan', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      expect(find.text(l10n.billsFormDueDateMonthlyNote(10)), findsOneWidget);
+    });
+
+    testWidgets('tahunan → catatan menyebut tanggal DAN nama bulan', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTahunan);
+      expect(
+        find.text(l10n.billsFormDueDateYearlyNote(10, 'Agustus')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sekali-jalan → TIDAK ada catatan tanggal sama sekali', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        bill: billTanggal10Bulanan.copyWith(recurrence: Recurrence.none),
+      );
+      expect(find.text(l10n.billsFormDueDateMonthlyNote(10)), findsNothing);
+      expect(find.textContaining('tiap tahun'), findsNothing);
+    });
+
+    testWidgets('tanggal belum dipilih → tak ada catatan meski bulanan', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      expect(find.textContaining('tiap bulan'), findsNothing);
+    });
+
+    testWidgets('mengganti pengulangan mengganti catatannya', (tester) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      expect(find.text(l10n.billsFormDueDateMonthlyNote(10)), findsOneWidget);
+      await tapLabel(tester, l10n.billsRecurrenceYearly);
+      expect(find.text(l10n.billsFormDueDateMonthlyNote(10)), findsNothing);
+      expect(find.textContaining('tiap tahun'), findsOneWidget);
+    });
+  });
+
+  group('catatan chip tenor', () {
+    testWidgets('"Tanpa batas" terpilih → catatannya yang tampil', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      expect(find.text(l10n.billsTenorUnlimitedNote), findsOneWidget);
+      expect(find.text(l10n.billsTenorCountNote), findsNothing);
+    });
+
+    testWidgets('pindah ke "Jumlahnya pasti" mengganti catatannya', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      await tapLabel(tester, l10n.billsTenorCount);
+      expect(find.text(l10n.billsTenorCountNote), findsOneWidget);
+      expect(find.text(l10n.billsTenorUnlimitedNote), findsNothing);
+    });
+
+    testWidgets('sekali-jalan menyembunyikan seluruh blok tenor '
+        'beserta catatannya', (tester) async {
+      await pumpPage(tester, bill: billTanggal10Bulanan);
+      await tapLabel(tester, l10n.billsRecurrenceNone);
+      expect(find.text(l10n.billsTenorUnlimitedNote), findsNothing);
+      expect(find.text(l10n.billsTenorCountNote), findsNothing);
+      expect(find.text(l10n.billsTenorEndDateNote), findsNothing);
+    });
   });
 }
