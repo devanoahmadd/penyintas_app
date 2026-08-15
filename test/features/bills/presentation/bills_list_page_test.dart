@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -835,5 +836,115 @@ void main() {
         );
       },
     );
+
+    // ── Fix round 1 (review Important-1) ────────────────────────────────────
+    //
+    // "Tidak melempar exception" saja tak cukup — dua anak fleksibel yang
+    // TIDAK sama-sama tight bisa lolos dari overflow tapi tetap memotong
+    // nominal di lebar NORMAL dan membuat kolom ⋮ ragged (tak rata kanan).
+    // Dua test di bawah mengunci sifat itu secara eksplisit, terpisah dari
+    // sekadar "tak melempar".
+    testWidgets('kolom ⋮ rata kanan berapa pun panjang nominal — tak ragged '
+        '[review S8]', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            // Nominal bill 1 SENGAJA sangat pendek ("Rp 100") — dua nilai
+            // yang sama-sama panjang bisa kebetulan sama-sama terpotong ke
+            // lebar jatah yang identik di bawah struktur kompetisi-flex yang
+            // salah, membuat dx tetap sama walau ⋮ sebenarnya ragged. Pasangan
+            // pendek-vs-panjang ini yang benar-benar membedah bug-nya.
+            buildBill(
+              id: 1,
+              name: 'Kos',
+              dueDate: todayStart,
+              estimatedAmount: 100,
+            ),
+            buildBill(
+              id: 2,
+              name: 'Cicilan motor Honda Beat',
+              dueDate: todayStart,
+              estimatedAmount: 12450000,
+            ),
+          ],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      final dx1 = tester
+          .getTopRight(find.byKey(const ValueKey('bill_item_menu_1')))
+          .dx;
+      final dx2 = tester
+          .getTopRight(find.byKey(const ValueKey('bill_item_menu_2')))
+          .dx;
+      expect(
+        dx1,
+        dx2,
+        reason:
+            'kolom ⋮ harus rata kanan yang sama persis di kedua baris, '
+            'terlepas dari panjang nominal',
+      );
+    });
+
+    testWidgets('nominal delapan digit TIDAK terpotong di lebar normal (360dp) '
+        '[review S8]', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(
+              id: 1,
+              name: 'Cicilan motor Honda Beat',
+              dueDate: todayStart,
+              estimatedAmount: 12450000,
+            ),
+          ],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.text(formatRupiah(12450000)),
+      );
+      expect(
+        paragraph.didExceedMaxLines,
+        isFalse,
+        reason:
+            'nominal 8 digit tak boleh terpotong di lebar 360dp — hanya '
+            'jaring pengaman untuk skenario benar-benar ekstrem',
+      );
+    });
+
+    testWidgets('⋮ punya node semantik sendiri: label "Aksi tagihan", aksi tap '
+        '[review Important-3]', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpItem(tester, onMenuTap: () {});
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('bill_item_menu_1'))),
+        matchesSemantics(
+          label: l10n.billsActionsMenuA11y,
+          isButton: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+        ),
+      );
+      handle.dispose();
+    });
   });
 }

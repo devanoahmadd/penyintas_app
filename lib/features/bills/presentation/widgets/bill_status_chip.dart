@@ -64,6 +64,8 @@ class BillStatusChip extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: AppTextStyles.caption.copyWith(fontSize: 9, color: fg),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
