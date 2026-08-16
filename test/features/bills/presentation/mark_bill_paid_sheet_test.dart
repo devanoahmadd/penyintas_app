@@ -66,6 +66,7 @@ void main() {
     bool isFixedNeed = false,
     String category = 'internet',
     Recurrence recurrence = Recurrence.monthly,
+    DateTime? dueDate,
   }) => BillEntity(
     id: 7,
     cloudId: 'cloud-7',
@@ -73,7 +74,7 @@ void main() {
     estimatedAmount: estimatedAmount,
     category: category,
     isFixedNeed: isFixedNeed,
-    dueDate: DateTime(2026, 8, 10),
+    dueDate: dueDate ?? DateTime(2026, 8, 10),
     recurrence: recurrence,
     installmentTotal: 12,
     installmentsPaid: 3,
@@ -203,6 +204,98 @@ void main() {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
   }
+
+  /// Tekan tombol OK pada `showDatePicker` yang sedang terbuka.
+  /// Label diambil dari MaterialLocalizations agar bebas dari bahasa aktif.
+  Future<void> confirmDatePicker(WidgetTester tester) async {
+    final ctx = tester.element(find.byType(DatePickerDialog));
+    final okLabel = MaterialLocalizations.of(ctx).okButtonLabel;
+    await tester.tap(find.widgetWithText(TextButton, okLabel));
+    await tester.pumpAndSettle();
+  }
+
+  /// Pilih [date] sebagai tanggal bayar lewat mode INPUT TEKS pada
+  /// `showDatePicker` — bukan navigasi grid kalender. Navigasi grid rawan
+  /// lintas bulan (tombol "bulan sebelumnya" perlu ditekan berkali-kali kalau
+  /// [date] beda bulan dari `initialDate`); mode input bebas dari itu karena
+  /// tanggalnya diketik langsung, diformat via `MaterialLocalizations` yang
+  /// sama supaya cocok dengan parser tanggal locale aktif.
+  Future<void> pilihTanggal(WidgetTester tester, DateTime date) async {
+    await tapKey(tester, 'bill_paid_date');
+    final ctx = tester.element(find.byType(DatePickerDialog));
+    final localizations = MaterialLocalizations.of(ctx);
+    await tester.tap(find.byTooltip(localizations.inputDateModeButtonLabel));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField),
+      localizations.formatCompactDate(date),
+    );
+    await tester.pumpAndSettle();
+    await confirmDatePicker(tester);
+  }
+
+  // ── Fixture selisih tanggal (group "baris selisih tanggal") ──────────────
+  //
+  // `_paidDate` DEFAULT selalu hari ini (lihat `initState` sheet) dan tak
+  // bisa dimajukan ke masa depan — jadi bill dengan dueDate di MASA DEPAN
+  // menghasilkan selisih POSITIF ("lebih awal") secara otomatis lewat
+  // default, sedangkan dueDate di MASA LALU menghasilkan selisih NEGATIF
+  // ("terlambat"). Beberapa fixture sengaja diberi jam non-tengah-malam
+  // (23:00) pada dueDate-nya — lihat catatan di masing-masing.
+
+  /// Jatuh tempo persis hari ini (tengah malam) → bayar (default) TEPAT pada
+  /// jatuh tempo, selisih 0.
+  final billJatuhTempoHariIni = billBerjalan(dueDate: hariIni());
+
+  /// Jatuh tempo 3 hari lagi → bayar (default: hari ini) 3 hari LEBIH AWAL.
+  final billJatuhTempo3HariLagi = billBerjalan(
+    dueDate: hariIni().add(const Duration(days: 3)),
+  );
+
+  /// Jatuh tempo 3 hari lalu (tengah malam, tanpa jam) → dipakai KHUSUS test
+  /// "mengubah tanggal ke jatuh tempo menghilangkan barisnya": `_paidDate`
+  /// tak bisa dimajukan ke masa depan, jadi skenario "pilih tanggal = dueDate
+  /// via picker" cuma bisa diuji kalau dueDate-nya ada di masa lalu/hari ini
+  /// — bukan `billJatuhTempo3HariLagi` yang dueDate-nya di luar jangkauan
+  /// `lastDate` picker.
+  final billJatuhTempo3HariLalu = billBerjalan(
+    dueDate: hariIni().subtract(const Duration(days: 3)),
+  );
+
+  /// Jatuh tempo 2 hari lalu, jam 23:00 → bayar (default) 2 hari TERLAMBAT.
+  /// Jam 23 SENGAJA bukan tengah malam: raw `difference` tanpa `startOfDay`
+  /// menghitung -25 jam (bukan -48 jam) yang `inDays`-nya truncate ke -1,
+  /// bukan -2 — kalau baris memakai kunci `billsPaidDateLate(1)` alih-alih
+  /// `billsPaidDateLate(2)`, sabotase "hapus startOfDay" tertangkap di sini.
+  final billJatuhTempo2HariLalu = billBerjalan(
+    dueDate: hariIni()
+        .subtract(const Duration(days: 2))
+        .add(const Duration(hours: 23)),
+  );
+
+  /// Jatuh tempo hari ini, jam 23:00 → hanya beda JAM dari `_paidDate` (yang
+  /// selalu tengah malam), BUKAN beda tanggal kalender. Baris TIDAK boleh
+  /// muncul sama sekali.
+  final billJatuhTempoHariIniJam23 = billBerjalan(
+    dueDate: hariIni().add(const Duration(hours: 23)),
+  );
+
+  /// Jatuh tempo besok (tengah malam) → bayar (default) 1 hari LEBIH AWAL.
+  /// Kasus tepi n==1 di sisi EARLY.
+  final billJatuhTempo1HariLagi = billBerjalan(
+    dueDate: hariIni().add(const Duration(days: 1)),
+  );
+
+  /// Jatuh tempo kemarin, jam 23:00 → bayar (default) 1 hari TERLAMBAT.
+  /// Kasus tepi n==1 di sisi LATE, jam 23 dengan alasan sama seperti
+  /// `billJatuhTempo2HariLalu` — di sini efeknya malah lebih tajam: raw
+  /// `difference` cuma -1 jam, `inDays`-nya truncate ke 0, jadi baris HILANG
+  /// TOTAL di bawah sabotase "hapus startOfDay" alih-alih salah kunci.
+  final billJatuhTempo1HariLalu = billBerjalan(
+    dueDate: hariIni()
+        .subtract(const Duration(days: 1))
+        .add(const Duration(hours: 23)),
+  );
 
   // ── (a) Nominal default = estimasi, dan EDITABLE ──────────────────────────
 
@@ -692,5 +785,89 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(l10n.billsFixedHelpLockedTitle), findsOneWidget);
     });
+  });
+
+  // ── Baris selisih tanggal bayar (Task 16) ─────────────────────────────────
+
+  group('baris selisih tanggal', () {
+    testWidgets('bayar tepat pada jatuh tempo → TIDAK ada baris sama sekali', (
+      tester,
+    ) async {
+      await pumpSheet(tester, bill: billJatuhTempoHariIni);
+      expect(find.byKey(const ValueKey('bill_paid_date_diff')), findsNothing);
+    });
+
+    testWidgets('bayar 3 hari lebih awal → baris "lebih awal"', (
+      tester,
+    ) async {
+      await pumpSheet(tester, bill: billJatuhTempo3HariLagi);
+      expect(find.text(l10n.billsPaidDateEarly(3)), findsOneWidget);
+    });
+
+    testWidgets('bayar 2 hari terlambat → baris "terlambat"', (tester) async {
+      await pumpSheet(tester, bill: billJatuhTempo2HariLalu);
+      expect(find.text(l10n.billsPaidDateLate(2)), findsOneWidget);
+    });
+
+    testWidgets('mengubah tanggal ke jatuh tempo MENGHILANGKAN barisnya', (
+      tester,
+    ) async {
+      // `billJatuhTempo3HariLalu`, BUKAN `billJatuhTempo3HariLagi`: dueDate
+      // yang terakhir ada di MASA DEPAN, sedangkan `_paidDate` tak pernah
+      // bisa dimajukan melewati hari ini (`lastDate: startOfDay(now)` di
+      // `_pickPaidDate`) — tak ada cara memilihnya lewat picker sungguhan.
+      await pumpSheet(tester, bill: billJatuhTempo3HariLalu);
+      expect(find.text(l10n.billsPaidDateLate(3)), findsOneWidget);
+      await pilihTanggal(tester, billJatuhTempo3HariLalu.dueDate);
+      expect(find.byKey(const ValueKey('bill_paid_date_diff')), findsNothing);
+    });
+
+    testWidgets('selisih dihitung dari AWAL HARI, bukan jam — '
+        'beda jam dalam hari yang sama bukan selisih', (tester) async {
+      // dueDate jam 23:00 hari ini; `_paidDate` (default) selalu tengah
+      // malam hari ini juga — tanggal kalendernya SAMA, cuma jamnya beda.
+      await pumpSheet(tester, bill: billJatuhTempoHariIniJam23);
+      expect(find.byKey(const ValueKey('bill_paid_date_diff')), findsNothing);
+    });
+  });
+
+  // ── [Audit T2] Bentuk tunggal — kasus paling umum, bukan kasus tepi ────
+  //
+  // Harness ini memuat locale `id`, tempat "1 hari" dan "{n} hari" tak beda
+  // bentuk. Yang dikunci di sini adalah RANTAI widget → l10n, BUKAN
+  // percabangan `n == 1` itu sendiri — percabangan itu sudah terjaga di level
+  // dispatch oleh `bills_l10n_test.dart` (T5), yang memanggil
+  // `AppLocalizations.billsPaidDateEarly/Late` langsung di locale EN, tempat
+  // sisi jamak vs tunggal benar-benar beda string ("1 day" vs "1 days").
+  testWidgets('bayar 1 hari lebih awal memakai kunci TUNGGAL', (tester) async {
+    await pumpSheet(tester, bill: billJatuhTempo1HariLagi);
+    expect(find.text(l10n.billsPaidDateEarly(1)), findsOneWidget);
+    expect(
+      l10n.billsPaidDateEarly(1),
+      isNot(contains('{n}')),
+      reason: 'kunci tunggal tak berplaceholder — kalau ada, salah kunci',
+    );
+  });
+
+  testWidgets('bayar 1 hari terlambat memakai kunci TUNGGAL', (tester) async {
+    await pumpSheet(tester, bill: billJatuhTempo1HariLalu);
+    expect(find.text(l10n.billsPaidDateLate(1)), findsOneWidget);
+  });
+
+  testWidgets('perilaku lama tak berubah: tanggal bayar default hari ini, '
+      'tak bisa maju', (tester) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    expect(
+      fieldText(tester, 'bill_paid_amount'),
+      '750000',
+      reason: 'nominal masih diprefill seperti sebelumnya',
+    );
+    await tapSubmit(tester);
+    expect(
+      captureMarkedPaid(tester).paidDate,
+      hariIni(),
+      reason: 'tanggal bayar default tetap hari ini setelah baris selisih '
+          'ditambahkan',
+    );
   });
 }

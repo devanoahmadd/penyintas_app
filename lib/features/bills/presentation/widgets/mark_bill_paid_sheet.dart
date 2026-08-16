@@ -99,6 +99,19 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
   /// Toggle tak berlaku untuk tagihan yang tak terwakili `fixedExpenses`.
   bool get _fixedLocked => !representedByFixedExpenses(widget.bill);
 
+  /// Selisih hari antara tanggal bayar dan jatuh tempo, dihitung dari AWAL
+  /// HARI keduanya. `dueDate` bisa punya komponen jam non-tengah-malam
+  /// (tergantung cara tagihan dibuat) sementara `_paidDate` SELALU tengah
+  /// malam persis (lihat `initState`/`_pickPaidDate`) — memakai `difference`
+  /// mentah tanpa `startOfDay` di kedua sisi bikin `Duration.inDays`
+  /// membulatkan ke arah nol dan MENGECILKAN keterlambatan (mis. telat 2 hari
+  /// terbaca 1 hari, atau baris hilang total kalau sisa jamnya < 24 jam).
+  ///
+  /// Positif = dibayar lebih awal. Negatif = terlambat. 0 = tepat waktu, dan
+  /// saat itu layar tetap sepi (kasus paling umum).
+  int get _selisihHari =>
+      startOfDay(widget.bill.dueDate).difference(startOfDay(_paidDate)).inDays;
+
   /// Presedensi: alasan BENTUK menang atas alasan FLAG, karena
   /// `yearly && !isFixedNeed` memenuhi keduanya dan hanya alasan flag yang
   /// punya jalan keluar. Menampilkan yang bisa diperbaiki lebih dulu akan
@@ -326,6 +339,19 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                         mutedColor: mutedColor,
                         onTap: _pickPaidDate,
                       ),
+                      if (_selisihHari != 0) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          _selisihHari > 0
+                              ? l10n.billsPaidDateEarly(_selisihHari)
+                              : l10n.billsPaidDateLate(-_selisihHari),
+                          key: const ValueKey('bill_paid_date_diff'),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontSize: 12,
+                            color: mutedColor,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
 
                       // Kebutuhan tetap
