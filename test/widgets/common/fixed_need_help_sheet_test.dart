@@ -136,4 +136,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l10n.billsFixedHelpTitle), findsNothing);
   });
+
+  // ── Review ronde 1, Important 1 ─────────────────────────────────────────
+  // `InkResponse` TIDAK menyumbang peran tombol sendiri (beda dari
+  // `IconButton`, yang membungkus dirinya dengan `Semantics(button: true)`
+  // otomatis) — tanpa pembungkus eksplisit, tombol tutup tak terbaca sama
+  // sekali maupun tak dikenali sebagai tombol oleh pembaca layar.
+  testWidgets('tombol tutup punya peran tombol dan label semantik', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await bukaSheet(tester);
+
+    final closeLabel = MaterialLocalizations.of(
+      tester.element(find.byIcon(Icons.close)),
+    ).closeButtonLabel;
+
+    expect(
+      tester.getSemantics(find.byIcon(Icons.close)),
+      matchesSemantics(
+        label: closeLabel,
+        isButton: true,
+        hasTapAction: true,
+        // `InkResponse` bisa difokus (mis. navigasi keyboard/switch access)
+        // secara bawaan — bukan sesuatu yang task ini tambahkan sendiri.
+        isFocusable: true,
+        hasFocusAction: true,
+      ),
+    );
+
+    handle.dispose();
+  });
 }

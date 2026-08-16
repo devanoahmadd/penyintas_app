@@ -83,17 +83,24 @@ class _Body extends StatelessWidget {
             child: Row(
               children: [
                 const Spacer(),
-                // Tanpa label semantik eksplisit — menyalin `_CloseButton`
-                // milik `mark_bill_paid_sheet.dart` apa adanya. Menambah
-                // label di sini butuh kunci l10n baru yang di luar cakupan
-                // task ini (enam kunci `bills_fixed_help_*` sudah cukup).
-                InkResponse(
-                  onTap: () => Navigator.of(context).pop(),
-                  radius: 24,
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Icon(Icons.close, size: 18, color: mutedColor),
+                // Peran tombol + label WAJIB eksplisit — `InkResponse`
+                // sendiri cuma menyumbang `Semantics(onTap: …)`, TANPA flag
+                // tombol (beda dari `IconButton`, yang membungkus dirinya
+                // dengan `Semantics(button: true, …)` secara otomatis).
+                // Label pakai `MaterialLocalizations` yang SUDAH terlokalkan
+                // (id/en) lewat delegate yang sudah terdaftar di
+                // `lib/app.dart` — bukan kunci l10n baru.
+                Semantics(
+                  button: true,
+                  label: MaterialLocalizations.of(context).closeButtonLabel,
+                  child: InkResponse(
+                    onTap: () => Navigator.of(context).pop(),
+                    radius: 24,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Icon(Icons.close, size: 18, color: mutedColor),
+                    ),
                   ),
                 ),
               ],
