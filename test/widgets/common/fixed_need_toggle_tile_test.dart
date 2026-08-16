@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// `SemanticsFlag` tidak diekspor material.dart — impor eksplisit [Audit B1].
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/widgets/common/fixed_need_toggle_tile.dart';
@@ -76,13 +74,13 @@ void main() {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(harness(onHelpTap: () {}));
 
-    final node = tester.getSemantics(
-      find.byIcon(Icons.help_outline_rounded),
-    );
+    final node = tester.getSemantics(find.byIcon(Icons.help_outline_rounded));
 
     expect(node.label, 'Apa itu kebutuhan tetap?');
     expect(
-      node.hasFlag(SemanticsFlag.isButton),
+      // `hasFlag(SemanticsFlag.isButton)` deprecated sejak v3.32.0 —
+      // `flagsCollection.isButton` adalah penggantinya, sama-sama `bool`.
+      node.flagsCollection.isButton,
       isTrue,
       reason: 'ikon tanpa peran tombol tak bisa diaktifkan pembaca layar',
     );
@@ -106,7 +104,8 @@ void main() {
     expect(
       node.label,
       contains('Disisihkan lebih dulu.'),
-      reason: 'merge label+hint+switch adalah keputusan a11y yang dipertahankan',
+      reason:
+          'merge label+hint+switch adalah keputusan a11y yang dipertahankan',
     );
 
     handle.dispose();
@@ -115,10 +114,12 @@ void main() {
   testWidgets('tombol bantuan memenuhi hit target 48dp', (tester) async {
     await tester.pumpWidget(harness(onHelpTap: () {}));
     final size = tester.getSize(
-      find.ancestor(
-        of: find.byIcon(Icons.help_outline_rounded),
-        matching: find.byType(InkResponse),
-      ).first,
+      find
+          .ancestor(
+            of: find.byIcon(Icons.help_outline_rounded),
+            matching: find.byType(InkResponse),
+          )
+          .first,
     );
     expect(size.width, greaterThanOrEqualTo(48));
     expect(size.height, greaterThanOrEqualTo(48));
@@ -133,4 +134,48 @@ void main() {
     await tester.pump();
     expect(nilaiBaru, isNull);
   });
+
+  // ── Task 15: risiko tercatat sejak Task 2 — tombol (?) tanpa label
+  // semantik tak terbaca sama sekali oleh pembaca layar, dan tak ada apa pun
+  // yang menangkapnya. `assert` ini menegakkan kontrak dartdoc di atas.
+  test('assert: helpSemanticLabel wajib diisi kalau onHelpTap non-null', () {
+    expect(
+      () => FixedNeedToggleTile(
+        tileKey: const ValueKey('t'),
+        switchKey: const ValueKey('s'),
+        value: false,
+        label: 'Termasuk kebutuhan tetap?',
+        hint: 'Disisihkan lebih dulu.',
+        panelColor: AppColors.surfaceAltLight,
+        borderColor: AppColors.borderLight,
+        textColor: AppColors.textLight,
+        mutedColor: AppColors.mutedLight,
+        onChanged: (_) {},
+        onHelpTap: () {},
+        // helpSemanticLabel SENGAJA tidak diisi.
+      ),
+      throwsAssertionError,
+    );
+  });
+
+  test(
+    'tanpa onHelpTap, helpSemanticLabel boleh null (tak melanggar assert)',
+    () {
+      expect(
+        () => FixedNeedToggleTile(
+          tileKey: const ValueKey('t'),
+          switchKey: const ValueKey('s'),
+          value: false,
+          label: 'Termasuk kebutuhan tetap?',
+          hint: 'Disisihkan lebih dulu.',
+          panelColor: AppColors.surfaceAltLight,
+          borderColor: AppColors.borderLight,
+          textColor: AppColors.textLight,
+          mutedColor: AppColors.mutedLight,
+          onChanged: (_) {},
+        ),
+        returnsNormally,
+      );
+    },
+  );
 }

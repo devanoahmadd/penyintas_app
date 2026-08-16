@@ -663,4 +663,34 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text(l10n.billsPaidTitle), findsOneWidget);
   });
+
+  // ── (?) sheet penjelasan kebutuhan tetap (Task 15) ────────────────────────
+
+  group('(?) kebutuhan tetap di sheet bayar', () {
+    testWidgets('(?) di sheet bayar membuka sheet penjelasan yang SAMA', (
+      tester,
+    ) async {
+      // Tagihan yang tile-nya TIDAK terkunci — mengikuti pola `kos` di
+      // fixture bersama task ini: bulanan + ditandai kebutuhan tetap.
+      await pumpSheet(tester, bill: billBerjalan(isFixedNeed: true));
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.billsFixedHelpTitle), findsOneWidget);
+      expect(find.text(l10n.billsFixedHelpLockedBody), findsOneWidget);
+    });
+
+    testWidgets('(?) tetap ada meski toggle TERKUNCI — penjelasan justru '
+        'paling dibutuhkan di sana', (tester) async {
+      // Tahunan + ditandai + anggaran ada → tile TERKUNCI (lihat grup
+      // "Toggle terkunci untuk tagihan tak terwakili (spec §5.1)" di atas).
+      await pumpSheet(
+        tester,
+        bill: billBerjalan(isFixedNeed: true, recurrence: Recurrence.yearly),
+      );
+      expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.billsFixedHelpLockedTitle), findsOneWidget);
+    });
+  });
 }

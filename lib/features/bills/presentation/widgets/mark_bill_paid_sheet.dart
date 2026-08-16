@@ -13,6 +13,7 @@ import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/represented_by_fixed_expenses.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/widgets/common/fixed_need_help_sheet.dart';
 import 'package:penyintas_app/widgets/common/fixed_need_toggle_tile.dart';
 
 /// Sheet konfirmasi "tandai lunas" (spec §6.3).
@@ -342,6 +343,10 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                         mutedColor: mutedColor,
                         hintColor: _fixedLocked ? textSoftColor : null,
                         enabled: !_fixedLocked,
+                        // (?) TETAP ditampilkan meski `_fixedLocked` —
+                        // penjelasannya justru paling dibutuhkan di sana.
+                        onHelpTap: () => FixedNeedHelpSheet.show(context),
+                        helpSemanticLabel: l10n.billsFixedHelpA11y,
                         onChanged: (v) => setState(() => _includeAsFixed = v),
                       ),
                       if (_showM1Hint) ...[

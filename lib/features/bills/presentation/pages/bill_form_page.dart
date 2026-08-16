@@ -17,6 +17,8 @@ import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_grid.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 import 'package:penyintas_app/widgets/common/amount_keypad.dart';
+import 'package:penyintas_app/widgets/common/fixed_need_help_sheet.dart';
+import 'package:penyintas_app/widgets/common/fixed_need_toggle_tile.dart';
 
 /// Batas akhir perulangan — spec §4.1 mewajibkan MAKSIMAL SATU yang non-null.
 enum _TenorMode { unlimited, count, endDate }
@@ -1036,7 +1038,9 @@ class _BillFormPageState extends State<BillFormPage> {
                             const SizedBox(height: AppSpacing.xl),
 
                             // 7 — Kebutuhan tetap
-                            _FixedNeedToggle(
+                            FixedNeedToggleTile(
+                              tileKey: const ValueKey('bill_form_fixed_row'),
+                              switchKey: const ValueKey('bill_form_fixed'),
                               value: _isFixedNeed,
                               label: l10n.billsFormFixedLabel,
                               // Hint lama menjanjikan "bukan potong jatah harian
@@ -1045,6 +1049,9 @@ class _BillFormPageState extends State<BillFormPage> {
                               // pengeluaran saat dibayar. Toggle-nya tetap hidup:
                               // `isFixedNeed` adalah pernyataan NIAT pengguna,
                               // penyempitannya terjadi di titik pakai.
+                              //
+                              // I3: hint WAJIB ikut `_recurrence` — jangan
+                              // disederhanakan jadi tanpa syarat.
                               hint: _recurrence == Recurrence.monthly
                                   ? l10n.billsFormFixedHint
                                   : l10n.billsFormFixedHintNonMonthly,
@@ -1052,6 +1059,13 @@ class _BillFormPageState extends State<BillFormPage> {
                               borderColor: borderColor,
                               textColor: textColor,
                               mutedColor: mutedColor,
+                              onHelpTap: () => FixedNeedHelpSheet.show(context),
+                              helpSemanticLabel: l10n.billsFixedHelpA11y,
+                              // I4: TIDAK ada `enabled:` di sini. Toggle form
+                              // adalah pernyataan NIAT pengguna; penyempitannya
+                              // terjadi di sheet bayar, BUKAN di sini — jangan
+                              // sampai menyambungkan (?) ikut membawa
+                              // penguncian dari satu tempat ke tempat lain.
                               onChanged: (v) =>
                                   setState(() => _isFixedNeed = v),
                             ),
@@ -1808,88 +1822,6 @@ class _DateField extends StatelessWidget {
                   style: AppTextStyles.body.copyWith(
                     color: value != null ? textColor : mutedColor,
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FixedNeedToggle extends StatelessWidget {
-  const _FixedNeedToggle({
-    required this.value,
-    required this.label,
-    required this.hint,
-    required this.panelColor,
-    required this.borderColor,
-    required this.textColor,
-    required this.mutedColor,
-    required this.onChanged,
-  });
-
-  final bool value;
-  final String label;
-  final String hint;
-  final Color panelColor;
-  final Color borderColor;
-  final Color textColor;
-  final Color mutedColor;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: panelColor,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: borderColor),
-          ),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: AppTextStyles.label.copyWith(
-                          fontSize: 13,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        hint,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontSize: 12,
-                          height: 1.35,
-                          color: mutedColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Switch(
-                  value: value,
-                  onChanged: onChanged,
-                  activeThumbColor: Colors.white,
-                  activeTrackColor: AppColors.primary,
                 ),
               ],
             ),

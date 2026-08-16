@@ -20,6 +20,7 @@ import 'package:penyintas_app/features/bills/presentation/widgets/bill_category_
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/category_bloc.dart';
 import 'package:penyintas_app/widgets/common/amount_keypad.dart';
+import 'package:penyintas_app/widgets/common/fixed_need_toggle_tile.dart';
 
 class MockBillsBloc extends MockBloc<BillsEvent, BillsState>
     implements BillsBloc {}
@@ -1438,7 +1439,7 @@ void main() {
         );
 
         // Toggle SENGAJA tidak dikunci di form — flag = niat pengguna (spec §3).
-        // Hanya ada satu Switch di seluruh halaman (di `_FixedNeedToggle`),
+        // Hanya ada satu Switch di seluruh halaman (di `FixedNeedToggleTile`),
         // jadi finder-nya tak ambigu.
         final sw = tester.widget<Switch>(find.byType(Switch));
         expect(
@@ -1449,6 +1450,53 @@ void main() {
         );
       },
     );
+  });
+
+  // ── (?) sheet penjelasan kebutuhan tetap (Task 15) ────────────────────────
+
+  group('(?) kebutuhan tetap di form', () {
+    testWidgets('(?) di form membuka sheet penjelasan', (tester) async {
+      await pumpPage(tester);
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.billsFixedHelpTitle), findsOneWidget);
+    });
+
+    testWidgets('menekan (?) TIDAK membalik toggle kebutuhan tetap', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryFood);
+      await pickDueDate(tester);
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.text(l10n.billsFixedHelpTitle))).pop();
+      await tester.pumpAndSettle();
+      await tapSubmit(tester);
+
+      final event = captureLastEvent(tester) as BillAdded;
+      expect(event.bill.isFixedNeed, isFalse);
+    });
+
+    // I4 — toggle di FORM tidak pernah dikunci. Sabotase: `enabled: false`
+    // pada `FixedNeedToggleTile` di form.
+    testWidgets('I4: toggle kebutuhan tetap di form selalu bisa diubah', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billTahunan);
+      final sw = tester.widget<Switch>(
+        find.descendant(
+          of: find.byType(FixedNeedToggleTile),
+          matching: find.byType(Switch),
+        ),
+      );
+      expect(
+        sw.onChanged,
+        isNotNull,
+        reason: 'penyempitan terjadi di sheet bayar, bukan di form',
+      );
+    });
   });
 
   // ── PopScope — buang perubahan (D15) ──────────────────────────────────────

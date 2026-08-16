@@ -25,7 +25,12 @@ class FixedNeedToggleTile extends StatelessWidget {
     this.hintColor,
     this.onHelpTap,
     this.helpSemanticLabel,
-  });
+  }) : assert(
+         onHelpTap == null || helpSemanticLabel != null,
+         'helpSemanticLabel wajib diisi kalau onHelpTap non-null — tanpa '
+         'label, tombol (?) tak terbaca sama sekali oleh pengguna pembaca '
+         'layar.',
+       );
 
   final Key tileKey;
   final Key switchKey;
@@ -54,7 +59,10 @@ class FixedNeedToggleTile extends StatelessWidget {
   final VoidCallback? onHelpTap;
 
   /// Label pembaca layar untuk tombol (?). Ikon tanpa teks tak terbaca tanpa
-  /// ini. Wajib diisi kalau [onHelpTap] non-null.
+  /// ini. Wajib diisi kalau [onHelpTap] non-null — DITEGAKKAN oleh `assert`
+  /// di konstruktor (Task 15), bukan cuma dokumentasi: sampai sebelum task
+  /// itu, kedua pemanggil selalu mengirim `null` untuk keduanya sehingga
+  /// pelanggarannya tak pernah tertangkap.
   final String? helpSemanticLabel;
 
   @override
