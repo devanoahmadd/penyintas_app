@@ -9,6 +9,7 @@ import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/bills/presentation/widgets/bill_actions_sheet.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_item.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/bill_status_chip.dart';
 import 'package:penyintas_app/features/bills/presentation/widgets/mark_bill_paid_sheet.dart';
@@ -76,12 +77,80 @@ class _BillsListPageState extends State<BillsListPage> {
   /// mengalir masuk lewat stream — bukan lewat hasil `pop`.
   void _openForm() => context.push('/bills/new');
 
-  /// Pintu aksi ubah/hapus tagihan (⋮ di tiap baris — Task 13).
+  /// Pintu aksi ubah/hapus tagihan (⋮ di tiap baris — Task 13/14).
   ///
-  /// SEMENTARA langsung mendorong rute ubah, supaya rutenya teruji lebih
-  /// dulu — Task 14 mengganti isinya dengan sheet aksi (ubah/hapus).
-  void _openActionsSheet(BillEntity bill) =>
-      context.push('/bills/${bill.id}/edit', extra: bill);
+  /// Tersedia untuk SEMUA tagihan, termasuk yang sudah tak bisa ditandai lunas
+  /// lagi — tak bisa dibayar ≠ tak bisa diubah atau dihapus.
+  Future<void> _openActionsSheet(BillEntity bill) async {
+    // Bloc dibaca SEBELUM await — setelah await, `context` tak lagi dijamin
+    // hidup (lint `use_build_context_synchronously`).
+    final bloc = context.read<BillsBloc>();
+    final aksi = await BillActionsSheet.show(context, bill: bill);
+    if (!mounted || aksi == null) return;
+
+    switch (aksi) {
+      case BillAction.edit:
+        context.push('/bills/${bill.id}/edit', extra: bill);
+      case BillAction.delete:
+        final jadi = await _konfirmasiHapus(bill);
+        // Pembatalan pengingat ikut ditangani `BillsBloc._onDeleted` — halaman
+        // ini cukup mengirim eventnya.
+        if (jadi == true) bloc.add(BillDeleted(bill.id));
+    }
+  }
+
+  /// Dialog hapus (spec §4.5). Isinya BERSYARAT: kalimat soal riwayat hanya
+  /// benar kalau riwayatnya ada. Menjanjikan "pembayaranmu tetap tersimpan"
+  /// pada tagihan yang belum pernah dibayar adalah janji kosong yang justru
+  /// menimbulkan pertanyaan.
+  ///
+  /// Permukaannya meniru `manage_categories_page.dart` — dialog hapus pertama
+  /// di aplikasi ini. Menirunya persis justru yang diinginkan.
+  Future<bool?> _konfirmasiHapus(BillEntity bill) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = context.l10n;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: Text(
+          l10n.billsDeleteTitle(bill.name),
+          style: AppTextStyles.h3.copyWith(
+            color: isDark ? AppColors.textDark : AppColors.textLight,
+          ),
+        ),
+        content: Text(
+          bill.installmentsPaid > 0
+              ? l10n.billsDeleteBodyPaid
+              : l10n.billsDeleteBodyClean,
+          style: AppTextStyles.body.copyWith(
+            color: isDark ? AppColors.textSoftDark : AppColors.textSoftLight,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              l10n.btnCancel,
+              style: AppTextStyles.label.copyWith(
+                color: isDark ? AppColors.mutedDark : AppColors.mutedLight,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l10n.billsDeleteConfirm,
+              style: AppTextStyles.label.copyWith(color: AppColors.warn),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _openMarkPaidSheet(BillEntity bill) async {
     // Bloc dibaca SEBELUM await — setelah await, `context` tak lagi dijamin

@@ -10,6 +10,7 @@ import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
+import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
@@ -154,6 +155,10 @@ void main() {
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
     registerFallbackValue(const NoParams());
+    // `any(that: isA<BillDeleted>())` di grup dialog hapus butuh fallback
+    // bertipe BillsEvent — tanpa ini mocktail melempar dan meninggalkan
+    // matcher-nya kotor, yang lalu merusak stubbing test-test SESUDAHNYA.
+    registerFallbackValue(const BillsSubscribed());
   });
 
   setUp(() {
@@ -631,11 +636,15 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    // Task 13: pintu menu (⋮) mendorong rute ubah — SEMENTARA, sampai Task
-    // 14 memasang sheet aksi (`_openActionsSheet`).
-    testWidgets('menekan ⋮ mendorong rute ubah dengan bill sebagai extra', (
-      tester,
-    ) async {
+    // Rantai LENGKAP: baris → ⋮ → sheet aksi → Ubah → rute [Audit B4].
+    //
+    // Diarahkan ulang dari test T13 yang menembak `context.push` SEMENTARA di
+    // `_openActionsSheet`. Sejak Task 14, ⋮ tak lagi menavigasi langsung — ia
+    // membuka sheet, dan sheet-lah yang mendorong rute. Asersi identitas
+    // `same(kos)` dipertahankan: itu yang membuktikan `billEditGuard`
+    // menerima instance yang benar, bukan salinan.
+    testWidgets('memilih Ubah di sheet mendorong rute ubah dengan bill '
+        'sebagai extra', (tester) async {
       final kos = buildBill(id: 42, name: 'Kos Bu Tini', dueDate: todayStart);
       stub(BillsState(status: BillsStatus.success, bills: [kos]));
       stubCategoriesLoaded();
@@ -644,6 +653,15 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const ValueKey('bill_item_menu_42')));
+      await tester.pumpAndSettle();
+      // ⋮ HANYA membuka sheet — belum menavigasi ke mana pun.
+      expect(
+        router.state.uri.toString(),
+        '/bills',
+        reason: '⋮ membuka sheet dulu, bukan langsung melompat ke form',
+      );
+
+      await tester.tap(find.text(l10n.billsActionEdit));
       await tester.pumpAndSettle();
 
       expect(router.state.uri.toString(), '/bills/42/edit');
@@ -655,6 +673,170 @@ void main() {
             'rute ubah membaca bill dari extra — instance yang SAMA, '
             'bukan salinan, supaya penjaga billEditGuard lolos',
       );
+      expect(find.text(l10n.billsFormEditTitle), findsOneWidget);
+    });
+
+    testWidgets(
+      'menutup sheet aksi tanpa memilih TIDAK menavigasi ke mana pun',
+      (tester) async {
+        stub(
+          BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(id: 42, name: 'Kos Bu Tini', dueDate: todayStart),
+            ],
+          ),
+        );
+        stubCategoriesLoaded();
+        final router = buatRouter();
+        await tester.pumpWidget(harness(router: router));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const ValueKey('bill_item_menu_42')));
+        await tester.pumpAndSettle();
+        // Sheet BENAR-BENAR terbuka dulu — tanpa ini, asersi negatif di bawah
+        // lulus vakum (tak menavigasi karena tak ada apa-apa yang dibuka).
+        expect(find.text(l10n.billsActionEdit), findsOneWidget);
+
+        // Ketuk barrier di luar sheet.
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.billsActionEdit), findsNothing);
+        expect(router.state.uri.toString(), '/bills');
+        verifyNever(() => bloc.add(any(that: isA<BillDeleted>())));
+      },
+    );
+  });
+
+  // ── Dialog konfirmasi hapus (Task 14) ───────────────────────────────────────
+  //
+  // Dialog dibuka lewat JALUR NYATA: baris → ⋮ → sheet → Hapus. Sengaja tidak
+  // memanggil dialognya langsung — yang diuji rantainya, bukan dialognya
+  // sendirian.
+  group('dialog hapus', () {
+    Future<void> bukaDialogHapus(
+      WidgetTester tester, {
+      required int installmentsPaid,
+      int id = 1,
+      String name = 'Kos Bu Tini',
+      ThemeData? theme,
+    }) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(
+              id: id,
+              name: name,
+              dueDate: todayStart,
+              installmentsPaid: installmentsPaid,
+              installmentTotal: installmentsPaid > 0 ? 12 : null,
+            ),
+          ],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness(theme: theme));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('bill_item_menu_$id')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.billsActionDelete));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('tagihan TANPA riwayat: kalimat pendek, tanpa janji kosong', (
+      tester,
+    ) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0);
+
+      expect(find.text(l10n.billsDeleteBodyClean), findsOneWidget);
+      expect(find.text(l10n.billsDeleteBodyPaid), findsNothing);
+    });
+
+    testWidgets('tagihan BERRIWAYAT: menyebut Transaksi', (tester) async {
+      await bukaDialogHapus(tester, installmentsPaid: 3);
+
+      expect(find.text(l10n.billsDeleteBodyPaid), findsOneWidget);
+      expect(find.text(l10n.billsDeleteBodyClean), findsNothing);
+    });
+
+    testWidgets('judul dialog menyebut nama tagihan', (tester) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0, name: 'Wifi Indihome');
+
+      expect(find.text(l10n.billsDeleteTitle('Wifi Indihome')), findsOneWidget);
+    });
+
+    testWidgets('konfirmasi mengirim BillDeleted dengan id yang benar', (
+      tester,
+    ) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0, id: 42);
+
+      await tester.tap(find.text(l10n.billsDeleteConfirm));
+      await tester.pumpAndSettle();
+
+      verify(() => bloc.add(const BillDeleted(42))).called(1);
+    });
+
+    testWidgets('batal TIDAK mengirim BillDeleted', (tester) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0, id: 42);
+
+      await tester.tap(find.text(l10n.btnCancel));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => bloc.add(any(that: isA<BillDeleted>())));
+    });
+
+    // Membuktikan asersi negatif di test "batal" TIDAK lulus vakum: dari
+    // keadaan yang sama, jalur konfirmasi memang menghasilkan BillDeleted.
+    testWidgets('menutup dialog dengan barrier juga TIDAK menghapus', (
+      tester,
+    ) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0, id: 42);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.billsDeleteConfirm), findsNothing);
+      verifyNever(() => bloc.add(any(that: isA<BillDeleted>())));
+    });
+
+    testWidgets('tombol dialog memenuhi hit target 48dp', (tester) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0);
+
+      for (final label in [l10n.btnCancel, l10n.billsDeleteConfirm]) {
+        expect(
+          tester.getSize(find.widgetWithText(TextButton, label)).height,
+          greaterThanOrEqualTo(48),
+          reason: 'tombol "$label" di bawah hit target minimum',
+        );
+      }
+    });
+
+    testWidgets('aksi Hapus di dialog memakai AppColors.warn', (tester) async {
+      await bukaDialogHapus(tester, installmentsPaid: 0);
+
+      final teks = tester.widget<Text>(
+        find.descendant(
+          of: find.widgetWithText(TextButton, l10n.billsDeleteConfirm),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(teks.style?.color, AppColors.warn);
+    });
+
+    testWidgets('dark mode: dialog render tanpa error dan pakai cardDark', (
+      tester,
+    ) async {
+      await bukaDialogHapus(
+        tester,
+        installmentsPaid: 0,
+        theme: ThemeData.dark(),
+      );
+
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect(dialog.backgroundColor, AppColors.cardDark);
+      expect(tester.takeException(), isNull);
     });
   });
 

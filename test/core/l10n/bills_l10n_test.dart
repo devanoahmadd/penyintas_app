@@ -148,6 +148,13 @@ void main() {
     'bills_fixed_help_locked_title',
     'bills_fixed_help_locked_body',
     'bills_fixed_help_a11y',
+    // Sheet aksi ubah/hapus + dialog konfirmasi hapus (Task 14)
+    'bills_action_edit',
+    'bills_action_delete',
+    'bills_delete_title',
+    'bills_delete_body_clean',
+    'bills_delete_body_paid',
+    'bills_delete_confirm',
     // ── Lubang lama, ditemukan audit 2026-08-08 [Audit S4] ──
     // Keempatnya SUDAH ada di kedua JSON dan sudah punya getter; yang hilang
     // hanya penjaganya. Menghapusnya dari kedua berkas hari ini tidak
@@ -201,6 +208,7 @@ void main() {
       'bills_reminder_n_days_before': ['{n}'],
       'bills_paid_date_early': ['{n}'],
       'bills_paid_date_late': ['{n}'],
+      'bills_delete_title': ['{name}'],
     };
     withPlaceholder.forEach((key, tokens) {
       for (final token in tokens) {

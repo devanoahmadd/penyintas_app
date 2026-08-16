@@ -730,6 +730,21 @@ class AppLocalizations {
   /// yang satu dibaca pembaca layar, dan keduanya bisa berubah sendiri-sendiri.
   String get billsFixedHelpA11y => _t('bills_fixed_help_a11y');
 
+  // ── Sheet aksi + dialog hapus tagihan (Task 14) ──
+  String get billsActionEdit => _t('bills_action_edit');
+  String get billsActionDelete => _t('bills_action_delete');
+  String billsDeleteTitle(String name) =>
+      _t('bills_delete_title').replaceAll('{name}', name);
+
+  /// Isi dialog hapus untuk tagihan yang BELUM pernah dibayar.
+  ///
+  /// Terpisah dari [billsDeleteBodyPaid] karena kalimat soal riwayat hanya
+  /// benar kalau riwayatnya ada — menjanjikan "pembayaranmu tetap tersimpan"
+  /// pada tagihan tanpa pembayaran justru menimbulkan pertanyaan.
+  String get billsDeleteBodyClean => _t('bills_delete_body_clean');
+  String get billsDeleteBodyPaid => _t('bills_delete_body_paid');
+  String get billsDeleteConfirm => _t('bills_delete_confirm');
+
   // ── Baris uang terikat / sisa aman di kartu saldo (P1, Task 7.2c) ──
   /// Frasa horizon varian B & C — menandai HORIZON waktu (kini → gajian),
   /// bukan nama besaran baru. Sengaja SENTENCE CASE: register eyebrow
