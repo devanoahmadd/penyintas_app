@@ -797,9 +797,7 @@ void main() {
       expect(find.byKey(const ValueKey('bill_paid_date_diff')), findsNothing);
     });
 
-    testWidgets('bayar 3 hari lebih awal → baris "lebih awal"', (
-      tester,
-    ) async {
+    testWidgets('bayar 3 hari lebih awal → baris "lebih awal"', (tester) async {
       await pumpSheet(tester, bill: billJatuhTempo3HariLagi);
       expect(find.text(l10n.billsPaidDateEarly(3)), findsOneWidget);
     });
@@ -866,7 +864,8 @@ void main() {
     expect(
       captureMarkedPaid(tester).paidDate,
       hariIni(),
-      reason: 'tanggal bayar default tetap hari ini setelah baris selisih '
+      reason:
+          'tanggal bayar default tetap hari ini setelah baris selisih '
           'ditambahkan',
     );
   });

@@ -49,7 +49,8 @@ void main() {
         expect(
           r.path.startsWith('/'),
           isFalse,
-          reason: 'path absolut di rute bersarang membuat /bills/new tak '
+          reason:
+              'path absolut di rute bersarang membuat /bills/new tak '
               'pernah cocok',
         );
       }

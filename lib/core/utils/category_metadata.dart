@@ -48,10 +48,7 @@ class CategoryMetadata {
   /// yang dikapitalkan — bukan tiap kata — supaya hasilnya terbaca sebagai
   /// nama, bukan judul.
   static String prettifySlug(String slug) {
-    final kata = slug
-        .split('_')
-        .where((p) => p.isNotEmpty)
-        .join(' ');
+    final kata = slug.split('_').where((p) => p.isNotEmpty).join(' ');
     if (kata.isEmpty) return '';
     return kata[0].toUpperCase() + kata.substring(1);
   }
