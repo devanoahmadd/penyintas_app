@@ -269,6 +269,30 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       newStatus: advance.newStatus,
     );
     if (applyResult.isLeft()) {
+      // KOMPENSASI. Transaksinya sudah masuk DB di langkah 2, dan tagihannya
+      // gagal maju di langkah 6 — tanpa baris ini pengeluarannya tercatat
+      // untuk pembayaran yang TIDAK PERNAH terjadi. Dan karena snackbarnya
+      // mengundang "Coba lagi", ketukan berikutnya menulis transaksi KEDUA:
+      // satu tagihan, dua kali uang keluar, tanpa satu pun tanda di layar.
+      //
+      // Best-effort, persis pola `_reschedule`/`_cancelReminder`: kegagalan
+      // kompensasi TIDAK boleh menggantikan galat aslinya. Yang perlu
+      // diketahui pengguna adalah pembayarannya tak tercatat — bukan detail
+      // pembersihan yang ia tak pernah minta.
+      if (txId != null) {
+        try {
+          final bersih = await _deleteTransaction(txId);
+          bersih.fold(
+            (f) => _log(
+              StateError('Kompensasi transaksi yatim gagal: $f'),
+              StackTrace.current,
+            ),
+            (_) {},
+          );
+        } catch (e, st) {
+          _log(e, st);
+        }
+      }
       emit(
         _gagalAksi(
           BillWriteAction.markPaid,

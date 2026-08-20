@@ -1344,5 +1344,113 @@ void main() {
             .having((s) => s.status, 'status', BillsStatus.success),
       ],
     );
+
+    blocTest<BillsBloc, BillsState>(
+      'applyBillPayment gagal → transaksi yang TERLANJUR dicatat DIHAPUS',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(() => mockAddTransaction(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockDeleteTransaction(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Left(CacheFailure('apply gagal')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: false,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      verify: (_) {
+        // Id-nya TIDAK ditebak dari fixture: ia uuid yang dibuat bloc sendiri.
+        // Menangkapnya dari `addTransaction` adalah satu-satunya cara jujur
+        // membuktikan yang dihapus adalah transaksi yang BARU SAJA ditulis.
+        final txDicatat =
+            verify(() => mockAddTransaction(captureAny())).captured.single
+                as TransactionEntity;
+        verify(() => mockDeleteTransaction(txDicatat.id)).called(1);
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'opt-out transaksi → applyBillPayment gagal → TIDAK ada yang dihapus',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Left(CacheFailure('apply gagal')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      verify: (_) => verifyNever(() => mockDeleteTransaction(any())),
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'kompensasi ITU SENDIRI gagal → galat markPaid tetap yang dilaporkan',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(() => mockAddTransaction(any()))
+            .thenAnswer((_) async => const Right(null));
+        when(() => mockDeleteTransaction(any()))
+            .thenAnswer((_) async => const Left(CacheFailure('del gagal')));
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Left(CacheFailure('apply gagal')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: false,
+        ),
+      ),
+      // SATU state saja, dan isinya galat markPaid — BUKAN galat hapus
+      // transaksi. Kompensasi yang gagal tak boleh menyalip pesan aslinya:
+      // yang perlu diketahui pengguna adalah pembayarannya tak tercatat.
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+    );
   });
 }
