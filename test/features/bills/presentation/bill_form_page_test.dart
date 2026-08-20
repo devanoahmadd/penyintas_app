@@ -925,6 +925,17 @@ void main() {
 
   // ── Umpan balik submit ────────────────────────────────────────────────────
 
+  /// Bentuk state "gagal tulis" sesudah pemisahan kanal (§2): `status` TETAP
+  /// success — itulah yang membuat urutan cabang jadi berbahaya.
+  BillsState gagalTulis(BillWriteAction aksi, {int seq = 1}) => BillsState(
+    status: BillsStatus.success,
+    actionFailure: BillActionFailure(
+      aksi: aksi,
+      failure: const CacheFailure('db mati'),
+      seq: seq,
+    ),
+  );
+
   testWidgets('gagal simpan → SnackBar tampil & tombol simpan aktif lagi', (
     tester,
   ) async {
@@ -934,7 +945,7 @@ void main() {
     await pickDueDate(tester);
     await tapSubmit(tester);
 
-    stateController.add(const BillsState(status: BillsStatus.failure));
+    stateController.add(gagalTulis(BillWriteAction.add));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -957,6 +968,146 @@ void main() {
     expect(find.byType(BillFormPage), findsNothing);
     expect(find.text('buka'), findsOneWidget);
   });
+
+  testWidgets('gagal simpan → snackbar tampil DAN halaman tidak ter-pop', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await tapLabel(tester, l10n.categoryInternet);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    stateController.add(gagalTulis(BillWriteAction.add));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
+    expect(
+      find.byType(BillFormPage),
+      findsOneWidget,
+      reason:
+          'kegagalan tak boleh menutup halaman — isian pengguna hilang '
+          'tanpa jejak kalau ia ter-pop',
+    );
+  });
+
+  testWidgets('sukses simpan → halaman TETAP ter-pop sesudah kanal dipisah', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await tapLabel(tester, l10n.categoryInternet);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    // Sukses TIDAK dipancarkan handler — ia datang sebagai emisi stream
+    // daftar. Inilah kenapa `listenWhen` pada `actionFailure` mematikannya.
+    stateController.add(
+      BillsState(status: BillsStatus.success, bills: [billContoh()]),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(BillFormPage), findsNothing);
+  });
+
+  testWidgets('gagal → perbaiki → simpan lagi berhasil → halaman menutup', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await tapLabel(tester, l10n.categoryInternet);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    stateController.add(gagalTulis(BillWriteAction.add));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // SnackBar gagal-simpan menempati sisi bawah layar, PERSIS di atas tombol
+    // Simpan. Tunggu ia lewat sendiri dulu — tanpa ini ketukan kedua mengenai
+    // snackbar-nya, `_submit()` tak pernah jalan, dan test ini merah karena
+    // alasan yang sama sekali bukan yang sedang diuji.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tapSubmit(tester);
+    // Bloc membersihkan actionFailure saat stream memancar ulang (§2.7).
+    stateController.add(
+      BillsState(status: BillsStatus.success, bills: [billContoh()]),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(BillFormPage), findsNothing);
+  });
+
+  testWidgets('kegagalan simpan LAMA yang masih menggantung tak dibaca ulang', (
+    tester,
+  ) async {
+    // Kegagalan simpan dari kunjungan sebelumnya masih menempel di state
+    // bersama saat halaman ini dibuka lagi. Filter `aksi` TIDAK menolongnya —
+    // aksinya memang `add`. Yang menolak adalah baseline `seq` yang diambil
+    // saat `_submit()`.
+    whenListen(
+      bloc,
+      stateController.stream,
+      initialState: gagalTulis(BillWriteAction.add, seq: 4),
+    );
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await tapLabel(tester, l10n.categoryInternet);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    // Emisi apa pun yang menyusul masih membawa galat LAMA itu.
+    stateController.add(gagalTulis(BillWriteAction.add, seq: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.text(l10n.billsFormSaveFailed),
+      findsNothing,
+      reason:
+          'galat seq 4 sudah ada SEBELUM kiriman ini — ia bukan '
+          'jawaban atas Simpan yang baru saja ditekan',
+    );
+    // SENGAJA TIDAK ada asersi `find.byType(BillFormPage)` di sini. Emisi di
+    // atas membawa `status: success`, jadi sesudah baseline `seq` menolaknya
+    // sebagai galat, listener JATUH ke cabang sukses dan halaman memang
+    // ter-pop — itu "risiko sisa yang diterima sadar" di spec §2.7, bukan
+    // bug. Yang diuji test ini adalah baseline `seq`, dan asersi snackbar di
+    // atas sudah menguncinya sendirian (sabotase (d) tetap memerah).
+  });
+
+  testWidgets(
+    'kegagalan milik permukaan LAIN tidak dibaca sebagai gagal simpan',
+    (tester) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryInternet);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+
+      // Hapus yang gagal di daftar, menggantung di state bersama.
+      stateController.add(gagalTulis(BillWriteAction.delete, seq: 9));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.text(l10n.billsFormSaveFailed),
+        findsNothing,
+        reason: 'form hanya bertanggung jawab atas add/update',
+      );
+      // Sama seperti test di atasnya: TIDAK ada asersi
+      // `find.byType(BillFormPage)` di sini. Emisi uji membawa
+      // `status: success`, jadi sesudah filter `aksi` menolaknya, listener
+      // jatuh ke cabang sukses dan halaman memang ter-pop. Menambahkan asersi
+      // "halaman masih ada" di sini akan merah — dan yang merah itu benar,
+      // bukan bug.
+    },
+  );
 
   // ── Kategori datang dari CategoryBloc (Task 8) ────────────────────────────
 
@@ -1732,7 +1883,7 @@ void main() {
       );
 
       // BLoC baru menjawab GAGAL setelah back tadi ditelan.
-      stateController.add(const BillsState(status: BillsStatus.failure));
+      stateController.add(gagalTulis(BillWriteAction.add));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

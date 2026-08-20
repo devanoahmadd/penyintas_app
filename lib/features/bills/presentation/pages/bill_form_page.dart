@@ -98,6 +98,18 @@ class _BillFormPageState extends State<BillFormPage> {
   bool _showErrors = false;
   bool _isSubmitting = false;
 
+  /// `seq` kegagalan terakhir yang SUDAH ditindaklanjuti halaman ini.
+  ///
+  /// Di-seed saat `_submit()` dari state saat itu — bukan dibiarkan null:
+  /// kegagalan yang sudah menggantung sebelum halaman ini mengirim apa pun
+  /// (mis. hapus yang gagal di daftar) bukan milik kiriman ini.
+  int? _seqGalatTerakhir;
+
+  /// Aksi tulis yang PERMUKAAN INI kirim. Kegagalan aksi lain diabaikan —
+  /// tanpa penjaga ini, gagal hapus di daftar tampil sebagai "gagal menyimpan"
+  /// di form yang belum menerima jawaban apa pun.
+  static const _aksiMilikku = {BillWriteAction.add, BillWriteAction.update};
+
   /// Cap keadaan awal, diambil sekali di [initState] SETELAH prefill.
   /// D15 membandingkan NILAI, bukan "pernah menyentuh field" — mengetik lalu
   /// menghapus lagi bukan perubahan.
@@ -534,6 +546,7 @@ class _BillFormPageState extends State<BillFormPage> {
     });
     final model = _buildModel();
     final bloc = context.read<BillsBloc>();
+    _seqGalatTerakhir = bloc.state.actionFailure?.seq;
     bloc.add(_isEdit ? BillUpdated(model) : BillAdded(model));
     // Navigator.pop() dipanggil via BlocListener setelah simpan berhasil.
   }
@@ -607,6 +620,29 @@ class _BillFormPageState extends State<BillFormPage> {
     return BlocListener<BillsBloc, BillsState>(
       listener: (context, state) {
         if (!_isSubmitting) return;
+
+        // WAJIB DIPERIKSA LEBIH DULU. Sejak kanal galat dipisah (§2),
+        // `status` tak lagi menandai gagal-tulis — ia masih `success` saat
+        // aksi ini gagal. Memeriksa `status` duluan akan MEM-POP halaman atas
+        // kegagalan: form menutup mulus, tak ada yang tersimpan, dan tak ada
+        // satu pun tanda di layar.
+        //
+        // Dan JANGAN pasang `listenWhen` pada `actionFailure` di sini: simpan
+        // yang BERHASIL tidak memancarkan apa pun dari handler — yang menutup
+        // halaman adalah emisi stream daftar yang menyusul. Menyaringnya
+        // membuat form tak pernah menutup sesudah simpan berhasil.
+        final gagal = state.actionFailure;
+        if (gagal != null &&
+            gagal.seq != _seqGalatTerakhir &&
+            _aksiMilikku.contains(gagal.aksi)) {
+          _seqGalatTerakhir = gagal.seq;
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.billsFormSaveFailed)));
+          return;
+        }
+
         if (state.status == BillsStatus.success) {
           // `_sudahDisimpan` diset SEBELUM pop di baris berikutnya, tapi pop
           // itu IMPERATIF — ia tak melewati `PopScope.canPop` sama sekali,
@@ -615,11 +651,6 @@ class _BillFormPageState extends State<BillFormPage> {
           // dijaga oleh `_isSubmitting` di `onPopInvokedWithResult`.
           _sudahDisimpan = true;
           Navigator.of(context).pop();
-        } else if (state.status == BillsStatus.failure) {
-          setState(() => _isSubmitting = false);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.billsFormSaveFailed)));
         }
       },
       child: PopScope(
