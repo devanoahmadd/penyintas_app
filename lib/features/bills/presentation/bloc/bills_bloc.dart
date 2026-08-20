@@ -65,6 +65,23 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
 
   static const _uuid = Uuid();
 
+  /// Penghitung monoton untuk `BillActionFailure.seq`. Lihat dartdoc `seq`.
+  int _actionSeq = 0;
+
+  /// Pemancaran kegagalan AKSI TULIS. SENGAJA tidak menyentuh `status`
+  /// maupun `failure`: keduanya milik stream muat, dan mencampurinya adalah
+  /// bug yang perbaikan ini tutup — gagal menulis pernah membuat seluruh
+  /// daftar lenyap dan menyalahkan "gagal memuat".
+  BillsState _gagalAksi(BillWriteAction aksi, Failure f, {int? billId}) =>
+      state.copyWith(
+        actionFailure: BillActionFailure(
+          aksi: aksi,
+          failure: f,
+          seq: ++_actionSeq,
+          billId: billId,
+        ),
+      );
+
   static void _log(Object e, StackTrace s) {
     try {
       FirebaseCrashlytics.instance.recordError(e, s);
@@ -118,6 +135,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
           status: BillsStatus.success,
           bills: bills,
           clearFailure: true,
+          clearActionFailure: true,
         ),
       ),
       onError: (e, s) {
@@ -133,8 +151,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   Future<void> _onAdded(BillAdded event, Emitter<BillsState> emit) async {
     final result = await _createBill(event.bill);
     await result.fold(
-      (f) async =>
-          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+      (f) async => emit(_gagalAksi(BillWriteAction.add, f)),
       // sukses: stream watchActive akan re-emit daftar terbaru otomatis;
       // reschedule (Task 6.2) pakai snapshot terkini agar bill baru ikut.
       (_) => _reschedule(),
@@ -144,8 +161,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
   Future<void> _onUpdated(BillUpdated event, Emitter<BillsState> emit) async {
     final result = await _updateBill(event.bill);
     await result.fold(
-      (f) async =>
-          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+      (f) async => emit(_gagalAksi(BillWriteAction.update, f)),
       (_) => _reschedule(),
     );
   }
@@ -154,7 +170,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     final result = await _deleteBill(event.id);
     await result.fold(
       (f) async =>
-          emit(state.copyWith(status: BillsStatus.failure, failure: f)),
+          emit(_gagalAksi(BillWriteAction.delete, f, billId: event.id)),
       // F3: bill terhapus TIDAK ADA lagi di activeBills → rescheduleAll TAK
       // BISA membatalkan notif lamanya. cancelFor EKSPLISIT wajib, kalau
       // tidak notif jadi yatim (tetap tampil utk bill yang sudah dihapus).
@@ -178,11 +194,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     final billResult = await _billRepository.getBillById(event.billId);
     if (billResult.isLeft()) {
       emit(
-        state.copyWith(
-          status: BillsStatus.failure,
-          failure: billResult.swap().getOrElse(
+        _gagalAksi(
+          BillWriteAction.markPaid,
+          billResult.swap().getOrElse(
             () => const CacheFailure('Gagal memuat tagihan.'),
           ),
+          billId: event.billId,
         ),
       );
       return;
@@ -190,9 +207,10 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     final bill = billResult.fold((_) => null, (b) => b);
     if (bill == null) {
       emit(
-        state.copyWith(
-          status: BillsStatus.failure,
-          failure: const CacheFailure('Tagihan tak ditemukan.'),
+        _gagalAksi(
+          BillWriteAction.markPaid,
+          const CacheFailure('Tagihan tak ditemukan.'),
+          billId: event.billId,
         ),
       );
       return;
@@ -227,11 +245,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       final txnResult = await _addTransaction(txn);
       if (txnResult.isLeft()) {
         emit(
-          state.copyWith(
-            status: BillsStatus.failure,
-            failure: txnResult.swap().getOrElse(
+          _gagalAksi(
+            BillWriteAction.markPaid,
+            txnResult.swap().getOrElse(
               () => const CacheFailure('Gagal mencatat transaksi.'),
             ),
+            billId: event.billId,
           ),
         );
         return; // JANGAN advance tanpa transaksi tersimpan.
@@ -251,11 +270,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     );
     if (applyResult.isLeft()) {
       emit(
-        state.copyWith(
-          status: BillsStatus.failure,
-          failure: applyResult.swap().getOrElse(
+        _gagalAksi(
+          BillWriteAction.markPaid,
+          applyResult.swap().getOrElse(
             () => const CacheFailure('Gagal memperbarui tagihan.'),
           ),
+          billId: event.billId,
         ),
       );
       return;
@@ -283,6 +303,7 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
           status: bill.status,
           txId: txId,
         ),
+        clearActionFailure: true,
       ),
     );
   }
@@ -306,11 +327,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     );
     if (restoreResult.isLeft()) {
       emit(
-        state.copyWith(
-          status: BillsStatus.failure,
-          failure: restoreResult.swap().getOrElse(
+        _gagalAksi(
+          BillWriteAction.undoPayment,
+          restoreResult.swap().getOrElse(
             () => const CacheFailure('Gagal membatalkan pembayaran.'),
           ),
+          billId: snap.billId,
         ),
       );
       return;
@@ -322,11 +344,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
       final delResult = await _deleteTransaction(txId);
       if (delResult.isLeft()) {
         emit(
-          state.copyWith(
-            status: BillsStatus.failure,
-            failure: delResult.swap().getOrElse(
+          _gagalAksi(
+            BillWriteAction.undoPayment,
+            delResult.swap().getOrElse(
               () => const CacheFailure('Gagal menghapus transaksi.'),
             ),
+            billId: snap.billId,
           ),
         );
         return;
@@ -339,6 +362,12 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     await _reschedule();
 
     // 4. Clear lastUndo + success. Daftar aktif refresh via stream watchActive.
-    emit(state.copyWith(status: BillsStatus.success, clearUndo: true));
+    emit(
+      state.copyWith(
+        status: BillsStatus.success,
+        clearUndo: true,
+        clearActionFailure: true,
+      ),
+    );
   }
 }

@@ -94,6 +94,14 @@ BillEntity _makeBill({
   updatedAt: updatedAt ?? DateTime(2026, 7, 1),
 );
 
+UndoSnapshot _snapshotUndo({String? txId}) => UndoSnapshot(
+  billId: 7,
+  dueDate: DateTime(2026, 6, 25),
+  installmentsPaid: 0,
+  status: BillStatus.active,
+  txId: txId,
+);
+
 BillModel _makeBillModel({
   String? cloudId,
   String name = 'Kos Bu Tini',
@@ -550,11 +558,9 @@ void main() {
         ),
       ),
       expect: () => [
-        isA<BillsState>().having(
-          (s) => s.status,
-          'status',
-          BillsStatus.failure,
-        ),
+        isA<BillsState>()
+            .having((s) => s.actionFailure?.aksi, 'aksi', BillWriteAction.markPaid)
+            .having((s) => s.status, 'status', isNot(BillsStatus.failure)),
       ],
       verify: (_) {
         verifyNever(
@@ -1129,5 +1135,214 @@ void main() {
       expect(hasil.failure, isNotNull);
       expect(hasil.status, BillsStatus.failure);
     });
+  });
+
+  group('kanal galat tulis — sembilan titik (§2.4)', () {
+    /// Matcher bersama: kegagalan tulis WAJIB muncul di `actionFailure`, dan
+    /// kanal muat (`status` + `failure`) WAJIB tetap bersih.
+    Matcher gagalTulis(BillWriteAction aksi, {int? billId}) =>
+        isA<BillsState>()
+            .having((s) => s.actionFailure?.aksi, 'aksi', aksi)
+            .having((s) => s.actionFailure?.billId, 'billId', billId)
+            .having((s) => s.status, 'status', BillsStatus.success)
+            .having((s) => s.failure, 'failure', isNull);
+
+    const seedSukses = BillsState(status: BillsStatus.success);
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 1 — createBill gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockCreateBill(any()))
+          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      act: (bloc) => bloc.add(BillAdded(_makeBillModel())),
+      expect: () => [gagalTulis(BillWriteAction.add)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 2 — updateBill gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockUpdateBill(any()))
+          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      act: (bloc) => bloc.add(BillUpdated(_makeBillModel())),
+      expect: () => [gagalTulis(BillWriteAction.update)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 3 — deleteBill gagal, membawa billId untuk aksi "Coba lagi"',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockDeleteBill(any()))
+          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      act: (bloc) => bloc.add(const BillDeleted(7)),
+      expect: () => [gagalTulis(BillWriteAction.delete, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 4 — markPaid: getBillById gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockBillRepository.getBillById(any()))
+          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 5 — markPaid: bill tak ditemukan',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockBillRepository.getBillById(any()))
+          .thenAnswer((_) async => const Right(null)),
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 6 — markPaid: addTransaction gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(() => mockAddTransaction(any()))
+            .thenAnswer((_) async => const Left(CacheFailure('tx gagal')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: false,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 7 — markPaid: applyBillPayment gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Left(CacheFailure('apply gagal')));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      ),
+      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 8 — undo: restoreBillPayment gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(
+        () => mockBillRepository.restoreBillPayment(
+          id: any(named: 'id'),
+          dueDate: any(named: 'dueDate'),
+          installmentsPaid: any(named: 'installmentsPaid'),
+          status: any(named: 'status'),
+        ),
+      ).thenAnswer((_) async => const Left(CacheFailure('restore gagal'))),
+      act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo())),
+      expect: () => [gagalTulis(BillWriteAction.undoPayment, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'titik 9 — undo: deleteTransaction gagal',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () {
+        when(
+          () => mockBillRepository.restoreBillPayment(
+            id: any(named: 'id'),
+            dueDate: any(named: 'dueDate'),
+            installmentsPaid: any(named: 'installmentsPaid'),
+            status: any(named: 'status'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockDeleteTransaction(any()))
+            .thenAnswer((_) async => const Left(CacheFailure('del tx gagal')));
+      },
+      act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo(txId: 'tx-1'))),
+      expect: () => [gagalTulis(BillWriteAction.undoPayment, billId: 7)],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'seq NAIK di kegagalan kedua yang isinya identik',
+      build: buildBloc,
+      seed: () => seedSukses,
+      setUp: () => when(() => mockDeleteBill(any()))
+          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      act: (bloc) async {
+        bloc.add(const BillDeleted(7));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const BillDeleted(7));
+      },
+      expect: () => [
+        isA<BillsState>().having((s) => s.actionFailure?.seq, 'seq', 1),
+        isA<BillsState>().having((s) => s.actionFailure?.seq, 'seq', 2),
+      ],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'stream memancar ulang → actionFailure DIBERSIHKAN',
+      build: buildBloc,
+      seed: () => const BillsState(
+        status: BillsStatus.success,
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.delete,
+          failure: CacheFailure('db mati'),
+          seq: 1,
+        ),
+      ),
+      setUp: () => when(() => mockWatchActiveBills(any())).thenAnswer(
+        (_) => Stream<Either<Failure, List<BillEntity>>>.value(
+          Right([_makeBill(id: 1)]),
+        ),
+      ),
+      act: (bloc) => bloc.add(const BillsSubscribed()),
+      expect: () => [
+        isA<BillsState>().having((s) => s.status, 'status', BillsStatus.loading),
+        isA<BillsState>()
+            .having((s) => s.actionFailure, 'actionFailure', isNull)
+            .having((s) => s.status, 'status', BillsStatus.success),
+      ],
+    );
   });
 }
