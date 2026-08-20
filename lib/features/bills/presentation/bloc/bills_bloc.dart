@@ -284,7 +284,10 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
           final bersih = await _deleteTransaction(txId);
           bersih.fold(
             (f) => _log(
-              StateError('Kompensasi transaksi yatim gagal: $f'),
+              StateError(
+                'Kompensasi transaksi yatim gagal: $f '
+                '(txId: $txId, billId: ${event.billId})',
+              ),
               StackTrace.current,
             ),
             (_) {},

@@ -1138,12 +1138,15 @@ void main() {
   });
 
   group('kanal galat tulis — sembilan titik (§2.4)', () {
-    /// Matcher bersama: kegagalan tulis WAJIB muncul di `actionFailure`, dan
+    /// Matcher bersama: kegagalan tulis WAJIB muncul di `actionFailure` dengan
+    /// `Failure` PERSIS yang diharapkan (bukan cuma `aksi`/`billId` — dua
+    /// titik dengan `Failure` berbeda yang tertukar HARUS terlihat), dan
     /// kanal muat (`status` + `failure`) WAJIB tetap bersih.
-    Matcher gagalTulis(BillWriteAction aksi, {int? billId}) =>
+    Matcher gagalTulis(BillWriteAction aksi, Failure failure, {int? billId}) =>
         isA<BillsState>()
             .having((s) => s.actionFailure?.aksi, 'aksi', aksi)
             .having((s) => s.actionFailure?.billId, 'billId', billId)
+            .having((s) => s.actionFailure?.failure, 'failure asli', failure)
             .having((s) => s.status, 'status', BillsStatus.success)
             .having((s) => s.failure, 'failure', isNull);
 
@@ -1156,7 +1159,7 @@ void main() {
       setUp: () => when(() => mockCreateBill(any()))
           .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(BillAdded(_makeBillModel())),
-      expect: () => [gagalTulis(BillWriteAction.add)],
+      expect: () => [gagalTulis(BillWriteAction.add, const CacheFailure('db mati'))],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1166,7 +1169,9 @@ void main() {
       setUp: () => when(() => mockUpdateBill(any()))
           .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(BillUpdated(_makeBillModel())),
-      expect: () => [gagalTulis(BillWriteAction.update)],
+      expect: () => [
+        gagalTulis(BillWriteAction.update, const CacheFailure('db mati')),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1176,7 +1181,9 @@ void main() {
       setUp: () => when(() => mockDeleteBill(any()))
           .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(const BillDeleted(7)),
-      expect: () => [gagalTulis(BillWriteAction.delete, billId: 7)],
+      expect: () => [
+        gagalTulis(BillWriteAction.delete, const CacheFailure('db mati'), billId: 7),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1194,7 +1201,11 @@ void main() {
           optOutTransaction: true,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      // Failure ASLI dari getBillById (forward), BUKAN pesan buatan handler —
+      // pembeda ini sengaja ditulis di kode (lihat komentar :192-193 bloc).
+      expect: () => [
+        gagalTulis(BillWriteAction.markPaid, const CacheFailure('db mati'), billId: 7),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1212,7 +1223,15 @@ void main() {
           optOutTransaction: true,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      // Failure DIBUAT SENDIRI oleh handler ('Tagihan tak ditemukan.') — pesan
+      // BEDA dari titik 4 ('db mati') supaya tertukar = merah, bukan lolos.
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('Tagihan tak ditemukan.'),
+          billId: 7,
+        ),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1235,7 +1254,9 @@ void main() {
           optOutTransaction: false,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      expect: () => [
+        gagalTulis(BillWriteAction.markPaid, const CacheFailure('tx gagal'), billId: 7),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1264,7 +1285,13 @@ void main() {
           optOutTransaction: true,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('apply gagal'),
+          billId: 7,
+        ),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1280,7 +1307,13 @@ void main() {
         ),
       ).thenAnswer((_) async => const Left(CacheFailure('restore gagal'))),
       act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo())),
-      expect: () => [gagalTulis(BillWriteAction.undoPayment, billId: 7)],
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.undoPayment,
+          const CacheFailure('restore gagal'),
+          billId: 7,
+        ),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1300,7 +1333,13 @@ void main() {
             .thenAnswer((_) async => const Left(CacheFailure('del tx gagal')));
       },
       act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo(txId: 'tx-1'))),
-      expect: () => [gagalTulis(BillWriteAction.undoPayment, billId: 7)],
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.undoPayment,
+          const CacheFailure('del tx gagal'),
+          billId: 7,
+        ),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
@@ -1375,7 +1414,13 @@ void main() {
           optOutTransaction: false,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('apply gagal'),
+          billId: 7,
+        ),
+      ],
       verify: (_) {
         // Id-nya TIDAK ditebak dari fixture: ia uuid yang dibuat bloc sendiri.
         // Menangkapnya dari `addTransaction` adalah satu-satunya cara jujur
@@ -1413,7 +1458,13 @@ void main() {
           optOutTransaction: true,
         ),
       ),
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('apply gagal'),
+          billId: 7,
+        ),
+      ],
       verify: (_) => verifyNever(() => mockDeleteTransaction(any())),
     );
 
@@ -1447,10 +1498,87 @@ void main() {
           optOutTransaction: false,
         ),
       ),
-      // SATU state saja, dan isinya galat markPaid — BUKAN galat hapus
-      // transaksi. Kompensasi yang gagal tak boleh menyalip pesan aslinya:
-      // yang perlu diketahui pengguna adalah pembayarannya tak tercatat.
-      expect: () => [gagalTulis(BillWriteAction.markPaid, billId: 7)],
+      // SATU state saja, dan isinya galat markPaid dengan Failure ASLI
+      // ('apply gagal') — BUKAN galat hapus transaksi ('del gagal').
+      // Kompensasi yang gagal tak boleh menyalip ATAU MENGGANTI pesan
+      // aslinya: yang perlu diketahui pengguna adalah pembayarannya tak
+      // tercatat, bukan detail pembersihan yang gagal.
+      expect: () => [
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('apply gagal'),
+          billId: 7,
+        ),
+      ],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'markPaid sukses → actionFailure lama DIBERSIHKAN',
+      build: buildBloc,
+      seed: () => const BillsState(
+        status: BillsStatus.success,
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.delete,
+          failure: CacheFailure('db mati'),
+          seq: 1,
+          billId: 9,
+        ),
+      ),
+      setUp: () {
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
+        );
+        when(
+          () => mockBillRepository.applyBillPayment(
+            id: any(named: 'id'),
+            newDueDate: any(named: 'newDueDate'),
+            newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+            newStatus: any(named: 'newStatus'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      act: (bloc) => bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 800000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      ),
+      expect: () => [
+        isA<BillsState>()
+            .having((s) => s.status, 'status', BillsStatus.success)
+            .having((s) => s.actionFailure, 'actionFailure', isNull),
+      ],
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'undo sukses → actionFailure lama DIBERSIHKAN',
+      build: buildBloc,
+      seed: () => const BillsState(
+        status: BillsStatus.success,
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.markPaid,
+          failure: CacheFailure('apply gagal'),
+          seq: 1,
+          billId: 7,
+        ),
+      ),
+      setUp: () => when(
+        () => mockBillRepository.restoreBillPayment(
+          id: any(named: 'id'),
+          dueDate: any(named: 'dueDate'),
+          installmentsPaid: any(named: 'installmentsPaid'),
+          status: any(named: 'status'),
+        ),
+      ).thenAnswer((_) async => const Right(null)),
+      act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo())),
+      expect: () => [
+        isA<BillsState>()
+            .having((s) => s.status, 'status', BillsStatus.success)
+            .having((s) => s.actionFailure, 'actionFailure', isNull),
+      ],
     );
   });
 }
