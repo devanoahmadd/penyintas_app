@@ -1081,4 +1081,53 @@ void main() {
       }
     });
   });
+
+  group('BillsState — kanal galat tulis (§2.3)', () {
+    const galat = BillActionFailure(
+      aksi: BillWriteAction.delete,
+      failure: CacheFailure('db mati'),
+      seq: 1,
+      billId: 7,
+    );
+
+    test('copyWith membawa actionFailure', () {
+      const awal = BillsState(status: BillsStatus.success);
+      expect(awal.copyWith(actionFailure: galat).actionFailure, galat);
+    });
+
+    test('copyWith TANPA argumen mempertahankan actionFailure', () {
+      const s = BillsState(status: BillsStatus.success, actionFailure: galat);
+      expect(s.copyWith(bills: const []).actionFailure, galat);
+    });
+
+    test('clearActionFailure mengosongkannya', () {
+      const s = BillsState(status: BillsStatus.success, actionFailure: galat);
+      expect(s.copyWith(clearActionFailure: true).actionFailure, isNull);
+    });
+
+    test('actionFailure ikut props — dua state beda galat TIDAK sama', () {
+      const a = BillsState(actionFailure: galat);
+      const b = BillsState(
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.delete,
+          failure: CacheFailure('db mati'),
+          seq: 2,
+          billId: 7,
+        ),
+      );
+      expect(a, isNot(b), reason: 'seq WAJIB masuk props — tanpa itu kegagalan '
+          'kedua yang identik tak pernah terlihat konsumen');
+    });
+
+    test('clearActionFailure TIDAK menyentuh kanal muat', () {
+      const s = BillsState(
+        status: BillsStatus.failure,
+        failure: CacheFailure('gagal muat'),
+        actionFailure: galat,
+      );
+      final hasil = s.copyWith(clearActionFailure: true);
+      expect(hasil.failure, isNotNull);
+      expect(hasil.status, BillsStatus.failure);
+    });
+  });
 }
