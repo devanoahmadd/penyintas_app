@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
@@ -651,7 +652,19 @@ void main() {
     await pumpSheet(tester, bill: billBerjalan());
     await tapSubmit(tester);
 
-    stateController.add(const BillsState(status: BillsStatus.failure));
+    // Kanal galat tulis (Task 1-3): `status` TIDAK menyentuh kegagalan aksi
+    // lagi — sheet harus membaca `actionFailure`, bukan `status.failure`.
+    stateController.add(
+      const BillsState(
+        status: BillsStatus.success,
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.markPaid,
+          failure: CacheFailure('db mati'),
+          seq: 1,
+          billId: 1,
+        ),
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -667,6 +680,41 @@ void main() {
       isNotNull,
       reason: 'setelah gagal, konfirmasi harus bisa ditekan ulang',
     );
+  });
+
+  testWidgets('gagal tandai lunas → snackbar tampil DAN sheet tidak menutup', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    await tapSubmit(tester);
+
+    stateController.add(
+      const BillsState(
+        status: BillsStatus.success,
+        actionFailure: BillActionFailure(
+          aksi: BillWriteAction.markPaid,
+          failure: CacheFailure('db mati'),
+          seq: 1,
+          billId: 1,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(l10n.billsPaidFailed), findsOneWidget);
+    expect(find.byType(MarkBillPaidSheet), findsOneWidget);
+  });
+
+  testWidgets('sukses tandai lunas → sheet TETAP menutup', (tester) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    await tapSubmit(tester);
+
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(MarkBillPaidSheet), findsNothing);
   });
 
   testWidgets('sukses → sheet ditutup', (tester) async {

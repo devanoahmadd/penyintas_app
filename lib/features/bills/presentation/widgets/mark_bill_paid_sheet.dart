@@ -54,6 +54,17 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
   bool _showErrors = false;
   bool _isSubmitting = false;
 
+  /// `seq` kegagalan terakhir yang SUDAH ditindaklanjuti sheet ini.
+  ///
+  /// Di-seed saat `_submit()` dari state saat itu — bukan dibiarkan null:
+  /// kegagalan yang sudah menggantung sebelum sheet ini mengirim apa pun
+  /// (mis. gagal hapus di daftar) bukan milik kiriman ini.
+  int? _seqGalatTerakhir;
+
+  /// Sheet ini hanya bertanggung jawab atas tandai-lunas. Kegagalan hapus
+  /// atau simpan milik permukaan lain.
+  static const _aksiMilikku = {BillWriteAction.markPaid};
+
   @override
   void initState() {
     super.initState();
@@ -159,7 +170,9 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       _showErrors = false;
       _isSubmitting = true;
     });
-    context.read<BillsBloc>().add(
+    final bloc = context.read<BillsBloc>();
+    _seqGalatTerakhir = bloc.state.actionFailure?.seq;
+    bloc.add(
       BillMarkedPaid(
         billId: widget.bill.id,
         actualAmount: _amount,
@@ -202,6 +215,29 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     return BlocListener<BillsBloc, BillsState>(
       listener: (context, state) {
         if (!_isSubmitting) return;
+
+        // WAJIB DIPERIKSA LEBIH DULU. Sejak kanal galat dipisah (§2),
+        // `status` tak lagi menandai gagal-tulis — ia masih `success` saat
+        // aksi ini gagal. Memeriksa `status` duluan akan MEM-POP sheet atas
+        // kegagalan: pengguna mengira tagihannya lunas padahal tidak.
+        //
+        // Dan JANGAN pasang `listenWhen` pada `actionFailure` di sini:
+        // tandai-lunas yang BERHASIL tidak memancarkan apa pun dari
+        // handler — yang menutup sheet adalah emisi stream daftar yang
+        // menyusul. Menyaringnya membuat sheet tak pernah menutup sesudah
+        // pembayaran berhasil.
+        final gagal = state.actionFailure;
+        if (gagal != null &&
+            gagal.seq != _seqGalatTerakhir &&
+            _aksiMilikku.contains(gagal.aksi)) {
+          _seqGalatTerakhir = gagal.seq;
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.billsPaidFailed)));
+          return;
+        }
+
         if (state.status == BillsStatus.success) {
           // Sheet TIDAK menampilkan surface apa pun di sini. Perayaan +
           // tawaran "Urungkan" digabung jadi SATU snackbar milik halaman
@@ -209,11 +245,6 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
           // `MilestoneToast.show` memanggil `hideCurrentSnackBar()`, dan yang
           // hilang justru undo — jaring pengaman pengguna.
           Navigator.of(context).pop();
-        } else if (state.status == BillsStatus.failure) {
-          setState(() => _isSubmitting = false);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.billsPaidFailed)));
         }
       },
       child: Padding(
