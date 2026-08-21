@@ -990,6 +990,13 @@ void main() {
           'kegagalan tak boleh menutup halaman — isian pengguna hilang '
           'tanpa jejak kalau ia ter-pop',
     );
+    // Asersi di atas TUMPUL sendirian: `pump(300ms)` persis sepanjang transisi
+    // pop `MaterialPageRoute`, jadi `BillFormPage` masih ada di pohon tepat
+    // saat diperiksa meski pop SUDAH dimulai. Tombol rute di bawah form
+    // ('buka', harness) offstage selama form menindihnya sebagai rute opaque,
+    // dan langsung onstage begitu pop dimulai — jadi asersi ini menangkap pop
+    // SEKETIKA, tanpa bergantung pada durasi transisi sama sekali.
+    expect(find.text('buka'), findsNothing);
   });
 
   testWidgets('sukses simpan → halaman TETAP ter-pop sesudah kanal dipisah', (
