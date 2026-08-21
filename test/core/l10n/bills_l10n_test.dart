@@ -99,6 +99,7 @@ void main() {
     'bills_form_error_tenor_count',
     'bills_form_error_tenor_end_date',
     'bills_form_save_failed',
+    'bills_form_save_timeout',
     // Sheet tandai lunas
     'bills_paid_title',
     'bills_paid_amount_label',

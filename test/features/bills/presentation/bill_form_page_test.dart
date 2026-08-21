@@ -1280,6 +1280,254 @@ void main() {
     },
   );
 
+  group('watchdog simpan (§10.1)', () {
+    // `gagalTulis(...)` dipakai di grup ini adalah helper yang SUDAH
+    // didefinisikan di level `main()` pada Task 3 — jangan membuat salinan
+    // kedua yang bisa berbeda diam-diam.
+    Future<void> submitLalu(WidgetTester tester) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryInternet);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+    }
+
+    /// Tekan tombol back `AppBar` — widget yang PERSIS sama dengan yang
+    /// diketuk `tester.pageBack()`, tapi dicari lewat tipenya karena
+    /// `pageBack()` mustahil bekerja di harness berbahasa Indonesia ini
+    /// (alasan lengkapnya di komentar grup "PopScope — buang perubahan").
+    ///
+    /// SENGAJA tanpa `pumpAndSettle`, dan inilah bedanya dengan `tekanBack`
+    /// di grup itu: seluruh test di sini menekan back selagi `_isSubmitting`,
+    /// dan tombol Simpan sedang menggambar `CircularProgressIndicator` yang
+    /// berputar SELAMANYA. `pumpAndSettle` menunggu animasi yang tak pernah
+    /// berhenti lalu habis waktu. Satu detik cukup menuntaskan transisi pop
+    /// MAUPUN transisi masuk dialog buang-perubahan.
+    Future<void> tekanBackAppBar(WidgetTester tester) async {
+      await tester.tap(find.byType(BackButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    testWidgets('BLoC diam 10 detik → snackbar TIMEOUT (bukan "gagal")', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(find.text(l10n.billsFormSaveTimeout), findsOneWidget);
+      expect(find.text(l10n.billsFormSaveFailed), findsNothing);
+    });
+
+    testWidgets(
+      'watchdog menyala → tombol Simpan TETAP mati, tak ada kiriman kedua',
+      (tester) async {
+        await submitLalu(tester);
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+
+        final tombol = tester.widget<ElevatedButton>(
+          find.byKey(const ValueKey('bill_form_submit')),
+        );
+        expect(tombol.onPressed, isNull);
+        verify(() => bloc.add(any(that: isA<BillAdded>()))).called(1);
+      },
+    );
+
+    testWidgets('watchdog menyala → tombol back MEMBUKA jalan keluar', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      await tekanBackAppBar(tester);
+
+      expect(
+        find.text(l10n.billsFormDiscardTitle),
+        findsOneWidget,
+        reason:
+            'sesudah 10 detik tanpa jawaban, pengguna harus punya pintu '
+            'keluar — bukan hanya tombol yang berubah rupa',
+      );
+    });
+
+    testWidgets('SEBELUM watchdog menyala → back tetap ditelan', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 3));
+
+      await tekanBackAppBar(tester);
+
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+      expect(find.byType(BillFormPage), findsOneWidget);
+    });
+
+    testWidgets(
+      'mode UBAH tanpa satu pun perubahan → back saat submit TETAP ditelan',
+      (tester) async {
+        // Jalur yang lolos dari semua penjaga sebelum perbaikan `canPop`:
+        // form ubah yang valid sejak dibuka bisa disimpan TANPA disentuh, dan
+        // `_adaPerubahan` tetap `false`. `canPop` lalu `true`, back mem-pop
+        // seketika, `onPopInvokedWithResult` tak pernah tercapai, dan jawaban
+        // BLoC — sukses MAUPUN gagal — tak pernah sampai ke layar.
+        await pumpPage(tester, bill: billContoh());
+        await tapSubmit(tester);
+
+        await tekanBackAppBar(tester);
+
+        expect(
+          find.byType(BillFormPage),
+          findsOneWidget,
+          reason:
+              'halaman tak boleh ter-pop di tengah simpan hanya karena '
+              'pengguna kebetulan tak mengubah apa pun',
+        );
+
+        // Dan buktikan akibatnya: jawaban GAGAL masih sampai.
+        stateController.add(gagalTulis(BillWriteAction.update));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
+      },
+    );
+
+    testWidgets('BLoC menjawab sukses lebih dulu → tak ada snackbar palsu', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      stateController.add(
+        BillsState(status: BillsStatus.success, bills: [billContoh()]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 12));
+
+      expect(find.text(l10n.billsFormSaveTimeout), findsNothing);
+    });
+
+    testWidgets('jawaban SUKSES yang terlambat tetap menutup halaman', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      stateController.add(
+        BillsState(status: BillsStatus.success, bills: [billContoh()]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(BillFormPage), findsNothing);
+    });
+
+    testWidgets('jawaban GAGAL yang terlambat tetap menampilkan snackbar', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      stateController.add(gagalTulis(BillWriteAction.add, seq: 5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
+      expect(find.byType(BillFormPage), findsOneWidget);
+    });
+
+    testWidgets(
+      'emisi state NON-TERMINAL di tengah simpan tak mematikan watchdog',
+      (tester) async {
+        // Penjaga letak `cancel()` (Langkah 4). `status: loading` bukan jawaban
+        // atas kiriman ini — ia cuma keramaian di stream. Kalau `cancel()`
+        // dipasang di puncak badan listener, emisi ini mematikan batas waktu dan
+        // pengguna terkurung tanpa satu pun tanda.
+        await submitLalu(tester);
+        stateController.add(const BillsState(status: BillsStatus.loading));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+
+        expect(find.text(l10n.billsFormSaveTimeout), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'watchdog menyala di form UBAH tanpa perubahan → back langsung menutup',
+      (tester) async {
+        // Pasangan dari cabang `!_adaPerubahan` di Langkah 4: pintu terbuka
+        // TANPA dialog, karena memang tak ada yang bisa dibuang.
+        await pumpPage(tester, bill: billContoh());
+        await tapSubmit(tester);
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+
+        await tekanBackAppBar(tester);
+
+        expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+        expect(find.byType(BillFormPage), findsNothing);
+      },
+    );
+
+    testWidgets('halaman ditutup sebelum timer → tak ada exception', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      stateController.add(
+        BillsState(status: BillsStatus.success, bills: [billContoh()]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 12));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    // ── Tambahan di luar tabel sabotase brief ──────────────────────────────
+    //
+    // Baris `_watchdogMenyala = false` di `_submit()` TIDAK dikunci satu pun
+    // test di atas — mencabutnya membiarkan SELURUH berkas ini hijau
+    // (dibuktikan dengan sabotase tersendiri). Padahal tanpa baris itu,
+    // kiriman KEDUA mewarisi pintu yang sudah dibuka kiriman pertama: back
+    // pada detik nol simpan kedua mem-pop halaman, `BlocListener` mati
+    // bersamanya, dan jawaban atas kiriman kedua — sukses MAUPUN gagal — tak
+    // pernah sampai ke layar. Persis kurungan yang task ini buka, terbalik
+    // jadi kebocoran.
+    testWidgets('kiriman KEDUA tak mewarisi pintu terbuka kiriman pertama', (
+      tester,
+    ) async {
+      await submitLalu(tester);
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      // Jawaban gagal menuntaskan kiriman pertama — `_isSubmitting` kembali
+      // false, tombol Simpan hidup lagi.
+      stateController.add(gagalTulis(BillWriteAction.add));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      // Snackbar gagal menempati sisi bawah layar PERSIS di atas tombol
+      // Simpan — biarkan ia lewat dulu, kalau tidak ketukan kedua mengenai
+      // snackbar-nya dan `_submit()` tak pernah jalan.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await tapSubmit(tester);
+      await tekanBackAppBar(tester);
+
+      expect(find.text(l10n.billsFormDiscardTitle), findsNothing);
+      expect(
+        find.byType(BillFormPage),
+        findsOneWidget,
+        reason:
+            'watchdog kiriman pertama tak boleh membuka pintu untuk kiriman '
+            'kedua yang baru saja dimulai',
+      );
+    });
+  });
+
   // ── Kategori datang dari CategoryBloc (Task 8) ────────────────────────────
 
   ElevatedButton tombolSimpan(WidgetTester tester) => tester

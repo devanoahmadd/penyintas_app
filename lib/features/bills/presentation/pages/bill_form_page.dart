@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -123,6 +125,29 @@ class _BillFormPageState extends State<BillFormPage> {
   /// di form yang belum menerima jawaban apa pun.
   static const _aksiMilikku = {BillWriteAction.add, BillWriteAction.update};
 
+  /// Batas menunggu jawaban BLoC sesudah Simpan ditekan.
+  ///
+  /// [docs/masalah-produk-tagihan.md §7.4] Hari ini `bill_repository_impl`
+  /// hanya menulis ke Drift lokal di dalam try/catch — selalu selesai cepat,
+  /// jadi timer ini tak pernah menyala di jalur normal. Ia ada karena
+  /// BENTUK risikonya: tanpa batas, satu jawaban yang tak pernah datang
+  /// mengurung pengguna di halaman ini SELAMANYA — back sistem dan back
+  /// AppBar sama-sama lewat `Navigator.maybePop()`, dan keduanya ditelan
+  /// `onPopInvokedWithResult` selagi `_isSubmitting`. KALAU kelak jalur
+  /// simpan mendapat langkah remote yang menunggu, batas inilah yang
+  /// menahannya — jangan dicabut.
+  static const _batasTungguSimpan = Duration(seconds: 10);
+  Timer? _watchdogTimer;
+
+  /// Watchdog sudah menyala untuk kiriman yang sedang berjalan.
+  ///
+  /// SENGAJA terpisah dari `_isSubmitting`, yang merangkap DUA penjaga:
+  /// "jangan pop" (`onPopInvokedWithResult`) dan "jangan kirim ulang"
+  /// (`_submit`). Yang dilonggarkan watchdog hanya yang pertama — pintunya.
+  /// Melonggarkan `_isSubmitting` sendiri ikut membuka jalan kiriman kedua
+  /// DAN menelan jawaban BLoC yang terlambat: tagihan ganda, senyap.
+  bool _watchdogMenyala = false;
+
   /// Cap keadaan awal, diambil sekali di [initState] SETELAH prefill.
   /// D15 membandingkan NILAI, bukan "pernah menyentuh field" — mengetik lalu
   /// menghapus lagi bukan perubahan.
@@ -153,9 +178,19 @@ class _BillFormPageState extends State<BillFormPage> {
   /// IMPERATIF — ia tak pernah mengonsultasi `PopScope.canPop` sama sekali
   /// (`canPop` hanya dibaca `Navigator.maybePop()`, yaitu jalur tombol back
   /// sistem/`BackButton`). Dan pada detik flag ini diset `true`,
-  /// `_isSubmitting` SUDAH `true` sejak `_submit()` dipanggil, jadi cabang
-  /// `if (_isSubmitting) return;` di `onPopInvokedWithResult` SUDAH menelan
-  /// back apa pun isi flag ini.
+  /// `_isSubmitting` SUDAH `true` sejak `_submit()` dipanggil, sehingga
+  /// penjaga di `onPopInvokedWithResult` sudah berdiri lebih dulu.
+  ///
+  /// KOREKSI sesudah watchdog (Task 8): penjaga itu tak lagi berbunyi
+  /// `if (_isSubmitting) return;` melainkan
+  /// `if (_isSubmitting && !_watchdogMenyala) return;`, jadi kalimat lama
+  /// "SUDAH menelan back apa pun isi flag ini" TIDAK lagi benar tanpa syarat.
+  /// Begitu `_batasTungguSimpan` lewat tanpa jawaban, back justru SENGAJA
+  /// tidak ditelan — itulah satu-satunya pintu keluar pengguna. Tapi jendela
+  /// yang dijaga flag ini tetap tak tersentuh: `_sudahDisimpan` baru `true`
+  /// pada cabang sukses, dan cabang itu MEMBATALKAN watchdog di baris
+  /// pertamanya, sehingga `_watchdogMenyala` mustahil `true` bersamaan
+  /// dengannya.
   ///
   /// Tetap dipertahankan di `canPop` sebagai jaring pengaman MURAH kalau
   /// suatu hari pop-sukses dipindah ke jalur yang sungguhan melewati
@@ -274,6 +309,12 @@ class _BillFormPageState extends State<BillFormPage> {
 
   @override
   void dispose() {
+    // WAJIB dibatalkan di sini: halaman bisa ter-pop (sukses simpan, atau
+    // pintu yang dibuka watchdog) selagi timernya masih menghitung. Timer
+    // yatim yang menyala sesudah state ter-dispose menyentuh `context` yang
+    // sudah mati — dan di widget test ia jatuh sebagai "A Timer is still
+    // pending even after the widget tree was disposed".
+    _watchdogTimer?.cancel();
     _nameController.dispose();
     _amountController.dispose();
     _notesController.dispose();
@@ -577,6 +618,23 @@ class _BillFormPageState extends State<BillFormPage> {
     _seqGalatTerakhir = bloc.state.actionFailure?.seq;
     bloc.add(_isEdit ? BillUpdated(model) : BillAdded(model));
     // Navigator.pop() dipanggil via BlocListener setelah simpan berhasil.
+
+    // Kiriman baru → hitungan baru. Kiriman kedua sesudah gagal-simpan
+    // mewarisi `_watchdogMenyala` dari kiriman pertama kalau tak direset di
+    // sini, dan pintunya akan terbuka sejak detik nol.
+    _watchdogMenyala = false;
+    _watchdogTimer?.cancel();
+    _watchdogTimer = Timer(_batasTungguSimpan, () {
+      // `mounted` — halaman bisa sudah ter-pop. `_isSubmitting` — jawaban
+      // bisa sudah datang lewat jalur yang (semestinya) sudah membatalkan
+      // timer ini; penjaga kedua ini yang membuat pembatalan itu tak jadi
+      // satu-satunya pertahanan.
+      if (!mounted || !_isSubmitting) return;
+      setState(() => _watchdogMenyala = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.billsFormSaveTimeout)),
+      );
+    });
   }
 
   /// Dialog buang-perubahan (D15). Permukaannya sengaja SAMA dengan dialog
@@ -659,19 +717,43 @@ class _BillFormPageState extends State<BillFormPage> {
         // yang BERHASIL tidak memancarkan apa pun dari handler — yang menutup
         // halaman adalah emisi stream daftar yang menyusul. Menyaringnya
         // membuat form tak pernah menutup sesudah simpan berhasil.
+        // `_watchdogTimer?.cancel()` di bawah SENGAJA dipasang DI DALAM
+        // masing-masing cabang terminal, bukan di puncak badan listener ini.
+        // Listener menyala untuk SETIAP perubahan state, termasuk emisi yang
+        // bukan jawaban atas kiriman ini (mis. `status: loading` saat daftar
+        // berlangganan ulang). Membatalkannya di puncak berarti keramaian di
+        // stream mematikan batas waktu tanpa membawa jawaban apa pun —
+        // watchdog mati, jawaban tak kunjung datang, dan kurungan yang batas
+        // ini ada untuk membukanya kembali utuh tanpa satu pun tanda.
         final gagal = state.actionFailure;
         if (gagal != null &&
             gagal.seq != _seqGalatTerakhir &&
             _aksiMilikku.contains(gagal.aksi)) {
+          _watchdogTimer?.cancel();
           _seqGalatTerakhir = gagal.seq;
           setState(() => _isSubmitting = false);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.billsFormSaveFailed)));
+          final messenger = ScaffoldMessenger.of(context);
+          // Snackbar watchdog ("belum ada jawaban") jadi BOHONG begitu
+          // jawabannya tiba — dan ia tak sekadar menua di layar: selama ia
+          // masih tampil, `showSnackBar` di bawah cuma MENGANTRE di
+          // belakangnya. Pengguna menatap "belum ada jawaban" beberapa detik
+          // penuh padahal simpannya sudah gagal, lalu menekan Simpan lagi.
+          // `removeCurrentSnackBar` (bukan `hideCurrentSnackBar`) supaya
+          // jawaban yang benar naik SEKETIKA, tanpa menunggu animasi keluar.
+          //
+          // Digerbangi `_watchdogMenyala` supaya kita hanya menyingkirkan
+          // pesan MILIK SENDIRI: `ScaffoldMessenger` di sini milik
+          // `MaterialApp`, jadi tanpa gerbang ini kita bisa mencabut snackbar
+          // permukaan lain yang kebetulan sedang tampil.
+          if (_watchdogMenyala) messenger.removeCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.billsFormSaveFailed)),
+          );
           return;
         }
 
         if (state.status == BillsStatus.success) {
+          _watchdogTimer?.cancel();
           // `_sudahDisimpan` diset SEBELUM pop di baris berikutnya, tapi pop
           // itu IMPERATIF — ia tak melewati `PopScope.canPop` sama sekali,
           // jadi flag ini tak menggerbangi apa pun pada detik ini (lihat
@@ -688,24 +770,62 @@ class _BillFormPageState extends State<BillFormPage> {
         // dengan sengaja. Back kedua, dengan panel sudah tertutup, baru
         // menempuh jalur pembanding nilai di bawah.
         //
-        // `_isSubmitting` SENGAJA TIDAK ada di sini [Important 1, review
-        // T10]. Kalau ia ikut membuka kunci, `canPop` bernilai `true` selagi
+        // `_isSubmitting` SENGAJA TIDAK ikut MEMBUKA kunci di sini [Important
+        // 1, review T10]. Kalau ia membuka, `canPop` bernilai `true` selagi
         // tagihan sedang disimpan, back mem-pop halaman SEKETIKA, state
         // ter-dispose bersamanya, dan jawaban BLoC — sukses ATAU GAGAL —
         // tak pernah sampai (termasuk snackbar gagal-simpan, yang jadi TAK
-        // PERNAH tampil). Back selama submit sekarang ditelan di
+        // PERNAH tampil). Back selama submit ditelan di
         // `onPopInvokedWithResult` di bawah, bukan dibuka lewat `canPop`.
-        canPop: _sudahDisimpan || (!_keypadTerbuka && !_adaPerubahan),
+        //
+        // KOREKSI [Rev 3, Task 8]: kalimat "`_isSubmitting` sengaja tidak ada
+        // di sini" dulu benar sebagai NIAT tapi keliru sebagai KESIMPULAN —
+        // ketiadaannya justru meninggalkan lubang. Larangannya cuma berlaku
+        // satu arah: `_isSubmitting` tak boleh MEMBUKA kunci, tapi ia WAJIB
+        // ikut MENUTUPNYA. Di mode UBAH, pengguna yang menekan Simpan TANPA
+        // mengubah apa pun membuat `_adaPerubahan == false`, sehingga
+        // `canPop` bernilai `true` selagi tagihan sedang disimpan. Back lalu
+        // mem-pop halaman SEKETIKA — `onPopInvokedWithResult` dipanggil
+        // dengan `didPop == true` dan langsung `return`, jadi penjaga
+        // `_isSubmitting` di bawah TAK PERNAH tercapai. `BlocListener` mati
+        // bersama halaman, dan kegagalan simpan jadi SENYAP TOTAL: persis
+        // yang penjaga di bawah janjikan takkan terjadi. `!_isSubmitting` di
+        // baris berikut yang menutupnya.
+        //
+        // Pop pada simpan yang BERHASIL tak terganggu — ia imperatif
+        // (`Navigator.of(context).pop()`) dan tak pernah membaca `canPop`.
+        canPop:
+            _sudahDisimpan ||
+            (!_isSubmitting && !_keypadTerbuka && !_adaPerubahan),
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
           // [Audit S13] Menekan Simpan lalu back sebelum BLoC menjawab BUKAN
           // "membuang perubahan" — pekerjaannya justru sedang disimpan.
-          // Telan diam-diam, jangan tanya — dan (lihat komentar `canPop` di
-          // atas) jangan biarkan halaman ter-pop di tengah proses sama
-          // sekali, supaya jawaban BLoC yang menyusul tetap sampai ke layar.
-          if (_isSubmitting) return;
+          // Telan diam-diam, jangan tanya.
+          //
+          // [Rev 3, Task 8] Dulu penjaga ini berbunyi `if (_isSubmitting)`
+          // polos, dengan alasan "jangan biarkan halaman ter-pop di tengah
+          // proses SAMA SEKALI". Alasannya masih berlaku — tapi "sama sekali"
+          // ternyata terlalu jauh: kalau jawabannya tak pernah datang,
+          // `_isSubmitting` tak pernah reset dan pengguna terkurung SELAMANYA
+          // (back sistem dan back AppBar sama-sama lewat sini). Sesudah
+          // `_batasTungguSimpan` lewat, `_watchdogMenyala` membuka pintunya —
+          // satu-satunya keadaan di mana pop di tengah simpan diizinkan.
+          // Yang TIDAK dilonggarkan: `_isSubmitting` sendiri tetap `true`,
+          // jadi tombol Simpan tetap mati dan jawaban BLoC yang terlambat
+          // masih diterima listener di atas.
+          if (_isSubmitting && !_watchdogMenyala) return;
           if (_keypadTerbuka) {
             _tutupKeypad();
+            return;
+          }
+          // [Rev 3] Tak ada yang bisa dibuang → jangan tanya. Jalur ini baru
+          // TERJANGKAU sesudah `canPop` diperketat dengan `!_isSubmitting`:
+          // form ubah yang tak disentuh kini sampai ke sini, dan menanyakan
+          // "Buang perubahan?" atas perubahan yang tidak ada adalah pertanyaan
+          // yang membingungkan tepat di saat pengguna sedang berusaha keluar.
+          if (!_adaPerubahan) {
+            Navigator.of(context).pop();
             return;
           }
           final buang = await _tanyaBuangPerubahan();
