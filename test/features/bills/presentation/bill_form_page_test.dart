@@ -978,14 +978,49 @@ void main() {
     testWidgets('mode tambah → anchor diambil dari tanggal yang dipilih', (
       tester,
     ) async {
+      // SENGAJA TIDAK memakai helper `pickDueDate` di sini. Helper itu cuma
+      // mengetuk baris tanggal lalu OK TANPA memilih hari, dan `_pickDueDate`
+      // memakai `initialDate: _dueDate ?? now` — di mode tambah `_dueDate`
+      // masih null, jadi yang terpilih adalah HARI INI. Akibatnya
+      // `dueDate.day`, `_dueDayAnchor`, dan `DateTime.now().day` runtuh ke
+      // satu angka, dan `expect(bill.dueDayOfMonth, bill.dueDate.day)` lulus
+      // vakum — tabrakan nilai yang persis sama dengan fixture `dueDate 10 /
+      // anchor 10` yang task ini justru mengganti, hanya saja angkanya
+      // dipasok jam dinding alih-alih literal.
+      //
+      // Hari targetnya dihitung supaya TAK PERNAH sama dengan hari ini.
+      // Literal telanjang (mis. selalu 17) akan mengalami degenerasi yang
+      // sama setiap tanggal 17 — satu hari dari tiap tiga puluh, testnya
+      // diam-diam kehilangan gigi. `hariTarget` tak diketahui kode produksi,
+      // jadi satu-satunya cara ia muncul di `bill` adalah lewat ketukan
+      // pengguna.
+      //
+      // BATASNYA, jujur: daya kunci test ini tetap tipis. Di mode tambah tak
+      // ada anchor basi untuk dikontradiksi, dan kedua penulisan anchor
+      // saling menutupi — buang `_dueDayAnchor ??` di `_buildModel` dan
+      // `picked.day` tersisa; buang `_dueDayAnchor = picked.day` dan fallback
+      // `_dueDate!.day` tersisa. Yang ia kunci adalah "hari yang diketuk
+      // pengguna benar-benar sampai ke KEDUA field", bukan pemisahan anchor
+      // dari turunannya. Itu diuji di test mode-ubah di atas.
+      final hariTarget = DateTime.now().day == 17 ? 18 : 17;
+
       await pumpPage(tester);
       await fillBaseFields(tester);
       await tapLabel(tester, l10n.categoryInternet);
-      await pickDueDate(tester);
+      await tapKey(tester, 'bill_form_due_date');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.text('$hariTarget'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await confirmDatePicker(tester);
       await tapSubmit(tester);
 
       final bill = (captureLastEvent(tester) as BillAdded).bill;
-      expect(bill.dueDayOfMonth, bill.dueDate.day);
+      expect(bill.dueDate.day, hariTarget);
+      expect(bill.dueDayOfMonth, hariTarget);
     });
 
     testWidgets(
