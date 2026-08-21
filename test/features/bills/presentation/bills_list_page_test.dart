@@ -1177,13 +1177,33 @@ void main() {
     testWidgets('gagal hapus → "Coba lagi" mengirim ulang BillDeleted', (
       tester,
     ) async {
+      // [Review Important-1] `billId` di `actionFailure` SENGAJA beda dari id
+      // bill PERTAMA di daftar, dan daftarnya berisi DUA bill — bukan satu.
+      // Sebelum perbaikan ini, `bills` cuma berisi id 7 dan `billId` galat
+      // JUGA 7, jadi implementasi yang keliru membaca `state.bills.first.id`
+      // (alih-alih `gagal.billId`) lolos memberi `BillDeleted(7)` — angka
+      // yang sama persis dengan yang benar. Dengan id 42 bukan elemen
+      // pertama, implementasi yang salah sumber mengirim `BillDeleted(7)`
+      // dan test ini MERAH, bukan kebetulan hijau.
+      final bills = [
+        buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart),
+        buildBill(id: 42, name: 'Kos Bu Tini', dueDate: todayStart),
+      ];
       whenListen(
         bloc,
-        Stream<BillsState>.value(gagalTulis(BillWriteAction.delete, billId: 7)),
-        initialState: BillsState(
-          status: BillsStatus.success,
-          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        Stream<BillsState>.value(
+          BillsState(
+            status: BillsStatus.success,
+            bills: bills,
+            actionFailure: const BillActionFailure(
+              aksi: BillWriteAction.delete,
+              failure: CacheFailure('db mati'),
+              seq: 1,
+              billId: 42,
+            ),
+          ),
         ),
+        initialState: BillsState(status: BillsStatus.success, bills: bills),
       );
       stubCategoriesLoaded();
       await tester.pumpWidget(harness());
@@ -1197,7 +1217,7 @@ void main() {
       await tester.tap(find.text(l10n.retry));
       await tester.pump();
 
-      verify(() => bloc.add(const BillDeleted(7))).called(1);
+      verify(() => bloc.add(const BillDeleted(42))).called(1);
     });
 
     testWidgets('gagal undo → "Coba lagi" mengirim ulang BillPaymentUndone', (
