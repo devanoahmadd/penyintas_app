@@ -1424,6 +1424,76 @@ void main() {
       expect(find.byType(BillFormPage), findsNothing);
     });
 
+    // Cermin dari pencabutan snackbar di cabang GAGAL [review Task 8].
+    // "Belum ada jawaban" jadi BOHONG pada detik jawabannya terbukti datang.
+    // Halaman ter-pop, tapi `ScaffoldMessenger` milik `MaterialApp` — pesan
+    // usang itu tertinggal di layar DAFTAR kalau tak dicabut.
+    testWidgets(
+      'jawaban SUKSES yang terlambat mencabut snackbar batas tunggu',
+      (tester) async {
+        await submitLalu(tester);
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+        expect(
+          find.text(l10n.billsFormSaveTimeout),
+          findsOneWidget,
+          reason: 'prasyarat: snackbar batas tunggu memang sedang tampil',
+        );
+
+        stateController.add(
+          BillsState(status: BillsStatus.success, bills: [billContoh()]),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text(l10n.billsFormSaveTimeout),
+          findsNothing,
+          reason:
+              'jawabannya sudah tiba — kalimat "belum ada jawaban" tak boleh '
+              'ikut pindah ke layar daftar',
+        );
+      },
+    );
+
+    // Snackbar batas tunggu hidup 4 detik lalu tutup SENDIRI. Kalau
+    // pegangannya tak ikut dilepas pada detik itu, `close()` di cabang
+    // terminal memanggil controller yang sudah tak ada di antrean:
+    // `assert(_snackBars.first == controller)` di `material/scaffold.dart`
+    // gagal, dan pada antrean kosong `.first` melempar StateError. Jendela
+    // ini PERSIS jalur yang watchdog ada untuk melayaninya — jawaban yang
+    // datang jauh sesudah batas.
+    testWidgets(
+      'jawaban tiba setelah snackbar batas tunggu tutup sendiri → tak melempar',
+      (tester) async {
+        await submitLalu(tester);
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+
+        // Biarkan snackbar batas tunggu lewat waktunya sendiri. BUKAN
+        // `pumpAndSettle`: `_isSubmitting` masih true, jadi tombol Simpan
+        // menggambar spinner yang berputar selamanya. Dan BUKAN satu
+        // `pump(8s)`: timer 4 detik snackbar baru MULAI sesudah animasi
+        // masuknya tuntas, lalu animasi keluarnya butuh frame sendiri —
+        // lompatan waktu sekali frame melewati keduanya.
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(seconds: 1));
+        }
+        expect(
+          find.text(l10n.billsFormSaveTimeout),
+          findsNothing,
+          reason: 'prasyarat: snackbar batas tunggu sudah tutup sendiri',
+        );
+
+        stateController.add(gagalTulis(BillWriteAction.add, seq: 5));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
+      },
+    );
+
     testWidgets('jawaban GAGAL yang terlambat tetap menampilkan snackbar', (
       tester,
     ) async {

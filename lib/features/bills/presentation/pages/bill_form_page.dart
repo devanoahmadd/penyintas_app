@@ -148,6 +148,17 @@ class _BillFormPageState extends State<BillFormPage> {
   /// DAN menelan jawaban BLoC yang terlambat: tagihan ganda, senyap.
   bool _watchdogMenyala = false;
 
+  /// Pegangan snackbar batas-tunggu yang SEDANG hidup. null = tak ada.
+  ///
+  /// Dipegang supaya kedua cabang terminal mencabut PERSIS snackbar ini.
+  /// `ScaffoldMessenger` di halaman ini milik `MaterialApp`, jadi
+  /// `removeCurrentSnackBar()` polos mencabut "apa pun yang kebetulan di
+  /// depan" — dan `_watchdogMenyala` bukan gerbang yang tepat untuk
+  /// menggantikannya: ia berarti "kita PERNAH menampilkan snackbar batas
+  /// tunggu", bukan "yang tampil sekarang milik kita" (ia tak pernah
+  /// diturunkan lagi di cabang gagal). Pegangan ini yang membedakan keduanya.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _snackbarWatchdog;
+
   /// Cap keadaan awal, diambil sekali di [initState] SETELAH prefill.
   /// D15 membandingkan NILAI, bukan "pernah menyentuh field" — mengetik lalu
   /// menghapus lagi bukan perubahan.
@@ -186,11 +197,16 @@ class _BillFormPageState extends State<BillFormPage> {
   /// `if (_isSubmitting && !_watchdogMenyala) return;`, jadi kalimat lama
   /// "SUDAH menelan back apa pun isi flag ini" TIDAK lagi benar tanpa syarat.
   /// Begitu `_batasTungguSimpan` lewat tanpa jawaban, back justru SENGAJA
-  /// tidak ditelan — itulah satu-satunya pintu keluar pengguna. Tapi jendela
-  /// yang dijaga flag ini tetap tak tersentuh: `_sudahDisimpan` baru `true`
-  /// pada cabang sukses, dan cabang itu MEMBATALKAN watchdog di baris
-  /// pertamanya, sehingga `_watchdogMenyala` mustahil `true` bersamaan
-  /// dengannya.
+  /// tidak ditelan — itulah satu-satunya pintu keluar pengguna.
+  ///
+  /// Dan JANGAN dibaca sebagai "kedua flag mustahil hidup bersamaan"
+  /// [koreksi review Task 8]. `Timer.cancel()` di cabang sukses hanya
+  /// mencegah timer yang BELUM menyala; ia tak menurunkan `_watchdogMenyala`
+  /// yang terlanjur `true`. Pada sukses yang TERLAMBAT — jalur yang punya
+  /// testnya sendiri — keduanya memang hidup berdampingan. Itu tetap tak
+  /// berakibat apa-apa, tapi alasannya bukan "mustahil bertemu": alasannya
+  /// pop di cabang sukses IMPERATIF, jadi tak ada satu pun pembacaan `canPop`
+  /// di jendela itu untuk digerbangi flag mana pun.
   ///
   /// Tetap dipertahankan di `canPop` sebagai jaring pengaman MURAH kalau
   /// suatu hari pop-sukses dipindah ke jalur yang sungguhan melewati
@@ -631,10 +647,35 @@ class _BillFormPageState extends State<BillFormPage> {
       // satu-satunya pertahanan.
       if (!mounted || !_isSubmitting) return;
       setState(() => _watchdogMenyala = true);
-      ScaffoldMessenger.of(context).showSnackBar(
+      final kendali = ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.billsFormSaveTimeout)),
       );
+      _snackbarWatchdog = kendali;
+      // WAJIB dilepas begitu snackbar-nya tutup sendiri (lewat waktu, atau
+      // digusur permukaan lain). `close()` menuntut pemanggilnya masih berada
+      // di DEPAN antrean — `assert(_snackBars.first == controller)` di
+      // `material/scaffold.dart:341` — jadi memanggilnya atas snackbar yang
+      // sudah lewat justru melempar. Pegangan yang basi lebih berbahaya
+      // daripada tak punya pegangan sama sekali.
+      kendali.closed.whenComplete(() {
+        if (identical(_snackbarWatchdog, kendali)) _snackbarWatchdog = null;
+      });
     });
+  }
+
+  /// Cabut snackbar batas-tunggu — dipanggil dari KEDUA cabang terminal.
+  ///
+  /// Begitu jawaban BLoC tiba, "Belum ada jawaban" berhenti jadi benar. Di
+  /// cabang gagal ia bahkan MENGHALANGI: selama ia masih tampil, snackbar
+  /// gagal-simpan cuma MENGANTRE di belakangnya, jadi pengguna menatap
+  /// "belum ada jawaban" beberapa detik penuh padahal simpannya sudah gagal —
+  /// lalu menekan Simpan lagi. Di cabang sukses ia tak menghalangi apa pun,
+  /// tapi ia ikut pindah ke layar daftar sebagai kalimat yang sudah terbukti
+  /// keliru. Aturannya sama di kedua sisi: jawaban tiba → pesan "menunggu"
+  /// pergi.
+  void _cabutSnackbarWatchdog() {
+    _snackbarWatchdog?.close();
+    _snackbarWatchdog = null;
   }
 
   /// Dialog buang-perubahan (D15). Permukaannya sengaja SAMA dengan dialog
@@ -732,28 +773,19 @@ class _BillFormPageState extends State<BillFormPage> {
           _watchdogTimer?.cancel();
           _seqGalatTerakhir = gagal.seq;
           setState(() => _isSubmitting = false);
-          final messenger = ScaffoldMessenger.of(context);
-          // Snackbar watchdog ("belum ada jawaban") jadi BOHONG begitu
-          // jawabannya tiba — dan ia tak sekadar menua di layar: selama ia
-          // masih tampil, `showSnackBar` di bawah cuma MENGANTRE di
-          // belakangnya. Pengguna menatap "belum ada jawaban" beberapa detik
-          // penuh padahal simpannya sudah gagal, lalu menekan Simpan lagi.
-          // `removeCurrentSnackBar` (bukan `hideCurrentSnackBar`) supaya
-          // jawaban yang benar naik SEKETIKA, tanpa menunggu animasi keluar.
-          //
-          // Digerbangi `_watchdogMenyala` supaya kita hanya menyingkirkan
-          // pesan MILIK SENDIRI: `ScaffoldMessenger` di sini milik
-          // `MaterialApp`, jadi tanpa gerbang ini kita bisa mencabut snackbar
-          // permukaan lain yang kebetulan sedang tampil.
-          if (_watchdogMenyala) messenger.removeCurrentSnackBar();
-          messenger.showSnackBar(
-            SnackBar(content: Text(l10n.billsFormSaveFailed)),
-          );
+          // Pesan "menunggu" pergi DULU, jawaban yang benar naik sesudahnya —
+          // kalau tidak, ia cuma mengantre di belakang kalimat yang sudah
+          // berhenti benar. Lihat [_cabutSnackbarWatchdog].
+          _cabutSnackbarWatchdog();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.billsFormSaveFailed)));
           return;
         }
 
         if (state.status == BillsStatus.success) {
           _watchdogTimer?.cancel();
+          _cabutSnackbarWatchdog();
           // `_sudahDisimpan` diset SEBELUM pop di baris berikutnya, tapi pop
           // itu IMPERATIF — ia tak melewati `PopScope.canPop` sama sekali,
           // jadi flag ini tak menggerbangi apa pun pada detik ini (lihat
@@ -801,7 +833,10 @@ class _BillFormPageState extends State<BillFormPage> {
           if (didPop) return;
           // [Audit S13] Menekan Simpan lalu back sebelum BLoC menjawab BUKAN
           // "membuang perubahan" — pekerjaannya justru sedang disimpan.
-          // Telan diam-diam, jangan tanya.
+          // Telan diam-diam, jangan tanya — SELAMA batas tunggu belum lewat.
+          // Sesudah itu bertanya justru yang benar: pengguna tak lagi sekadar
+          // menunggu, ia sedang memilih keluar dari form yang masih memuat
+          // isiannya.
           //
           // [Rev 3, Task 8] Dulu penjaga ini berbunyi `if (_isSubmitting)`
           // polos, dengan alasan "jangan biarkan halaman ter-pop di tengah
