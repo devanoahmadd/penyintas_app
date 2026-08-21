@@ -213,6 +213,38 @@ class _BillsListPageState extends State<BillsListPage> {
       );
   }
 
+  /// Snackbar kegagalan aksi tulis. Bentuknya meniru snackbar undo di berkas
+  /// yang sama supaya kedua permukaan terasa satu tangan.
+  void _showGagalTulisSnackBar(
+    BuildContext context, {
+    required String pesan,
+    VoidCallback? onRetry,
+  }) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            pesan,
+            style: AppTextStyles.body.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.warn,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          duration: const Duration(seconds: 6),
+          action: onRetry == null
+              ? null
+              : SnackBarAction(
+                  label: context.l10n.retry,
+                  textColor: Colors.white,
+                  onPressed: onRetry,
+                ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -220,14 +252,77 @@ class _BillsListPageState extends State<BillsListPage> {
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final todayStart = startOfDay(DateTime.now());
 
-    return BlocListener<BillsBloc, BillsState>(
-      listenWhen: (prev, curr) => prev.lastUndo != curr.lastUndo,
-      listener: (context, state) {
-        // Undo yang sudah dipakai membuat bloc meng-clear `lastUndo` → tak ada
-        // yang perlu ditawarkan lagi.
-        if (state.lastUndo == null) return;
-        _showUndoSnackBar(context, state);
-      },
+    return MultiBlocListener(
+      listeners: [
+        // (1) Tawaran "Urungkan" sesudah pembayaran — sudah ada sejak Task 5.4.
+        BlocListener<BillsBloc, BillsState>(
+          listenWhen: (prev, curr) => prev.lastUndo != curr.lastUndo,
+          listener: (context, state) {
+            // Undo yang sudah dipakai membuat bloc meng-clear `lastUndo` →
+            // tak ada yang perlu ditawarkan lagi.
+            if (state.lastUndo == null) return;
+            _showUndoSnackBar(context, state);
+          },
+        ),
+        // (2) Kegagalan AKSI TULIS yang permukaannya memang halaman ini.
+        //
+        // PRESEDENSI: snackbar ini MENGGUSUR snackbar undo lewat
+        // `hideCurrentSnackBar()`. Kegagalan yang baru saja terjadi lebih
+        // mendesak daripada tawaran mengurungkan tindakan yang BERHASIL.
+        // Undo yang tergusur tidak hilang dari state — `lastUndo` bertahan;
+        // yang hilang cuma tawarannya. Kebalikannya jauh lebih buruk: galat
+        // yang tak pernah terlihat.
+        //
+        // BATASNYA, supaya tak dibaca lebih jauh dari yang benar:
+        // `_showUndoSnackBar` JUGA memanggil `hideCurrentSnackBar()`, jadi
+        // yang berlaku sebenarnya "yang terakhir terjadi menang". Pada
+        // skenario tabrakan yang diuji (undo tampil dulu, lalu hapus gagal),
+        // yang menang adalah snackbar galat — dan itulah yang dikunci test.
+        // Urutan sebaliknya (undo BERHASIL sesudah sebuah galat) tetap
+        // menggusur galatnya; diterima, karena aksi terakhir pengguna memang
+        // berhasil dan pesan yang tergusur sudah sempat terbaca.
+        BlocListener<BillsBloc, BillsState>(
+          listenWhen: (prev, curr) => prev.actionFailure != curr.actionFailure,
+          listener: (context, state) {
+            final gagal = state.actionFailure;
+            if (gagal == null) return;
+            switch (gagal.aksi) {
+              case BillWriteAction.delete:
+                _showGagalTulisSnackBar(
+                  context,
+                  pesan: context.l10n.billsDeleteFailed,
+                  onRetry: gagal.billId == null
+                      ? null
+                      : () => context.read<BillsBloc>().add(
+                          BillDeleted(gagal.billId!),
+                        ),
+                );
+              case BillWriteAction.undoPayment:
+                // Undo dikirim dari snackbar milik halaman ini dan TAK PUNYA
+                // permukaan lain di atasnya. Tanpa cabang ini kegagalannya
+                // senyap total: pengguna menekan "Urungkan", tak terjadi
+                // apa-apa, dan ia menyangka pembayarannya sudah dibatalkan.
+                final snapshot = state.lastUndo;
+                _showGagalTulisSnackBar(
+                  context,
+                  pesan: context.l10n.billsUndoFailed,
+                  onRetry: snapshot == null
+                      ? null
+                      : () => context.read<BillsBloc>().add(
+                          BillPaymentUndone(snapshot),
+                        ),
+                );
+              // Simpan & tandai-lunas punya permukaannya sendiri di atas
+              // halaman ini; snackbar kedua di baliknya justru menggusur
+              // pesan yang sedang dibaca pengguna.
+              case BillWriteAction.add:
+              case BillWriteAction.update:
+              case BillWriteAction.markPaid:
+                break;
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: bgColor,
         body: CustomScrollView(

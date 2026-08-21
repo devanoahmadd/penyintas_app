@@ -55,6 +55,18 @@ void main() {
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
 
+  // Diangkat dari dalam `group('snackbar undo')` (Task 5, §2.6) — dipakai
+  // juga oleh grup kanal galat tulis dan test presedensi. Diangkat, bukan
+  // disalin: dua fixture kembar yang bisa menyimpang diam-diam adalah bug
+  // test yang sulit terlihat.
+  final snapshotUndo = UndoSnapshot(
+    billId: 7,
+    dueDate: todayStart.subtract(const Duration(days: 30)),
+    installmentsPaid: 3,
+    status: BillStatus.active,
+    txId: 'tx-abc',
+  );
+
   BillEntity buildBill({
     required int id,
     required String name,
@@ -493,14 +505,6 @@ void main() {
   // `MilestoneToast.show` memanggil `hideCurrentSnackBar()`, jadi kalau sheet
   // ikut menampilkan toast, snackbar Undo-lah yang tergusur.
   group('snackbar undo', () {
-    final snapshot = UndoSnapshot(
-      billId: 7,
-      dueDate: todayStart.subtract(const Duration(days: 30)),
-      installmentsPaid: 3,
-      status: BillStatus.active,
-      txId: 'tx-abc',
-    );
-
     /// State awal SENGAJA tanpa `lastUndo` — `listenWhen` hanya lolos kalau
     /// `lastUndo` benar-benar BERUBAH.
     void stubUndo(BillsState next) {
@@ -514,7 +518,7 @@ void main() {
     BillsState stateWithUndo({required List<BillEntity> bills}) => BillsState(
       status: BillsStatus.success,
       bills: bills,
-      lastUndo: snapshot,
+      lastUndo: snapshotUndo,
     );
 
     testWidgets(
@@ -581,7 +585,7 @@ void main() {
       await tester.tap(find.text(l10n.billsUndo));
       await tester.pump();
 
-      verify(() => bloc.add(BillPaymentUndone(snapshot))).called(1);
+      verify(() => bloc.add(BillPaymentUndone(snapshotUndo))).called(1);
     });
   });
 
@@ -1128,5 +1132,161 @@ void main() {
       );
       handle.dispose();
     });
+  });
+
+  // ── Kanal galat tulis di daftar (§2.6, Task 5) ──────────────────────────────
+  //
+  // Daftar tidak menutup apa pun sesudah aksi ini — ia BERBICARA untuk dua
+  // aksi yang tak punya permukaan lain di atasnya: `delete` dan
+  // `undoPayment`. Kalau daftar diam, kedua kegagalan itu tak terlihat sama
+  // sekali oleh pengguna.
+  group('kanal galat tulis di daftar (§2.6)', () {
+    BillsState gagalTulis(BillWriteAction aksi, {int? billId, int seq = 1}) =>
+        BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+          actionFailure: BillActionFailure(
+            aksi: aksi,
+            failure: const CacheFailure('db mati'),
+            seq: seq,
+            billId: billId,
+          ),
+        );
+
+    testWidgets('gagal hapus → snackbar tampil, daftar TETAP tergambar', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(gagalTulis(BillWriteAction.delete, billId: 7)),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.billsDeleteFailed), findsOneWidget);
+      expect(find.byType(BillItem), findsOneWidget);
+      expect(find.text(l10n.billsError), findsNothing);
+    });
+
+    testWidgets('gagal hapus → "Coba lagi" mengirim ulang BillDeleted', (
+      tester,
+    ) async {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(gagalTulis(BillWriteAction.delete, billId: 7)),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+      // Selama animasi masuk, snackbar masih dibungkus IgnorePointer — tap-nya
+      // meleset kalau tidak ditunggu sampai diam (preseden: test "tap
+      // Urungkan" di grup 'snackbar undo').
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+
+      verify(() => bloc.add(const BillDeleted(7))).called(1);
+    });
+
+    testWidgets('gagal undo → "Coba lagi" mengirim ulang BillPaymentUndone', (
+      tester,
+    ) async {
+      // Spec §2.9 #14. Tanpa test ini, aksi retry pada cabang undo terpasang
+      // tanpa pengunci — mencabutnya tak membuat satu pun test memerah,
+      // padahal ia satu-satunya jalan pulih yang dipunyai pengguna.
+      final gagal = gagalTulis(BillWriteAction.undoPayment, billId: 7);
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(gagal.copyWith(lastUndo: snapshotUndo)),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+          lastUndo: snapshotUndo,
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+      // Selama animasi masuk, snackbar masih dibungkus IgnorePointer — tap-nya
+      // meleset kalau tidak ditunggu sampai diam (preseden: test "tap
+      // Urungkan" di grup 'snackbar undo').
+      await tester.pump(const Duration(milliseconds: 800));
+
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+
+      verify(() => bloc.add(BillPaymentUndone(snapshotUndo))).called(1);
+    });
+
+    testWidgets('gagal undo → snackbar tampil (tidak senyap)', (tester) async {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(
+          gagalTulis(BillWriteAction.undoPayment, billId: 7),
+        ),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.billsUndoFailed), findsOneWidget);
+    });
+
+    testWidgets(
+      'snackbar gagal-tulis menggusur snackbar undo, lastUndo tetap',
+      (tester) async {
+        final undo = BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+          lastUndo: snapshotUndo,
+        );
+        whenListen(
+          bloc,
+          Stream<BillsState>.fromIterable([
+            undo,
+            undo.copyWith(
+              actionFailure: const BillActionFailure(
+                aksi: BillWriteAction.delete,
+                failure: CacheFailure('db mati'),
+                seq: 1,
+                billId: 7,
+              ),
+            ),
+          ]),
+          initialState: const BillsState(status: BillsStatus.success),
+        );
+        stubCategoriesLoaded();
+        await tester.pumpWidget(harness());
+        await tester.pump();
+        await tester.pump();
+        // BUKAN `pump()` berdurasi nol. `hideCurrentSnackBar()` menjalankan
+        // animasi keluar, dan `showSnackBar` berikutnya MENGANTRE sampai yang
+        // lama benar-benar lepas dari pohon. Dengan pompaan nol, snackbar galat
+        // belum masuk DAN snackbar undo belum keluar — kedua asersi di bawah
+        // gagal karena waktu, bukan karena kode.
+        await tester.pump(const Duration(milliseconds: 750));
+
+        expect(find.text(l10n.billsDeleteFailed), findsOneWidget);
+        expect(find.text(l10n.billsUndo), findsNothing);
+      },
+    );
   });
 }

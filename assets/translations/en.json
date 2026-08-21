@@ -507,6 +507,8 @@
   "bills_delete_body_clean": "This bill and its reminder will be deleted.",
   "bills_delete_body_paid": "The bill and its reminder are deleted. Payments you already logged stay in Transactions.",
   "bills_delete_confirm": "Delete",
+  "bills_delete_failed": "Couldn't delete the bill. Give it another try.",
+  "bills_undo_failed": "Couldn't undo the payment. Give it another try.",
   "dashboard_tied_eyebrow": "Before payday",
   "dashboard_tied_eyebrow_info": "Bills before payday",
   "dashboard_tied_safe_label": "Safe to spend",

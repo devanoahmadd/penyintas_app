@@ -507,6 +507,8 @@
   "bills_delete_body_clean": "Tagihan ini dan pengingatnya akan dihapus.",
   "bills_delete_body_paid": "Tagihan dan pengingatnya dihapus. Pembayaran yang sudah kamu catat tetap tersimpan di Transaksi.",
   "bills_delete_confirm": "Hapus",
+  "bills_delete_failed": "Gagal menghapus tagihan. Coba lagi, ya.",
+  "bills_undo_failed": "Gagal membatalkan pembayaran. Coba lagi, ya.",
   "dashboard_tied_eyebrow": "Sebelum gajian",
   "dashboard_tied_eyebrow_info": "Tagihan sebelum gajian",
   "dashboard_tied_safe_label": "Aman dipakai",

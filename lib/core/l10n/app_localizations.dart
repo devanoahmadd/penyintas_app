@@ -745,6 +745,15 @@ class AppLocalizations {
   String get billsDeleteBodyPaid => _t('bills_delete_body_paid');
   String get billsDeleteConfirm => _t('bills_delete_confirm');
 
+  // ── Kanal galat tulis di daftar (§2.6) ──
+  /// Gagal hapus tagihan — dipicu `state.actionFailure` di
+  /// `bills_list_page.dart`, satu-satunya permukaan untuk aksi ini.
+  String get billsDeleteFailed => _t('bills_delete_failed');
+
+  /// Gagal batalkan pembayaran (undo) — snackbar "Urungkan" tak punya
+  /// permukaan lain di atasnya, jadi kegagalannya HARUS berbicara di sini.
+  String get billsUndoFailed => _t('bills_undo_failed');
+
   // ── Baris uang terikat / sisa aman di kartu saldo (P1, Task 7.2c) ──
   /// Frasa horizon varian B & C — menandai HORIZON waktu (kini → gajian),
   /// bukan nama besaran baru. Sengaja SENTENCE CASE: register eyebrow
