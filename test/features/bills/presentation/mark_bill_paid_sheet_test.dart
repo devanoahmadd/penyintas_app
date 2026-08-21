@@ -670,6 +670,10 @@ void main() {
 
     expect(find.text(l10n.billsPaidFailed), findsOneWidget);
     expect(find.byType(MarkBillPaidSheet), findsOneWidget);
+    // 'buka' milik rute DI BAWAH sheet — offstage selama sheet menindihnya
+    // sebagai rute opaque, dan onstage SEKETIKA begitu pop dimulai. Tak
+    // bergantung durasi transisi seperti `find.byType(MarkBillPaidSheet)`.
+    expect(find.text('buka'), findsNothing);
     // Tombol WAJIB aktif lagi — kalau `_isSubmitting` tak di-reset, pengguna
     // terkunci di sheet tanpa bisa mencoba ulang.
     final submit = tester.widget<ElevatedButton>(
@@ -704,6 +708,10 @@ void main() {
 
     expect(find.text(l10n.billsPaidFailed), findsOneWidget);
     expect(find.byType(MarkBillPaidSheet), findsOneWidget);
+    // 'buka' milik rute DI BAWAH sheet — sheet TIDAK boleh ter-pop atas
+    // kegagalan. Pegangan ini onstage SEKETIKA begitu pop dimulai, jadi
+    // ia menangkap pop tanpa bergantung durasi transisi sama sekali.
+    expect(find.text('buka'), findsNothing);
   });
 
   testWidgets('sukses tandai lunas → sheet TETAP menutup', (tester) async {
@@ -715,6 +723,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(MarkBillPaidSheet), findsNothing);
+    // Sheet MEMANG menutup di sini — 'buka' onstage lagi.
+    expect(find.text('buka'), findsOneWidget);
   });
 
   testWidgets('sukses → sheet ditutup', (tester) async {
