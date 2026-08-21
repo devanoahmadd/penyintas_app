@@ -1251,9 +1251,11 @@ class _BillFormPageState extends State<BillFormPage> {
                         AppSpacing.lg,
                         AppSpacing.lg,
                       ),
-                      // Kategori gagal dimuat → Simpan dimatikan. Menyimpan tagihan
-                      // tanpa bisa memverifikasi kategorinya adalah menyimpan
-                      // tebakan (spec §5.3).
+                      // Kategori gagal dimuat → mode TAMBAH: Simpan dimatikan.
+                      // Menyimpan tagihan tanpa bisa memverifikasi kategorinya
+                      // adalah menyimpan tebakan (spec §5.3). Mode UBAH dibiarkan:
+                      // kategorinya sudah terpilih dan tersimpan, tak ada yang
+                      // ditebak.
                       //
                       // DITURUNKAN dari state, bukan disimpan di field. Field
                       // boolean di sini hanya akan jadi salinan basi yang lupa
@@ -1267,6 +1269,15 @@ class _BillFormPageState extends State<BillFormPage> {
                           height: 54,
                           child: ElevatedButton(
                             key: const ValueKey('bill_form_submit'),
+                            // Mode TAMBAH: tanpa kategori yang bisa
+                            // diverifikasi, menyimpan tagihan berarti
+                            // menyimpan tebakan (spec induk §5.3).
+                            //
+                            // Mode UBAH: kategorinya sudah terpilih, sudah
+                            // tersimpan, dan `_category` dijamin bertahan —
+                            // tak ada yang ditebak. Mengunci Simpan di sini
+                            // hanya menyandera perbaikan nominal atau nama
+                            // pada tagihan yang kategorinya sudah lama benar.
                             onPressed:
                                 _isSubmitting || (kategoriGagal && !_isEdit)
                                 ? null
