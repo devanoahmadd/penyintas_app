@@ -106,6 +106,32 @@ BillEntity billContoh({
   updatedAt: DateTime(2026, 8, 1),
 );
 
+/// Tagihan dengan anchor akhir-bulan yang SEDANG TERPANGKAS.
+///
+/// `dueDate.day` (28) SENGAJA berbeda dari `dueDayOfMonth` (31), dan 31 tak
+/// bisa diturunkan dari nilai mana pun di fixture ini — bukan dari tenor (12),
+/// cicilan terbayar (3), pengingat (1), tanggal buat (5), maupun id (7).
+/// Aturan independensi fixture: `docs/masalah-produk-tagihan.md` §4.2.
+final billAnchorTerpangkas = BillEntity(
+  id: 7,
+  cloudId: 'cloud-7',
+  name: 'Kos Bu Tini',
+  estimatedAmount: 1200000,
+  category: 'fixed',
+  isFixedNeed: true,
+  notes: 'Transfer tiap akhir bulan',
+  dueDate: DateTime(2026, 2, 28),
+  recurrence: Recurrence.monthly,
+  installmentTotal: 12,
+  installmentsPaid: 3,
+  dueDayOfMonth: 31,
+  reminderDaysBefore: 1,
+  reminderEnabled: true,
+  status: BillStatus.active,
+  createdAt: DateTime(2026, 1, 5),
+  updatedAt: DateTime(2026, 1, 5),
+);
+
 /// Tagihan yang kategorinya sudah TERHAPUS — tak ada di [kategoriBawaan].
 final billBerkategoriYatim = billContoh(category: 'kursus_bahasa');
 
@@ -858,26 +884,8 @@ void main() {
   testWidgets(
     'mode edit → prefill terisi & emit BillUpdated (bukan BillAdded)',
     (tester) async {
-      final created = DateTime(2026, 1, 5);
-      final initial = BillEntity(
-        id: 7,
-        cloudId: 'cloud-7',
-        name: 'Cicilan Laptop',
-        estimatedAmount: 1200000,
-        category: 'shopping',
-        isFixedNeed: true,
-        notes: 'Transfer tiap tanggal 10',
-        dueDate: DateTime(2026, 8, 10),
-        recurrence: Recurrence.monthly,
-        installmentTotal: 12,
-        installmentsPaid: 3,
-        dueDayOfMonth: 10,
-        reminderDaysBefore: 1,
-        reminderEnabled: true,
-        status: BillStatus.active,
-        createdAt: created,
-        updatedAt: created,
-      );
+      final initial = billAnchorTerpangkas;
+      final created = initial.createdAt;
 
       await pumpPage(tester, bill: initial);
 
@@ -886,13 +894,13 @@ void main() {
       String fieldText(String key) =>
           tester.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
 
-      expect(fieldText('bill_form_name'), 'Cicilan Laptop');
+      expect(fieldText('bill_form_name'), 'Kos Bu Tini');
       // Nominal TIDAK lagi `TextField` — ia area tap yang menampilkan nilai
       // sudah terformat. String penuh sengaja dikunci di sini: format Rupiah
       // "Rp 1.245.000" adalah aturan proyek, bukan detail bebas.
       expect(find.text('Rp 1.200.000'), findsOneWidget);
       expect(fieldText('bill_form_installment'), '12');
-      expect(fieldText('bill_form_notes'), 'Transfer tiap tanggal 10');
+      expect(fieldText('bill_form_notes'), 'Transfer tiap akhir bulan');
       expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
       expect(find.text(l10n.billsFormEditTitle), findsOneWidget);
 
@@ -902,9 +910,9 @@ void main() {
       expect(event, isA<BillUpdated>());
       final bill = (event as BillUpdated).bill;
       expect(bill.cloudId, 'cloud-7');
-      expect(bill.name, 'Cicilan Laptop');
+      expect(bill.name, 'Kos Bu Tini');
       expect(bill.estimatedAmount, 1200000);
-      expect(bill.category, 'shopping');
+      expect(bill.category, 'fixed');
       expect(bill.installmentTotal, 12);
       expect(
         bill.installmentsPaid,
@@ -912,7 +920,13 @@ void main() {
         reason: 'progres cicilan tidak boleh reset',
       );
       expect(bill.recurrenceEndDate, isNull);
-      expect(bill.dueDayOfMonth, 10);
+      expect(
+        bill.dueDayOfMonth,
+        31,
+        reason:
+            'anchor akhir-bulan tak boleh diturunkan ulang dari dueDate '
+            'yang sedang terpangkas (28 Feb)',
+      );
       expect(bill.reminderDaysBefore, 1);
       expect(
         bill.createdAt,
@@ -922,6 +936,121 @@ void main() {
       verifyNever(() => bloc.add(any(that: isA<BillAdded>())));
     },
   );
+
+  group('anchor jatuh tempo (§1)', () {
+    testWidgets('ubah nominal saja → anchor 31 BERTAHAN', (tester) async {
+      await pumpPage(tester, bill: billAnchorTerpangkas);
+      await isiNominal(tester, '1500000');
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillUpdated).bill;
+      expect(
+        bill.dueDayOfMonth,
+        31,
+        reason:
+            'menyimpan tanpa menyentuh pemilih tanggal tak boleh '
+            'menurunkan anchor dari dueDate yang sedang terpangkas',
+      );
+      expect(bill.dueDate, DateTime(2026, 2, 28));
+    });
+
+    testWidgets('pilih tanggal baru 17 Feb → anchor jadi 17', (tester) async {
+      await pumpPage(tester, bill: billAnchorTerpangkas);
+      await tapKey(tester, 'bill_form_due_date');
+      // Kalender terbuka pada Februari 2026 (`initialDate` = `_dueDate` =
+      // 28 Feb), jadi yang terpilih adalah 17 FEBRUARI — bukan Maret.
+      // Finder dilingkupi ke dialognya: `find.text('17')` telanjang juga
+      // menyapu form di baliknya, dan angka polos gampang bertabrakan.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.text('17'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await confirmDatePicker(tester);
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillUpdated).bill;
+      expect(bill.dueDayOfMonth, 17);
+    });
+
+    testWidgets('mode tambah → anchor diambil dari tanggal yang dipilih', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryInternet);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillAdded).bill;
+      expect(bill.dueDayOfMonth, bill.dueDate.day);
+    });
+
+    testWidgets(
+      'sekali-jalan (anchor null) dijadikan bulanan → fallback hidup',
+      (tester) async {
+        final sekaliJalan = billContoh(recurrence: Recurrence.none);
+        await pumpPage(tester, bill: sekaliJalan);
+        await tapLabel(tester, l10n.billsRecurrenceMonthly);
+        await tapSubmit(tester);
+
+        final bill = (captureLastEvent(tester) as BillUpdated).bill;
+        expect(bill.dueDayOfMonth, bill.dueDate.day);
+      },
+    );
+
+    testWidgets('bulanan dijadikan sekali-jalan → anchor jadi null', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billAnchorTerpangkas);
+      await tapLabel(tester, l10n.billsRecurrenceNone);
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillUpdated).bill;
+      expect(bill.dueDayOfMonth, isNull);
+    });
+
+    testWidgets('tahunan: ubah nominal saja → anchor BERTAHAN', (tester) async {
+      final tahunan = BillEntity(
+        id: 8,
+        name: 'Pajak Motor',
+        estimatedAmount: 350000,
+        category: 'other',
+        isFixedNeed: false,
+        dueDate: DateTime(2026, 2, 28),
+        recurrence: Recurrence.yearly,
+        installmentsPaid: 0,
+        dueDayOfMonth: 29,
+        reminderEnabled: true,
+        status: BillStatus.active,
+        createdAt: DateTime(2026, 1, 5),
+        updatedAt: DateTime(2026, 1, 5),
+      );
+      await pumpPage(tester, bill: tahunan);
+      await isiNominal(tester, '400000');
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillUpdated).bill;
+      expect(bill.dueDayOfMonth, 29);
+    });
+
+    testWidgets('catatan tanggal menyebut ANCHOR, bukan tanggal terpangkas', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billAnchorTerpangkas);
+
+      expect(find.text(l10n.billsFormDueDateMonthlyNote(31)), findsOneWidget);
+      expect(
+        find.text(l10n.billsFormDueDateMonthlyNote(28)),
+        findsNothing,
+        reason:
+            'catatan yang menyebut 28 berbohong: bulan depan sistem '
+            'kembali ke 31',
+      );
+    });
+  });
 
   // ── Umpan balik submit ────────────────────────────────────────────────────
 

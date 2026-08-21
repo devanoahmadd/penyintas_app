@@ -77,6 +77,19 @@ class _BillFormPageState extends State<BillFormPage> {
 
   String? _category;
   DateTime? _dueDate;
+
+  /// Anchor hari jatuh tempo (1–31) yang TERSIMPAN di tagihan.
+  ///
+  /// Sengaja TIDAK diturunkan dari `_dueDate`: `dueDate` bisa terpangkas
+  /// akhir-bulan (anchor 31 → 28 Feb) sementara anchornya tetap 31, dan
+  /// menurunkannya ulang saat menyimpan menghapus anchor itu SELAMANYA —
+  /// tanpa exception, tanpa pesan, tanpa jalan pulih dari UI mana pun.
+  /// Kontrak anchornya sendiri ada di `roll_forward_due_date.dart:7-9`.
+  ///
+  /// Ia TIDAK ikut `_capSekarang` [D15]: ia hanya bisa bergerak bersama
+  /// `_dueDate`, yang sudah ada di cap itu.
+  int? _dueDayAnchor;
+
   Recurrence _recurrence = Recurrence.monthly;
   _TenorMode _tenorMode = _TenorMode.unlimited;
   DateTime? _recurrenceEndDate;
@@ -184,6 +197,7 @@ class _BillFormPageState extends State<BillFormPage> {
       _notesController.text = initial.notes ?? '';
       _category = initial.category;
       _dueDate = initial.dueDate;
+      _dueDayAnchor = initial.dueDayOfMonth;
       _recurrence = initial.recurrence;
       _isFixedNeed = initial.isFixedNeed;
       _recurrenceEndDate = initial.recurrenceEndDate;
@@ -284,14 +298,18 @@ class _BillFormPageState extends State<BillFormPage> {
   String? _catatanTanggal(AppLocalizations l10n) {
     final due = _dueDate;
     if (due == null) return null;
+    // Catatan ini menjanjikan pola BULAN DEPAN, jadi ia wajib menyebut anchor
+    // — bukan `due.day` yang bisa sedang terpangkas. Anchor 31 yang tampil
+    // "tiap tanggal 28" di Februari adalah kebohongan: Maret kembali ke 31.
+    final hari = _dueDayAnchor ?? due.day;
     return switch (_recurrence) {
-      Recurrence.monthly => l10n.billsFormDueDateMonthlyNote(due.day),
+      Recurrence.monthly => l10n.billsFormDueDateMonthlyNote(hari),
       // `MMMM` — nama bulan penuh yang sudah dilokalkan. Ini PEMAKAI PERTAMA
       // `MMMM` di fitur Tagihan; tiga DateFormat lain memakai `MMM` singkat.
       // Bedanya menyeret data locale yang berbeda, jadi uji device wajib
       // memeriksa ia berbahasa Indonesia (§11).
       Recurrence.yearly => l10n.billsFormDueDateYearlyNote(
-        due.day,
+        hari,
         DateFormat(
           'MMMM',
           Localizations.localeOf(context).languageCode,
@@ -486,7 +504,14 @@ class _BillFormPageState extends State<BillFormPage> {
       lastDate: DateTime(now.year + 10),
       builder: _datePickerTheme,
     );
-    if (picked != null) setState(() => _dueDate = picked);
+    if (picked != null) {
+      setState(() {
+        _dueDate = picked;
+        // SATU-SATUNYA titik yang memindahkan anchor: pengguna sungguh
+        // memilih tanggal baru. Invarian I8 di spec induk §8.
+        _dueDayAnchor = picked.day;
+      });
+    }
   }
 
   Future<void> _pickRecurrenceEndDate() async {
@@ -523,8 +548,11 @@ class _BillFormPageState extends State<BillFormPage> {
       // sudah dijaga di _selectTenorMode. Non-recurring → keduanya null.
       installmentTotal: _isRecurring ? _installmentTotal : null,
       recurrenceEndDate: _isRecurring ? _recurrenceEndDate : null,
-      // Anchor roll-forward diambil dari tanggal jatuh tempo awal.
-      dueDayOfMonth: _isRecurring ? _dueDate!.day : null,
+      // Anchor dipertahankan apa adanya; ia hanya berpindah di `_pickDueDate`.
+      // Fallback `?? _dueDate!.day` melayani tagihan yang memang belum punya
+      // anchor: mode tambah, dan tagihan sekali-jalan yang baru dijadikan
+      // berulang.
+      dueDayOfMonth: _isRecurring ? (_dueDayAnchor ?? _dueDate!.day) : null,
       installmentsPaid: initial?.installmentsPaid ?? 0,
       reminderDaysBefore: reminderDaysBefore,
       reminderEnabled: reminderEnabled,
