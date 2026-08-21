@@ -1267,7 +1267,8 @@ class _BillFormPageState extends State<BillFormPage> {
                           height: 54,
                           child: ElevatedButton(
                             key: const ValueKey('bill_form_submit'),
-                            onPressed: _isSubmitting || kategoriGagal
+                            onPressed:
+                                _isSubmitting || (kategoriGagal && !_isEdit)
                                 ? null
                                 : _submit,
                             style: ElevatedButton.styleFrom(

@@ -1365,6 +1365,47 @@ void main() {
     expect(captureLastEvent(tester), isA<BillAdded>());
   });
 
+  group('kunci Simpan saat CategoryError (§3)', () {
+    testWidgets('mode UBAH → Simpan tetap hidup dan mengirim BillUpdated', (
+      tester,
+    ) async {
+      stubKategori(const CategoryError('db mati'));
+      await pumpPage(tester, bill: billContoh());
+
+      expect(
+        tombolSimpan(tester).onPressed,
+        isNotNull,
+        reason:
+            'mode ubah: kategorinya sudah terpilih dan tersimpan, tak ada yang '
+            'ditebak — tak boleh menyandera perbaikan nominal atau nama',
+      );
+
+      await tapSubmit(tester);
+      final event = captureLastEvent(tester);
+      expect(event, isA<BillUpdated>());
+      expect(
+        (event as BillUpdated).bill.category,
+        'fixed',
+        reason: 'kategori lama tersimpan utuh — tak ada yang ditebak',
+      );
+    });
+
+    testWidgets('mode TAMBAH → Simpan tetap MATI', (tester) async {
+      stubKategori(const CategoryError('db mati'));
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await pickDueDate(tester);
+
+      expect(
+        tombolSimpan(tester).onPressed,
+        isNull,
+        reason:
+            'tanpa kategori yang bisa diverifikasi, tagihan baru adalah tebakan '
+            '— pelonggaran mode ubah tak boleh merembet ke sini',
+      );
+    });
+  });
+
   // ── Keypad nominal & aturan K1–K3 (spec §5.2) ─────────────────────────────
 
   testWidgets('K1: menyentuh field nominal membuka keypad', (tester) async {
