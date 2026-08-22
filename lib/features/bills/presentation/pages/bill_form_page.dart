@@ -1838,50 +1838,57 @@ class _ChoicePill extends StatelessWidget {
     final fg = selected ? Colors.white : textColor;
     final teksKedua = sublabel;
 
-    return Material(
-      color: selected ? AppColors.primary : panelColor,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: InkWell(
-        onTap: onTap,
+    // SENGAJA tanpa `label:` — teks di dalam chip sudah menyumbang labelnya,
+    // dan menuliskannya lagi membuat pembaca layar mengucapkannya dua kali.
+    // Pola dan alasan yang sama dengan `bill_category_grid.dart:179-184`.
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.primary : panelColor,
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: selected ? AppColors.primary : borderColor,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              border: Border.all(
+                color: selected ? AppColors.primary : borderColor,
+              ),
             ),
-          ),
-          child: Container(
-            // Hit target minimum Android 48dp.
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md2,
-              vertical: AppSpacing.sm,
-            ),
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.label.copyWith(
-                    fontSize: 13,
-                    color: fg,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                if (teksKedua != null) ...[
-                  const SizedBox(height: 2),
+            child: Container(
+              // Hit target minimum Android 48dp.
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md2,
+                vertical: AppSpacing.sm,
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    teksKedua,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      fontSize: 12,
-                      color: fg.withValues(alpha: 0.8),
+                    label,
+                    style: AppTextStyles.label.copyWith(
+                      fontSize: 13,
+                      color: fg,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
+                  if (teksKedua != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      teksKedua,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        fontSize: 12,
+                        color: fg.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

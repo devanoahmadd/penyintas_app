@@ -2071,6 +2071,95 @@ void main() {
     expect(chipSize.height, greaterThanOrEqualTo(48.0));
   });
 
+  testWidgets('kesebelas chip pilihan punya peran tombol & keadaan terpilih', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    // `_recurrence` bawaan `billContoh` sudah `monthly`. Ditegaskan di sini
+    // karena kelompok Tenor bersarang di balik `if (_isRecurring)` (:924) —
+    // form sekali-jalan diam-diam hanya menguji delapan chip.
+    await pumpPage(tester, bill: billContoh());
+
+    // ENUMERASI, bukan sampel: kesebelas chip disebut satu per satu.
+    final chips = <String>[
+      l10n.billsRecurrenceNone,
+      l10n.billsRecurrenceMonthly,
+      l10n.billsRecurrenceYearly,
+      l10n.billsTenorUnlimited,
+      l10n.billsTenorCount,
+      l10n.billsTenorEndDate,
+      l10n.billsReminderDefault,
+      l10n.billsReminderD3,
+      l10n.billsReminderD1,
+      l10n.billsReminderDayOf,
+      l10n.billsReminderOff,
+    ];
+    expect(chips.length, 11);
+
+    for (final label in chips) {
+      final finder = find.text(label);
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      // TANPA `label:` di sapuan ini — lihat catatan di bawah blok. Yang
+      // disapu adalah PERAN dan KEADAAN; labelnya diuji terpisah.
+      expect(
+        tester.getSemantics(finder),
+        isSemantics(isButton: true, hasSelectedState: true, hasTapAction: true),
+        reason: 'chip "$label" bisu bagi pembaca layar',
+      );
+    }
+
+    // Label diuji TERPISAH, dan hanya untuk sepuluh chip berbaris tunggal.
+    //
+    // Chip "Bawaan aplikasi" punya BARIS KEDUA (`sublabel:
+    // _sublabelBawaan(l10n)`, `bill_form_page.dart:1093`) yang di `setUp`
+    // berkas ini selalu terisi — `stubReminderSettings(null)` memberi
+    // `daysBefore = 1`. Semantik yang ter-merge menggabungkan kedua teks
+    // dengan "\n", jadi `isSemantics(label: 'Bawaan aplikasi')`
+    // menuntut kecocokan PERSIS dan akan gagal SELAMANYA — walau
+    // implementasinya benar. Preseden `bill_category_grid_test.dart:360`
+    // lolos justru karena tile-nya tak punya teks kedua.
+    for (final label in chips.where((c) => c != l10n.billsReminderDefault)) {
+      expect(
+        tester.getSemantics(find.text(label)).label,
+        label,
+        reason:
+            'chip "$label" tak boleh menyalin teksnya sendiri ke '
+            '`Semantics.label` — pembaca layar mengucapkannya dua kali',
+      );
+    }
+    expect(
+      tester.getSemantics(find.text(l10n.billsReminderDefault)).label,
+      startsWith(l10n.billsReminderDefault),
+      reason:
+          'chip Bawaan membawa baris kedua; yang dijaga adalah bahwa '
+          'label chip TETAP dibuka oleh teks chipnya sendiri',
+    );
+
+    // Tiga chip yang memang terpilih pada fixture ini WAJIB terdengar
+    // terpilih; tetangganya tidak. Tanpa pasangan ini, `selected: false`
+    // mati pun lolos sapuan di atas.
+    for (final terpilih in [
+      l10n.billsRecurrenceMonthly,
+      l10n.billsTenorUnlimited,
+      l10n.billsReminderDefault,
+    ]) {
+      final finder = find.text(terpilih);
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(finder),
+        isSemantics(isSelected: true),
+        reason: 'chip "$terpilih" sedang terpilih tapi tak terdengar begitu',
+      );
+    }
+    expect(
+      tester.getSemantics(find.text(l10n.billsRecurrenceYearly)),
+      isSemantics(isSelected: false),
+    );
+    handle.dispose();
+  });
+
   testWidgets('dark mode render tanpa error', (tester) async {
     await pumpPage(tester, theme: ThemeData.dark());
 
