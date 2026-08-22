@@ -2907,6 +2907,22 @@ void main() {
       handle.dispose();
     });
 
+    // Cabang default aplikasi (tema terang) TIDAK punya cek warna sebelum
+    // ini — lima dari enam test grup ini hanya menegaskan keberadaan wadah
+    // (`findsOneWidget`/`findsNothing`), bukan nilai alpha-nya. Tanpa test
+    // ini, alpha terang bisa diturunkan sampai nyaris tak terlihat (mis.
+    // 0.14 → 0.01) tanpa ada satu pun test yang memerah.
+    testWidgets('tema terang → latar sorotan memakai token terang', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+
+      final box = tester.widget<Container>(sorotan());
+      final dekor = box.decoration! as BoxDecoration;
+      expect(dekor.color, AppColors.primary.withValues(alpha: 0.14));
+    });
+
     testWidgets('tema gelap → latar sorotan memakai token gelap', (
       tester,
     ) async {
