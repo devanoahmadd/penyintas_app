@@ -231,6 +231,24 @@ void main() {
     });
   });
 
+  test('copy galat lokal tidak menyalahkan koneksi', () {
+    // Keduanya kegagalan Drift LOKAL murni — tak ada jaringan di rantainya.
+    // Menyuruh pengguna memeriksa koneksi adalah saran yang tak pernah
+    // menyelesaikannya, dan menutupi penyebab yang sebenarnya.
+    for (final key in ['bills_error', 'bills_form_category_load_failed']) {
+      expect(
+        (id[key] as String).toLowerCase(),
+        isNot(contains('koneksi')),
+        reason: '"$key" masih menyalahkan koneksi',
+      );
+      expect(
+        (en[key] as String).toLowerCase(),
+        isNot(contains('connection')),
+        reason: '"$key" masih menyalahkan koneksi',
+      );
+    }
+  });
+
   test('kunci selisih tanggal tunggal tidak memakai bentuk jamak', () {
     for (final k in ['bills_paid_date_early_one', 'bills_paid_date_late_one']) {
       expect(
