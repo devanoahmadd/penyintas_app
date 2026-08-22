@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
@@ -2842,6 +2843,83 @@ void main() {
           await tapLabel(tester, l10n.billsTenorEndDate);
         },
       );
+    });
+  });
+
+  group('isyarat ketukan-pertama-mengganti (§9)', () {
+    // Fungsi lokal, BUKAN getter — brief menulisnya sebagai `Finder get
+    // sorotan`, tapi getter tak boleh dideklarasikan di dalam badan fungsi
+    // lokal (callback `group`); Dart menolaknya saat kompilasi. `Finder`
+    // tetap dievaluasi ulang tiap dipanggil, jadi perilakunya identik.
+    Finder sorotan() => find.byKey(const ValueKey('bill_form_amount_replace'));
+
+    testWidgets('buka keypad pada nominal terisi → sorotan tampil', (
+      tester,
+    ) async {
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+      expect(sorotan(), findsOneWidget);
+    });
+
+    testWidgets('satu digit diketuk → sorotan hilang', (tester) async {
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+      await ketikDiKeypad(tester, '5');
+      await tester.pump();
+      expect(sorotan(), findsNothing);
+    });
+
+    testWidgets('backspace diketuk → sorotan hilang', (tester) async {
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+      await tapBackspace(tester);
+      expect(sorotan(), findsNothing);
+    });
+
+    testWidgets('tutup lalu buka lagi → sorotan muncul lagi', (tester) async {
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+      await ketikDiKeypad(tester, '5');
+      await tapKey(tester, 'bill_form_keypad_done');
+      await tapKey(tester, 'bill_form_amount');
+      expect(sorotan(), findsOneWidget);
+    });
+
+    testWidgets('nominal nol → sorotan TIDAK PERNAH muncul', (tester) async {
+      await pumpPage(tester);
+      await tapKey(tester, 'bill_form_amount');
+      expect(
+        sorotan(),
+        findsNothing,
+        reason: 'tak ada yang akan diganti; sorotan di sini bohong',
+      );
+    });
+
+    testWidgets('keadaan aktif → hint semantik terpasang', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpPage(tester, bill: billContoh());
+      await tapKey(tester, 'bill_form_amount');
+
+      final node = tester.getSemantics(
+        find.byKey(const ValueKey('bill_form_amount')),
+      );
+      expect(node.hint, l10n.billsFormAmountReplaceHint);
+      handle.dispose();
+    });
+
+    testWidgets('tema gelap → latar sorotan memakai token gelap', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        bill: billContoh(),
+        theme: ThemeData(brightness: Brightness.dark),
+      );
+      await tapKey(tester, 'bill_form_amount');
+
+      final box = tester.widget<Container>(sorotan());
+      final dekor = box.decoration! as BoxDecoration;
+      expect(dekor.color, AppColors.primary.withValues(alpha: 0.28));
     });
   });
 }

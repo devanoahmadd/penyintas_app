@@ -472,6 +472,7 @@
   "bills_form_error_tenor_end_date": "Pilih tanggal terakhir perulangannya.",
   "bills_form_save_failed": "Gagal menyimpan tagihan. Coba lagi, ya.",
   "bills_form_save_timeout": "Belum ada jawaban. Cek dulu daftar tagihanmu sebelum menyimpan lagi.",
+  "bills_form_amount_replace_hint": "Ketuk angka untuk mengganti nominal ini.",
   "bills_paid_title": "Tandai Lunas",
   "bills_paid_amount_label": "Nominal yang kamu bayar",
   "bills_paid_amount_note": "Perkiraan awal {amount}",

@@ -1043,6 +1043,16 @@ class _BillFormPageState extends State<BillFormPage> {
                               textColor: textColor,
                               mutedColor: mutedColor,
                               hasError: _showErrors && _amountInvalid,
+                              // Keadaan internal yang mengubah arti tindakan
+                              // BERIKUTNYA wajib punya perwakilan di layar.
+                              // Nominal nol tak punya apa pun untuk diganti.
+                              akanDiganti:
+                                  _keypadTerbuka &&
+                                  _keypadKetukanPertama &&
+                                  _amount > 0,
+                              highlightColor: AppColors.primary.withValues(
+                                alpha: isDark ? 0.28 : 0.14,
+                              ),
                               onTap: _bukaKeypad,
                             ),
                             _ErrorText(
@@ -2009,6 +2019,8 @@ class _AmountDisplayField extends StatelessWidget {
     required this.mutedColor,
     required this.hasError,
     required this.onTap,
+    required this.akanDiganti,
+    required this.highlightColor,
   });
 
   /// Dipakai [Scrollable.ensureVisible] pada aturan K3 — lihat `_bukaKeypad`.
@@ -2027,6 +2039,12 @@ class _AmountDisplayField extends StatelessWidget {
   final bool hasError;
   final VoidCallback onTap;
 
+  /// `true` saat ketukan BERIKUTNYA di keypad akan mengganti seluruh nominal,
+  /// bukan menambah digit — lihat `_keypadKetukanPertama` di halaman induk.
+  /// Tanpa isyarat ini, penggantian terjadi diam-diam.
+  final bool akanDiganti;
+  final Color highlightColor;
+
   @override
   Widget build(BuildContext context) {
     final terisi = amount > 0;
@@ -2037,6 +2055,14 @@ class _AmountDisplayField extends StatelessWidget {
     final garis = hasError
         ? AppColors.warn
         : (active ? AppColors.primary : borderColor);
+    final teksNominal = Text(
+      teks,
+      // Nominal pakai token numerik — tabular-nums sudah built-in,
+      // jadi angkanya tak bergoyang tiap digit bertambah.
+      style: terisi
+          ? AppTextStyles.numericMd.copyWith(color: textColor)
+          : AppTextStyles.body.copyWith(color: mutedColor),
+    );
 
     return Semantics(
       button: true,
@@ -2049,7 +2075,12 @@ class _AmountDisplayField extends StatelessWidget {
       // form yang benar-benar berisi Rp 750.000 — regresi dari `TextField`
       // lama, yang memetakan `hintText` ke `SemanticsProperties.hint`.
       value: terisi ? teks : null,
-      hint: terisi ? null : teks,
+      // Sorotan visual tak terbaca TalkBack. Placeholder tetap `hint` saat
+      // field kosong; saat terisi DAN akan diganti, hint-nya berganti jadi
+      // penjelasan keadaan itu.
+      hint: terisi
+          ? (akanDiganti ? context.l10n.billsFormAmountReplaceHint : null)
+          : teks,
       // `excludeSemantics` membuang seluruh semantik keturunan — TERMASUK
       // aksi ketuk milik InkWell. Tanpa `onTap` di simpul ini, pembaca layar
       // menemukan tombol yang tak bisa diaktifkan sama sekali.
@@ -2073,14 +2104,29 @@ class _AmountDisplayField extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 56),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               alignment: Alignment.centerLeft,
-              child: Text(
-                teks,
-                // Nominal pakai token numerik — tabular-nums sudah built-in,
-                // jadi angkanya tak bergoyang tiap digit bertambah.
-                style: terisi
-                    ? AppTextStyles.numericMd.copyWith(color: textColor)
-                    : AppTextStyles.body.copyWith(color: mutedColor),
-              ),
+              child: akanDiganti
+                  ? Container(
+                      key: const ValueKey('bill_form_amount_replace'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        // Alpha di atas token, bukan hex baru — preseden
+                        // `disabledBackgroundColor` di berkas yang sama.
+                        // Membaca seperti teks TERSOROT, bukan seperti field
+                        // nonaktif.
+                        color: highlightColor,
+                        // `AppRadius.sm` adalah `double` (`app_spacing.dart:21`),
+                        // BUKAN `Radius` — CLAUDE.md yang menuliskannya sebagai
+                        // `Radius.circular(8)` sudah basi. `BorderRadius.all()`
+                        // di sini TIDAK meng-compile; `circular()` yang benar,
+                        // dan itu pula yang dipakai seluruh berkas lain.
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: teksNominal,
+                    )
+                  : teksNominal,
             ),
           ),
         ),

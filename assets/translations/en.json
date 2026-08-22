@@ -472,6 +472,7 @@
   "bills_form_error_tenor_end_date": "Pick the last date of the repetition.",
   "bills_form_save_failed": "Couldn't save the bill. Give it another try.",
   "bills_form_save_timeout": "No response yet. Check your bills list before saving again.",
+  "bills_form_amount_replace_hint": "Tap a number to replace this amount.",
   "bills_paid_title": "Mark as Paid",
   "bills_paid_amount_label": "Amount you paid",
   "bills_paid_amount_note": "Original estimate {amount}",

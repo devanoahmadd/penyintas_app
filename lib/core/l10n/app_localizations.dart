@@ -626,6 +626,7 @@ class AppLocalizations {
       _t('bills_form_error_tenor_end_date');
   String get billsFormSaveFailed => _t('bills_form_save_failed');
   String get billsFormSaveTimeout => _t('bills_form_save_timeout');
+  String get billsFormAmountReplaceHint => _t('bills_form_amount_replace_hint');
 
   // ── Tandai lunas (A1, Task 5.3) ──
   String get billsPaidTitle => _t('bills_paid_title');
