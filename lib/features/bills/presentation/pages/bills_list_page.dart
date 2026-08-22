@@ -353,19 +353,31 @@ class _BillsListPageState extends State<BillsListPage> {
         // keluar-masuk aplikasi. Tak ada jalan pulih lain dari dalam.
         BlocListener<CategoryBloc, CategoryState>(
           listener: (context, state) {
-            if (state is! CategoryError) {
-              // Episode galat berikutnya dapat jatah percobaannya sendiri.
+            if (kategoriSudahSiap(state)) {
+              // Episode galat BERAKHIR hanya kalau kategori sungguh sudah
+              // di tangan (`CategoryLoaded`/`CategoryActionLoading` —
+              // predikat yang sama dipakai untuk menggambar ikon asli,
+              // lihat `kategoriSudahSiap`). Episode berikutnya dapat jatah
+              // percobaannya sendiri.
               _kategoriSudahDicobaUlang = false;
               _kategoriRetryTimer?.cancel();
               return;
             }
+            // `CategoryLoading` SENGAJA TIDAK mereset apa pun di sini.
+            // `_onLoad` memancarkannya sebelum SETIAP hasil
+            // (`category_bloc.dart:50`), termasuk sebelum galat kedua —
+            // mereset pada `CategoryLoading` membuat galat yang menetap
+            // terbaca sebagai "episode baru" tiap kali, dan mengubah
+            // penjaga ini jadi lingkaran retry 2 detik yang tak berhenti.
+            if (state is! CategoryError) return;
             if (_kategoriSudahDicobaUlang) return;
             _kategoriSudahDicobaUlang = true;
             _kategoriRetryTimer?.cancel();
-            // Bloc DIBACA SEKARANG, bukan 2 detik lagi dari dalam callback.
-            // `context` di listener ini milik `BlocListener`, sementara
-            // penjaga `mounted` memeriksa `State` — dua umur yang berbeda,
-            // dan `context.read` pada elemen yang sudah lepas melempar.
+            // Bloc DIBACA SEKARANG, bukan 2 detik lagi dari dalam callback:
+            // sebuah elemen bisa `deactivated` sementara `State.mounted`
+            // masih `true` (mis. reparenting lewat `GlobalKey`), dan
+            // `context.read` pada elemen yang `deactivated` melempar — jadi
+            // dependensi ditangkap SEBELUM celah async, bukan sesudahnya.
             final kategoriBloc = context.read<CategoryBloc>();
             _kategoriRetryTimer = Timer(_jedaMuatUlangKategori, () {
               if (!mounted) return;

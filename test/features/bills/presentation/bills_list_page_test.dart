@@ -1375,6 +1375,53 @@ void main() {
       verifyNever(() => categoryBloc.add(const LoadCategories()));
     });
 
+    testWidgets('galat menetap (Loading di tengah) → TETAP satu percobaan', (
+      tester,
+    ) async {
+      // BEDANYA dengan "masih gagal sesudah percobaan" di atas: test itu
+      // mengunci urutan `Error → Error` beruntun, yang MUSTAHIL terjadi di
+      // produksi karena dedup bloc (`bloc_base.dart:102`) menelan
+      // `CategoryState` identik berturut-turut. Urutan nyata adalah
+      // `Error → Loading → Error` — `_onLoad` SELALU `emit(CategoryLoading())`
+      // dulu sebelum hasil akhirnya (`category_bloc.dart:50`), termasuk
+      // sebelum galat kedua. Test inilah yang membuktikan penjaga tahan
+      // terhadap urutan yang benar-benar bisa terjadi.
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      final ctrl = StreamController<CategoryState>.broadcast();
+      addTearDown(ctrl.close);
+      whenListen(
+        categoryBloc,
+        ctrl.stream,
+        initialState: const CategoryError('db mati'),
+      );
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      // Stub DIPASANG SESUDAH pumpWidget — `buildBillsRoute()` sendiri
+      // mengirim `LoadCategories` saat rute dibangun (`app_router.dart:314`).
+      // Dipasang lebih awal, panggilan otomatis itu ikut memicu jawaban ini
+      // sebelum `BlocListener` di halaman sempat subscribe ke `ctrl`.
+      when(() => categoryBloc.add(const LoadCategories())).thenAnswer((_) {
+        // Meniru `_onLoad` APA ADANYA: Loading dulu, baru hasilnya.
+        ctrl
+          ..add(const CategoryLoading())
+          ..add(const CategoryError('db mati'));
+      });
+      ctrl.add(const CategoryError('db mati'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2)); // percobaan ke-1
+
+      clearInteractions(categoryBloc);
+      await tester.pump(); // Loading + Error kedua diproses
+      await tester.pump(const Duration(seconds: 10));
+
+      verifyNever(() => categoryBloc.add(const LoadCategories()));
+    });
+
     testWidgets('gagal → percobaan → berhasil: ikon kategori tergambar', (
       tester,
     ) async {
@@ -1397,6 +1444,15 @@ void main() {
         ctrl.stream,
         initialState: const CategoryError('db mati'),
       );
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      // Stub DIPASANG SESUDAH pumpWidget — `buildBillsRoute()` sendiri
+      // mengirim `LoadCategories` saat rute dibangun (`app_router.dart:314`).
+      // Dipasang lebih awal, panggilan otomatis itu ikut memicu jawaban ini
+      // dan mendorong `CategoryLoaded` ke `ctrl` SEBELUM `BlocListener`
+      // sempat subscribe — test lolos hanya berkat semantik broadcast, bukan
+      // karena pemulihan sungguh teruji.
+      //
       // KUNCINYA ADA DI SINI. `CategoryLoaded` LAHIR DARI `add`-nya, bukan
       // didorong tangan oleh test. Kalau ia didorong tangan, test ini tetap
       // hijau walau SELURUH implementasi task ini dicabut — pemulihan yang
@@ -1404,8 +1460,6 @@ void main() {
       when(
         () => categoryBloc.add(const LoadCategories()),
       ).thenAnswer((_) => ctrl.add(CategoryLoaded(categories: kategoriBawaan)));
-      await tester.pumpWidget(harness());
-      await tester.pump();
       // `BlocListener` hanya bereaksi pada EVENT lewat stream — `initialState`
       // di `whenListen` cuma menyetel `bloc.state` untuk `BlocBuilder`, TIDAK
       // pernah lewat stream (lihat `bloc_test`'s `when_listen.dart`). Tanpa
