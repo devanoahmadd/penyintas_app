@@ -559,7 +559,11 @@ void main() {
       ),
       expect: () => [
         isA<BillsState>()
-            .having((s) => s.actionFailure?.aksi, 'aksi', BillWriteAction.markPaid)
+            .having(
+              (s) => s.actionFailure?.aksi,
+              'aksi',
+              BillWriteAction.markPaid,
+            )
             .having((s) => s.status, 'status', isNot(BillsStatus.failure)),
       ],
       verify: (_) {
@@ -1121,8 +1125,13 @@ void main() {
           billId: 7,
         ),
       );
-      expect(a, isNot(b), reason: 'seq WAJIB masuk props — tanpa itu kegagalan '
-          'kedua yang identik tak pernah terlihat konsumen');
+      expect(
+        a,
+        isNot(b),
+        reason:
+            'seq WAJIB masuk props — tanpa itu kegagalan '
+            'kedua yang identik tak pernah terlihat konsumen',
+      );
     });
 
     test('clearActionFailure TIDAK menyentuh kanal muat', () {
@@ -1156,18 +1165,22 @@ void main() {
       'titik 1 — createBill gagal',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockCreateBill(any()))
-          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      setUp: () => when(
+        () => mockCreateBill(any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(BillAdded(_makeBillModel())),
-      expect: () => [gagalTulis(BillWriteAction.add, const CacheFailure('db mati'))],
+      expect: () => [
+        gagalTulis(BillWriteAction.add, const CacheFailure('db mati')),
+      ],
     );
 
     blocTest<BillsBloc, BillsState>(
       'titik 2 — updateBill gagal',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockUpdateBill(any()))
-          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      setUp: () => when(
+        () => mockUpdateBill(any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(BillUpdated(_makeBillModel())),
       expect: () => [
         gagalTulis(BillWriteAction.update, const CacheFailure('db mati')),
@@ -1178,11 +1191,16 @@ void main() {
       'titik 3 — deleteBill gagal, membawa billId untuk aksi "Coba lagi"',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockDeleteBill(any()))
-          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      setUp: () => when(
+        () => mockDeleteBill(any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(const BillDeleted(7)),
       expect: () => [
-        gagalTulis(BillWriteAction.delete, const CacheFailure('db mati'), billId: 7),
+        gagalTulis(
+          BillWriteAction.delete,
+          const CacheFailure('db mati'),
+          billId: 7,
+        ),
       ],
     );
 
@@ -1190,8 +1208,9 @@ void main() {
       'titik 4 — markPaid: getBillById gagal',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockBillRepository.getBillById(any()))
-          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      setUp: () => when(
+        () => mockBillRepository.getBillById(any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) => bloc.add(
         BillMarkedPaid(
           billId: 7,
@@ -1204,7 +1223,11 @@ void main() {
       // Failure ASLI dari getBillById (forward), BUKAN pesan buatan handler —
       // pembeda ini sengaja ditulis di kode (lihat komentar :192-193 bloc).
       expect: () => [
-        gagalTulis(BillWriteAction.markPaid, const CacheFailure('db mati'), billId: 7),
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('db mati'),
+          billId: 7,
+        ),
       ],
     );
 
@@ -1212,8 +1235,9 @@ void main() {
       'titik 5 — markPaid: bill tak ditemukan',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockBillRepository.getBillById(any()))
-          .thenAnswer((_) async => const Right(null)),
+      setUp: () => when(
+        () => mockBillRepository.getBillById(any()),
+      ).thenAnswer((_) async => const Right(null)),
       act: (bloc) => bloc.add(
         BillMarkedPaid(
           billId: 7,
@@ -1242,8 +1266,9 @@ void main() {
         when(() => mockBillRepository.getBillById(any())).thenAnswer(
           (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
         );
-        when(() => mockAddTransaction(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('tx gagal')));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('tx gagal')));
       },
       act: (bloc) => bloc.add(
         BillMarkedPaid(
@@ -1255,7 +1280,11 @@ void main() {
         ),
       ),
       expect: () => [
-        gagalTulis(BillWriteAction.markPaid, const CacheFailure('tx gagal'), billId: 7),
+        gagalTulis(
+          BillWriteAction.markPaid,
+          const CacheFailure('tx gagal'),
+          billId: 7,
+        ),
       ],
     );
 
@@ -1329,8 +1358,9 @@ void main() {
             status: any(named: 'status'),
           ),
         ).thenAnswer((_) async => const Right(null));
-        when(() => mockDeleteTransaction(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('del tx gagal')));
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('del tx gagal')));
       },
       act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo(txId: 'tx-1'))),
       expect: () => [
@@ -1346,8 +1376,9 @@ void main() {
       'seq NAIK di kegagalan kedua yang isinya identik',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(() => mockDeleteBill(any()))
-          .thenAnswer((_) async => const Left(CacheFailure('db mati'))),
+      setUp: () => when(
+        () => mockDeleteBill(any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('db mati'))),
       act: (bloc) async {
         bloc.add(const BillDeleted(7));
         await Future<void>.delayed(Duration.zero);
@@ -1377,7 +1408,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const BillsSubscribed()),
       expect: () => [
-        isA<BillsState>().having((s) => s.status, 'status', BillsStatus.loading),
+        isA<BillsState>().having(
+          (s) => s.status,
+          'status',
+          BillsStatus.loading,
+        ),
         isA<BillsState>()
             .having((s) => s.actionFailure, 'actionFailure', isNull)
             .having((s) => s.status, 'status', BillsStatus.success),
@@ -1392,10 +1427,12 @@ void main() {
         when(() => mockBillRepository.getBillById(any())).thenAnswer(
           (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
         );
-        when(() => mockAddTransaction(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockDeleteTransaction(any()))
-            .thenAnswer((_) async => const Right(null));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
         when(
           () => mockBillRepository.applyBillPayment(
             id: any(named: 'id'),
@@ -1476,10 +1513,12 @@ void main() {
         when(() => mockBillRepository.getBillById(any())).thenAnswer(
           (_) async => Right(_makeBill(id: 7, dueDate: DateTime(2026, 7, 25))),
         );
-        when(() => mockAddTransaction(any()))
-            .thenAnswer((_) async => const Right(null));
-        when(() => mockDeleteTransaction(any()))
-            .thenAnswer((_) async => const Left(CacheFailure('del gagal')));
+        when(
+          () => mockAddTransaction(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(
+          () => mockDeleteTransaction(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('del gagal')));
         when(
           () => mockBillRepository.applyBillPayment(
             id: any(named: 'id'),
