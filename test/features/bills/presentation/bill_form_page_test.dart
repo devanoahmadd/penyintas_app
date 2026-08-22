@@ -2708,5 +2708,140 @@ void main() {
       expect(diumumkan.first, l10n.billsFormErrorAmount);
       expect(diumumkan, isNot(contains(l10n.billsFormErrorDueDate)));
     });
+
+    // [Review T10] Dua test di atas hanya melewati DUA dari enam pasangan
+    // key<->label (nominal & jatuh tempo). Tanpa test ini, menukar
+    // `_labelKeyName` dengan `_labelKeyCategory` — atau menukar kedua key
+    // tenor — LOLOS seluruh suite: pengumumannya tetap benar, hanya gulirnya
+    // yang mendarat di field lain.
+    //
+    // Ia sekaligus menegakkan PRASYARAT yang selama ini cuma tertulis di
+    // dartdoc `_fieldWajibKosong`: label yang ditunjuk WAJIB ter-mount saat
+    // getternya true. `currentContext` yang null membuat `ensureVisible` diam
+    // tanpa melempar apa pun, jadi hanya asersi "labelnya benar-benar masuk
+    // viewport" yang bisa menangkapnya.
+    testWidgets('keenam key menjemput label MILIKNYA SENDIRI', (tester) async {
+      bool didalam(Rect anak, Rect induk) =>
+          anak.top >= induk.top && anak.bottom <= induk.bottom;
+
+      /// Siapkan form sehingga PERSIS SATU field wajib tersisa kosong, jauhkan
+      /// labelnya dari viewport, tekan Simpan, lalu tuntut label ITU yang
+      /// dijemput.
+      ///
+      /// [gulirAwal] negatif = geser isi ke atas (menuju dasar form) untuk
+      /// field yang letaknya di ATAS; positif = kembali ke puncak untuk dua
+      /// field tenor yang letaknya di BAWAH.
+      Future<void> periksa({
+        required String label,
+        required Offset gulirAwal,
+        required Future<void> Function() siapkan,
+      }) async {
+        // Enam kasus dalam SATU test berbagi satu Navigator. Tanpa merobohkan
+        // pohonnya lebih dulu, halaman kasus sebelumnya masih menumpuk di atas
+        // tombol "buka" dan `pumpPage` berikutnya gagal menekannya.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+
+        await pumpPage(tester, ukuran: const Size(400, 700));
+        await siapkan();
+
+        final area = find.byType(SingleChildScrollView).first;
+        await tester.drag(area, gulirAwal);
+        await tester.pumpAndSettle();
+
+        final target = find.text(label);
+        expect(
+          didalam(tester.getRect(target), tester.getRect(area)),
+          isFalse,
+          reason:
+              '"$label" sudah terlihat SEBELUM Simpan ditekan — penjemputannya '
+              'tak akan membuktikan apa pun',
+        );
+
+        await tapSubmit(tester);
+        await tester.pumpAndSettle();
+
+        expect(
+          didalam(tester.getRect(target), tester.getRect(area)),
+          isTrue,
+          reason:
+              'Simpan ditolak karena "$label", tapi yang dijemput field lain — '
+              'key-nya terpasang di label yang salah, atau labelnya tak '
+              'ter-mount sehingga `ensureVisible` diam',
+        );
+      }
+
+      /// Isi field wajib SELAIN yang sedang diuji.
+      ///
+      /// Nominal diisi PALING AWAL lalu nama menyusul: `enterText` pada nama
+      /// merebut fokus, dan itulah yang menutup panel keypad. Urutan terbalik
+      /// meninggalkan panelnya terbuka dan viewport-nya menyusut sepanjang
+      /// sisa test.
+      Future<void> isiKecuali({
+        bool nama = true,
+        bool nominal = true,
+        bool kategori = true,
+        bool tanggal = true,
+      }) async {
+        if (nominal) await isiNominal(tester, '750000');
+        if (nama) {
+          await tester.enterText(
+            find.byKey(const ValueKey('bill_form_name')),
+            'Kos Bu Tini',
+          );
+          await tester.pump();
+        } else {
+          // Nama sengaja dibiarkan kosong, tapi fokusnya tetap diambil supaya
+          // keypad tertutup seperti cabang di atas.
+          await tapKey(tester, 'bill_form_name');
+        }
+        if (kategori) await tapLabel(tester, l10n.categoryInternet);
+        if (tanggal) await pickDueDate(tester);
+      }
+
+      await periksa(
+        label: l10n.billsFormNameLabel,
+        gulirAwal: const Offset(0, -2000),
+        siapkan: () => isiKecuali(nama: false),
+      );
+
+      await periksa(
+        label: l10n.billsFormAmountLabel,
+        gulirAwal: const Offset(0, -2000),
+        siapkan: () => isiKecuali(nominal: false),
+      );
+
+      await periksa(
+        label: l10n.billsFormCategoryLabel,
+        gulirAwal: const Offset(0, -2000),
+        siapkan: () => isiKecuali(kategori: false),
+      );
+
+      await periksa(
+        label: l10n.billsFormDueDateLabel,
+        gulirAwal: const Offset(0, -2000),
+        siapkan: () => isiKecuali(tanggal: false),
+      );
+
+      // Dua mode tenor SALING EKSKLUSIF — `_tenorMode` tak bisa `count` dan
+      // `endDate` sekaligus, jadi keduanya menuntut pemasangan halaman sendiri.
+      await periksa(
+        label: l10n.billsFormTenorCountLabel,
+        gulirAwal: const Offset(0, 2000),
+        siapkan: () async {
+          await isiKecuali();
+          await tapLabel(tester, l10n.billsTenorCount);
+        },
+      );
+
+      await periksa(
+        label: l10n.billsFormTenorEndDateLabel,
+        gulirAwal: const Offset(0, 2000),
+        siapkan: () async {
+          await isiKecuali();
+          await tapLabel(tester, l10n.billsTenorEndDate);
+        },
+      );
+    });
   });
 }
