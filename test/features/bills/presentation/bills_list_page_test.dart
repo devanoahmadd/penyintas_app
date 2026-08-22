@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
@@ -1306,6 +1308,152 @@ void main() {
 
         expect(find.text(l10n.billsDeleteFailed), findsOneWidget);
         expect(find.text(l10n.billsUndo), findsNothing);
+      },
+    );
+  });
+
+  group('pemulihan ikon kategori (§4)', () {
+    testWidgets(
+      'CategoryError → satu percobaan ulang otomatis sesudah 2 detik',
+      (tester) async {
+        stub(
+          BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart),
+            ],
+          ),
+        );
+        whenListen(
+          categoryBloc,
+          Stream<CategoryState>.value(const CategoryError('db mati')),
+          initialState: const CategoryError('db mati'),
+        );
+        await tester.pumpWidget(harness());
+        await tester.pump();
+
+        clearInteractions(categoryBloc);
+        await tester.pump(const Duration(seconds: 2));
+
+        verify(() => categoryBloc.add(const LoadCategories())).called(1);
+      },
+    );
+
+    testWidgets('masih gagal sesudah percobaan → TIDAK mencoba lagi', (
+      tester,
+    ) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      // `StreamController`, BUKAN `Stream.value` — stream sekali-pancar
+      // hanya bisa mengirim SATU `CategoryError`, jadi ada-tidaknya penjaga
+      // tak pernah kelihatan bedanya (add() paling banyak sekali terjadi
+      // apa pun keadaan penjaganya). Episode galat yang SAMA di sini
+      // dikirim DUA kali lewat stream, mensimulasikan galat yang menetap —
+      // baru di situ penjaga (atau ketiadaannya) benar-benar diuji.
+      final ctrl = StreamController<CategoryState>.broadcast();
+      addTearDown(ctrl.close);
+      whenListen(
+        categoryBloc,
+        ctrl.stream,
+        initialState: const CategoryError('db mati'),
+      );
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      ctrl.add(const CategoryError('db mati'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      clearInteractions(categoryBloc);
+      ctrl.add(const CategoryError('db mati'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 10));
+
+      verifyNever(() => categoryBloc.add(const LoadCategories()));
+    });
+
+    testWidgets('gagal → percobaan → berhasil: ikon kategori tergambar', (
+      tester,
+    ) async {
+      stub(
+        BillsState(
+          status: BillsStatus.success,
+          bills: [
+            buildBill(
+              id: 7,
+              name: 'Wifi Indihome',
+              dueDate: todayStart,
+            ).copyWith(category: 'internet'),
+          ],
+        ),
+      );
+      final ctrl = StreamController<CategoryState>.broadcast();
+      addTearDown(ctrl.close);
+      whenListen(
+        categoryBloc,
+        ctrl.stream,
+        initialState: const CategoryError('db mati'),
+      );
+      // KUNCINYA ADA DI SINI. `CategoryLoaded` LAHIR DARI `add`-nya, bukan
+      // didorong tangan oleh test. Kalau ia didorong tangan, test ini tetap
+      // hijau walau SELURUH implementasi task ini dicabut — pemulihan yang
+      // "terbukti" tanpa pernah dipicu apa pun.
+      when(
+        () => categoryBloc.add(const LoadCategories()),
+      ).thenAnswer((_) => ctrl.add(CategoryLoaded(categories: kategoriBawaan)));
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      // `BlocListener` hanya bereaksi pada EVENT lewat stream — `initialState`
+      // di `whenListen` cuma menyetel `bloc.state` untuk `BlocBuilder`, TIDAK
+      // pernah lewat stream (lihat `bloc_test`'s `when_listen.dart`). Tanpa
+      // baris ini galat "sudah menetap sejak awal" tak pernah dilihat
+      // listener retry, beda dari situasi nyata: `CategoryBloc` di
+      // `app_router.dart` mengirim `LoadCategories()` lalu `BillsListPage`
+      // subscribe SEBELUM bloc sempat emit `CategoryError`-nya sendiri lewat
+      // stream — persis yang disimulasikan baris ini.
+      ctrl.add(const CategoryError('db mati'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.receipt_long_outlined), findsNothing);
+    });
+
+    testWidgets(
+      'halaman ditutup sebelum timer → tak ada add & tak ada exception',
+      (tester) async {
+        stub(
+          BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart),
+            ],
+          ),
+        );
+        whenListen(
+          categoryBloc,
+          Stream<CategoryState>.value(const CategoryError('db mati')),
+          initialState: const CategoryError('db mati'),
+        );
+        await tester.pumpWidget(harness());
+        await tester.pump();
+
+        clearInteractions(categoryBloc);
+        await tester.pumpWidget(const SizedBox.shrink());
+        // SENGAJA kurang dari `_jedaMuatUlangKategori` (2 detik) — kalau
+        // dipompa LEBIH lama dari jeda, timer keburu meluncur wajar sebelum
+        // test berakhir dan lolos jadi "timer tertinggal" apa pun nasib
+        // `cancel()`-nya di `dispose()`. Dengan 1 detik, timer masih AKTIF
+        // saat test berakhir — kalau `dispose()` tak membatalkannya,
+        // harness Flutter melempar "A Timer is still pending even after
+        // the widget tree was disposed" di titik ini.
+        await tester.pump(const Duration(seconds: 1));
+
+        verifyNever(() => categoryBloc.add(const LoadCategories()));
+        expect(tester.takeException(), isNull);
       },
     );
   });

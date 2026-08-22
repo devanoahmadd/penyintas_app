@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -64,10 +66,30 @@ class BillsListPage extends StatefulWidget {
 }
 
 class _BillsListPageState extends State<BillsListPage> {
+  /// Percobaan ulang muat kategori sesudah `CategoryError`.
+  ///
+  /// SATU percobaan per episode galat, bukan berulang: `_onLoad` memang
+  /// `droppable()` sehingga tumpukan event aman, tapi galat DB yang menetap
+  /// tak boleh berubah jadi lingkaran retry yang menggerus baterai. Kalau
+  /// percobaan itu gagal juga, ikon antara bertahan — daftar tetap terbaca.
+  ///
+  /// Jeda 2 detik, bukan seketika: kegagalan Drift yang realistis adalah
+  /// kunci sesaat, dan retry pada milidetik yang sama menabrak kunci yang
+  /// sama.
+  static const _jedaMuatUlangKategori = Duration(seconds: 2);
+  Timer? _kategoriRetryTimer;
+  bool _kategoriSudahDicobaUlang = false;
+
   @override
   void initState() {
     super.initState();
     context.read<BillsBloc>().add(const BillsSubscribed());
+  }
+
+  @override
+  void dispose() {
+    _kategoriRetryTimer?.cancel();
+    super.dispose();
   }
 
   /// Form tambah kini HALAMAN PENUH, bukan bottom sheet (spec §5.1).
@@ -320,6 +342,35 @@ class _BillsListPageState extends State<BillsListPage> {
               case BillWriteAction.markPaid:
                 break;
             }
+          },
+        ),
+        // (3) Pemulihan ikon kategori sesudah `CategoryError` (spec §4).
+        //
+        // `CategoryBloc` di rute `/bills` hanya mengirim `LoadCategories`
+        // SEKALI, saat rute dibangun — dorong ke `/bills/new` tidak
+        // membangun ulang rute ini. Tanpa listener ini, sekali muat kategori
+        // gagal, SETIAP baris menggambar ikon pengganti sampai pengguna
+        // keluar-masuk aplikasi. Tak ada jalan pulih lain dari dalam.
+        BlocListener<CategoryBloc, CategoryState>(
+          listener: (context, state) {
+            if (state is! CategoryError) {
+              // Episode galat berikutnya dapat jatah percobaannya sendiri.
+              _kategoriSudahDicobaUlang = false;
+              _kategoriRetryTimer?.cancel();
+              return;
+            }
+            if (_kategoriSudahDicobaUlang) return;
+            _kategoriSudahDicobaUlang = true;
+            _kategoriRetryTimer?.cancel();
+            // Bloc DIBACA SEKARANG, bukan 2 detik lagi dari dalam callback.
+            // `context` di listener ini milik `BlocListener`, sementara
+            // penjaga `mounted` memeriksa `State` — dua umur yang berbeda,
+            // dan `context.read` pada elemen yang sudah lepas melempar.
+            final kategoriBloc = context.read<CategoryBloc>();
+            _kategoriRetryTimer = Timer(_jedaMuatUlangKategori, () {
+              if (!mounted) return;
+              kategoriBloc.add(const LoadCategories());
+            });
           },
         ),
       ],
