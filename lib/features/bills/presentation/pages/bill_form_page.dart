@@ -683,7 +683,7 @@ class _BillFormPageState extends State<BillFormPage> {
       //
       // `sendAnnouncement`, BUKAN `announce`. Yang terakhir sudah
       // `@Deprecated` di SDK terpasang ("deprecated after v3.35.0-0.1.pre",
-      // `semantics_service.dart:50-54`) — memakainya membuat
+      // `semantics_service.dart:51-55`) — memakainya membuat
       // `scripts/analyze-scoped.sh` berhenti mencetak `No issues found!` dan
       // gerbang tiap task jadi merah karena hal yang bukan bug.
       SemanticsService.sendAnnouncement(
