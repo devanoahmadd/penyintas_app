@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -2601,6 +2602,111 @@ void main() {
       expect(find.text(l10n.billsTenorUnlimitedNote), findsNothing);
       expect(find.text(l10n.billsTenorCountNote), findsNothing);
       expect(find.text(l10n.billsTenorEndDateNote), findsNothing);
+    });
+  });
+
+  group('Simpan dengan isian tak lengkap (§7)', () {
+    /// Sadap kanal pengumuman aksesibilitas dan kumpulkan pesannya.
+    ///
+    /// Disadap LANGSUNG di kanalnya, bukan lewat pohon semantik: pengumuman
+    /// adalah peristiwa sesaat yang tak meninggalkan jejak di simpul mana pun,
+    /// jadi hanya kanal ini yang bisa membuktikan ia pernah dikirim.
+    List<String> sadapPengumuman(WidgetTester tester) {
+      final diumumkan = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler(
+        SystemChannels.accessibility,
+        (dynamic pesan) async {
+          final map = pesan as Map<dynamic, dynamic>;
+          if (map['type'] == 'announce') {
+            diumumkan.add((map['data'] as Map)['message'] as String);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler(SystemChannels.accessibility, null),
+      );
+      return diumumkan;
+    }
+
+    testWidgets(
+      'field wajib pertama yang kosong DIGULIRKAN ke dalam viewport',
+      (tester) async {
+        await pumpPage(tester, ukuran: const Size(400, 700));
+        await fillBaseFields(tester);
+        await tapLabel(tester, l10n.categoryInternet);
+        // Tanggal jatuh tempo SENGAJA dibiarkan kosong.
+
+        // Gulir jauh ke dasar supaya labelnya keluar viewport.
+        await tester.drag(
+          find.byType(SingleChildScrollView).first,
+          const Offset(0, -600),
+        );
+        await tester.pumpAndSettle();
+
+        await tapSubmit(tester);
+        await tester.pumpAndSettle();
+
+        final label = find.text(l10n.billsFormDueDateLabel);
+        final rectLabel = tester.getRect(label);
+        final layar = tester.getRect(find.byType(Scaffold).last);
+        expect(
+          rectLabel.top >= layar.top && rectLabel.bottom <= layar.bottom,
+          isTrue,
+          reason:
+              'tanpa gulir, pengguna menekan Simpan dan tak terjadi apa-apa '
+              'di layar yang ia lihat',
+        );
+      },
+    );
+
+    testWidgets('pesan galat field pertama DIUMUMKAN ke pembaca layar', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final diumumkan = sadapPengumuman(tester);
+
+      await pumpPage(tester);
+      await fillBaseFields(tester);
+      await tapLabel(tester, l10n.categoryInternet);
+      await tapSubmit(tester);
+      await tester.pumpAndSettle();
+
+      expect(diumumkan, contains(l10n.billsFormErrorDueDate));
+
+      expect(
+        tester.getSemantics(find.text(l10n.billsFormErrorDueDate)),
+        // `isSemantics`, bukan `containsSemantics`: yang terakhir sudah
+        // `@Deprecated` di SDK terpasang ("Migrate to isSemantics instead",
+        // `matchers.dart:858-862`) dan membuat gerbang analyze merah. Keduanya
+        // sama-sama hanya memeriksa properti yang disebut.
+        isSemantics(isLiveRegion: true),
+        reason:
+            'di Android `announce` adalah no-op; tanpa live region, '
+            'pengguna TalkBack tetap tak diberi tahu apa pun',
+      );
+      handle.dispose();
+    });
+
+    testWidgets('dua field kosong → yang DIJEMPUT adalah yang lebih atas', (
+      tester,
+    ) async {
+      final diumumkan = sadapPengumuman(tester);
+
+      await pumpPage(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('bill_form_name')),
+        'Kos Bu Tini',
+      );
+      await tester.pump();
+      // Nominal DAN tanggal sama-sama kosong.
+      await tapLabel(tester, l10n.categoryInternet);
+      await tapSubmit(tester);
+      await tester.pumpAndSettle();
+
+      expect(diumumkan.first, l10n.billsFormErrorAmount);
+      expect(diumumkan, isNot(contains(l10n.billsFormErrorDueDate)));
     });
   });
 }

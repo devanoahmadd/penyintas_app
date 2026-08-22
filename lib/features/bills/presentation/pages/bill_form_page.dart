@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -236,6 +237,17 @@ class _BillFormPageState extends State<BillFormPage> {
   /// bisa merangkap keduanya tanpa memaksa test ikut tahu tipe internalnya.
   final _amountFieldKey = GlobalKey();
 
+  /// Titik acuan `Scrollable.ensureVisible` saat Simpan ditolak. Dipasang di
+  /// `_FieldLabel` tiap bagian, BUKAN di kontrolnya: grid kategori tinggi, dan
+  /// menyasar gridnya membuat gulir berusaha memuat seluruh tingginya alih-alih
+  /// membawa pengguna ke judul + kontrol.
+  final _labelKeyName = GlobalKey();
+  final _labelKeyAmount = GlobalKey();
+  final _labelKeyCategory = GlobalKey();
+  final _labelKeyDueDate = GlobalKey();
+  final _labelKeyTenorCount = GlobalKey();
+  final _labelKeyTenorEndDate = GlobalKey();
+
   bool get _isEdit => widget.bill != null;
 
   @override
@@ -448,6 +460,27 @@ class _BillFormPageState extends State<BillFormPage> {
       !_tenorCountInvalid &&
       !_tenorEndDateInvalid;
 
+  /// Field wajib yang masih kosong, URUT SESUAI TATA LETAK. Urutan inilah
+  /// yang menentukan field mana yang dijemput saat Simpan ditolak — menambah
+  /// field wajib baru berarti menambah satu baris di sini, bukan menambah
+  /// cabang di `_submit`.
+  ///
+  /// PRASYARAT: label tiap baris di sini WAJIB ter-mount setiap kali
+  /// getter invalid-nya bernilai true. Dua baris tenor aman karena getter-nya
+  /// ikut bersyarat pada `_tenorMode`. Menambah field wajib yang labelnya
+  /// bersyarat TAPI getter-nya tidak akan membuat `ensureVisible` gagal
+  /// tanpa suara.
+  List<(GlobalKey, String)> _fieldWajibKosong(AppLocalizations l10n) => [
+    if (_nameInvalid) (_labelKeyName, l10n.billsFormErrorName),
+    if (_amountInvalid) (_labelKeyAmount, l10n.billsFormErrorAmount),
+    if (_categoryInvalid) (_labelKeyCategory, l10n.billsFormErrorCategory),
+    if (_dueDateInvalid) (_labelKeyDueDate, l10n.billsFormErrorDueDate),
+    if (_tenorCountInvalid)
+      (_labelKeyTenorCount, l10n.billsFormErrorTenorCount),
+    if (_tenorEndDateInvalid)
+      (_labelKeyTenorEndDate, l10n.billsFormErrorTenorEndDate),
+  ];
+
   // ── Mutasi state (penjaga invariant) ──────────────────────────────────────
 
   void _selectCategory(String slug) {
@@ -623,6 +656,41 @@ class _BillFormPageState extends State<BillFormPage> {
     if (_isSubmitting) return;
     if (!_isValid) {
       setState(() => _showErrors = true);
+      final pertama = _fieldWajibKosong(context.l10n).firstOrNull;
+      if (pertama == null) return;
+      final (kunci, pesan) = pertama;
+
+      // Gerbang ui-ux-pro-max `reduced-motion`, sama seperti `_bukaKeypad`.
+      final durasi = MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 220);
+
+      // DIJADWALKAN setelah frame: pesan galat yang baru muncul menggeser
+      // tata letak, jadi menggulir sebelum frame berikutnya membuat
+      // sasarannya meleset persis setinggi pesan itu.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = kunci.currentContext;
+        if (ctx == null) return;
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.2,
+          duration: durasi,
+          curve: Curves.easeOut,
+        );
+      });
+      // Gulir saja TAK TERDENGAR. Tanpa pengumuman, pengguna pembaca layar
+      // tetap mengalami "tombolnya tak bereaksi".
+      //
+      // `sendAnnouncement`, BUKAN `announce`. Yang terakhir sudah
+      // `@Deprecated` di SDK terpasang ("deprecated after v3.35.0-0.1.pre",
+      // `semantics_service.dart:50-54`) — memakainya membuat
+      // `scripts/analyze-scoped.sh` berhenti mencetak `No issues found!` dan
+      // gerbang tiap task jadi merah karena hal yang bukan bug.
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        pesan,
+        Directionality.of(context),
+      );
       return;
     }
     setState(() {
@@ -926,6 +994,7 @@ class _BillFormPageState extends State<BillFormPage> {
                           children: [
                             // 1 — Nama
                             _FieldLabel(
+                              key: _labelKeyName,
                               l10n.billsFormNameLabel,
                               isDark: isDark,
                               required: true,
@@ -956,6 +1025,7 @@ class _BillFormPageState extends State<BillFormPage> {
 
                             // 2 — Nominal
                             _FieldLabel(
+                              key: _labelKeyAmount,
                               l10n.billsFormAmountLabel,
                               isDark: isDark,
                               required: true,
@@ -995,6 +1065,7 @@ class _BillFormPageState extends State<BillFormPage> {
 
                             // 3 — Kategori
                             _FieldLabel(
+                              key: _labelKeyCategory,
                               l10n.billsFormCategoryLabel,
                               isDark: isDark,
                               required: true,
@@ -1054,6 +1125,7 @@ class _BillFormPageState extends State<BillFormPage> {
 
                             // 4 — Jatuh tempo
                             _FieldLabel(
+                              key: _labelKeyDueDate,
                               l10n.billsFormDueDateLabel,
                               isDark: isDark,
                               required: true,
@@ -1189,6 +1261,7 @@ class _BillFormPageState extends State<BillFormPage> {
                               if (_tenorMode == _TenorMode.count) ...[
                                 const SizedBox(height: AppSpacing.md),
                                 _FieldLabel(
+                                  key: _labelKeyTenorCount,
                                   l10n.billsFormTenorCountLabel,
                                   isDark: isDark,
                                   required: true,
@@ -1223,6 +1296,7 @@ class _BillFormPageState extends State<BillFormPage> {
                               if (_tenorMode == _TenorMode.endDate) ...[
                                 const SizedBox(height: AppSpacing.md),
                                 _FieldLabel(
+                                  key: _labelKeyTenorEndDate,
                                   l10n.billsFormTenorEndDateLabel,
                                   isDark: isDark,
                                   required: true,
@@ -1620,8 +1694,12 @@ class _BillFormPageState extends State<BillFormPage> {
 // ── Sub-komponen ─────────────────────────────────────────────────────────────
 
 class _FieldLabel extends StatelessWidget {
+  /// [super.key] BUKAN sekadar formalitas: label inilah titik acuan
+  /// `Scrollable.ensureVisible` saat Simpan ditolak (lihat `_fieldWajibKosong`).
+  /// Tanpa meneruskannya, `_FieldLabel(key: ...)` bahkan tak meng-compile.
   const _FieldLabel(
     this.text, {
+    super.key,
     required this.isDark,
     this.required = false,
     this.optionalNote,
@@ -1697,12 +1775,21 @@ class _ErrorText extends StatelessWidget {
             color: AppColors.warn,
           ),
           const SizedBox(width: AppSpacing.xs),
+          // Live region = jalur pengumuman yang direkomendasikan SDK dan yang
+          // TIDAK deprecated. `sendAnnouncement` di `_submit` melayani platform
+          // yang mendukungnya; ini melayani Android, tempat announce jadi no-op
+          // (TalkBack mengabaikannya sejak Android men-deprecate
+          // `announceForAccessibility`). Keduanya berpasangan — jangan cabut
+          // salah satunya sebagai "duplikat".
           Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.bodySmall.copyWith(
-                fontSize: 12,
-                color: AppColors.warn,
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontSize: 12,
+                  color: AppColors.warn,
+                ),
               ),
             ),
           ),
