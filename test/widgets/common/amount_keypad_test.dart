@@ -53,11 +53,7 @@ Widget _pumpPad({required double padding}) => MaterialApp(
   home: Scaffold(
     body: Padding(
       padding: EdgeInsets.symmetric(horizontal: padding / 2),
-      child: AmountKeypad(
-        isDark: false,
-        onKey: (_) {},
-        horizontalPadding: padding,
-      ),
+      child: AmountKeypad(isDark: false, onKey: (_) {}),
     ),
   ),
 );
@@ -198,8 +194,8 @@ void main() {
     });
   });
 
-  group('AmountKeypad — kontrak horizontalPadding', () {
-    testWidgets('padding bawaan 48 → tombol tepat 48dp', (tester) async {
+  group('AmountKeypad — kontrak lebar nyata', () {
+    testWidgets('panel dengan padding 48: tombol tepat 48dp', (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -210,7 +206,7 @@ void main() {
       expect(size.height, closeTo(48, 0.5));
     });
 
-    testWidgets('padding 32 dengan tata letak yang cocok → TETAP 48dp', (
+    testWidgets('panel dengan padding 32 (lebar kolom beda) → TETAP 48dp', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -223,7 +219,45 @@ void main() {
       expect(
         size.height,
         closeTo(48, 0.5),
-        reason: 'aspect wajib ikut padding, bukan angka mati 48',
+        reason:
+            'aspect diturunkan dari constraint nyata `LayoutBuilder` '
+            'memberi — bukan dari parameter yang dititipkan pemanggil — jadi '
+            'padding panel berapa pun tetap menghasilkan tombol 48dp',
+      );
+    });
+
+    testWidgets('lanskap ber-notch: tombol TETAP >= 48dp di dalam SafeArea', (
+      tester,
+    ) async {
+      // Lanskap + inset kiri-kanan seperti perangkat ber-notch.
+      tester.view.physicalSize = const Size(844, 390);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(left: 44, right: 44);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: [_SyncL10nDelegate(_l10n)],
+          locale: const Locale('id'),
+          home: Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: AmountKeypad(isDark: false, onKey: (_) {}),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSize(find.widgetWithText(GestureDetector, '7')).height,
+        greaterThanOrEqualTo(48.0),
+        reason:
+            'SafeArea meng-inset kiri-kanan di lanskap; menghitung dari '
+            'lebar layar penuh membuat tombolnya menyusut diam-diam',
       );
     });
   });

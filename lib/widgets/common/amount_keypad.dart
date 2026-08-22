@@ -39,27 +39,16 @@ const _kKeys = [
 /// untuk hitungan cacah seperti jumlah cicilan. PIN punya keypad sendiri
 /// (`pin_keypad.dart`): panjang tetap, tanpa format ribuan.
 ///
-/// **Kontrak tata letak:** tinggi tombol diturunkan dari lebar layar dikurangi
-/// [horizontalPadding]. Pemanggil WAJIB memberi padding horizontal total yang
-/// sama dengan nilai itu — kalau tidak, tombolnya tak lagi setinggi 48dp.
+/// **Kontrak tata letak:** tinggi tombol diturunkan dari lebar NYATA yang
+/// diterima lewat `LayoutBuilder` — bukan dari lebar layar. Pemanggil tak
+/// perlu menitipkan padding apa pun; cukup taruh widget ini di dalam induk
+/// yang memberi batas lebar (mis. `Padding`, `Container`), dan tombolnya
+/// otomatis 48dp untuk lebar kolom berapa pun yang benar-benar tersedia.
 class AmountKeypad extends StatefulWidget {
-  const AmountKeypad({
-    super.key,
-    required this.onKey,
-    required this.isDark,
-    this.horizontalPadding = 48,
-  });
+  const AmountKeypad({super.key, required this.onKey, required this.isDark});
 
   final void Function(String key) onKey;
   final bool isDark;
-
-  /// Total padding horizontal yang dipasang PEMANGGIL di kiri+kanan keypad.
-  ///
-  /// Dipakai `_calcAspect` untuk menghitung lebar kolom, dan dari lebar itu
-  /// tinggi tombol. Salah nilai → tombol tak lagi 48dp dan jaminan hit target
-  /// patah diam-diam. Bawaan `48` = `AppSpacing.xl` kiri + kanan, persis yang
-  /// dipakai onboarding.
-  final double horizontalPadding;
 
   @override
   State<AmountKeypad> createState() => _AmountKeypadState();
@@ -81,32 +70,42 @@ class _AmountKeypadState extends State<AmountKeypad> {
         ? AppColors.textSoftDark
         : AppColors.textSoftLight;
 
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 7,
-      crossAxisSpacing: 7,
-      childAspectRatio: _calcAspect(context),
-      children: _kKeys.map((key) {
-        return _KeyButton(
-          keyLabel: key,
-          surface: surface,
-          textColor: textColor,
-          backIconColor: textSoft,
-          onTap: () => _handleTap(key),
+    // Tinggi tombol diturunkan dari lebar NYATA yang diterima, bukan dari
+    // `MediaQuery.size.width`. Keypad hidup di dalam `SafeArea` yang meng-inset
+    // kiri-kanan di lanskap, dan dari dalam sana `MediaQuery.removePadding`
+    // sudah menolkan `padding` DAN mengurangi `viewPadding` — jadi keduanya
+    // berbohong tentang ruang yang tersisa. Constraint tidak.
+    return LayoutBuilder(
+      builder: (context, c) {
+        assert(
+          c.maxWidth.isFinite,
+          'AmountKeypad butuh lebar berbatas: tinggi tombol 48dp diturunkan '
+          'dari lebar kolom. Induk tanpa batas horizontal (mis. Row tanpa '
+          'Expanded) menghasilkan aspect tak hingga.',
         );
-      }).toList(),
+        // 14 = dua celah 7dp antar kolom.
+        final colW = (c.maxWidth - 14) / 3;
+        return GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 7,
+          crossAxisSpacing: 7,
+          childAspectRatio: colW / 48,
+          children: _kKeys
+              .map(
+                (key) => _KeyButton(
+                  keyLabel: key,
+                  surface: surface,
+                  textColor: textColor,
+                  backIconColor: textSoft,
+                  onTap: () => _handleTap(key),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
-  }
-
-  double _calcAspect(BuildContext context) {
-    // Target height = 48dp (Android Material minimum tap target)
-    final screenW = MediaQuery.of(context).size.width;
-    // Available width = layar minus padding pemanggil minus 2 gap (7×2)
-    final availW = screenW - widget.horizontalPadding - 14;
-    final colW = availW / 3;
-    return colW / 48;
   }
 }
 

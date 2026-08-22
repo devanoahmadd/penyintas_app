@@ -1623,15 +1623,11 @@ class _BillFormPageState extends State<BillFormPage> {
                               // tercapai dan `Flexible` ini tak berefek apa pun.
                               Flexible(
                                 child: SingleChildScrollView(
+                                  // Tinggi tombol kini diukur dari lebar nyata
+                                  // panel — tak ada lagi kontrak "padding
+                                  // pemanggil harus sinkron".
                                   child: AmountKeypad(
                                     isDark: isDark,
-                                    // WAJIB sinkron dengan padding Container di
-                                    // atas: 24 kiri + 24 kanan. `AmountKeypad`
-                                    // menurunkan TINGGI tombol dari angka ini
-                                    // [Audit S3]. Mengubah `AppSpacing.xl` di atas
-                                    // tanpa mengubah nilai ini akan memecah hit
-                                    // target 48dp diam-diam.
-                                    horizontalPadding: AppSpacing.xl * 2,
                                     onKey: (k) => setState(() {
                                       // Lihat `_keypadKetukanPertama`. Backspace
                                       // dikecualikan dari "mulai angka baru",

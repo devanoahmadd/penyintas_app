@@ -581,6 +581,49 @@ void main() {
 
       expect(find.text('Lanjut', skipOffstage: false), findsOneWidget);
     });
+
+    testWidgets('keypad panel docked: tombol tepat 48dp', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.getSize(find.widgetWithText(GestureDetector, '7').first).height,
+        closeTo(48, 0.2),
+        reason:
+            'panel docked memang sudah 48dp hari ini — test ini menahannya '
+            'supaya tidak ikut bergeser saat geometri keypad diubah',
+      );
+    });
+
+    testWidgets('keypad sheet nominal: tombol tepat 48dp', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await goToStep1(tester);
+      await tester.tap(find.text('Kos / Sewa', skipOffstage: false));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        tester.getSize(find.widgetWithText(GestureDetector, '7').first).height,
+        closeTo(48, 0.2),
+        reason:
+            'sheet ini memakai padding xl2 (20x2 = 40) sementara parameter '
+            'lama menghitung 48 — hasilnya 48,52dp, bukan 48',
+      );
+    });
   });
 
   // ── Ruas 3 — dana darurat ──────────────────────────────────────────────

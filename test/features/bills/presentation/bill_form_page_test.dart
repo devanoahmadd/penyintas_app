@@ -1873,10 +1873,11 @@ void main() {
     expect(find.byType(AmountKeypad), findsNothing);
   });
 
-  // `AmountKeypad` menurunkan TINGGI tombol dari `horizontalPadding` yang
-  // dikirim pemanggil [Audit S3]. Kalau padding panel di halaman ini digeser
-  // tanpa menggeser nilai itu, tombolnya menyusut di bawah 48dp tanpa satu
-  // pun error — persis jenis kerusakan yang tak terlihat mata.
+  // `AmountKeypad` menurunkan TINGGI tombol dari lebar nyata yang diberikan
+  // `LayoutBuilder` [Audit S3, revisi Task 13] — bukan lagi dari sebuah
+  // parameter yang wajib disinkronkan pemanggil. Test ini tetap dijaga
+  // karena regresi nyatanya masih mungkin: kalau panel dibungkus induk tanpa
+  // batas lebar, tombolnya bisa kembali menyusut di bawah 48dp diam-diam.
   testWidgets('tombol keypad memenuhi hit target 48dp di layar sempit', (
     tester,
   ) async {
@@ -1887,9 +1888,7 @@ void main() {
     expect(
       tester.getSize(tombol).height,
       greaterThanOrEqualTo(48.0),
-      reason:
-          'padding panel dan `horizontalPadding` AmountKeypad harus tetap '
-          'sinkron — kalau tidak, tinggi tombol jatuh diam-diam',
+      reason: 'tinggi tombol diturunkan dari lebar nyata panel',
     );
   });
 
