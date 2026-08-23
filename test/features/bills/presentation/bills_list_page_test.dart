@@ -1272,6 +1272,106 @@ void main() {
       expect(find.text(l10n.billsUndoFailed), findsOneWidget);
     });
 
+    // ── [W1] Simpan yang gagal tanpa satu pun permukaan ───────────────────
+    //
+    // Premis komentar lama di `bills_list_page.dart` ("Simpan punya
+    // permukaannya sendiri di atas halaman ini") dibatalkan oleh watchdog
+    // batas-tunggu di form: sesudah 10 detik tanpa jawaban, pintu keluar form
+    // DIBUKA. Pengguna keluar, `BlocListener` form mati bersama halamannya,
+    // lalu jawaban BLoC tiba sebagai kegagalan `add`/`update` — dan
+    // satu-satunya listener yang tersisa adalah halaman ini. Tanpa cabang di
+    // bawah, tagihannya tak tersimpan dan TAK ADA satu pun tanda di layar;
+    // kalimat terakhir yang pengguna lihat adalah "belum ada jawaban", yang
+    // tak pernah dikoreksi.
+    testWidgets('gagal UBAH tiba saat form sudah ditinggalkan → snackbar '
+        'tampil di daftar', (tester) async {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(gagalTulis(BillWriteAction.update, billId: 7)),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text(l10n.billsFormSaveFailed),
+        findsOneWidget,
+        reason:
+            'form-nya sudah tak ada — kalau daftar ikut diam, kegagalan '
+            'simpan tak punya satu pun permukaan',
+      );
+      expect(find.byType(BillItem), findsOneWidget);
+    });
+
+    testWidgets('gagal TAMBAH tiba saat form sudah ditinggalkan → snackbar '
+        'tampil di daftar', (tester) async {
+      // Cabang `add` diuji terpisah dari `update`: keduanya kasus `switch`
+      // sendiri-sendiri, dan perbaikan yang cuma menutup salah satunya lolos
+      // dari test di atas.
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(gagalTulis(BillWriteAction.add)),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.billsFormSaveFailed), findsOneWidget);
+    });
+
+    testWidgets('form MASIH di layar → daftar diam, biar form yang bicara', (
+      tester,
+    ) async {
+      // Sisi kedua dari [W1], dan alasan cabang `add`/`update` di daftar
+      // BERGERBANG, bukan polos: selama form masih menindih halaman ini,
+      // form-lah permukaannya. Tanpa gerbang, SETIAP gagal-simpan di jalur
+      // normal — bukan kasus pojok, melainkan jalur yang paling sering
+      // dilewati — menampilkan dua snackbar berisi kalimat yang sama.
+      final kendali = StreamController<BillsState>.broadcast();
+      addTearDown(kendali.close);
+      whenListen(
+        bloc,
+        kendali.stream,
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.billsAdd));
+      await tester.pumpAndSettle();
+      expect(
+        find.byType(BillFormPage),
+        findsOneWidget,
+        reason: 'prasyarat: form sedang menindih daftar',
+      );
+
+      kendali.add(gagalTulis(BillWriteAction.update));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+
+      expect(
+        find.text(l10n.billsFormSaveFailed),
+        findsNothing,
+        reason:
+            'permukaan gagal-simpan milik form selama form masih hidup — '
+            'snackbar kedua dari daftar cuma menggandakan kalimat yang sama',
+      );
+    });
+
     testWidgets(
       'snackbar gagal-tulis menggusur snackbar undo, lastUndo tetap',
       (tester) async {

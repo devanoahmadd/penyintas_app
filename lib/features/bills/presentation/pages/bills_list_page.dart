@@ -286,7 +286,10 @@ class _BillsListPageState extends State<BillsListPage> {
             _showUndoSnackBar(context, state);
           },
         ),
-        // (2) Kegagalan AKSI TULIS yang permukaannya memang halaman ini.
+        // (2) Kegagalan AKSI TULIS yang permukaannya halaman ini — entah
+        // karena memang miliknya (hapus, urungkan), entah karena permukaan
+        // aslinya sudah tak ada lagi (simpan yang ditinggalkan, lihat [W1] di
+        // cabang `add`/`update`).
         //
         // PRESEDENSI: snackbar ini MENGGUSUR snackbar undo lewat
         // `hideCurrentSnackBar()`. Kegagalan yang baru saja terjadi lebih
@@ -334,11 +337,54 @@ class _BillsListPageState extends State<BillsListPage> {
                           BillPaymentUndone(snapshot),
                         ),
                 );
-              // Simpan & tandai-lunas punya permukaannya sendiri di atas
-              // halaman ini; snackbar kedua di baliknya justru menggusur
-              // pesan yang sedang dibaca pengguna.
+              // [W1] Simpan DULU dianggap "punya permukaannya sendiri di atas
+              // halaman ini". Premis itu dibatalkan watchdog batas-tunggu di
+              // form: sesudah 10 detik tanpa jawaban, pintu keluar form
+              // dibuka. Pengguna keluar, `BlocListener` form mati bersama
+              // halamannya, lalu jawaban BLoC tiba sebagai gagal
+              // `add`/`update` — dan satu-satunya listener yang tersisa adalah
+              // halaman ini. Tagihannya tak tersimpan, dan tanpa cabang ini
+              // TAK ADA satu pun tanda di layar; kalimat terakhir yang
+              // pengguna lihat, "belum ada jawaban", tak pernah dikoreksi.
+              //
+              // BERGERBANG, bukan `break` yang dicabut begitu saja: kalau
+              // halaman ini ikut bicara selagi form MASIH menindihnya, setiap
+              // gagal-simpan di jalur normal — jalur yang paling sering
+              // dilewati, bukan kasus pojok — menghasilkan DUA snackbar
+              // berkalimat sama. Keduanya nyata terlihat: `ScaffoldMessenger`
+              // milik `MaterialApp`, jadi snackbar dari halaman ini digambar
+              // di atas form juga, lalu snackbar form mengantre di belakangnya.
+              // Urutannya pun tak menolong: listener halaman ini berlangganan
+              // LEBIH DULU (rutenya dibangun lebih dulu), jadi "yang terakhir
+              // menang" justru berarti punya form yang tampil belakangan —
+              // bukan satu pesan menggusur satu pesan.
+              //
+              // `isCurrentOf` = "tak ada rute lain di atas /bills". Itu proksi
+              // paling dekat untuk "form sudah tak ada" yang bisa dibaca dari
+              // sini; halaman ini tak punya cara langsung menanyai form.
+              // Batasnya, jujur: (1) sheet tandai-lunas atau dialog hapus yang
+              // sedang terbuka juga membuatnya `false`, jadi kegagalan simpan
+              // BASI yang tiba tepat saat itu ikut tertelan; (2) selama
+              // transisi pop form (±300ms) rute form sudah tak "present"
+              // sementara `State`-nya masih hidup, jadi di jendela sempit itu
+              // keduanya bisa bicara. Dua-duanya jauh lebih kecil daripada
+              // kegagalan yang sama sekali tak punya permukaan.
+              //
+              // Tanpa "Coba lagi": mengirim ulang `add`/`update` menuntut
+              // `BillModel` utuh, dan `actionFailure` cuma membawa aksi, galat,
+              // `seq`, dan `billId`. Pesannya sendiri sudah mengajak mencoba
+              // lagi lewat form.
               case BillWriteAction.add:
               case BillWriteAction.update:
+                if (ModalRoute.isCurrentOf(context) ?? true) {
+                  _showGagalTulisSnackBar(
+                    context,
+                    pesan: context.l10n.billsFormSaveFailed,
+                  );
+                }
+              // Tandai-lunas TETAP `break`: sheet-nya punya snackbar sendiri
+              // dan tak pernah ditinggalkan di tengah aksi — tak ada watchdog
+              // yang membuka pintu keluarnya.
               case BillWriteAction.markPaid:
                 break;
             }
