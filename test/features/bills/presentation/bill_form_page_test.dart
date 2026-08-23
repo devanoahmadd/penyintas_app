@@ -1366,6 +1366,13 @@ void main() {
     testWidgets('watchdog menyala → tombol back MEMBUKA jalan keluar', (
       tester,
     ) async {
+      // [W2] Bentuk lama test ini mengasersikan dialog "Buang perubahan?"
+      // MUNCUL — pintu keluarnya memang terbuka, tapi lewat pertanyaan yang
+      // salah. Pekerjaan pengguna sedang MELAYANG (kiriman belum dijawab),
+      // bukan sedang dibuang; dan kalau ia menjawab "Buang", simpanannya tetap
+      // bisa mendarat sesudahnya — tagihannya muncul di daftar tepat sesudah
+      // ia diberi tahu bahwa ia membuangnya. Yang dikunci sekarang lebih keras
+      // daripada yang dulu: halaman benar-benar MENUTUP, tanpa pertanyaan.
       await submitLalu(tester);
       await tester.pump(const Duration(seconds: 10));
       await tester.pump();
@@ -1374,12 +1381,55 @@ void main() {
 
       expect(
         find.text(l10n.billsFormDiscardTitle),
-        findsOneWidget,
+        findsNothing,
+        reason:
+            'menanyakan "buang perubahan?" atas pekerjaan yang justru sedang '
+            'disimpan adalah pertanyaan yang salah',
+      );
+      expect(
+        find.byType(BillFormPage),
+        findsNothing,
         reason:
             'sesudah 10 detik tanpa jawaban, pengguna harus punya pintu '
             'keluar — bukan hanya tombol yang berubah rupa',
       );
     });
+
+    testWidgets(
+      'gagal-simpan sesudah watchdog → back BERTANYA buang perubahan lagi',
+      (tester) async {
+        // [W3] Sesudah [W2], `_watchdogMenyala` ikut MENGGERBANGI perilaku
+        // dialog — jadi ia wajib turun lagi begitu jawaban tiba. Kalau tidak,
+        // kombinasi `_isSubmitting == false && _watchdogMenyala == true`
+        // membuat back menutup form TANPA bertanya, dan isian yang justru
+        // GAGAL tersimpan hilang diam-diam: kegagalan senyap ditumpuk
+        // kehilangan data senyap. Pada detik ini pekerjaannya tak lagi
+        // melayang — ia sudah dijawab, dan jawabannya "gagal".
+        await submitLalu(tester);
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump();
+
+        stateController.add(gagalTulis(BillWriteAction.add));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        // Snackbar gagal menempati sisi bawah layar; biarkan ia lewat dulu.
+        // `_isSubmitting` sudah `false` di sini, jadi tombol Simpan tak lagi
+        // memutar spinner dan `pumpAndSettle` tak menggantung.
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        await tekanBackAppBar(tester);
+
+        expect(
+          find.text(l10n.billsFormDiscardTitle),
+          findsOneWidget,
+          reason:
+              'simpannya sudah dijawab GAGAL — isian di layar tak lagi '
+              'melayang, dan menutup form tanpa bertanya membuangnya diam-diam',
+        );
+        expect(find.byType(BillFormPage), findsOneWidget);
+      },
+    );
 
     testWidgets('SEBELUM watchdog menyala → back tetap ditelan', (
       tester,
@@ -1594,6 +1644,13 @@ void main() {
     // bersamanya, dan jawaban atas kiriman kedua — sukses MAUPUN gagal — tak
     // pernah sampai ke layar. Persis kurungan yang task ini buka, terbalik
     // jadi kebocoran.
+    //
+    // [W3] Yang dikunci test ini BERGESER, dan itu jujur dicatat di sini:
+    // sejak cabang gagal ikut menurunkan `_watchdogMenyala`, mencabut baris
+    // di `_submit()` TIDAK lagi memerahkannya (disabotase ulang, hijau
+    // semua) — kiriman kedua tak pernah lagi bisa dimulai dengan flag menyala.
+    // Yang tetap ia kunci adalah AKIBATNYA, dari sisi pengguna: pintu tertutup
+    // lagi pada detik nol kiriman kedua, dari mana pun penutupan itu datang.
     testWidgets('kiriman KEDUA tak mewarisi pintu terbuka kiriman pertama', (
       tester,
     ) async {

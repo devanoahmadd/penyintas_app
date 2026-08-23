@@ -147,6 +147,13 @@ class _BillFormPageState extends State<BillFormPage> {
   /// (`_submit`). Yang dilonggarkan watchdog hanya yang pertama — pintunya.
   /// Melonggarkan `_isSubmitting` sendiri ikut membuka jalan kiriman kedua
   /// DAN menelan jawaban BLoC yang terlambat: tagihan ganda, senyap.
+  ///
+  /// ARTINYA, sejak [W2] ia menggerbangi juga bentuk pintu itu (keluar tanpa
+  /// bertanya vs dialog buang-perubahan): "kiriman yang sedang berjalan sudah
+  /// melewati batas tunggu dan BELUM dijawab". Karena itu ia diturunkan di
+  /// dua titik — awal tiap kiriman (`_submit`) dan cabang gagal di
+  /// `BlocListener` [W3]. Cabang sukses tak perlu: halaman langsung ter-pop
+  /// di sana, jadi tak ada back berikutnya yang bisa salah dibaca.
   bool _watchdogMenyala = false;
 
   /// Pegangan snackbar batas-tunggu yang SEDANG hidup. null = tak ada.
@@ -155,9 +162,16 @@ class _BillFormPageState extends State<BillFormPage> {
   /// `ScaffoldMessenger` di halaman ini milik `MaterialApp`, jadi
   /// `removeCurrentSnackBar()` polos mencabut "apa pun yang kebetulan di
   /// depan" — dan `_watchdogMenyala` bukan gerbang yang tepat untuk
-  /// menggantikannya: ia berarti "kita PERNAH menampilkan snackbar batas
-  /// tunggu", bukan "yang tampil sekarang milik kita" (ia tak pernah
-  /// diturunkan lagi di cabang gagal). Pegangan ini yang membedakan keduanya.
+  /// menggantikannya: ia menandai KEADAAN KIRIMAN ("sudah lewat batas tunggu
+  /// dan belum dijawab"), bukan kepemilikan snackbar yang sedang tampil.
+  /// Snackbar batas tunggu hidup 4 detik lalu tutup sendiri, sementara
+  /// flag-nya bertahan sampai jawaban tiba — keduanya tak pernah sejalan.
+  /// Pegangan ini yang membedakan keduanya.
+  ///
+  /// [W3] Kalimat lama di sini menambahkan alasan kedua, "ia tak pernah
+  /// diturunkan lagi di cabang gagal". Itu tak lagi benar — cabang gagal kini
+  /// menurunkannya — tapi kesimpulannya tak berubah: sebuah flag tetap bukan
+  /// pegangan snackbar.
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _snackbarWatchdog;
 
   /// Cap keadaan awal, diambil sekali di [initState] SETELAH prefill.
@@ -726,6 +740,17 @@ class _BillFormPageState extends State<BillFormPage> {
     // Kiriman baru → hitungan baru. Kiriman kedua sesudah gagal-simpan
     // mewarisi `_watchdogMenyala` dari kiriman pertama kalau tak direset di
     // sini, dan pintunya akan terbuka sejak detik nol.
+    //
+    // KEJUJURAN [W3]: sejak cabang gagal ikut menurunkan flag ini, baris di
+    // sini sudah TIDAK menutup lubang mana pun sendirian. `_isSubmitting`
+    // hanya dikembalikan ke `false` di satu tempat — cabang gagal itu — jadi
+    // satu-satunya jalan menuju kiriman kedua sudah melewati resetnya. Dan
+    // memang: mencabut baris ini tak lagi memerahkan satu test pun (dibuktikan
+    // dengan sabotase tersendiri), termasuk test yang dulu ditulis khusus
+    // untuk menguncinya. Ia dipertahankan sebagai jaring pengaman MURAH: ia
+    // yang tetap benar kalau kelak muncul jalan ketiga yang menurunkan
+    // `_isSubmitting` tanpa lewat cabang gagal. Jangan dibaca sebagai penjaga
+    // yang sedang bekerja hari ini.
     _watchdogMenyala = false;
     _watchdogTimer?.cancel();
     _watchdogTimer = Timer(_batasTungguSimpan, () {
@@ -860,7 +885,17 @@ class _BillFormPageState extends State<BillFormPage> {
             _aksiMilikku.contains(gagal.aksi)) {
           _watchdogTimer?.cancel();
           _seqGalatTerakhir = gagal.seq;
-          setState(() => _isSubmitting = false);
+          setState(() {
+            _isSubmitting = false;
+            // [W3] Kiriman ini SUDAH dijawab — pintu yang dibuka batas tunggu
+            // ikut ditutup lagi bersamanya. Sejak [W2], flag ini menggerbangi
+            // dialog buang-perubahan, jadi membiarkannya `true` di sini
+            // membuat back berikutnya MENUTUP form tanpa bertanya dan
+            // membuang isian yang justru gagal tersimpan. Reset di `_submit()`
+            // tidak cukup: ia baru jalan kalau pengguna menekan Simpan lagi,
+            // sedangkan back bisa datang lebih dulu.
+            _watchdogMenyala = false;
+          });
           // Pesan "menunggu" pergi DULU, jawaban yang benar naik sesudahnya —
           // kalau tidak, ia cuma mengantre di belakang kalimat yang sudah
           // berhenti benar. Lihat [_cabutSnackbarWatchdog].
@@ -921,10 +956,18 @@ class _BillFormPageState extends State<BillFormPage> {
           if (didPop) return;
           // [Audit S13] Menekan Simpan lalu back sebelum BLoC menjawab BUKAN
           // "membuang perubahan" — pekerjaannya justru sedang disimpan.
-          // Telan diam-diam, jangan tanya — SELAMA batas tunggu belum lewat.
-          // Sesudah itu bertanya justru yang benar: pengguna tak lagi sekadar
-          // menunggu, ia sedang memilih keluar dari form yang masih memuat
-          // isiannya.
+          // Telan diam-diam, jangan tanya.
+          //
+          // [W2] Kalimat lama di sini melanjutkan: "…SELAMA batas tunggu belum
+          // lewat. Sesudah itu bertanya justru yang benar." Separuh yang
+          // KEDUA keliru, dan dicabut. Batas tunggu yang lewat tidak mengubah
+          // apa pun soal nasib pekerjaannya: kiriman itu masih MELAYANG, bukan
+          // dibuang. Menawarkan "Buang perubahan?" di sana menanyakan hal yang
+          // salah — dan kalau pengguna menjawab "Buang", simpanannya tetap
+          // bisa mendarat sesudahnya, sehingga tagihan yang ia kira sudah
+          // dibuang justru muncul di daftar. Yang berubah sesudah batas tunggu
+          // hanyalah PINTUNYA: back berhenti ditelan. Perlakuannya sama persis
+          // dengan cabang `!_adaPerubahan` di bawah — keluar tanpa bertanya.
           //
           // [Rev 3, Task 8] Dulu penjaga ini berbunyi `if (_isSubmitting)`
           // polos, dengan alasan "jangan biarkan halaman ter-pop di tengah
@@ -947,7 +990,14 @@ class _BillFormPageState extends State<BillFormPage> {
           // form ubah yang tak disentuh kini sampai ke sini, dan menanyakan
           // "Buang perubahan?" atas perubahan yang tidak ada adalah pertanyaan
           // yang membingungkan tepat di saat pengguna sedang berusaha keluar.
-          if (!_adaPerubahan) {
+          //
+          // `_watchdogMenyala` ikut di sini karena alasan yang BERBEDA dari
+          // `!_adaPerubahan`, meski jalan keluarnya sama: bukan "tak ada yang
+          // bisa dibuang", melainkan "yang ada bukan untuk dibuang" — lihat
+          // [W2] di atas. Ia hanya benar selama flag itu sungguh berarti
+          // "kiriman masih melayang"; karena itu cabang gagal di `BlocListener`
+          // WAJIB menurunkannya lagi [W3].
+          if (_watchdogMenyala || !_adaPerubahan) {
             Navigator.of(context).pop();
             return;
           }
