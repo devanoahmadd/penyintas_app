@@ -956,6 +956,32 @@ void main() {
       expect(bill.dueDate, DateTime(2026, 2, 28));
     });
 
+    testWidgets('buka kalender lalu OK TANPA memilih → anchor 31 BERTAHAN', (
+      tester,
+    ) async {
+      // [S1] `showDatePicker` mengembalikan `initialDate` — yaitu `_dueDate`
+      // yang SEDANG TERPANGKAS (28 Feb) — begitu OK ditekan tanpa satu pun
+      // ketukan tanggal. Tanpa penjaga "tanggalnya benar-benar berubah", satu
+      // gerak yang sangat wajar ("lihat dulu tanggalnya… oke") menurunkan
+      // anchor 31 jadi 28 SELAMANYA: nilainya hilang dari DB dan tak ada jalan
+      // pulih dari UI mana pun.
+      //
+      // `pickDueDate` memang PERSIS itu: ketuk baris tanggal, lalu OK.
+      await pumpPage(tester, bill: billAnchorTerpangkas);
+      await pickDueDate(tester);
+      await tapSubmit(tester);
+
+      final bill = (captureLastEvent(tester) as BillUpdated).bill;
+      expect(
+        bill.dueDayOfMonth,
+        31,
+        reason:
+            'membuka kalender lalu menekan OK bukan "memilih tanggal baru" — '
+            'anchor tak boleh ikut turun ke tanggal yang sedang terpangkas',
+      );
+      expect(bill.dueDate, DateTime(2026, 2, 28));
+    });
+
     testWidgets('pilih tanggal baru 17 Feb → anchor jadi 17', (tester) async {
       await pumpPage(tester, bill: billAnchorTerpangkas);
       await tapKey(tester, 'bill_form_due_date');

@@ -594,14 +594,34 @@ class _BillFormPageState extends State<BillFormPage> {
       lastDate: DateTime(now.year + 10),
       builder: _datePickerTheme,
     );
-    if (picked != null) {
-      setState(() {
-        _dueDate = picked;
-        // SATU-SATUNYA titik yang memindahkan anchor: pengguna sungguh
-        // memilih tanggal baru. Invarian I8 di spec induk §8.
-        _dueDayAnchor = picked.day;
-      });
-    }
+    if (picked == null) return;
+    // [S1] "Sungguh memilih tanggal baru" HARUS diperiksa, bukan disimpulkan
+    // dari "dialognya tidak dibatalkan". `showDatePicker` mengembalikan
+    // `initialDate` — yaitu `_dueDate`, yang bisa SEDANG TERPANGKAS akhir
+    // bulan (28 Feb untuk tagihan ber-anchor 31) — begitu pengguna cuma
+    // membuka kalender lalu menekan OK. Tanpa penjaga ini, gerak sewajar
+    // "lihat dulu tanggalnya… oke" menurunkan anchor 31 jadi 28 SELAMANYA:
+    // nilai aslinya hilang dari DB, tanpa pesan dan tanpa jalan pulih.
+    //
+    // Dibandingkan per HARI (`isSameDay`), bukan `picked != _dueDate`:
+    // `_dueDate` yang kebetulan membawa jam ikut membuat pembandingan mentah
+    // berkata "berubah" padahal harinya sama — persis kesimpulan yang
+    // menjatuhkan anchor. `_dueDate` null (mode tambah) → `isSameDay` bernilai
+    // false, jadi pilihan pertama tetap menyemai anchor.
+    //
+    // PERTUKARANNYA, jujur: pengguna jadi tak bisa menetapkan anchor ke hari
+    // yang SAMA dengan `dueDate` yang sedang terpangkas (mis. menjadikan 28
+    // sebagai anchor tetap selagi jatuh temponya kebetulan 28 Feb). Ia masih
+    // bisa melakukannya dari bulan mana pun yang lain. Harga itu jauh lebih
+    // kecil daripada kerusakan permanen yang dicegah.
+    if (DateUtils.isSameDay(picked, _dueDate)) return;
+    setState(() {
+      _dueDate = picked;
+      // SATU-SATUNYA titik yang memindahkan anchor: pengguna sungguh
+      // memilih tanggal baru. Invarian I8 di spec induk §8 — penjaga di atas
+      // yang MENEGAKKANNYA, bukan yang melanggarnya.
+      _dueDayAnchor = picked.day;
+    });
   }
 
   Future<void> _pickRecurrenceEndDate() async {
