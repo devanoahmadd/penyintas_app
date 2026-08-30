@@ -99,4 +99,28 @@ void main() {
       );
     });
   });
+
+  group('cancelAllScheduled', () {
+    // Dipanggil saat sesi berakhir (logout / hapus akun). Notifikasi hidup di
+    // penjadwal OS, di luar jangkauan wipe database — tanpa penyapuan ini,
+    // pengingat tagihan akun lama tetap berbunyi di device untuk akun baru.
+    test('menyapu seluruh notifikasi terjadwal, Right(null)', () async {
+      when(() => local.cancelAllScheduled()).thenAnswer((_) async {});
+
+      final result = await repo.cancelAllScheduled();
+
+      expect(result, const Right<Failure, void>(null));
+      verify(() => local.cancelAllScheduled()).called(1);
+    });
+
+    test('datasource melempar → Left(CacheFailure)', () async {
+      when(
+        () => local.cancelAllScheduled(),
+      ).thenThrow(Exception('plugin mati'));
+
+      final result = await repo.cancelAllScheduled();
+
+      expect(result.isLeft(), isTrue);
+    });
+  });
 }

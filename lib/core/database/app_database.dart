@@ -573,27 +573,45 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  /// Wipe semua data lokal (logout flow). Menghapus semua baris di semua tabel dan
-  /// menjalankan VACUUM untuk reclaim disk space.
+  /// Wipe semua data lokal (logout & hapus akun), lalu VACUUM untuk reclaim
+  /// disk space.
+  ///
+  /// Tak ada satu pun tabel di sini yang menyimpan pemiliknya (tak ada kolom
+  /// `userId`), jadi fungsi ini adalah SATU-SATUNYA pembatas antar akun di
+  /// device yang sama. Bolong satu tabel = data akun lama menyambut akun
+  /// berikutnya yang login.
+  ///
+  /// Karena itu penghapusan menyapu [allTables] — daftar yang diturunkan Drift
+  /// dari anotasi `@DriftDatabase` — bukan daftar tabel yang ditulis tangan.
+  /// Daftar tangan sempat tertinggal saat tabel `bills` lahir di
+  /// schemaVersion 14, dan tagihan pun bocor lintas akun. Dengan menyapu
+  /// [allTables], tabel baru ikut terhapus secara bawaan; yang ingin
+  /// dipertahankan harus dikecualikan secara sadar di bawah ini.
   Future<void> clearAllLocalData() async {
     await transaction(() async {
-      await delete(goals).go();
-      await delete(transactions).go();
-      await delete(budgetLimits).go();
-      await delete(syncQueue).go();
-      // Pertahankan language (device-scoped UX); reset profil/lokasi ke default.
+      // Bahasa itu preferensi device (dipilih sebelum login), bukan data akun.
       final keepLang =
           (await (select(
             preferences,
           )..where((t) => t.id.equals(1))).getSingleOrNull())?.language ??
           'id';
-      await delete(preferences).go();
+
+      for (final table in allTables) {
+        // Kategori dikecualikan dari sapuan — ditangani terpisah di bawah
+        // karena hanya sebagian barisnya yang milik akun.
+        if (identical(table, categories)) continue;
+        await delete(table).go();
+      }
+
+      // Kategori built-in adalah label bersama, bukan milik akun mana pun;
+      // yang dihapus hanya kategori buatan pengguna.
+      await (delete(categories)..where((c) => c.isBuiltIn.not())).go();
+
+      // Baris singleton preferences (id=1) WAJIB selalu ada — ia baru saja
+      // ikut tersapu, jadi dibuat ulang dengan bahasa yang dipertahankan.
       await into(preferences).insert(
         PreferencesCompanion(id: const Value(1), language: Value(keepLang)),
       );
-      await delete(appSettings).go();
-      // Hapus hanya custom kategori; built-in akan di-seed ulang saat onboarding
-      await (delete(categories)..where((c) => c.isBuiltIn.not())).go();
     });
     await customStatement('VACUUM');
   }

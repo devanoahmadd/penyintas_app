@@ -33,6 +33,15 @@ abstract class NotificationLocalDatasource {
 
   /// Batalkan pengingat tagihan ber-[id].
   Future<void> cancelBillReminder(int id);
+
+  /// Batalkan SEMUA notifikasi terjadwal — pengingat harian, peringatan
+  /// anggaran, dan pengingat tagihan sekaligus.
+  ///
+  /// Dipakai saat sesi berakhir (logout / hapus akun). Sengaja menyapu semua
+  /// alih-alih membatalkan satu per satu dari daftar tagihan: notifikasi yang
+  /// tagihannya sudah hilang dari database tak akan pernah masuk daftar itu,
+  /// jadi pembatalan per-id justru meninggalkan notifikasi yatim.
+  Future<void> cancelAllScheduled();
 }
 
 class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
@@ -211,4 +220,7 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
 
   @override
   Future<void> cancelBillReminder(int id) => _plugin.cancel(id: id);
+
+  @override
+  Future<void> cancelAllScheduled() => _plugin.cancelAll();
 }

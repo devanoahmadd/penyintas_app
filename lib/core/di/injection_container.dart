@@ -243,6 +243,10 @@ void _initAuth() {
       unregisterFcmToken: sl(),
       reloadUser: sl(),
       onAccountDeleted: () => sl<AppLockRepository>().disableLock(),
+      // Notifikasi terjadwal hidup di OS, bukan di Drift — wipe database tak
+      // menjangkaunya. Tanpa ini, pengingat tagihan akun lama tetap berbunyi
+      // untuk akun berikutnya di device yang sama.
+      onSessionEnded: () => sl<NotificationRepository>().cancelAllScheduled(),
     ),
   );
 

@@ -50,7 +50,10 @@ void main() {
   setUp(() => db = _openTestDb());
   tearDown(() => db.close());
 
-  test('clearAllLocalData menghapus semua baris di semua tabel', () async {
+  // Isi SETIAP tabel dengan satu baris. Dipakai bersama oleh test-test wipe di
+  // bawah. Kalau tabel baru lahir dan lupa ditambahkan di sini, tripwire
+  // 'daftar tabel tak berubah diam-diam' yang akan menagihnya.
+  Future<void> seedSemuaTabel() async {
     await db
         .into(db.appSettings)
         .insert(const AppSettingsCompanion(id: Value(1)));
@@ -98,6 +101,45 @@ void main() {
             createdAt: DateTime(2026, 6, 1),
           ),
         );
+    await db
+        .into(db.preferences)
+        .insert(
+          const PreferencesCompanion(
+            id: Value(1),
+            language: Value('en'),
+            displayName: Value('Akun Lama'),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+    // Built-in tak perlu diselipkan — onCreate sudah menyemai 8 di fresh DB.
+    // Yang ditambahkan di sini hanya kategori buatan pengguna.
+    await db
+        .into(db.categories)
+        .insert(
+          CategoriesCompanion.insert(
+            slug: 'kopi-senin',
+            isBuiltIn: const Value(false),
+          ),
+        );
+    await db
+        .into(db.bills)
+        .insert(
+          BillsCompanion.insert(
+            name: 'Kos Bu Tini',
+            estimatedAmount: 800000,
+            category: 'fixed_need',
+            isFixedNeed: true,
+            dueDate: DateTime(2026, 9, 1),
+            recurrence: 'monthly',
+            status: 'active',
+            createdAt: DateTime(2026, 6, 1),
+            updatedAt: DateTime(2026, 6, 1),
+          ),
+        );
+  }
+
+  test('clearAllLocalData mengosongkan SETIAP tabel berdata-akun', () async {
+    await seedSemuaTabel();
 
     await db.clearAllLocalData();
 
@@ -106,6 +148,51 @@ void main() {
     expect(await db.select(db.goals).get(), isEmpty);
     expect(await db.select(db.budgetLimits).get(), isEmpty);
     expect(await db.select(db.syncQueue).get(), isEmpty);
+    // Tabel bills lahir di schemaVersion 14 dan luput dari daftar hapus manual
+    // sampai 2026-08-30. Akibatnya tagihan akun lama menyambut akun berikutnya
+    // yang login di device yang sama — tak ada satu pun tabel yang menyimpan
+    // pemiliknya, jadi wipe inilah satu-satunya pembatas antar akun.
+    expect(
+      await db.select(db.bills).get(),
+      isEmpty,
+      reason: 'tagihan akun lama bocor ke akun berikutnya',
+    );
+  });
+
+  test('clearAllLocalData mempertahankan bahasa & kategori built-in', () async {
+    await seedSemuaTabel();
+
+    await db.clearAllLocalData();
+
+    // Bahasa itu preferensi device, bukan data akun — sengaja bertahan.
+    final prefs = await db.select(db.preferences).getSingle();
+    expect(prefs.language, 'en');
+    // Sisa profil di baris singleton itu data akun — wajib kembali ke default.
+    expect(prefs.displayName, isNull);
+
+    // Built-in bertahan (label bersama, bukan milik siapa pun); kategori buatan
+    // pengguna ikut terhapus karena ia data akun.
+    final kategori = await db.select(db.categories).get();
+    expect(kategori.map((c) => c.slug), isNot(contains('kopi-senin')));
+    expect(kategori, isNotEmpty);
+    expect(kategori.every((c) => c.isBuiltIn), isTrue);
+  });
+
+  // Tripwire, bukan uji perilaku: memaksa penambah tabel BARU mengambil
+  // keputusan sadar — "data akun (ikut terhapus)" atau "milik device
+  // (dikecualikan)" — lalu memperbarui kedua test di atas. Tanpa ini, tabel
+  // ke-9 bisa lahir tanpa seorang pun memikirkan nasibnya saat pindah akun.
+  test('daftar tabel tak berubah diam-diam', () {
+    expect(db.allTables.map((t) => t.actualTableName).toSet(), {
+      'app_settings',
+      'sync_queue',
+      'transactions',
+      'goals',
+      'budget_limits',
+      'categories',
+      'preferences',
+      'bills',
+    });
   });
 
   group('migrasi v8→v9 (#234)', () {

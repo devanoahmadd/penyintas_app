@@ -9,6 +9,10 @@ abstract class NotificationRepository {
   });
   Future<Either<Failure, void>> cancelDailyReminder();
 
+  /// Batalkan seluruh notifikasi terjadwal milik sesi yang berakhir
+  /// (logout / hapus akun).
+  Future<Either<Failure, void>> cancelAllScheduled();
+
   /// Ambil FCM token device lalu daftarkan ke subcollection `fcmTokens` milik [uid].
   /// Bila token null (device belum mendapat token), tidak melakukan apa-apa → Right(null).
   Future<Either<Failure, void>> registerToken(String uid);

@@ -59,6 +59,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
+  Future<Either<Failure, void>> cancelAllScheduled() async {
+    try {
+      await _local.cancelAllScheduled();
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s);
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> registerToken(String uid) async {
     try {
       final token = await _remote.getFcmToken();

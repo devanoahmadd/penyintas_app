@@ -36,6 +36,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.unregisterFcmToken,
     required this.reloadUser,
     this.onAccountDeleted,
+    this.onSessionEnded,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
@@ -65,6 +66,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   /// terhapus remote — PIN device-local milik akun mati ikut dibersihkan.
   final Future<void> Function()? onAccountDeleted;
 
+  /// Dipanggil best-effort setelah data lokal dibersihkan — pada sign-out
+  /// MAUPUN hapus akun — untuk melepas jejak sesi yang tersimpan di LUAR
+  /// database, yakni notifikasi yang sudah terjadwal di OS.
+  ///
+  /// `wipeLocalData` tak bisa menjangkaunya: pengingat tagihan hidup di
+  /// penjadwal sistem, bukan di Drift. Tanpa pembatalan ini akun berikutnya
+  /// di device yang sama menerima pengingat tagihan milik akun sebelumnya.
+  final Future<void> Function()? onSessionEnded;
+
   StreamSubscription<UserEntity?>? _authSubscription;
 
   // Crashlytics best-effort — wrap agar TAK pernah throw (mis. Firebase belum
@@ -74,6 +84,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       FirebaseCrashlytics.instance.recordError(e, s);
     } catch (_) {}
+  }
+
+  /// Best-effort, sama seperti [unregisterFcmToken] dan [onAccountDeleted]:
+  /// kegagalan melepas jejak sesi tak boleh menyandera pengguna di akun yang
+  /// sudah ia tinggalkan.
+  Future<void> _endSession() async {
+    try {
+      await onSessionEnded?.call();
+    } catch (e, s) {
+      _log(e, s);
+    }
   }
 
   Future<void> _onAuthCheckRequested(
@@ -165,6 +186,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (uid != null) {
         await unregisterFcmToken(uid);
       }
+      await _endSession();
       final signOutResult = await signOut(const NoParams());
       signOutResult.fold(
         (failure) => emit(AuthError(failure.message)),
@@ -208,6 +230,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           await wipeResult.fold(
             (failure) async => emit(DeleteAccountFailure(failure.message)),
             (_) async {
+              await _endSession();
               // Account already deleted — even if signOut fails, treat as logged out
               await signOut(const NoParams());
               emit(const Unauthenticated());

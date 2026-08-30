@@ -81,6 +81,7 @@ void main() {
   );
 
   var hygieneCalls = 0;
+  var sessionEndedCalls = 0;
 
   setUpAll(() {
     registerFallbackValue(FakeSignInParams());
@@ -130,6 +131,24 @@ void main() {
     registerFcmToken: mockRegisterFcm,
     unregisterFcmToken: mockUnregisterFcm,
     reloadUser: mockReloadUser,
+  );
+
+  AuthBloc buildBlocWithSessionEnded({
+    Future<void> Function()? onSessionEnded,
+  }) => AuthBloc(
+    signIn: mockSignIn,
+    signUp: mockSignUp,
+    signOut: mockSignOut,
+    getCurrentUser: mockGetCurrentUser,
+    watchAuthState: mockWatchAuthState,
+    wipeLocalData: mockWipe,
+    deleteAccount: mockDeleteAccount,
+    googleSignIn: mockGoogleSignIn,
+    sendPasswordReset: mockSendPasswordReset,
+    registerFcmToken: mockRegisterFcm,
+    unregisterFcmToken: mockUnregisterFcm,
+    reloadUser: mockReloadUser,
+    onSessionEnded: onSessionEnded ?? () async => sessionEndedCalls++,
   );
 
   group('SignInRequested', () {
@@ -329,6 +348,62 @@ void main() {
       expect: () => [const AuthLoading(), const Unauthenticated()],
       verify: (_) => expect(hygieneCalls, 0),
     );
+
+    // Pengingat tagihan dijadwalkan ke OS, di luar jangkauan wipe database.
+    // Tanpa pembatalan ini, akun berikutnya di device yang sama menerima
+    // notifikasi "Kos Bu Tini jatuh tempo besok" milik akun sebelumnya.
+    blocTest<AuthBloc, AuthState>(
+      'sign-out membatalkan notifikasi terjadwal milik sesi yang berakhir',
+      build: () => buildBlocWithSessionEnded(),
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        sessionEndedCalls = 0;
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+      verify: (_) => expect(sessionEndedCalls, 1),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'pembatalan notifikasi yang gagal TIDAK menggagalkan sign-out '
+      '(best-effort, seperti unregisterFcmToken)',
+      build: () => buildBlocWithSessionEnded(
+        onSessionEnded: () async {
+          sessionEndedCalls++;
+          throw Exception('plugin notifikasi mati');
+        },
+      ),
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        sessionEndedCalls = 0;
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+      verify: (_) => expect(sessionEndedCalls, 1),
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'wipe gagal → notifikasi TIDAK dibatalkan (sesi masih berjalan)',
+      build: () => buildBlocWithSessionEnded(),
+      act: (bloc) => bloc.add(const SignOutRequested()),
+      setUp: () {
+        sessionEndedCalls = 0;
+        when(() => mockWipe(any())).thenAnswer(
+          (_) async => const Left(CacheFailure('Gagal membersihkan data.')),
+        );
+      },
+      expect: () => [
+        const AuthLoading(),
+        const AuthError('Gagal membersihkan data.'),
+      ],
+      verify: (_) => expect(sessionEndedCalls, 0),
+    );
   });
 
   group('ForgotPasswordRequested', () {
@@ -401,6 +476,24 @@ void main() {
         verify(() => mockWipe(any())).called(1);
         verify(() => mockSignOut(any())).called(1);
       },
+    );
+
+    blocTest<AuthBloc, AuthState>(
+      'hapus akun membatalkan notifikasi terjadwal milik sesi yang berakhir',
+      build: () => buildBlocWithSessionEnded(),
+      act: (bloc) => bloc.add(const DeleteAccountRequested(password: 'pw123')),
+      setUp: () {
+        sessionEndedCalls = 0;
+        when(
+          () => mockDeleteAccount(any()),
+        ).thenAnswer((_) async => const Right(null));
+        when(() => mockWipe(any())).thenAnswer((_) async => const Right(unit));
+        when(
+          () => mockSignOut(any()),
+        ).thenAnswer((_) async => const Right(null));
+      },
+      expect: () => [const DeleteAccountInProgress(), const Unauthenticated()],
+      verify: (_) => expect(sessionEndedCalls, 1),
     );
 
     blocTest<AuthBloc, AuthState>(
