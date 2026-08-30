@@ -714,6 +714,40 @@ void main() {
     expect(find.text('buka'), findsNothing);
   });
 
+  // Regresi layar-hitam (laporan device 2026-08-31): menandai lunas membuat
+  // layar menghitam lalu aplikasi keluar sendiri. Sebabnya sama persis dengan
+  // pop ganda di `BillFormPage` — sheet yang di-pop tetap hidup di pohon
+  // sepanjang transisi, `BillsBloc` adalah lazySingleton yang dibagi dengan
+  // halaman daftar, dan `BillsStatus.success` adalah status ISTIRAHAT daftar
+  // (bisa datang berkali-kali), bukan sinyal sekali-jalan. Pop kedua membuang
+  // halaman daftar, pop ketiga menembus akar → stack kosong → layar hitam →
+  // activity selesai.
+  testWidgets('sukses tandai lunas → emisi susulan TIDAK mem-pop dua kali', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    await tapSubmit(tester);
+
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump(); // pop #1 dimulai, transisi BELUM selesai
+
+    // Daftar berlangganan ulang saat rute kembali → loading lalu success lagi.
+    stateController.add(const BillsState(status: BillsStatus.loading));
+    await tester.pump();
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(MarkBillPaidSheet), findsNothing);
+    expect(
+      find.text('buka'),
+      findsOneWidget,
+      reason:
+          'pop kedua ikut membuang halaman di bawah sheet → stack navigasi '
+          'terkuras sampai akar, layar menghitam, aplikasi keluar sendiri',
+    );
+  });
+
   testWidgets('sukses tandai lunas → sheet TETAP menutup', (tester) async {
     await pumpSheet(tester, bill: billBerjalan());
     await tapSubmit(tester);

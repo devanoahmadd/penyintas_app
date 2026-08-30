@@ -54,6 +54,19 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
   bool _showErrors = false;
   bool _isSubmitting = false;
 
+  /// Penjaga SEKALI-PAKAI untuk pop-sukses. `_isSubmitting` tak bisa
+  /// menutupnya sendirian: ia hanya direset di cabang gagal, jadi sesudah pop
+  /// sukses listener ini tetap bersenjata.
+  ///
+  /// Sheet yang di-pop masih hidup di pohon sepanjang transisi, dan `BillsBloc`
+  /// adalah lazySingleton yang dibagi dengan halaman daftar — `success` adalah
+  /// status ISTIRAHAT daftar, bukan sinyal sekali-jalan, jadi ia datang lagi
+  /// begitu daftar berlangganan ulang. Tanpa penjaga ini pop kedua membuang
+  /// halaman daftar dan pop ketiga menembus akar: layar menghitam dan aplikasi
+  /// keluar sendiri. (Regresi device 2026-08-31 — kembaran bug di
+  /// `BillFormPage`.)
+  bool _sudahDitutup = false;
+
   /// `seq` kegagalan terakhir yang SUDAH ditindaklanjuti sheet ini.
   ///
   /// Di-seed saat `_submit()` dari state saat itu — bukan dibiarkan null:
@@ -214,7 +227,7 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
 
     return BlocListener<BillsBloc, BillsState>(
       listener: (context, state) {
-        if (!_isSubmitting) return;
+        if (!_isSubmitting || _sudahDitutup) return;
 
         // WAJIB DIPERIKSA LEBIH DULU. Sejak kanal galat dipisah (§2),
         // `status` tak lagi menandai gagal-tulis — ia masih `success` saat
@@ -244,6 +257,10 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
           // daftar (Task 5.4): dua surface akan saling menggusur karena
           // `MilestoneToast.show` memanggil `hideCurrentSnackBar()`, dan yang
           // hilang justru undo — jaring pengaman pengguna.
+          //
+          // Dilucuti SEBELUM pop: emisi `success` berikutnya bisa tiba selagi
+          // transisi pop masih berjalan dan sheet ini masih berlangganan.
+          _sudahDitutup = true;
           Navigator.of(context).pop();
         }
       },
