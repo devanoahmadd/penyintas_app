@@ -225,8 +225,13 @@ class _BillFormPageState extends State<BillFormPage> {
   ///
   /// Tetap dipertahankan di `canPop` sebagai jaring pengaman MURAH kalau
   /// suatu hari pop-sukses dipindah ke jalur yang sungguhan melewati
-  /// `canPop` (mis. dibungkus `Navigator.maybePop()`) — bukan karena ia
-  /// melindungi apa pun hari ini.
+  /// `canPop` (mis. dibungkus `Navigator.maybePop()`).
+  ///
+  /// KOREKSI 2026-08-31: kalimat lama di sini berbunyi flag ini "tidak
+  /// melindungi apa pun hari ini". Itu sudah tidak benar — ia sekarang
+  /// penjaga sekali-pakai di puncak `BlocListener`, dan tanpanya emisi
+  /// `success` susulan mem-pop halaman kedua sampai stack navigasi kosong
+  /// dan aplikasi membeku (ANR). Jangan dilepas.
   bool _sudahDisimpan = false;
 
   /// Panel keypad terbuka. Aturan K1 (§5.2): ia dan keyboard sistem TAK PERNAH
@@ -859,7 +864,16 @@ class _BillFormPageState extends State<BillFormPage> {
 
     return BlocListener<BillsBloc, BillsState>(
       listener: (context, state) {
-        if (!_isSubmitting) return;
+        // `_sudahDisimpan` MELUCUTI listener ini, bukan sekadar mencatat.
+        // Halaman yang di-pop tetap hidup di pohon sepanjang transisi, dan
+        // `BillsBloc` di sini singleton yang dibagi dengan halaman daftar:
+        // begitu rute kembali, `BillsSubscribed` dikirim ulang → restartable()
+        // → loading → success LAGI. Tanpa penjaga ini emisi susulan itu masuk
+        // ke cabang sukses di bawah dan mem-pop halaman KEDUA — stack navigasi
+        // kosong, tak ada yang bisa digambar, aplikasi membeku sampai Android
+        // memunculkan ANR. `_isSubmitting` tak bisa menutupnya sendirian: ia
+        // hanya direset di cabang gagal. (Regresi ANR 2026-08-31.)
+        if (!_isSubmitting || _sudahDisimpan) return;
 
         // WAJIB DIPERIKSA LEBIH DULU. Sejak kanal galat dipisah (§2),
         // `status` tak lagi menandai gagal-tulis — ia masih `success` saat
@@ -909,11 +923,10 @@ class _BillFormPageState extends State<BillFormPage> {
         if (state.status == BillsStatus.success) {
           _watchdogTimer?.cancel();
           _cabutSnackbarWatchdog();
-          // `_sudahDisimpan` diset SEBELUM pop di baris berikutnya, tapi pop
-          // itu IMPERATIF — ia tak melewati `PopScope.canPop` sama sekali,
-          // jadi flag ini tak menggerbangi apa pun pada detik ini (lihat
-          // komentar jujur di deklarasinya). Jendela sukses-simpan sudah
-          // dijaga oleh `_isSubmitting` di `onPopInvokedWithResult`.
+          // Diset SEBELUM pop, dan urutannya WAJIB begini: sejak regresi ANR
+          // 2026-08-31 flag ini menggerbangi puncak listener, jadi ia harus
+          // sudah `true` sebelum emisi `success` berikutnya sempat tiba.
+          // Pop-nya sendiri tetap IMPERATIF — tak melewati `PopScope.canPop`.
           _sudahDisimpan = true;
           Navigator.of(context).pop();
         }

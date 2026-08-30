@@ -1161,6 +1161,46 @@ void main() {
     expect(find.text('buka'), findsOneWidget);
   });
 
+  // Regresi ANR (jejak device 2026-08-31): go_router melempar
+  // 'You have popped the last page off of the stack' lalu UI membeku sampai
+  // Android memunculkan "penyintas_app isn't responding".
+  //
+  // Halaman yang di-pop TIDAK langsung mati — ia tetap di pohon selama
+  // transisi, dan `BlocListener`-nya tetap berlangganan. `BillsBloc` adalah
+  // singleton yang dibagi dengan halaman daftar, jadi kembalinya navigasi
+  // memicu `BillsSubscribed` → `restartable()` → loading → success LAGI.
+  // Emisi kedua itu masuk ke listener yang masih bersenjata (`_isSubmitting`
+  // tak pernah direset di cabang sukses) dan mem-pop halaman KEDUA.
+  testWidgets('sukses simpan → emisi success susulan TIDAK mem-pop dua kali', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await fillBaseFields(tester);
+    await tapLabel(tester, l10n.categoryInternet);
+    await pickDueDate(tester);
+    await tapSubmit(tester);
+
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump(); // pop #1 dimulai, transisi BELUM selesai
+
+    // Persis yang terjadi di device: daftar berlangganan ulang saat rute
+    // kembali, memancarkan loading lalu success sekali lagi.
+    stateController.add(const BillsState(status: BillsStatus.loading));
+    await tester.pump();
+    stateController.add(const BillsState(status: BillsStatus.success));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(BillFormPage), findsNothing);
+    expect(
+      find.text('buka'),
+      findsOneWidget,
+      reason:
+          'pop kedua ikut membuang halaman di bawah form → stack navigasi '
+          'kosong, tak ada yang bisa digambar, dan aplikasi membeku (ANR)',
+    );
+  });
+
   testWidgets('gagal simpan → snackbar tampil DAN halaman tidak ter-pop', (
     tester,
   ) async {
