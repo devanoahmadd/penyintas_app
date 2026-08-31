@@ -662,6 +662,14 @@ class AppLocalizations {
   String get billsPaidDone => _t('bills_paid_done');
   String get billsUndo => _t('bills_undo');
 
+  /// Undo ditolak karena tagihannya sudah berubah sejak dibayar.
+  ///
+  /// TERPISAH dari [billsUndoFailed] karena maknanya berbeda: yang itu
+  /// mengajak mencoba lagi, yang ini justru tak boleh — mengulanginya takkan
+  /// pernah berhasil. Copy-nya menyebut apa yang DIJAGA, bukan apa yang
+  /// gagal.
+  String get billsUndoStale => _t('bills_undo_stale');
+
   // ── Tile Tagihan di dashboard (A1, Task 7.1) ──
   /// Relatif jatuh tempo saat persis hari ini (bukan "Terlambat" — belum
   /// lewat; bukan `daysLeft(0)` — "0 hari lagi" janggal dibaca).

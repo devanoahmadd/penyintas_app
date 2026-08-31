@@ -99,7 +99,48 @@ UndoSnapshot _snapshotUndo({String? txId}) => UndoSnapshot(
   dueDate: DateTime(2026, 6, 25),
   installmentsPaid: 0,
   status: BillStatus.active,
+  // Keadaan pasca-bayar: bulanan, anchor 25, maju satu bulan.
+  expectedDueDate: DateTime(2026, 7, 25),
+  expectedInstallmentsPaid: 0,
+  expectedStatus: BillStatus.active,
   txId: txId,
+);
+
+/// Angsuran terakhir: pasca-bayar tagihannya TAMAT (`completed`).
+final _snapshotUndoAngsuran = UndoSnapshot(
+  billId: 2,
+  dueDate: DateTime(2026, 3, 10),
+  installmentsPaid: 2,
+  status: BillStatus.active,
+  expectedDueDate: DateTime(2026, 4, 10),
+  expectedInstallmentsPaid: 3,
+  expectedStatus: BillStatus.completed,
+  txId: 'tx-9',
+);
+
+/// Loloskan penjaga snapshot basi: tagihan terkini masih persis seperti yang
+/// ditinggalkan pembayaran [snap], jadi undo boleh berjalan.
+///
+/// Dipakai test-test yang sasarannya BUKAN penjaga itu — tanpa ini mereka
+/// berhenti di gerbang dan tak pernah sampai ke perilaku yang mereka uji.
+void _stubTagihanTakBerubah(MockBillRepository repo, UndoSnapshot snap) {
+  when(
+    () => repo.getBillById(any()),
+  ).thenAnswer((_) async => Right(_billSesuaiSnapshot(snap)));
+}
+
+/// Tagihan yang PERSIS seperti yang ditinggalkan pembayaran [snap] — yaitu
+/// yang diloloskan penjaga snapshot basi.
+///
+/// Dipakai setiap test yang menguji jalur undo NORMAL. Diturunkan dari
+/// `snap`, bukan ditulis ulang dengan angka literal: dua fixture kembar yang
+/// bisa menyimpang diam-diam adalah cara paling halus membuat penjaga itu
+/// tampak bekerja padahal tidak.
+BillEntity _billSesuaiSnapshot(UndoSnapshot snap) => _makeBill(
+  id: snap.billId,
+  dueDate: snap.expectedDueDate,
+  installmentsPaid: snap.expectedInstallmentsPaid,
+  status: snap.expectedStatus,
 );
 
 BillModel _makeBillModel({
@@ -580,7 +621,29 @@ void main() {
   });
 
   group('BillPaymentUndone', () {
-    void stubRestore() {
+    /// Snapshot bulanan anchor 31 Jan — pasca-bayar maju ke 28 Feb.
+    final snapBulanan = UndoSnapshot(
+      billId: 1,
+      dueDate: DateTime(2026, 1, 31),
+      installmentsPaid: 0,
+      status: BillStatus.active,
+      expectedDueDate: DateTime(2026, 2, 28),
+      expectedInstallmentsPaid: 0,
+      expectedStatus: BillStatus.active,
+      txId: 'tx-1',
+    );
+
+    final snapOptOut = UndoSnapshot(
+      billId: 3,
+      dueDate: DateTime(2026, 8, 5),
+      installmentsPaid: 0,
+      status: BillStatus.active,
+      expectedDueDate: DateTime(2026, 9, 5),
+      expectedInstallmentsPaid: 0,
+      expectedStatus: BillStatus.active,
+    );
+
+    void stubRestore(UndoSnapshot snap) {
       when(
         () => mockBillRepository.restoreBillPayment(
           id: any(named: 'id'),
@@ -589,39 +652,28 @@ void main() {
           status: any(named: 'status'),
         ),
       ).thenAnswer((_) async => const Right(null));
+      // Penjaga snapshot basi membaca tagihan terkini SEBELUM menulis balik.
+      // Ketiga test di grup ini menguji jalur undo NORMAL, jadi yang
+      // dikembalikan adalah tagihan yang masih persis seperti yang
+      // ditinggalkan pembayarannya.
+      when(
+        () => mockBillRepository.getBillById(any()),
+      ).thenAnswer((_) async => Right(_billSesuaiSnapshot(snap)));
     }
 
     blocTest<BillsBloc, BillsState>(
       'undo bulanan: restore PERSIS nilai snapshot (anchor 31 Jan) + hapus '
       'transaksi + clear lastUndo',
       build: buildBloc,
-      seed: () => BillsState(
-        status: BillsStatus.success,
-        lastUndo: UndoSnapshot(
-          billId: 1,
-          dueDate: DateTime(2026, 1, 31),
-          installmentsPaid: 0,
-          status: BillStatus.active,
-          txId: 'tx-1',
-        ),
-      ),
+      seed: () =>
+          BillsState(status: BillsStatus.success, lastUndo: snapBulanan),
       setUp: () {
-        stubRestore();
+        stubRestore(snapBulanan);
         when(
           () => mockDeleteTransaction(any()),
         ).thenAnswer((_) async => const Right(null));
       },
-      act: (bloc) => bloc.add(
-        BillPaymentUndone(
-          UndoSnapshot(
-            billId: 1,
-            dueDate: DateTime(2026, 1, 31),
-            installmentsPaid: 0,
-            status: BillStatus.active,
-            txId: 'tx-1',
-          ),
-        ),
-      ),
+      act: (bloc) => bloc.add(BillPaymentUndone(snapBulanan)),
       expect: () => [
         isA<BillsState>()
             .having((s) => s.status, 'status', BillsStatus.success)
@@ -656,22 +708,12 @@ void main() {
       'snapshot (bukan recompute)',
       build: buildBloc,
       setUp: () {
-        stubRestore();
+        stubRestore(_snapshotUndoAngsuran);
         when(
           () => mockDeleteTransaction(any()),
         ).thenAnswer((_) async => const Right(null));
       },
-      act: (bloc) => bloc.add(
-        BillPaymentUndone(
-          UndoSnapshot(
-            billId: 2,
-            dueDate: DateTime(2026, 3, 10),
-            installmentsPaid: 2,
-            status: BillStatus.active,
-            txId: 'tx-9',
-          ),
-        ),
-      ),
+      act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndoAngsuran)),
       verify: (_) {
         verify(
           () => mockBillRepository.restoreBillPayment(
@@ -687,17 +729,8 @@ void main() {
     blocTest<BillsBloc, BillsState>(
       'undo opt-out (txId null): restore dipanggil, deleteTransaction TIDAK',
       build: buildBloc,
-      setUp: stubRestore,
-      act: (bloc) => bloc.add(
-        BillPaymentUndone(
-          UndoSnapshot(
-            billId: 3,
-            dueDate: DateTime(2026, 8, 5),
-            installmentsPaid: 0,
-            status: BillStatus.active,
-          ),
-        ),
-      ),
+      setUp: () => stubRestore(snapOptOut),
+      act: (bloc) => bloc.add(BillPaymentUndone(snapOptOut)),
       verify: (_) {
         verify(
           () => mockBillRepository.restoreBillPayment(
@@ -708,6 +741,210 @@ void main() {
           ),
         ).called(1);
         verifyNever(() => mockDeleteTransaction(any()));
+      },
+    );
+  });
+
+  // ── Penjaga snapshot basi ───────────────────────────────────────────────
+  //
+  // `restoreBillPayment` menulis balik dueDate/installmentsPaid/status PERSIS
+  // dari snapshot. Selama tak ada yang memeriksa apakah tagihannya masih
+  // dalam keadaan yang sama, tulisan itu bisa menimpa perubahan yang lebih
+  // baru — dan pengguna tak diberi tahu apa pun.
+  //
+  // Jalur yang benar-benar bisa dijalani: tandai lunas → buka form, geser
+  // jatuh tempo, Simpan (jalur sukses form TIDAK memunculkan snackbar, jadi
+  // tawaran "Urungkan" yang lama tidak tergusur) → kembali ke daftar →
+  // tekan "Urungkan". Suntingan yang baru saja disimpan hilang diam-diam.
+  //
+  // Yang dibandingkan penjaga ini PERSIS tiga field yang ditulis
+  // `restoreBillPayment` — radius deteksinya sama dengan radius
+  // kerusakannya. Ganti nama atau nominal tidak menolak undo (memang tak
+  // tertimpa); geser jatuh tempo menolaknya (memang tertimpa).
+  group('BillPaymentUndone — penjaga snapshot basi', () {
+    /// Bulanan, anchor 25, jatuh tempo 25 Juli. Pasca-bayar ia roll-forward
+    /// ke 25 Agustus — itulah keadaan yang snapshot harapkan masih berlaku
+    /// saat "Urungkan" ditekan.
+    BillEntity billPraBayar() => _makeBill(
+      id: 7,
+      recurrence: Recurrence.monthly,
+      dueDayOfMonth: 25,
+      installmentsPaid: 0,
+      dueDate: DateTime(2026, 7, 25),
+    );
+
+    /// Pasca-bayar: jatuh tempo maju ke 25 Agustus DAN progres naik satu.
+    /// Keduanya ditulis eksplisit — `markBillPaid` menaikkan
+    /// `installmentsPaid` bahkan untuk tagihan bukan-cicilan.
+    BillEntity billPascaBayar() => billPraBayar().copyWith(
+      dueDate: DateTime(2026, 8, 25),
+      installmentsPaid: 1,
+    );
+
+    void stubBayarSukses() {
+      when(
+        () => mockBillRepository.getBillById(any()),
+      ).thenAnswer((_) async => Right(billPraBayar()));
+      when(
+        () => mockBillRepository.applyBillPayment(
+          id: any(named: 'id'),
+          newDueDate: any(named: 'newDueDate'),
+          newInstallmentsPaid: any(named: 'newInstallmentsPaid'),
+          newStatus: any(named: 'newStatus'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
+      when(
+        () => mockBillRepository.restoreBillPayment(
+          id: any(named: 'id'),
+          dueDate: any(named: 'dueDate'),
+          installmentsPaid: any(named: 'installmentsPaid'),
+          status: any(named: 'status'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
+      when(
+        () => mockDeleteTransaction(any()),
+      ).thenAnswer((_) async => const Right(null));
+    }
+
+    /// Jalankan pembayaran SUNGGUHAN lalu kembalikan snapshot yang dicatat
+    /// bloc sendiri.
+    ///
+    /// Sengaja tidak mengarang snapshot di test: yang diuji adalah lingkar
+    /// penuh bayar → urungkan. Kalau bloc berhenti mencatat keadaan yang
+    /// diharapkan, snapshot yang dipakai di bawah ikut salah dan test ini
+    /// memerah — bukan diam-diam tetap hijau di atas fixture buatan tangan.
+    Future<UndoSnapshot> bayar(BillsBloc bloc) async {
+      bloc.add(
+        BillMarkedPaid(
+          billId: 7,
+          actualAmount: 750000,
+          paidDate: DateTime(2026, 7, 26),
+          includeAsFixed: false,
+          optOutTransaction: true,
+        ),
+      );
+      final state = await bloc.stream.firstWhere((s) => s.lastUndo != null);
+      return state.lastUndo!;
+    }
+
+    void verifyTakAdaTulisanBalik() {
+      verifyNever(
+        () => mockBillRepository.restoreBillPayment(
+          id: any(named: 'id'),
+          dueDate: any(named: 'dueDate'),
+          installmentsPaid: any(named: 'installmentsPaid'),
+          status: any(named: 'status'),
+        ),
+      );
+      verifyNever(() => mockDeleteTransaction(any()));
+    }
+
+    blocTest<BillsBloc, BillsState>(
+      'jatuh tempo digeser sesudah dibayar → undo DITOLAK, tak ada tulisan '
+      'balik',
+      build: buildBloc,
+      setUp: stubBayarSukses,
+      act: (bloc) async {
+        final snapshot = await bayar(bloc);
+
+        // Pengguna menyunting tagihan: jatuh temponya digeser ke 28
+        // September. Snackbar "Urungkan" yang lama masih menempel.
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(
+            billPascaBayar().copyWith(
+              dueDate: DateTime(2026, 9, 28),
+              dueDayOfMonth: 28,
+            ),
+          ),
+        );
+
+        bloc.add(BillPaymentUndone(snapshot));
+      },
+      verify: (bloc) {
+        expect(bloc.state.actionFailure?.aksi, BillWriteAction.undoPayment);
+        expect(bloc.state.actionFailure?.failure, isA<ValidationFailure>());
+        // Tawaran undo ikut dicabut: ia sudah tak bisa dipakai lagi, dan
+        // membiarkannya hidup berarti menawarkan tombol "Coba lagi" untuk
+        // aksi yang tak akan pernah berhasil.
+        expect(bloc.state.lastUndo, isNull);
+        verifyTakAdaTulisanBalik();
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'tagihan sudah dihapus → undo DITOLAK, transaksi tidak ikut terhapus',
+      build: buildBloc,
+      setUp: stubBayarSukses,
+      act: (bloc) async {
+        final snapshot = await bayar(bloc);
+
+        when(
+          () => mockBillRepository.getBillById(any()),
+        ).thenAnswer((_) async => const Right(null));
+
+        bloc.add(BillPaymentUndone(snapshot));
+      },
+      verify: (bloc) {
+        expect(bloc.state.actionFailure?.aksi, BillWriteAction.undoPayment);
+        expect(bloc.state.actionFailure?.failure, isA<ValidationFailure>());
+        expect(bloc.state.lastUndo, isNull);
+        verifyTakAdaTulisanBalik();
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'gagal MEMBACA tagihan → galat biasa, tawaran undo DIPERTAHANKAN',
+      build: buildBloc,
+      setUp: stubBayarSukses,
+      act: (bloc) async {
+        final snapshot = await bayar(bloc);
+
+        when(
+          () => mockBillRepository.getBillById(any()),
+        ).thenAnswer((_) async => const Left(CacheFailure('db tak terbaca')));
+
+        bloc.add(BillPaymentUndone(snapshot));
+      },
+      verify: (bloc) {
+        // Tidak tahu ≠ basi. Bacaan yang gagal tak boleh dihukum sebagai
+        // snapshot basi: pengguna kehilangan satu-satunya jalan pulihnya
+        // padahal tagihannya mungkin tak berubah sama sekali.
+        expect(bloc.state.actionFailure?.aksi, BillWriteAction.undoPayment);
+        expect(
+          bloc.state.actionFailure?.failure,
+          isNot(isA<ValidationFailure>()),
+        );
+        expect(bloc.state.lastUndo, isNotNull);
+        verifyTakAdaTulisanBalik();
+      },
+    );
+
+    blocTest<BillsBloc, BillsState>(
+      'tagihan tak tersentuh → undo tetap berjalan seperti biasa',
+      build: buildBloc,
+      setUp: stubBayarSukses,
+      act: (bloc) async {
+        final snapshot = await bayar(bloc);
+
+        when(
+          () => mockBillRepository.getBillById(any()),
+        ).thenAnswer((_) async => Right(billPascaBayar()));
+
+        bloc.add(BillPaymentUndone(snapshot));
+      },
+      verify: (bloc) {
+        // Penjaga yang menolak SEMUANYA juga membuat ketiga test di atas
+        // hijau. Test inilah yang membedakan penjaga dari palang pintu.
+        expect(bloc.state.actionFailure, isNull);
+        expect(bloc.state.lastUndo, isNull);
+        verify(
+          () => mockBillRepository.restoreBillPayment(
+            id: 7,
+            dueDate: DateTime(2026, 7, 25),
+            installmentsPaid: 0,
+            status: BillStatus.active,
+          ),
+        ).called(1);
       },
     );
   });
@@ -918,18 +1155,14 @@ void main() {
         when(
           () => mockDeleteTransaction(any()),
         ).thenAnswer((_) async => const Right(null));
+        // Penjaga snapshot basi membaca tagihan terkini sebelum menulis
+        // balik; yang diuji di sini jalur SUKSES, jadi tagihannya masih
+        // persis seperti yang ditinggalkan pembayarannya.
+        when(() => mockBillRepository.getBillById(any())).thenAnswer(
+          (_) async => Right(_billSesuaiSnapshot(_snapshotUndoAngsuran)),
+        );
       },
-      act: (bloc) => bloc.add(
-        BillPaymentUndone(
-          UndoSnapshot(
-            billId: 2,
-            dueDate: DateTime(2026, 3, 10),
-            installmentsPaid: 2,
-            status: BillStatus.active,
-            txId: 'tx-9',
-          ),
-        ),
-      ),
+      act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndoAngsuran)),
       verify: (_) {
         verify(
           () => mockScheduler.rescheduleAll(
@@ -1327,14 +1560,17 @@ void main() {
       'titik 8 — undo: restoreBillPayment gagal',
       build: buildBloc,
       seed: () => seedSukses,
-      setUp: () => when(
-        () => mockBillRepository.restoreBillPayment(
-          id: any(named: 'id'),
-          dueDate: any(named: 'dueDate'),
-          installmentsPaid: any(named: 'installmentsPaid'),
-          status: any(named: 'status'),
-        ),
-      ).thenAnswer((_) async => const Left(CacheFailure('restore gagal'))),
+      setUp: () {
+        _stubTagihanTakBerubah(mockBillRepository, _snapshotUndo());
+        when(
+          () => mockBillRepository.restoreBillPayment(
+            id: any(named: 'id'),
+            dueDate: any(named: 'dueDate'),
+            installmentsPaid: any(named: 'installmentsPaid'),
+            status: any(named: 'status'),
+          ),
+        ).thenAnswer((_) async => const Left(CacheFailure('restore gagal')));
+      },
       act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo())),
       expect: () => [
         gagalTulis(
@@ -1350,6 +1586,7 @@ void main() {
       build: buildBloc,
       seed: () => seedSukses,
       setUp: () {
+        _stubTagihanTakBerubah(mockBillRepository, _snapshotUndo(txId: 'tx-1'));
         when(
           () => mockBillRepository.restoreBillPayment(
             id: any(named: 'id'),
@@ -1604,14 +1841,17 @@ void main() {
           billId: 7,
         ),
       ),
-      setUp: () => when(
-        () => mockBillRepository.restoreBillPayment(
-          id: any(named: 'id'),
-          dueDate: any(named: 'dueDate'),
-          installmentsPaid: any(named: 'installmentsPaid'),
-          status: any(named: 'status'),
-        ),
-      ).thenAnswer((_) async => const Right(null)),
+      setUp: () {
+        _stubTagihanTakBerubah(mockBillRepository, _snapshotUndo());
+        when(
+          () => mockBillRepository.restoreBillPayment(
+            id: any(named: 'id'),
+            dueDate: any(named: 'dueDate'),
+            installmentsPaid: any(named: 'installmentsPaid'),
+            status: any(named: 'status'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+      },
       act: (bloc) => bloc.add(BillPaymentUndone(_snapshotUndo())),
       expect: () => [
         isA<BillsState>()

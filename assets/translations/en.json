@@ -511,6 +511,7 @@
   "bills_delete_confirm": "Delete",
   "bills_delete_failed": "Couldn't delete the bill. Give it another try.",
   "bills_undo_failed": "Couldn't undo the payment. Give it another try.",
+  "bills_undo_stale": "This bill has changed. Undo was skipped so your edits stay intact.",
   "dashboard_tied_eyebrow": "Before payday",
   "dashboard_tied_eyebrow_info": "Bills before payday",
   "dashboard_tied_safe_label": "Safe to spend",

@@ -328,6 +328,11 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
           dueDate: bill.dueDate,
           installmentsPaid: bill.installmentsPaid,
           status: bill.status,
+          // Keadaan yang BARU SAJA ditulis langkah 6 — dipakai `_onPaymentUndone`
+          // memastikan tagihannya belum berubah lagi saat "Urungkan" ditekan.
+          expectedDueDate: advance.newDueDate,
+          expectedInstallmentsPaid: advance.newInstallmentsPaid,
+          expectedStatus: advance.newStatus,
           txId: txId,
         ),
         clearActionFailure: true,
@@ -344,6 +349,37 @@ class BillsBloc extends Bloc<BillsEvent, BillsState> {
     Emitter<BillsState> emit,
   ) async {
     final snap = event.snapshot;
+
+    // 0. PENJAGA SNAPSHOT BASI. `restoreBillPayment` di langkah 1 menulis
+    // balik tanpa membaca apa pun, jadi tanpa gerbang ini ia menimpa
+    // perubahan yang lebih baru dan pengguna tak diberi tahu apa-apa.
+    //
+    // Jendelanya nyata: tawaran "Urungkan" hidup beberapa detik, dan jalur
+    // SUKSES form simpan tidak memunculkan snackbar — jadi menyunting
+    // tagihan tidak menggusur tawaran undo yang lama.
+    final kiniResult = await _billRepository.getBillById(snap.billId);
+    final tolak = kiniResult.fold(
+      // Tidak tahu BUKAN basi. Bacaan yang gagal diperlakukan sebagai galat
+      // biasa yang bisa dicoba lagi — menghukumnya sebagai basi mencabut
+      // satu-satunya jalan pulih pengguna atas tagihan yang mungkin tak
+      // berubah sama sekali.
+      (f) => _gagalAksi(BillWriteAction.undoPayment, f, billId: snap.billId),
+      (kini) => kini != null && snap.cocokDengan(kini)
+          ? null
+          // Tagihan sudah dihapus, atau sudah tak seperti yang ditinggalkan
+          // pembayaran ini. `clearUndo` DI SINI bukan kerapian: selama
+          // `lastUndo` hidup, daftar menawarkan "Coba lagi" untuk aksi yang
+          // takkan pernah berhasil.
+          : _gagalAksi(
+              BillWriteAction.undoPayment,
+              const ValidationFailure('Tagihan sudah berubah sejak dibayar.'),
+              billId: snap.billId,
+            ).copyWith(clearUndo: true),
+    );
+    if (tolak != null) {
+      emit(tolak);
+      return;
+    }
 
     // 1. RESTORE state bill PERSIS dari snapshot (bukan recompute).
     final restoreResult = await _billRepository.restoreBillPayment(

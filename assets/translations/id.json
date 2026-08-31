@@ -511,6 +511,7 @@
   "bills_delete_confirm": "Hapus",
   "bills_delete_failed": "Gagal menghapus tagihan. Coba lagi, ya.",
   "bills_undo_failed": "Gagal membatalkan pembayaran. Coba lagi, ya.",
+  "bills_undo_stale": "Tagihan ini sudah berubah. Urungkan dilewati supaya perubahanmu tidak tertimpa.",
   "dashboard_tied_eyebrow": "Sebelum gajian",
   "dashboard_tied_eyebrow_info": "Tagihan sebelum gajian",
   "dashboard_tied_safe_label": "Aman dipakai",

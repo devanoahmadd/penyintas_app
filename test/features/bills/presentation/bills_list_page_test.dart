@@ -66,6 +66,12 @@ void main() {
     dueDate: todayStart.subtract(const Duration(days: 30)),
     installmentsPaid: 3,
     status: BillStatus.active,
+    // Keadaan pasca-bayar — dipakai bloc memeriksa apakah tagihannya sudah
+    // berubah lagi sejak snapshot ini diambil. Halaman tak pernah
+    // membacanya; ia ada di sini supaya fixture-nya utuh.
+    expectedDueDate: todayStart,
+    expectedInstallmentsPaid: 4,
+    expectedStatus: BillStatus.active,
     txId: 'tx-abc',
   );
 
@@ -1308,6 +1314,49 @@ void main() {
       await tester.pump();
 
       expect(find.text(l10n.billsUndoFailed), findsOneWidget);
+    });
+
+    // Penolakan karena snapshot basi BUKAN kegagalan biasa: mengulanginya
+    // tak akan pernah berhasil, jadi "Coba lagi" di situ hanya memancing
+    // pengguna menekannya berulang-ulang.
+    //
+    // Tombolnya hilang tanpa cabang khusus di halaman: bloc ikut mencabut
+    // `lastUndo` saat menolak, dan `onRetry` memang sudah bergerbang pada
+    // `snapshot == null`. Yang diuji di sini bahwa kedua hal itu benar-benar
+    // bertemu.
+    testWidgets('undo ditolak karena tagihan sudah berubah → pesan basi, '
+        'TANPA "Coba lagi"', (tester) async {
+      whenListen(
+        bloc,
+        Stream<BillsState>.value(
+          BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart),
+            ],
+            actionFailure: const BillActionFailure(
+              aksi: BillWriteAction.undoPayment,
+              failure: ValidationFailure(
+                'Tagihan sudah berubah sejak dibayar.',
+              ),
+              seq: 1,
+              billId: 7,
+            ),
+          ),
+        ),
+        initialState: BillsState(
+          status: BillsStatus.success,
+          bills: [buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart)],
+        ),
+      );
+      stubCategoriesLoaded();
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.billsUndoStale), findsOneWidget);
+      expect(find.text(l10n.billsUndoFailed), findsNothing);
+      expect(find.text(l10n.retry), findsNothing);
     });
 
     // Kembaran dari 'snackbar undo pergi sendiri sesudah durasinya habis',

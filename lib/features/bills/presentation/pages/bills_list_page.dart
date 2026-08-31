@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
+import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
@@ -346,9 +347,21 @@ class _BillsListPageState extends State<BillsListPage> {
                 // senyap total: pengguna menekan "Urungkan", tak terjadi
                 // apa-apa, dan ia menyangka pembayarannya sudah dibatalkan.
                 final snapshot = state.lastUndo;
+                // Undo yang DITOLAK karena tagihannya sudah berubah bukan
+                // kegagalan yang bisa dicoba lagi — bloc menandainya dengan
+                // `ValidationFailure`, bukan `CacheFailure`. Mengajaknya
+                // "coba lagi" hanya memancing ketukan yang takkan pernah
+                // berhasil.
+                //
+                // Tombol "Coba lagi" itu sendiri hilang tanpa cabang
+                // tambahan: bloc ikut mencabut `lastUndo` saat menolak, dan
+                // `onRetry` di bawah sudah bergerbang pada `snapshot == null`.
+                final basi = gagal.failure is ValidationFailure;
                 _showGagalTulisSnackBar(
                   context,
-                  pesan: context.l10n.billsUndoFailed,
+                  pesan: basi
+                      ? context.l10n.billsUndoStale
+                      : context.l10n.billsUndoFailed,
                   onRetry: snapshot == null
                       ? null
                       : () => context.read<BillsBloc>().add(

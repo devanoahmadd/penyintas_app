@@ -160,6 +160,7 @@ void main() {
     // Kanal galat tulis di daftar (§2.6) — snackbar `delete`/`undoPayment`.
     'bills_delete_failed',
     'bills_undo_failed',
+    'bills_undo_stale',
     // ── Lubang lama, ditemukan audit 2026-08-08 [Audit S4] ──
     // Keempatnya SUDAH ada di kedua JSON dan sudah punya getter; yang hilang
     // hanya penjaganya. Menghapusnya dari kedua berkas hari ini tidak
