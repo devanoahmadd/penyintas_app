@@ -589,6 +589,44 @@ void main() {
 
       verify(() => bloc.add(BillPaymentUndone(snapshotUndo))).called(1);
     });
+
+    // `duration` pada SnackBar hanya berlaku kalau `persist` bernilai false.
+    // Flutter menyetelnya `persist = persist ?? action != null`
+    // (`material/snack_bar.dart:303`), jadi snackbar yang PUNYA tombol
+    // diam-diam jadi abadi: timernya tetap jalan, lalu cuma `return`
+    // (`material/scaffold.dart:622-624`). Tak ada peringatan, tak ada lint —
+    // satu-satunya cara menangkapnya adalah memajukan waktu seperti di sini.
+    //
+    // Yang dipertaruhkan bukan kerapian layar: selama snackbar itu menempel
+    // (di halaman APA PUN, karena ScaffoldMessenger app ini duduk di atas
+    // Navigator), tombol "Urungkan" tetap bisa ditekan — dan ia membatalkan
+    // pembayaran sungguhan tanpa dialog konfirmasi.
+    testWidgets('snackbar undo pergi sendiri sesudah durasinya habis', (
+      tester,
+    ) async {
+      stubUndo(
+        stateWithUndo(
+          bills: [
+            buildBill(
+              id: 7,
+              name: 'Wifi Indihome',
+              dueDate: todayStart.add(const Duration(days: 3)),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.text(l10n.billsUndo), findsOneWidget);
+
+      // Lewati durasi tampil, lalu animasi keluarnya.
+      await tester.pump(const Duration(seconds: 9));
+      await tester.pump(const Duration(milliseconds: 800));
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
   });
 
   // ── Navigasi ke form (T7) ───────────────────────────────────────────────────
@@ -1271,6 +1309,43 @@ void main() {
 
       expect(find.text(l10n.billsUndoFailed), findsOneWidget);
     });
+
+    // Kembaran dari 'snackbar undo pergi sendiri sesudah durasinya habis',
+    // untuk permukaan galat yang akarnya sama persis.
+    //
+    // Varian BERTOMBOL yang dipakai, dan itu bukan pilihan sembarangan:
+    // `persist` Flutter hanya menyala kalau `action != null`, jadi varian
+    // tanpa tombol "Coba lagi" sudah hijau sejak awal dan tak mengunci
+    // apa-apa. Menguji varian itu akan terlihat seperti perlindungan tanpa
+    // pernah jadi perlindungan.
+    testWidgets(
+      'snackbar gagal-tulis bertombol pergi sendiri sesudah durasinya habis',
+      (tester) async {
+        whenListen(
+          bloc,
+          Stream<BillsState>.value(
+            gagalTulis(BillWriteAction.delete, billId: 7),
+          ),
+          initialState: BillsState(
+            status: BillsStatus.success,
+            bills: [
+              buildBill(id: 7, name: 'Wifi Indihome', dueDate: todayStart),
+            ],
+          ),
+        );
+        stubCategoriesLoaded();
+        await tester.pumpWidget(harness());
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 800));
+        expect(find.text(l10n.retry), findsOneWidget);
+
+        await tester.pump(const Duration(seconds: 9));
+        await tester.pump(const Duration(milliseconds: 800));
+
+        expect(find.byType(SnackBar), findsNothing);
+      },
+    );
 
     // ── [W1] Simpan yang gagal tanpa satu pun permukaan ───────────────────
     //

@@ -224,8 +224,21 @@ class _BillsListPageState extends State<BillsListPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          // Cukup lama untuk sempat membaca DAN menekan "Urungkan".
-          duration: const Duration(seconds: 6),
+          // Cukup lama untuk sempat membaca DAN menekan "Urungkan". Material
+          // menetapkan 10 detik sebagai batas untuk snackbar bertombol; 6
+          // detik adalah angka untuk yang tanpa tombol.
+          duration: const Duration(seconds: 8),
+          // WAJIB EKSPLISIT — bukan penegasan default. Flutter menyetel
+          // `persist = persist ?? action != null`
+          // (`material/snack_bar.dart:303`), jadi kehadiran tombol di bawah
+          // ini DIAM-DIAM membatalkan `duration` di atasnya: timernya tetap
+          // jalan, lalu cuma `return` (`material/scaffold.dart:622-624`).
+          //
+          // Tanpa baris ini snackbar menempel di halaman APA PUN (messenger
+          // app ini duduk di atas Navigator) sampai ada snackbar lain yang
+          // menggusurnya — dan selama itu "Urungkan" tetap bisa ditekan,
+          // membatalkan pembayaran sungguhan tanpa konfirmasi.
+          persist: false,
           action: SnackBarAction(
             label: l10n.billsUndo,
             textColor: Colors.white,
@@ -255,7 +268,12 @@ class _BillsListPageState extends State<BillsListPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 8),
+          // Lihat alasan lengkapnya di `_showUndoSnackBar`. Di sini tombolnya
+          // bersyarat, jadi tanpa baris ini nasib snackbar berbeda-beda
+          // tergantung ada-tidaknya "Coba lagi" — yang bertombol abadi, yang
+          // tidak pergi sendiri.
+          persist: false,
           action: onRetry == null
               ? null
               : SnackBarAction(
