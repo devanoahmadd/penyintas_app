@@ -182,7 +182,24 @@ class BillItem extends StatelessWidget {
                           const SizedBox(height: 2),
                           Row(
                             children: [
+                              // `flex: 1` — bukan `Flexible` tanpa bobot
+                              // (default-nya `flex: 1` juga, tapi SAMA
+                              // dengan bobot `installmentLabel` di bawah,
+                              // sebelum diturunkan ke sini). Dua `Flexible`
+                              // berbobot SAMA berbagi rata (50/50) tanpa
+                              // peduli kebutuhan konten: `dueLabel` yang
+                              // pendek (mis. "10 DES") tak pernah butuh
+                              // separuh ruang, tapi sisanya juga tak pernah
+                              // kembali ke `installmentLabel` yang jauh lebih
+                              // panjang. Tetap `Flexible` (bukan `Text`
+                              // biasa) — WAJIB bisa menyusut ke ellipsis
+                              // sendiri di kombinasi ekstrem (layar sangat
+                              // sempit + nominal sangat panjang, lihat
+                              // [Audit S8] `bills_list_page_test.dart`),
+                              // kalau tidak `Row` overflow beneran (pita
+                              // kuning-hitam), bukan cuma ellipsis.
                               Flexible(
+                                flex: 1,
                                 child: Text(
                                   dueLabel.toUpperCase(),
                                   style: AppTextStyles.caption.copyWith(
@@ -205,7 +222,22 @@ class BillItem extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                                // `flex: 3` (vs `flex: 1` di atas) — bukan
+                                // rasio ekstrem. Labelnya rutin lebih panjang
+                                // ("Cicilan ke-4 dari 12" vs "10 DES") jadi
+                                // pantas dapat porsi lebih besar, tapi rasio
+                                // yang terlalu jomplang (dicoba 1:4) justru
+                                // membalik masalahnya: DI LEBAR HP NORMAL
+                                // (~360dp) tanggal jadi nyaris tak terbaca
+                                // demi label cicilan — pertukaran yang lebih
+                                // buruk, bukan solusi. Di lebar yang benar-benar
+                                // sempit ditambah nominal sangat panjang
+                                // ([Audit S8]), kedua caption ini SUDAH
+                                // sama-sama nyaris tak ada ruang sejak
+                                // sebelum baris ini — rasio apa pun tak
+                                // mengubah itu.
                                 Flexible(
+                                  flex: 3,
                                   child: Text(
                                     installmentLabel.toUpperCase(),
                                     style: AppTextStyles.caption.copyWith(
