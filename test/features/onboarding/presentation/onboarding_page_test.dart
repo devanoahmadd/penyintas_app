@@ -1029,4 +1029,51 @@ void main() {
       expect(find.byType(OnboardingPage), findsOneWidget);
     });
   });
+
+  // ── OnboardingError → snackbar ────────────────────────────────────────
+  //
+  // Akar yang sama dengan snackbar tagihan: `persist` Flutter default-nya
+  // `action != null` (`material/snack_bar.dart:303`), jadi snackbar bertombol
+  // "Coba lagi" ini tak pernah berakhir sendiri — timernya jalan lalu cuma
+  // `return` (`material/scaffold.dart:622-624`). Ia lalu menempel di halaman
+  // mana pun yang dibuka sesudahnya, dan tombolnya tetap mengirim ulang
+  // submit yang sudah tak relevan.
+  group('OnboardingError', () {
+    testWidgets('snackbar galat submit pergi sendiri sesudah durasinya habis', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      whenListen(
+        mockBloc,
+        Stream<OnboardingState>.value(
+          const OnboardingError(message: 'Gagal menyimpan setup.'),
+        ),
+        initialState: const OnboardingInitial(),
+      );
+
+      await tester.pumpWidget(
+        _buildHarness(
+          onboardingBloc: mockBloc,
+          notificationBloc: mockNotifBloc,
+          draftCubit: mockDraftCubit,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.text('Coba lagi'), findsOneWidget);
+
+      // Snackbar ini SENGAJA tak menyetel `duration`, jadi yang berlaku
+      // adalah bawaan Flutter (4 detik) — bukan 8 detik seperti di daftar
+      // tagihan. Yang diuji di sini bahwa ia BERAKHIR, bukan berapa lamanya.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 800));
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
 }

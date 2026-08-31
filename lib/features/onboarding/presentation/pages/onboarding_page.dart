@@ -508,6 +508,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                         ),
                         backgroundColor: AppColors.warn,
                         behavior: SnackBarBehavior.floating,
+                        // WAJIB EKSPLISIT. Flutter menyetel
+                        // `persist = persist ?? action != null`
+                        // (`material/snack_bar.dart:303`), jadi tombol "Coba
+                        // lagi" di bawah ini membuat snackbar TAK PERNAH
+                        // berakhir sendiri — ia menempel di halaman mana pun
+                        // yang dibuka sesudahnya, dan tombolnya tetap
+                        // mengirim ulang submit yang sudah usang.
+                        persist: false,
                         action: SnackBarAction(
                           label: l.retry,
                           textColor: Colors.white,
