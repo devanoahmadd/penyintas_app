@@ -117,6 +117,13 @@ void main() {
       GlobalCupertinoLocalizations.delegate,
     ],
     theme: theme,
+    // Time picker dalam mode 12-jam menampilkan pemilih AM/PM yang nilai
+    // awalnya ikut jam mesin — "09:35" bisa jadi 21:35 kalau test kebetulan
+    // jalan sore. Dipaksa 24 jam supaya jam yang diketik = jam yang masuk.
+    builder: (ctx, child) => MediaQuery(
+      data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+      child: child!,
+    ),
     home: Scaffold(
       body: Builder(
         builder: (ctx) => Center(
@@ -206,6 +213,11 @@ void main() {
     return DateTime(now.year, now.month, now.day);
   }
 
+  /// Buang komponen jam. Disalin di sini alih-alih memakai `startOfDay`
+  /// produksi: kalau helper produksi itu suatu saat rusak, test yang
+  /// memakainya ikut bergeser dan berhenti menjadi pengunci.
+  DateTime tanggalSaja(DateTime d) => DateTime(d.year, d.month, d.day);
+
   /// Tekan tombol OK pada `showDatePicker` yang sedang terbuka.
   /// Label diambil dari MaterialLocalizations agar bebas dari bahasa aktif.
   Future<void> confirmDatePicker(WidgetTester tester) async {
@@ -215,13 +227,47 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Isi `showTimePicker` yang menyusul setelah tanggal dikonfirmasi.
+  /// [jam] null → tekan Batal; jam yang sedang berlaku harus dipertahankan.
+  Future<void> isiTimePicker(WidgetTester tester, TimeOfDay? jam) async {
+    final dialog = find.byType(TimePickerDialog);
+    expect(
+      dialog,
+      findsOneWidget,
+      reason: 'time picker harus menyusul date picker',
+    );
+    final ml = MaterialLocalizations.of(tester.element(dialog));
+    if (jam == null) {
+      await tester.tap(find.widgetWithText(TextButton, ml.cancelButtonLabel));
+      await tester.pumpAndSettle();
+      return;
+    }
+    // Mode input teks, bukan dial: dial dipilih lewat koordinat sudut dan
+    // rapuh terhadap ukuran layar, field jam/menit deterministik.
+    await tester.tap(find.byTooltip(ml.inputTimeModeButtonLabel));
+    await tester.pumpAndSettle();
+    final fields = find.descendant(
+      of: dialog,
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(fields.at(0), jam.hour.toString().padLeft(2, '0'));
+    await tester.enterText(fields.at(1), jam.minute.toString().padLeft(2, '0'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, ml.okButtonLabel));
+    await tester.pumpAndSettle();
+  }
+
   /// Pilih [date] sebagai tanggal bayar lewat mode INPUT TEKS pada
   /// `showDatePicker` — bukan navigasi grid kalender. Navigasi grid rawan
   /// lintas bulan (tombol "bulan sebelumnya" perlu ditekan berkali-kali kalau
   /// [date] beda bulan dari `initialDate`); mode input bebas dari itu karena
   /// tanggalnya diketik langsung, diformat via `MaterialLocalizations` yang
   /// sama supaya cocok dengan parser tanggal locale aktif.
-  Future<void> pilihTanggal(WidgetTester tester, DateTime date) async {
+  Future<void> pilihTanggal(
+    WidgetTester tester,
+    DateTime date, {
+    TimeOfDay? jam,
+  }) async {
     await tapKey(tester, 'bill_paid_date');
     final ctx = tester.element(find.byType(DatePickerDialog));
     final localizations = MaterialLocalizations.of(ctx);
@@ -233,12 +279,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     await confirmDatePicker(tester);
+    await isiTimePicker(tester, jam);
   }
 
   // ── Fixture selisih tanggal (group "baris selisih tanggal") ──────────────
   //
-  // `_paidDate` DEFAULT selalu hari ini (lihat `initState` sheet) dan tak
-  // bisa dimajukan ke masa depan — jadi bill dengan dueDate di MASA DEPAN
+  // `_paidDate` DEFAULT selalu hari ini — kini beserta JAM saat sheet dibuka
+  // (lihat `initState` sheet) — dan tak bisa dimajukan ke masa depan — jadi bill dengan dueDate di MASA DEPAN
   // menghasilkan selisih POSITIF ("lebih awal") secara otomatis lewat
   // default, sedangkan dueDate di MASA LALU menghasilkan selisih NEGATIF
   // ("terlambat"). Beberapa fixture sengaja diberi jam non-tengah-malam
@@ -274,9 +321,8 @@ void main() {
         .add(const Duration(hours: 23)),
   );
 
-  /// Jatuh tempo hari ini, jam 23:00 → hanya beda JAM dari `_paidDate` (yang
-  /// selalu tengah malam), BUKAN beda tanggal kalender. Baris TIDAK boleh
-  /// muncul sama sekali.
+  /// Jatuh tempo hari ini, jam 23:00 → hanya beda JAM dari `_paidDate`,
+  /// BUKAN beda tanggal kalender. Baris TIDAK boleh muncul sama sekali.
   final billJatuhTempoHariIniJam23 = billBerjalan(
     dueDate: hariIni().add(const Duration(hours: 23)),
   );
@@ -420,9 +466,9 @@ void main() {
     expect(event.billId, bill.id);
     expect(event.actualAmount, 750000);
     expect(
-      event.paidDate,
+      tanggalSaja(event.paidDate),
       hariIni(),
-      reason: 'tanggal bayar default = hari ini (awal hari)',
+      reason: 'tanggal bayar default = hari ini (jamnya diuji terpisah)',
     );
     expect(
       event.includeAsFixed,
@@ -950,8 +996,10 @@ void main() {
 
     testWidgets('selisih dihitung dari AWAL HARI, bukan jam — '
         'beda jam dalam hari yang sama bukan selisih', (tester) async {
-      // dueDate jam 23:00 hari ini; `_paidDate` (default) selalu tengah
-      // malam hari ini juga — tanggal kalendernya SAMA, cuma jamnya beda.
+      // dueDate jam 23:00 hari ini; `_paidDate` (default) jam saat sheet
+      // dibuka, hari ini juga — tanggal kalendernya SAMA, cuma jamnya beda.
+      // Justru karena keduanya kini berjam, `startOfDay` di dua sisi
+      // `_selisihHari` yang menahan baris ini tetap sepi.
       await pumpSheet(tester, bill: billJatuhTempoHariIniJam23);
       expect(find.byKey(const ValueKey('bill_paid_date_diff')), findsNothing);
     });
@@ -990,11 +1038,127 @@ void main() {
     );
     await tapSubmit(tester);
     expect(
-      captureMarkedPaid(tester).paidDate,
+      tanggalSaja(captureMarkedPaid(tester).paidDate),
       hariIni(),
       reason:
           'tanggal bayar default tetap hari ini setelah baris selisih '
           'ditambahkan',
+    );
+  });
+
+  // ── Jam bayar ────────────────────────────────────────────────────────────
+  //
+  // Bug lapangan: transaksi hasil pelunasan selalu tercatat 00:00. `_paidDate`
+  // diambil dari `startOfDay(DateTime.now())` di `initState` — jamnya dibuang
+  // di sana, padahal nilai itu jadi `date` transaksi apa adanya lewat
+  // `BillMarkedPaid.paidDate` → `bills_bloc.dart` (`date: event.paidDate`).
+
+  testWidgets('tanggal bayar default membawa JAM saat sheet dibuka, '
+      'bukan tengah malam', (tester) async {
+    final sebelum = DateTime.now();
+    await pumpSheet(tester, bill: billBerjalan());
+    await tapSubmit(tester);
+    final sesudah = DateTime.now();
+
+    final paidDate = captureMarkedPaid(tester).paidDate;
+    expect(
+      paidDate.isBefore(sebelum),
+      isFalse,
+      reason:
+          'paidDate lebih tua dari saat sheet dibuka → jamnya dibuang '
+          '(startOfDay), transaksi akan tercatat 00:00',
+    );
+    expect(
+      paidDate.isAfter(sesudah),
+      isFalse,
+      reason: 'paidDate tak boleh melewati saat submit ditekan',
+    );
+  });
+
+  testWidgets('memilih jam lewat time picker → jam itu terbawa ke paidDate', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    // KEMARIN, bukan hari ini: 14:35 hari ini bisa jatuh di masa depan
+    // (tergantung jam mesin) dan akan dipangkas oleh penjaga masa depan —
+    // yang diuji di sini murni "jam pilihan terbawa".
+    final kemarin = hariIni().subtract(const Duration(days: 1));
+
+    await pilihTanggal(
+      tester,
+      kemarin,
+      jam: const TimeOfDay(hour: 14, minute: 35),
+    );
+    await tapSubmit(tester);
+
+    final paidDate = captureMarkedPaid(tester).paidDate;
+    expect(tanggalSaja(paidDate), kemarin, reason: 'tanggal dari date picker');
+    expect(paidDate.hour, 14, reason: 'jam dari time picker');
+    expect(paidDate.minute, 35, reason: 'menit dari time picker');
+  });
+
+  testWidgets('jam di masa depan pada hari ini dipangkas ke saat ini', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    // `lastDate` date picker menutup pintu masa depan lewat TANGGAL; time
+    // picker membukanya lagi lewat JAM. 23:59 hari ini ada di masa depan untuk
+    // hampir setiap jam mesin — satu-satunya menit yang tidak (23:59 itu
+    // sendiri) membuat test ini tumpul, bukan salah: assertion-nya tetap benar.
+    await pilihTanggal(
+      tester,
+      hariIni(),
+      jam: const TimeOfDay(hour: 23, minute: 59),
+    );
+    final sesudahPilih = DateTime.now();
+    await tapSubmit(tester);
+
+    expect(
+      captureMarkedPaid(tester).paidDate.isAfter(sesudahPilih),
+      isFalse,
+      reason: 'pembayaran tak boleh tercatat pada waktu yang belum terjadi',
+    );
+  });
+
+  testWidgets('field tanggal bayar ikut menampilkan JAM', (tester) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    final kemarin = hariIni().subtract(const Duration(days: 1));
+    await pilihTanggal(
+      tester,
+      kemarin,
+      jam: const TimeOfDay(hour: 14, minute: 35),
+    );
+
+    // Jam yang tersimpan tapi tak terlihat sama saja dengan jam yang salah:
+    // pengguna tak punya cara tahu apa yang akan tercatat.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bill_paid_date')),
+        matching: find.textContaining('14:35'),
+      ),
+      findsOneWidget,
+      reason: 'nilai field harus memuat jam, bukan tanggal saja',
+    );
+  });
+
+  testWidgets('BATAL di time picker mempertahankan jam, bukan reset 00:00', (
+    tester,
+  ) async {
+    await pumpSheet(tester, bill: billBerjalan());
+    final kemarin = hariIni().subtract(const Duration(days: 1));
+
+    // `jam: null` → tombol Batal di time picker.
+    await pilihTanggal(tester, kemarin);
+    await tapSubmit(tester);
+
+    final paidDate = captureMarkedPaid(tester).paidDate;
+    expect(tanggalSaja(paidDate), kemarin, reason: 'tanggalnya tetap berubah');
+    expect(
+      paidDate.isAtSameMomentAs(kemarin),
+      isFalse,
+      reason:
+          'membatalkan pemilihan jam tak boleh berarti tengah malam — itu '
+          'pintu belakang menuju bug 00:00 yang sedang ditutup',
     );
   });
 }

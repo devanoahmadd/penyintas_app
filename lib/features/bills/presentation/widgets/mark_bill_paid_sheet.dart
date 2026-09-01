@@ -84,7 +84,7 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     // Nominal aktual DIPREFILL dari perkiraan, tapi tetap boleh diubah —
     // tagihan listrik jarang persis sama tiap bulan.
     _amountController.text = '${widget.bill.estimatedAmount}';
-    _paidDate = startOfDay(DateTime.now());
+    _paidDate = DateTime.now();
     // M1 (§4.2): saat kebutuhan tetap di anggaran masih 0, tak ada potongan di
     // muka yang menaungi tagihan ini — prefill DIPAKSA false supaya
     // pembayarannya benar-benar terhitung sebagai pengeluaran.
@@ -124,12 +124,13 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
   bool get _fixedLocked => !representedByFixedExpenses(widget.bill);
 
   /// Selisih hari antara tanggal bayar dan jatuh tempo, dihitung dari AWAL
-  /// HARI keduanya. `dueDate` bisa punya komponen jam non-tengah-malam
-  /// (tergantung cara tagihan dibuat) sementara `_paidDate` SELALU tengah
-  /// malam persis (lihat `initState`/`_pickPaidDate`) — memakai `difference`
-  /// mentah tanpa `startOfDay` di kedua sisi bikin `Duration.inDays`
-  /// membulatkan ke arah nol dan MENGECILKAN keterlambatan (mis. telat 2 hari
-  /// terbaca 1 hari, atau baris hilang total kalau sisa jamnya < 24 jam).
+  /// HARI keduanya. KEDUA sisi punya komponen jam sendiri — `dueDate`
+  /// tergantung cara tagihan dibuat, `_paidDate` membawa jam pembayaran
+  /// (lihat `initState`/`_pickPaidDate`) — dan memakai `difference` mentah
+  /// tanpa `startOfDay` di kedua sisi bikin `Duration.inDays` membulatkan ke
+  /// arah nol lalu MENGECILKAN keterlambatan (mis. telat 2 hari terbaca 1
+  /// hari, atau baris hilang total kalau sisa jamnya < 24 jam). Yang diukur
+  /// di sini beda TANGGAL KALENDER, bukan rentang jam.
   ///
   /// Positif = dibayar lebih awal. Negatif = terlambat. 0 = tepat waktu, dan
   /// saat itu layar tetap sepi (kasus paling umum).
@@ -145,9 +146,9 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       ? l10n.billsPaidFixedNotFlaggedHint
       : l10n.billsPaidFixedNonMonthlyHint;
 
-  // ── Pemilih tanggal ───────────────────────────────────────────────────────
+  // ── Pemilih tanggal & jam ─────────────────────────────────────────────────
 
-  Widget _datePickerTheme(BuildContext ctx, Widget? child) => Theme(
+  Widget _pickerTheme(BuildContext ctx, Widget? child) => Theme(
     data: Theme.of(ctx).copyWith(
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -157,6 +158,9 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
     child: child!,
   );
 
+  /// Tanggal DAN jam dalam satu ketukan: date picker dulu, time picker
+  /// menyusul — pola yang sama dengan `add_transaction_sheet`, supaya
+  /// pengguna tak perlu belajar dua cara mengisi waktu di aplikasi yang sama.
   Future<void> _pickPaidDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -164,11 +168,40 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
       initialDate: _paidDate,
       // Pembayaran terlambat dicatat boleh mundur…
       firstDate: DateTime(now.year - 2),
-      // …tapi tidak boleh dicatat di masa depan.
+      // …tapi tidak boleh dicatat di masa depan. `showDatePicker` menormalkan
+      // ketiga tanggal ini lewat `dateOnly()` sebelum meng-assert, jadi
+      // `initialDate` yang kini berjam tidak melewati `lastDate` ini.
       lastDate: startOfDay(now),
-      builder: _datePickerTheme,
+      builder: _pickerTheme,
     );
-    if (picked != null) setState(() => _paidDate = picked);
+    if (picked == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_paidDate),
+      builder: _pickerTheme,
+    );
+    if (!mounted) return;
+
+    // Batal di time picker = pertahankan jam yang sedang berlaku. Jatuh ke
+    // tengah malam di sini akan menghidupkan lagi bug yang justru sedang
+    // ditutup: transaksi tercatat 00:00.
+    final dipilih = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      time?.hour ?? _paidDate.hour,
+      time?.minute ?? _paidDate.minute,
+    );
+
+    // `lastDate` menutup pintu masa depan lewat TANGGAL, tapi time picker
+    // membukanya lagi lewat JAM: hari ini 23:00 sementara sekarang baru pagi
+    // adalah pembayaran yang belum terjadi. `DateTime.now()` dibaca ULANG di
+    // sini, bukan `now` di atas — dua dialog berturut-turut bisa memakan
+    // waktu, dan yang membatasi harus "sekarang", bukan "sekarang sebelum
+    // pengguna mulai memilih".
+    final sekarang = DateTime.now();
+    setState(() => _paidDate = dipilih.isAfter(sekarang) ? sekarang : dipilih);
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -380,7 +413,11 @@ class _MarkBillPaidSheetState extends State<MarkBillPaidSheet> {
                       const SizedBox(height: AppSpacing.sm),
                       _DateField(
                         fieldKey: const ValueKey('bill_paid_date'),
-                        value: dateFormat.format(_paidDate),
+                        // Jam ikut ditampilkan: yang tersimpan sekarang
+                        // bukan lagi sekadar tanggal.
+                        value:
+                            '${dateFormat.format(_paidDate)} · '
+                            '${DateFormat('HH:mm').format(_paidDate)}',
                         panelColor: panelColor,
                         borderColor: borderColor,
                         textColor: textColor,
