@@ -298,6 +298,42 @@ void main() {
         .add(const Duration(hours: 23)),
   );
 
+  // ── Progres cicilan di kartu ringkasan (redesign §4.3, 2026-09-01) ────────
+  //
+  // Frasa penuh "Cicilan ke-X dari Y" dipindah ke sini dari list item —
+  // di list, 20 karakter itu tak pernah muat berdampingan dengan caption
+  // tanggal (lihat bill_item_test.dart); di sini ruangnya cukup dan
+  // konteksnya pas (pengguna sedang mau bayar, wajar ingin tahu ini
+  // pembayaran keberapa).
+
+  testWidgets('tagihan bertenor → kartu ringkasan menampilkan progres cicilan', (
+    tester,
+  ) async {
+    // installmentTotal: 12, installmentsPaid: 3 → pembayaran BERIKUTNYA ke-4.
+    await pumpSheet(tester, bill: billBerjalan());
+
+    expect(
+      find.text(l10n.billsInstallmentProgress(4, 12)),
+      findsOneWidget,
+      reason: 'Progres cicilan harus tampil persis seperti frasa l10n — '
+          'dulu tak pernah dipakai di sheet ini sama sekali.',
+    );
+  });
+
+  testWidgets(
+    'tagihan tanpa tenor (sekali-jalan) → TIDAK ada progres cicilan',
+    (tester) async {
+      await pumpSheet(tester, bill: billSekaliJalan());
+
+      expect(
+        find.textContaining('Cicilan ke-'),
+        findsNothing,
+        reason: 'Tagihan tanpa installmentTotal tak punya progres untuk '
+            'ditampilkan — memaksakan teksnya akan menyesatkan.',
+      );
+    },
+  );
+
   // ── (a) Nominal default = estimasi, dan EDITABLE ──────────────────────────
 
   testWidgets('nominal default = estimatedAmount tagihan', (tester) async {

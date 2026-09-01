@@ -567,10 +567,22 @@ class _BillSummary extends StatelessWidget {
     // sedangkan `iconFromSlug` melihat namespace ikon KUSTOM sehingga semua
     // kategori built-in jatuh ke ikon grid generik.
     final (icon, iconColor) = CategoryMetadata.of(bill.category);
+    final l10n = AppLocalizations.of(context);
     final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
       bill.category,
-      AppLocalizations.of(context),
+      l10n,
     );
+
+    // Redesign §4.3 (2026-09-01): frasa penuh dipindah KE SINI dari list
+    // item (`bill_item.dart`) — di sana ia dipadatkan jadi "4/12" karena
+    // tak pernah muat berdampingan dengan caption tanggal; di sini ruangnya
+    // cukup dan konteksnya pas (pengguna sedang mau bayar). Bill lunas tak
+    // pernah sampai ke sheet ini (sudah hilang dari daftar aktif), jadi
+    // tanpa pengecualian status seperti di `bill_item.dart`.
+    final total = bill.installmentTotal;
+    final installmentLabel = total == null
+        ? null
+        : l10n.billsInstallmentProgress(bill.installmentsPaid + 1, total);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -644,6 +656,21 @@ class _BillSummary extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Baris TERPISAH, bukan disambung ke baris kategori·tanggal
+                // di atas — dua jenis info berbeda (apa+kapan vs progres),
+                // ruang di sini cukup lega untuk keduanya berdiri sendiri.
+                if (installmentLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    installmentLabel,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontSize: 12,
+                      color: mutedColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),

@@ -81,15 +81,21 @@ class BillItem extends StatelessWidget {
 
     final total = bill.installmentTotal;
     // Bill lunas: chip "Selesai" sudah mengomunikasikan status, dan
-    // `installmentsPaid + 1` akan melewati total (mis. "Cicilan ke-13 dari 12").
-    // Jadi progres cicilan hanya ditampilkan selama bill masih berjalan.
-    final installmentLabel =
-        (total == null || bill.status == BillStatus.completed)
+    // `installmentsPaid + 1` akan melewati total (mis. "13/12"). Jadi
+    // progres cicilan hanya ditampilkan selama bill masih berjalan.
+    //
+    // Redesign §4.3 (2026-09-01): bentuk pendek "4/12", BUKAN frasa penuh
+    // `l10n.billsInstallmentProgress` — frasa penuh (20 karakter, font mono)
+    // tak pernah muat berdampingan dengan caption tanggal di lebar HP nyata,
+    // berapa pun bobot Flexible-nya (dikonfirmasi lewat pengukuran, bukan
+    // dugaan). Interpolasi angka langsung, tanpa key l10n baru — sejajar
+    // `formatRupiah()`: murni format angka, bukan konten bahasa yang perlu
+    // diterjemahkan. Frasa lengkapnya sekarang tampil di sheet Tandai Lunas
+    // (`_BillSummary` di `mark_bill_paid_sheet.dart`), tempat yang ruangnya
+    // cukup dan konteksnya lebih pas.
+    final installmentLabel = (total == null || bill.status == BillStatus.completed)
         ? null
-        : context.l10n.billsInstallmentProgress(
-            bill.installmentsPaid + 1,
-            total,
-          );
+        : '${bill.installmentsPaid + 1}/$total';
 
     return Material(
       color: cardColor,

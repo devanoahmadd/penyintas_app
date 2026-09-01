@@ -460,10 +460,11 @@ void main() {
     await tester.pump();
 
     expect(find.text(formatRupiah(750000)), findsOneWidget);
-    expect(
-      find.text(l10n.billsInstallmentProgress(4, 12).toUpperCase()),
-      findsOneWidget,
-    );
+    // Redesign §4.3 (2026-09-01): frasa penuh dipangkas jadi pecahan pendek
+    // "4/12" di list — tak pernah muat berdampingan dengan caption tanggal
+    // di lebar HP nyata. Frasa lengkap sekarang di sheet Tandai Lunas
+    // (lihat mark_bill_paid_sheet_test.dart).
+    expect(find.text('4/12'), findsOneWidget);
   });
 
   testWidgets('area tap tiap baris minimal 48dp', (tester) async {

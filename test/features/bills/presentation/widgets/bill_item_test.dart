@@ -82,46 +82,63 @@ void main() {
     ),
   );
 
-  // Repro §4.3 checklist device: baris "C" — caption tanggal pendek (mis.
-  // "10 DES") + label cicilan panjang ("Cicilan ke-4 dari 12"). Sebelum
-  // fix, keduanya berbagi `Row` lewat `Flexible` berbobot SAMA — jatah 50/50
-  // itu tak peduli "10 DES" sebenarnya tak butuh separuh ruang, jadi sisa
-  // jatahnya tak pernah kembali ke label cicilan yang lebih panjang.
+  // Redesign §4.3 (2026-09-01, ui-ux-pro-max): frasa penuh "Cicilan ke-4
+  // dari 12" (20 karakter, font mono) tak pernah muat berdampingan dengan
+  // caption tanggal di lebar HP nyata — dikonfirmasi lewat pengukuran
+  // langsung, bukan cuma dugaan. Perbaikan sebelumnya (bobot Flexible 1:3)
+  // cuma memperbaiki PEMBAGIAN ruang, bukan KEBUTUHAN ruangnya — jadi tetap
+  // gagal di lebar realistis. Solusi sebenarnya: pangkas kebutuhannya.
+  // Frasa lengkap dipindah ke sheet Tandai Lunas (ada ruang, konteksnya pas);
+  // di list cukup "4/12" — bentuk pecahan singkat, tanpa kata sama sekali,
+  // jadi tak perlu key l10n baru (sejajar `formatRupiah()`: murni format
+  // angka, bukan konten bahasa).
   //
-  // Lebar 650 sengaja lega (bukan lebar HP asli) — test ini mengisolasi SATU
-  // hal: begitu `dueLabel` berhenti ikut kompetisi flex, `installmentLabel`
-  // menyerap SEMUA sisa ruang alih-alih dijatah rata. Di lebar HP sempit
-  // (~360–411dp) label 20 karakter ini tetap bisa terpotong — itu bukan lagi
-  // soal pembagian flex, tapi kolom nama+caption memang sesempit itu (chip
-  // status + nominal di sebelah kanan menyisakan ~100dp saja). Itu keputusan
-  // produk terpisah (lihat diskusi §4.3), bukan yang dikunci test ini.
+  // Test ini SENGAJA di lebar 360dp — HP sempit sungguhan, bukan lebar
+  // artifisial seperti test lama. Kalau ini hijau, klaim "muat di HP nyata"
+  // benar-benar terbukti, bukan diasumsikan.
+  testWidgets('label cicilan dipadatkan jadi "4/12", muat di lebar HP 360dp', (
+    tester,
+  ) async {
+    final bill = buildBill(
+      id: 1,
+      name: 'C',
+      dueDate: DateTime(2026, 12, 10),
+      installmentTotal: 12,
+      installmentsPaid: 3, // → cicilan ke-4 dari 12 → "4/12"
+    );
+
+    await pumpItem(tester, bill, width: 360);
+    await tester.pump();
+
+    final paragraph = tester.renderObject<RenderParagraph>(find.text('4/12'));
+
+    expect(
+      paragraph.didExceedMaxLines,
+      isFalse,
+      reason: 'Bahkan bentuk pendek "4/12" tak boleh terpotong di lebar '
+          'HP normal — kalau ini pun gagal, ada yang salah lebih dalam.',
+    );
+  });
+
   testWidgets(
-    'label cicilan menyerap sisa ruang, tak lagi dijatah rata dengan caption tanggal pendek',
+    'frasa penuh "Cicilan ke-X dari Y" TIDAK lagi dipakai di list (pindah ke sheet)',
     (tester) async {
       final bill = buildBill(
         id: 1,
         name: 'C',
         dueDate: DateTime(2026, 12, 10),
         installmentTotal: 12,
-        installmentsPaid: 3, // → "Cicilan ke-4 dari 12"
+        installmentsPaid: 3,
       );
 
-      await pumpItem(tester, bill, width: 650);
+      await pumpItem(tester, bill, width: 360);
       await tester.pump();
 
-      final label = l10n.billsInstallmentProgress(4, 12).toUpperCase();
-      final paragraph = tester.renderObject<RenderParagraph>(
-        find.text(label),
-      );
-
       expect(
-        paragraph.didExceedMaxLines,
-        isFalse,
-        reason:
-            'Label cicilan terpotong ellipsis padahal caption tanggal di '
-            'sebelahnya jauh lebih pendek dan ruang totalnya lebih dari '
-            'cukup — pembagian Flexible 50/50 tak memperhitungkan '
-            'kebutuhan konten.',
+        find.textContaining('CICILAN', findRichText: true),
+        findsNothing,
+        reason: 'Frasa panjang seharusnya sudah tak ada lagi di list item — '
+            'kalau masih ada, redesign belum benar-benar diterapkan.',
       );
     },
   );
