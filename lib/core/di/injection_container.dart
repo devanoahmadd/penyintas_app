@@ -42,6 +42,7 @@ import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
+import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/datasources/user_settings_remote_datasource.dart';
 import 'package:penyintas_app/features/auth/data/repositories/auth_repository_impl.dart';
@@ -219,6 +220,9 @@ void _registerCore() {
   sl.registerLazySingleton<GoRouter>(() => createAppRouter());
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
   sl.registerLazySingleton(() => AnalyticsService(sl()));
+
+  // A4 Konsistensi: sumber waktu yang bisa disuntik di test.
+  sl.registerLazySingleton<AppClock>(() => const SystemClock());
 }
 
 void _registerSettings() {

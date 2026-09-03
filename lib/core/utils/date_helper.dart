@@ -22,6 +22,25 @@ DateTime _nextPaymentDate(DateTime today, int paymentDate) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/// Tanggal lokal jadi INT yyyymmdd — bentuk `dayKey` yang dipakai fitur
+/// Konsistensi. Jam dibuang; hanya komponen tanggal lokal yang tersisa.
+int localDayKey(DateTime dt) => dt.year * 10000 + dt.month * 100 + dt.day;
+
+/// Kebalikan [localDayKey]: tengah malam lokal pada hari tersebut.
+DateTime localMidnightOf(int dayKey) =>
+    DateTime(dayKey ~/ 10000, (dayKey ~/ 100) % 100, dayKey % 100);
+
+/// Geser [dayKey] sebanyak [days] hari kalender.
+///
+/// Sengaja lewat konstruktor `DateTime(y, m, d + days)` yang menormalkan
+/// sendiri — BUKAN `.add(Duration(days: days))`. Penambahan durasi menghitung
+/// 24 jam absolut; di zona ber-DST itu bisa mendarat di jam 23:00 hari yang
+/// sama dan menghasilkan dayKey yang salah.
+int addDays(int dayKey, int days) {
+  final d = localMidnightOf(dayKey);
+  return localDayKey(DateTime(d.year, d.month, d.day + days));
+}
+
 /// Hari tersisa hingga tanggal kiriman berikutnya.
 /// Jika hari ini = paymentDate, kembalikan 0 (kiriman hari ini).
 ///
