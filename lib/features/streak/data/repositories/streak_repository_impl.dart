@@ -53,6 +53,23 @@ class StreakRepositoryImpl implements StreakRepository {
     if (!_pemicu.isClosed) _pemicu.add(null);
   }
 
+  /// HIGIENE TEST SAJA — BUKAN kontrak untuk dipanggil dari BLoC manapun.
+  ///
+  /// Ketiga langganan stream (`markSub`/`allMarkSub`/`txSub`) dan
+  /// `debounceTimer` di `watchSnapshot()` membersihkan diri sendiri lewat
+  /// `onCancel` milik `StreamController` yang dibuat baru tiap
+  /// `watchSnapshot()` dipanggil — mereka TIDAK bergantung pada method ini.
+  /// Yang benar-benar dimiliki `dispose()` hanyalah `_pemicu`, satu broadcast
+  /// controller LEVEL-REPOSITORY, dipakai bersama oleh halaman `/consistency`,
+  /// tile bento, kartu sore, DAN `DailyReminderScheduler` sekaligus (repo ini
+  /// `registerLazySingleton`, satu instance untuk semuanya).
+  ///
+  /// Menutupnya dari SATU consumer (mis. `StreakBloc.close()` di Task 11)
+  /// membuat `requestRecompute()` senyap gagal (no-op lewat guard
+  /// `!_pemicu.isClosed`) untuk SEMUA consumer lain sisa umur proses — tanpa
+  /// error yang terlihat. `dispose()` di sini murni menghindari warning
+  /// "StreamController not closed" di test; produksi tidak pernah
+  /// memanggilnya (repository lazy singleton tidak pernah direkonstruksi).
   @override
   void dispose() => _pemicu.close();
 

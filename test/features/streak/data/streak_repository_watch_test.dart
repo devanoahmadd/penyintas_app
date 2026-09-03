@@ -4,13 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
+import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/streak/data/datasources/streak_local_datasource.dart';
 import 'package:penyintas_app/features/streak/data/datasources/streak_mark_remote_datasource.dart';
 import 'package:penyintas_app/features/streak/data/repositories/streak_repository_impl.dart';
 import 'package:penyintas_app/features/streak/data/models/streak_mark_model.dart';
+import 'package:penyintas_app/features/streak/domain/entities/streak_meta_values.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_snapshot.dart';
 
 class _MockRemote extends Mock implements StreakMarkRemoteDatasource {}
@@ -294,6 +297,143 @@ void main() {
         isFalse,
         reason: 'undo user tidak boleh dibatalkan diam-diam oleh dorongan '
             'bootstrap miliknya sendiri',
+      );
+    },
+  );
+
+  // ── Ronde review 1 ───────────────────────────────────────────────────────
+
+  test(
+    'Temuan 1 — syncMarksFromRemote MENGHAPUS baris lokal isSynced=true yang '
+    'absen dari tarikan (D-13/D-14, kabel repository ke deleteSyncedMarksAbsentFrom)',
+    () async {
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
+          .thenAnswer((_) async => const <StreakMarkModel>[]);
+
+      // Baris SUDAH PERNAH naik (isSynced=true) tapi remote tak lagi
+      // membawanya — persis "dihapus di device lain".
+      await local.insertMark(
+        dayKey: 20260903,
+        markedAt: DateTime.utc(2026, 9, 3),
+        timezone: 'WIB',
+        viaClockCorrection: false,
+      );
+      await local.markSynced(20260903);
+
+      await repo.syncMarksFromRemote();
+
+      expect(
+        await local.hasMark(20260903),
+        isFalse,
+        reason: 'remote berwenang untuk baris yang PERNAH naik — dihapus di '
+            'device lain harus tercermin di sini',
+      );
+    },
+  );
+
+  group('Temuan 2 — cabang auth-null dan jalur galat syncMarksFromRemote', () {
+    test('_auth.currentUser == null → no-op, bukan galat', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      expect(await repo.syncMarksFromRemote(), const Right<Failure, int>(0));
+      verifyNever(
+        () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+      );
+    });
+
+    test('ServerException dari remote → Left(ServerFailure)', () async {
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
+          .thenThrow(const ServerException('gagal ambil'));
+      final hasil = await repo.syncMarksFromRemote();
+      expect(
+        hasil.isLeft() && hasil.fold((f) => f is ServerFailure, (_) => false),
+        isTrue,
+      );
+    });
+
+    test('exception umum dari remote → Left(CacheFailure)', () async {
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
+          .thenThrow(Exception('boom'));
+      final hasil = await repo.syncMarksFromRemote();
+      expect(
+        hasil.isLeft() && hasil.fold((f) => f is CacheFailure, (_) => false),
+        isTrue,
+      );
+    });
+  });
+
+  group('Temuan 3 — readMeta()/saveMeta() bulat-balik', () {
+    test('readMeta() mendelegasikan ke local, bukan nilai lain', () async {
+      final meta = StreakMetaValues.empty.copyWith(
+        lastSeenDay: 20260905,
+        maxSeenDay: 20260910,
+      );
+      await local.saveMeta(meta);
+      expect(await repo.readMeta(), meta);
+    });
+
+    test('saveMeta() mendelegasikan ke local, bukan no-op', () async {
+      final meta = StreakMetaValues.empty.copyWith(lastSeenDay: 20260903);
+      await repo.saveMeta(meta);
+      expect(await local.readMeta(), meta);
+    });
+  });
+
+  group('Temuan 4 — badan sementara markToday()/unmarkToday()', () {
+    test(
+      'markToday() melempar UnimplementedError — badan sementara sebelum '
+      'Task 9',
+      () {
+        expect(() => repo.markToday(), throwsA(isA<UnimplementedError>()));
+      },
+    );
+
+    test(
+      'unmarkToday() melempar UnimplementedError — badan sementara sebelum '
+      'Task 9',
+      () {
+        expect(() => repo.unmarkToday(), throwsA(isA<UnimplementedError>()));
+      },
+    );
+  });
+
+  test(
+    'Temuan 5 — requestRecompute() aman dipanggil sesudah dispose() (LIHAT '
+    'komentar dispose(): bukan kontrak untuk dipanggil BLoC manapun)',
+    () {
+      repo.dispose();
+      expect(() => repo.requestRecompute(), returnsNormally);
+    },
+  );
+
+  test(
+    'Temuan 6 — pushPendingMarks() membatasi dorongan ke kMaxPushPerSession '
+    'per sesi',
+    () async {
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      when(() => remote.saveMark(any())).thenAnswer((_) async {});
+
+      const jumlahBacklog = StreakRepositoryImpl.kMaxPushPerSession + 1;
+      for (var i = 0; i < jumlahBacklog; i++) {
+        final dayKey = addDays(20260101, i);
+        await local.insertMark(
+          dayKey: dayKey,
+          markedAt: localMidnightOf(dayKey).toUtc(),
+          timezone: 'WIB',
+          viaClockCorrection: false,
+        );
+      }
+
+      final naik = await repo.pushPendingMarks();
+
+      expect(
+        naik,
+        StreakRepositoryImpl.kMaxPushPerSession,
+        reason: 'backlog lebih besar dari batas tidak boleh terkuras '
+            'sekaligus — sisanya terkuras sesi berikutnya',
       );
     },
   );
