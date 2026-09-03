@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
+import 'package:penyintas_app/features/streak/data/models/streak_mark_model.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_meta_values.dart';
 
 abstract class StreakLocalDatasource {
@@ -59,6 +60,12 @@ abstract class StreakLocalDatasource {
     Set<int> survivingDayKeys, {
     required int sinceDayKey,
   });
+
+  /// Tarik-dari-remote: insert bila belum ada, JANGAN timpa baris lokal.
+  /// Baris lokal bisa memegang `viaClockCorrection`; menimpanya akan mencuci
+  /// tanda itu — persis kelas kesalahan yang aturan "tak pernah disinkronkan"
+  /// dibuat untuk mencegah.
+  Future<void> upsertMarksFromRemote(List<StreakMarkModel> models);
 }
 
 class StreakLocalDatasourceImpl implements StreakLocalDatasource {
@@ -287,5 +294,30 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
     await (_db.delete(
       _db.streakDayMarks,
     )..where((t) => t.dayKey.isIn(dibuang))).go();
+  }
+
+  /// `insertOrIgnore`, sama seperti [insertMark] (D-4 versi tarik). Baris
+  /// lokal yang sudah ada — jujur maupun `viaClockCorrection` — tidak boleh
+  /// tersentuh: dokumen remote tidak pernah membawa `viaClockCorrection`
+  /// sama sekali, jadi menimpa akan mencuci tanda itu tanpa jejak.
+  @override
+  Future<void> upsertMarksFromRemote(List<StreakMarkModel> models) async {
+    await _db.transaction(() async {
+      for (final m in models) {
+        await _db
+            .into(_db.streakDayMarks)
+            .insert(
+              StreakDayMarksCompanion.insert(
+                // WAJIB Value(...): dayKey adalah alias rowid (PK tanpa
+                // default), generator membuatnya opsional di Companion.insert.
+                dayKey: Value(m.dayKey),
+                markedAt: m.markedAt,
+                timezone: m.timezone,
+                isSynced: const Value(true),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
+      }
+    });
   }
 }

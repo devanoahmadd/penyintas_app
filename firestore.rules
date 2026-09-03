@@ -1,6 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Jendela hari yang boleh ditulis. `request.time` UTC sementara `dayKey`
+    // wall-clock lokal device — selisihnya maksimal ±14 jam, jadi kelonggaran
+    // 2 hari di atas lebih dari cukup. Aritmetika lewat timestamp, BUKAN
+    // `dayKey + 1`: 20260930 + 1 tidak sama dengan 20261001.
+    function maxWritableDayKey() {
+      let t = request.time + duration.value(2, 'd');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
+    // Batas BAWAH (Rev 2). Sebuah penanda hanya pernah dibuat untuk "hari ini"
+    // di device, jadi dokumen yang lebih tua dari setahun tidak bisa sah —
+    // 400 hari sudah jauh melampaui jendela pemulihan penanda offline yang
+    // belum sempat terkirim (antreannya sendiri kedaluwarsa dalam 7 hari,
+    // `sync_service.dart:61-77`).
+    //
+    // Kenapa dibatasi sama sekali: `dayKey >= 20000101` mengizinkan klien
+    // yang rusak — atau iseng — menulis PULUHAN RIBU dokumen bertanggal
+    // lampau. Isinya memang hanya merugikan akun user sendiri, tapi
+    // kuota dan tagihan Firestore-nya milik pemilik aplikasi. Pagarnya murah
+    // dan tidak menghilangkan satu pun jalur sah.
+    //
+    // Sengaja BUKAN `kStreakEpochDay`: menyalin konstanta Dart ke rules
+    // membuat dua tempat yang harus diubah bersamaan saat Task 18 mengunci
+    // epoch — jenis kopling yang cepat atau lambat terlupakan.
+    function minWritableDayKey() {
+      let t = request.time - duration.value(400, 'd');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
     match /users/{userId} {
       allow read, write: if request.auth != null
         && request.auth.uid == userId;
@@ -54,6 +83,30 @@ service cloud.firestore {
           && request.resource.data.isCompleted is bool
           && request.resource.data.targetDate is number
           && request.resource.data.createdAt is number
+          && request.resource.data.updatedAt is number;
+      }
+
+      // Penanda "hari ini tidak ada pengeluaran" (A4 Konsistensi). Satu
+      // dokumen per hari, doc-id = dayKey yyyyMMdd. Pola goals: owner-check +
+      // validasi tipe ringan pada field inti, TANPA hasOnly (field baru tetap
+      // lolos — hindari drift permission-denied yang pernah terjadi pada
+      // budget_limits).
+      match /streak_marks/{dayKey} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        // delete dipisah: saat delete request.resource.data == null.
+        allow delete: if request.auth != null
+          && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.dayKey is int
+          && request.resource.data.dayKey >= minWritableDayKey()
+          && request.resource.data.dayKey <= maxWritableDayKey()
+          && string(request.resource.data.dayKey) == dayKey
+          && request.resource.data.markedAt is number
+          && request.resource.data.timezone is string
+          && request.resource.data.timezone.size() > 0
+          && request.resource.data.timezone.size() <= 64
           && request.resource.data.updatedAt is number;
       }
 

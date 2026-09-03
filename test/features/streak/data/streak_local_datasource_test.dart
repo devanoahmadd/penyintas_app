@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/features/streak/data/datasources/streak_local_datasource.dart';
+import 'package:penyintas_app/features/streak/data/models/streak_mark_model.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_meta_values.dart';
 
 const epoch = 20260901;
@@ -391,6 +392,55 @@ void main() {
         'users/u1/streak_marks/20260903',
         'users/u1/goals/g1',
       });
+    });
+  });
+
+  group('upsertMarksFromRemote — insert-if-absent, tak pernah menimpa '
+      '(Task 7)', () {
+    test('baris yang belum ada lokal ikut masuk & langsung berstatus '
+        'tersinkron', () async {
+      await ds.upsertMarksFromRemote([
+        StreakMarkModel(
+          dayKey: 20260902,
+          markedAt: DateTime.utc(2026, 9, 2, 3),
+          timezone: 'Asia/Jakarta',
+        ),
+      ]);
+
+      final row = await ds.findMark(20260902);
+      expect(row, isNotNull);
+      expect(row!.isSynced, isTrue,
+          reason: 'baris hasil tarikan remote memang sudah ada di server');
+      expect(row.timezone, 'Asia/Jakarta');
+    });
+
+    test('baris lokal TIDAK PERNAH ditimpa remote — melindungi '
+        'viaClockCorrection', () async {
+      // Baris lokal "bertanda" — hasil koreksi jam (spec §4.7).
+      await ds.insertMark(
+        dayKey: 20260902,
+        markedAt: DateTime.utc(2026, 8, 3, 3),
+        timezone: 'WIB',
+        viaClockCorrection: true,
+      );
+
+      // Remote membawa versi berbeda untuk dayKey yang sama persis.
+      await ds.upsertMarksFromRemote([
+        StreakMarkModel(
+          dayKey: 20260902,
+          markedAt: DateTime.utc(2026, 9, 2, 3),
+          timezone: 'Asia/Jakarta',
+        ),
+      ]);
+
+      final row = await ds.findMark(20260902);
+      expect(row!.markedAt.toUtc(), DateTime.utc(2026, 8, 3, 3),
+          reason: 'baris lokal tidak boleh tertimpa nilai remote');
+      expect(row.timezone, 'WIB',
+          reason: 'field lokal lain pun tak boleh ikut tertimpa');
+      expect(row.viaClockCorrection, isTrue,
+          reason: 'tanda koreksi jam tidak boleh tercuci oleh tarikan '
+              'remote — itulah alasan method ini ada');
     });
   });
 }
