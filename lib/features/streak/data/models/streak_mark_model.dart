@@ -32,7 +32,10 @@ class StreakMarkModel {
     String docId,
     Map<String, dynamic> data,
   ) => StreakMarkModel(
-    // doc-id adalah sumber kebenaran: field bisa rusak, doc-id tidak bisa.
+    // Fallback ke doc-id hanya jalan kalau field 'dayKey' HILANG dari data.
+    // Kalau field itu ADA tapi bertipe salah, `as num?` melempar TypeError
+    // sebelum sempat jatuh ke fallback — dan itu memang diinginkan: sync
+    // harus tahu ada masalah, bukan menutupinya diam-diam di balik doc-id.
     dayKey: (data['dayKey'] as num?)?.toInt() ?? int.parse(docId),
     markedAt: DateTime.fromMillisecondsSinceEpoch(
       (data['markedAt'] as num?)?.toInt() ?? 0,

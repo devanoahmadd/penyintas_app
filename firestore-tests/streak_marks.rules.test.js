@@ -43,6 +43,18 @@ test('owner boleh read penanda', async () => {
   const ctx = env.authenticatedContext('u1');
   await assertSucceeds(getDoc(ref(ctx)));
 });
+test('owner boleh update penanda (markedAt & updatedAt baru) — Temuan 2: '
+  + 'cabang update belum pernah dilatih. SyncDispatcher memetakan create '
+  + '-> .set() tanpa merge, dan Firestore membedakan create/update dari '
+  + 'ADA-TIDAKnya dokumen di server, bukan dari SyncOperation yang '
+  + 'dikirim — retry sah (T25) bisa mendarat sebagai update.', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const r = ref(ctx);
+  await setDoc(r, valid());
+  await assertSucceeds(
+    setDoc(r, { ...valid(), markedAt: Date.now() + 1000 }),
+  );
+});
 test('owner boleh delete penanda (jalur undo)', async () => {
   const ctx = env.authenticatedContext('u1');
   const r = ref(ctx);
@@ -64,6 +76,16 @@ test('uid lain ditolak', async () => {
 test('anonim ditolak', async () => {
   const ctx = env.unauthenticatedContext();
   await assertFails(setDoc(ref(ctx, 'u1'), valid()));
+});
+test('uid lain ditolak read (Temuan 3) — allow read punya kondisi terpisah '
+  + 'dari create/update/delete, tak pernah dilatih dari sisi non-owner',
+  async () => {
+    const ctx = env.authenticatedContext('u2');
+    await assertFails(getDoc(ref(ctx, 'u1')));
+  });
+test('uid lain ditolak delete (Temuan 6)', async () => {
+  const ctx = env.authenticatedContext('u2');
+  await assertFails(deleteDoc(ref(ctx, 'u1')));
 });
 
 // --- Validasi bentuk (harus DITOLAK) ---
@@ -87,9 +109,45 @@ test('timezone kosong ditolak', async () => {
     setDoc(ref(ctx), { ...valid(), timezone: '' }),
   );
 });
+test('timezone > 64 karakter ditolak (batas atas, Temuan 5)', async () => {
+  const ctx = env.authenticatedContext('u1');
+  await assertFails(
+    setDoc(ref(ctx), { ...valid(), timezone: 'x'.repeat(65) }),
+  );
+});
 test('markedAt bukan angka ditolak', async () => {
   const ctx = env.authenticatedContext('u1');
   await assertFails(
     setDoc(ref(ctx), { ...valid(), markedAt: 'kemarin' }),
   );
+});
+test('dayKey bukan int (string) ditolak (Temuan 7)', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const d = hariIni();
+  await assertFails(
+    setDoc(ref(ctx, 'u1', d), { ...valid(d), dayKey: String(d) }),
+  );
+});
+
+// --- Field wajib HILANG, bukan cuma salah tipe (Temuan 4) — mengakses field
+// yang tak ada berbeda dari membandingkan tipe field yang ada di bahasa rules.
+test('dayKey hilang ditolak', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const { dayKey, ...rest } = valid();
+  await assertFails(setDoc(ref(ctx), rest));
+});
+test('markedAt hilang ditolak', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const { markedAt, ...rest } = valid();
+  await assertFails(setDoc(ref(ctx), rest));
+});
+test('timezone hilang ditolak', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const { timezone, ...rest } = valid();
+  await assertFails(setDoc(ref(ctx), rest));
+});
+test('updatedAt hilang ditolak (field inti wajib)', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const { updatedAt, ...rest } = valid();
+  await assertFails(setDoc(ref(ctx), rest));
 });
