@@ -382,23 +382,12 @@ void main() {
     });
   });
 
-  group('Temuan 4 — badan sementara markToday()/unmarkToday()', () {
-    test(
-      'markToday() melempar UnimplementedError — badan sementara sebelum '
-      'Task 9',
-      () {
-        expect(() => repo.markToday(), throwsA(isA<UnimplementedError>()));
-      },
-    );
-
-    test(
-      'unmarkToday() melempar UnimplementedError — badan sementara sebelum '
-      'Task 9',
-      () {
-        expect(() => repo.unmarkToday(), throwsA(isA<UnimplementedError>()));
-      },
-    );
-  });
+  // Temuan 4 — kedua badan sementara markToday()/unmarkToday() SUDAH
+  // diimplementasikan (Task 9), jadi test yang mengunci lemparan
+  // `UnimplementedError` di sini dihapus: ia mengunci ketiadaan fitur,
+  // bukan perilaku. Penggantinya bukan satu test melainkan satu berkas
+  // penuh — `streak_repository_write_test.dart` (idempotensi, penjaga
+  // jam, purge-sebelum-enqueue, jalur hapus).
 
   test(
     'Temuan 5 — requestRecompute() aman dipanggil sesudah dispose() (LIHAT '

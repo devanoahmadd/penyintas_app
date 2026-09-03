@@ -4,6 +4,8 @@ import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/constants/streak_constants.dart';
+import 'package:penyintas_app/core/database/app_database.dart'
+    show SyncOperation;
 import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
@@ -147,15 +149,17 @@ class StreakRepositoryImpl implements StreakRepository {
             if (!controller.isClosed) controller.addError(e, s);
           },
         );
-        txSub = _local.watchTransactionDays(epochDay: _epochDay).listen(
-          (v) {
-            txDays = v;
-            jadwalkan();
-          },
-          onError: (Object e, StackTrace s) {
-            if (!controller.isClosed) controller.addError(e, s);
-          },
-        );
+        txSub = _local
+            .watchTransactionDays(epochDay: _epochDay)
+            .listen(
+              (v) {
+                txDays = v;
+                jadwalkan();
+              },
+              onError: (Object e, StackTrace s) {
+                if (!controller.isClosed) controller.addError(e, s);
+              },
+            );
         pemicuSub = _pemicu.stream.listen((_) => jadwalkan());
       },
       onCancel: () async {
@@ -189,19 +193,163 @@ class StreakRepositoryImpl implements StreakRepository {
   @override
   Future<void> saveMeta(StreakMetaValues meta) => _local.saveMeta(meta);
 
-  // markToday()/unmarkToday() diimplementasikan Task 9 (jalur tulis penuh:
-  // penjaga jam, purge-sebelum-enqueue, SyncQueue). Badan sementara ini
-  // SENGAJA melempar, bukan mengembalikan `Right(null)` palsu — supaya tidak
-  // ada pemanggil yang mengira jalurnya sudah ada.
   @override
-  Future<Either<Failure, void>> markToday() => throw UnimplementedError(
-    'markToday() diimplementasikan Task 9.',
-  );
+  Future<Either<Failure, void>> markToday() async {
+    try {
+      final now = _clock.now();
+      final today = localDayKey(now);
+
+      // D-4 — IDEMPOTEN, dan ini yang PERTAMA diperiksa. Baris yang sudah ada
+      // tidak pernah disentuh: isinya maupun status sinkronnya. Menaruhnya di
+      // atas penjaga jam disengaja — kalau harinya memang sudah ditandai,
+      // tidak ada yang akan tercipta, jadi menolaknya dengan pesan galat cuma
+      // membingungkan user atas aksi yang sebenarnya tak berefek apa-apa.
+      // Ini sekaligus jaring kedua guard tap-ganda §8.1.
+      if (await _local.hasMark(today)) return const Right(null);
+
+      final meta = await _local.readMeta();
+
+      // Mode netral penjaga jam (selisih 1–2 hari): penandaan DITOLAK.
+      // Pembekuannya maksimal 2 hari dan sembuh sendiri; di luar rentang itu
+      // cabang "koreksi jam" sudah melepaskan penjaganya.
+      //
+      // Ambangnya diukur dalam HARI lewat `addDays()`, BUKAN pengurangan
+      // `yyyymmdd` mentah — jebakan yang sama persis yang sudah diperbaiki di
+      // `streak_calculator.dart` (`_selisihHari`): `20261001 - 20260930` = 71,
+      // padahal jaraknya satu hari. Perbandingan `<`/`>=` antar `dayKey` aman
+      // karena urutan `yyyymmdd` sudah sejalan dengan urutan kalender; yang
+      // tidak boleh cuma ARITMETIKAnya.
+      if (today < meta.lastSeenDay && today >= addDays(meta.lastSeenDay, -2)) {
+        return Left(
+          ValidationFailure(
+            'Jam perangkat sedang tidak cocok. Coba lagi nanti.',
+          ),
+        );
+      }
+
+      // Waktu nyata tidak pernah berjalan mundur. Hari device yang jatuh jauh
+      // DI BAWAH hari tertinggi yang pernah tercatat hanya bisa berarti jam
+      // dimanipulasi atau RTC benar-benar reset — keduanya diperlakukan sama.
+      //
+      // PEMBANDINGNYA `maxSeenDay`, BUKAN `lastSeenDay`: `lastSeenDay` sudah
+      // diturunkan StreakBloc saat snapshot dihitung, jauh sebelum user
+      // menekan tombol, sehingga selisihnya selalu nol di titik ini.
+      //
+      // `maxSeenDay > 0` menjaga meta kosong (akun baru / sesudah logout):
+      // `addDays(0, -2)` akan menghitung mundur dari tanggal tak bermakna.
+      final viaClockCorrection =
+          meta.maxSeenDay > 0 && today < addDays(meta.maxSeenDay, -2);
+
+      // `timeZoneName` memberi SINGKATAN device ("WIB", "+07"), bukan id IANA
+      // seperti contoh "Asia/Jakarta" di spec §6.1. Dibiarkan begitu dengan
+      // sadar: kolom ini murni jejak audit, tak pernah dibaca logika mana pun,
+      // dan menariknya dari `tz.local.name` akan mengikat penandaan pada
+      // urutan inisialisasi paket timezone milik lapisan notifikasi.
+      await _local.insertMark(
+        dayKey: today,
+        markedAt: now.toUtc(),
+        timezone: now.timeZoneName,
+        viaClockCorrection: viaClockCorrection,
+      );
+      requestRecompute();
+
+      // Baris bertanda TIDAK PERNAH disinkronkan. Kalau ia diunggah, reinstall
+      // menariknya kembali TANPA tanda dan membatalkan seluruh pengecualian
+      // ini — penjaga yang hidup hanya di lapisan lokal sementara datanya
+      // hidup lebih lama dari lapisan itu. Barisnya tetap ada, tidak dihapus,
+      // tanpa peringatan apa pun ke user.
+      if (viaClockCorrection) return const Right(null);
+
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return const Right(null); // data tetap aman di lokal
+
+      final path = 'users/$uid/streak_marks/$today';
+      // Aturan anti-race (berlaku dua arah): buang dulu item tertunda untuk
+      // path yang sama persis. Kebenaran lokal saat ini selalu menang atas
+      // apa pun yang masih menunggu terkirim.
+      await _local.purgePendingSyncFor(path);
+
+      final model = StreakMarkModel(
+        dayKey: today,
+        markedAt: now.toUtc(),
+        timezone: now.timeZoneName,
+      );
+      final data = model.toFirestore(updatedAtMs: now.millisecondsSinceEpoch);
+
+      if (await _network.isConnected) {
+        try {
+          await _remote.saveMark(model);
+          await _local.markSynced(today);
+          return const Right(null);
+        } catch (e, s) {
+          _logError(e, s, 'markToday.push');
+        }
+      }
+      await _local.addToSyncQueue(
+        itemId: '$today',
+        collectionPath: path,
+        data: data,
+        operation: SyncOperation.create,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s, 'markToday');
+      return Left(CacheFailure('Gagal menyimpan penanda hari ini.'));
+    }
+  }
 
   @override
-  Future<Either<Failure, void>> unmarkToday() => throw UnimplementedError(
-    'unmarkToday() diimplementasikan Task 9.',
-  );
+  Future<Either<Failure, void>> unmarkToday() async {
+    try {
+      final today = localDayKey(_clock.now());
+
+      // SATU pembacaan menutup dua lubang sekaligus:
+      //
+      //  D-8 — kalau tengah malam lewat selagi SnackBar undo masih hidup
+      //  (5 detik, dan §7.5 menundanya lebih lama lagi lewat perayaan),
+      //  `today` di sini sudah hari yang BERBEDA dari hari yang tadi
+      //  ditandai. Tanpa penjaga ini ia akan menghapus — dan mengantre
+      //  delete untuk — hari yang tidak pernah diurungkan siapa pun.
+      //
+      //  D-5 — baris bertanda tak pernah punya dokumen remote. Kalau hari itu
+      //  KEBETULAN punya dokumen sah dari device lain, mengantre delete akan
+      //  menghapus penanda jujur milik device itu.
+      final row = await _local.findMark(today);
+      if (row == null) return const Right(null);
+
+      // Undo adalah PENGHAPUSAN BARIS, bukan penandaan-terbalik.
+      await _local.deleteMark(today);
+      requestRecompute();
+
+      if (row.viaClockCorrection) return const Right(null);
+
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return const Right(null);
+
+      final path = 'users/$uid/streak_marks/$today';
+      final createDibuang = await _local.purgePendingSyncFor(path);
+      if (createDibuang > 0) {
+        // Purge baru saja membuang satu-satunya `create` yang belum pernah
+        // terkirim — dokumen remote memang belum pernah ada.
+        return const Right(null);
+      }
+
+      // Sisanya: barisnya bersih dan dokumen remote memang pernah (atau
+      // mungkin pernah) tersinkron. Mengantre delete aman & idempoten —
+      // menghapus dokumen yang tak ada adalah no-op di Firestore, dan rules
+      // mengizinkannya.
+      await _local.addToSyncQueue(
+        itemId: '$today',
+        collectionPath: path,
+        data: const <String, dynamic>{},
+        operation: SyncOperation.delete,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _logError(e, s, 'unmarkToday');
+      return Left(CacheFailure('Gagal membatalkan penanda hari ini.'));
+    }
+  }
 
   /// KEPUTUSAN `sinceDayKey` (wajib diputuskan sadar — lihat brief Task 8):
   ///
