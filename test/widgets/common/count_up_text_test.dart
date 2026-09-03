@@ -40,7 +40,7 @@ void main() {
 
       expect(find.text('0'), findsOneWidget);
 
-      // Ubah nilai
+      // Ubah nilai ke 100
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -53,7 +53,26 @@ void main() {
         ),
       );
 
-      // Tunggu animasi selesai (420ms)
+      // Asersi frame antara — animasi sudah dimulai tapi belum selesai
+      // Tunggu 150ms (dari total 420ms), nilai harus di antara 0 dan 100
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final textWidget = tester.widget<Text>(find.byType(Text));
+      final displayedValue = int.parse(textWidget.data ?? '0');
+
+      // Asersi bahwa animasi sedang berjalan: nilai harus strictly di antara 0 dan 100
+      expect(
+        displayedValue,
+        greaterThan(0),
+        reason: 'Nilai harus > 0 (sudah bergerak dari awal 0)',
+      );
+      expect(
+        displayedValue,
+        lessThan(100),
+        reason: 'Nilai harus < 100 (animasi belum selesai)',
+      );
+
+      // Tunggu animasi selesai (420ms total)
       await tester.pumpAndSettle();
 
       expect(find.text('100'), findsOneWidget);
