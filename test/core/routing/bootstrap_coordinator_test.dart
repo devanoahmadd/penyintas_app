@@ -14,6 +14,7 @@ import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/preferences/domain/entities/preferences_entity.dart';
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
+import 'package:penyintas_app/features/streak/domain/repositories/streak_repository.dart';
 
 class _MockSyncUserSettings extends Mock implements SyncUserSettingsUseCase {}
 
@@ -33,6 +34,8 @@ class _MockBillReminderScheduler extends Mock
 class _MockBillReminderSettingsDs extends Mock
     implements BillReminderSettingsDatasource {}
 
+class _MockStreakRepo extends Mock implements StreakRepository {}
+
 void main() {
   late _MockSyncUserSettings syncUserSettings;
   late _MockBudgetRepo budgetRepo;
@@ -42,6 +45,7 @@ void main() {
   late _MockBillRepo billRepo;
   late _MockBillReminderScheduler billScheduler;
   late _MockBillReminderSettingsDs billReminderSettingsDs;
+  late _MockStreakRepo streakRepo;
   late int onCompleteCalls;
 
   setUpAll(() {
@@ -58,6 +62,7 @@ void main() {
     billRepo = _MockBillRepo();
     billScheduler = _MockBillReminderScheduler();
     billReminderSettingsDs = _MockBillReminderSettingsDs();
+    streakRepo = _MockStreakRepo();
     onCompleteCalls = 0;
     when(
       () => syncUserSettings(any()),
@@ -90,6 +95,10 @@ void main() {
         globalHour: any(named: 'globalHour'),
       ),
     ).thenAnswer((_) async {});
+    when(
+      () => streakRepo.syncMarksFromRemote(),
+    ).thenAnswer((_) async => const Right(0));
+    when(() => streakRepo.pushPendingMarks()).thenAnswer((_) async => 0);
   });
 
   BootstrapCoordinator build() => BootstrapCoordinator(
@@ -101,11 +110,12 @@ void main() {
     billRepository: billRepo,
     billReminderScheduler: billScheduler,
     billReminderSettings: billReminderSettingsDs,
+    streakRepository: streakRepo,
     onComplete: () => onCompleteCalls++,
   );
 
   test(
-    'ensure() menjalankan kelima langkah sync + onComplete (reset cache guard) SEKALI',
+    'ensure() menjalankan keenam langkah sync + onComplete (reset cache guard) SEKALI',
     () async {
       final c = build();
       await c.ensure();
@@ -113,12 +123,44 @@ void main() {
       verify(() => budgetRepo.syncBudgetFromRemote()).called(1);
       verify(() => goalRepo.syncGoalsFromRemote()).called(1);
       verify(() => billRepo.syncBillsFromRemote()).called(1);
+      verify(() => streakRepo.syncMarksFromRemote()).called(1);
       verify(
         () => prefsRepo.syncOnLaunch(
           budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
         ),
       ).called(1);
       expect(onCompleteCalls, 1);
+      expect(c.isDone, true);
+    },
+  );
+
+  test(
+    'ensure() mendorong penanda belum sinkron (pushPendingMarks) sesudah '
+    'langkah lain selesai',
+    () async {
+      final c = build();
+      await c.ensure();
+      verify(() => streakRepo.pushPendingMarks()).called(1);
+    },
+  );
+
+  test(
+    'non-fatal: streak sync/push gagal → langkah lain tetap jalan, ensure() '
+    'selesai',
+    () async {
+      when(
+        () => streakRepo.syncMarksFromRemote(),
+      ).thenThrow(Exception('offline'));
+      when(
+        () => streakRepo.pushPendingMarks(),
+      ).thenThrow(Exception('offline'));
+      final c = build();
+      await c.ensure(); // tak melempar
+      verify(
+        () => prefsRepo.syncOnLaunch(
+          budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+        ),
+      ).called(1);
       expect(c.isDone, true);
     },
   );

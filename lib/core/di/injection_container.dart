@@ -138,6 +138,13 @@ import 'package:penyintas_app/features/bills/domain/usecases/sync_bills_from_rem
 import 'package:penyintas_app/features/bills/domain/usecases/update_bill_usecase.dart';
 import 'package:penyintas_app/features/bills/domain/usecases/watch_active_bills_usecase.dart';
 import 'package:penyintas_app/features/bills/presentation/bloc/bills_bloc.dart';
+import 'package:penyintas_app/features/streak/data/datasources/streak_local_datasource.dart';
+import 'package:penyintas_app/features/streak/data/datasources/streak_mark_remote_datasource.dart';
+import 'package:penyintas_app/features/streak/data/repositories/streak_repository_impl.dart';
+import 'package:penyintas_app/features/streak/domain/repositories/streak_repository.dart';
+import 'package:penyintas_app/features/streak/domain/usecases/mark_today_no_spend_usecase.dart';
+import 'package:penyintas_app/features/streak/domain/usecases/undo_today_no_spend_usecase.dart';
+import 'package:penyintas_app/features/streak/domain/usecases/watch_streak_snapshot_usecase.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
@@ -193,6 +200,7 @@ Future<void> init({required AppDatabase db}) async {
   _initSurvival();
   _initGoal();
   _initBills();
+  _initStreak();
   _initAppLock();
 }
 
@@ -364,6 +372,7 @@ void _initOnboarding() {
       billRepository: sl(),
       billReminderScheduler: sl(),
       billReminderSettings: sl(),
+      streakRepository: sl(),
       onComplete: () => sl<OnboardingGuard>().resetCache(),
     ),
   );
@@ -650,6 +659,30 @@ void _initBills() {
   sl.registerLazySingleton<BillReminderSettingsDatasource>(
     () => BillReminderSettingsDatasourceImpl(sl(), sl(), sl()),
   );
+}
+
+void _initStreak() {
+  // Repository singleton — stream snapshot dipakai bersama halaman
+  // /consistency, tile bento, kartu sore, dan DailyReminderScheduler.
+  sl.registerLazySingleton<StreakRepository>(
+    () => StreakRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      network: sl(),
+      auth: sl(),
+      clock: sl(),
+    ),
+  );
+  sl.registerLazySingleton<StreakLocalDatasource>(
+    () => StreakLocalDatasourceImpl(sl()),
+  );
+  sl.registerLazySingleton<StreakMarkRemoteDatasource>(
+    () => StreakMarkRemoteDatasourceImpl(auth: sl(), firestore: sl()),
+  );
+  sl.registerLazySingleton(() => WatchStreakSnapshotUseCase(sl()));
+  sl.registerLazySingleton(() => MarkTodayNoSpendUseCase(sl()));
+  sl.registerLazySingleton(() => UndoTodayNoSpendUseCase(sl()));
+  // StreakBloc didaftarkan di Task 11.
 }
 
 void _initPreferences() {

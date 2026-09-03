@@ -9,6 +9,7 @@ import 'package:penyintas_app/features/budget/domain/repositories/budget_reposit
 import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
+import 'package:penyintas_app/features/streak/domain/repositories/streak_repository.dart';
 
 /// Gerbang bootstrap SATU-TEMBAK per sesi login (Temuan 1, Opsi 1).
 /// Menjalankan restorasi identity + budget + preferences (`syncOnLaunch`) SEKALI,
@@ -25,6 +26,7 @@ class BootstrapCoordinator {
     required BillRepository billRepository,
     required BillReminderScheduler billReminderScheduler,
     required BillReminderSettingsDatasource billReminderSettings,
+    required StreakRepository streakRepository,
     required void Function()
     onComplete, // produksi: () => resetOnboardingCache()
     Duration stepTimeout = const Duration(seconds: 3),
@@ -36,6 +38,7 @@ class BootstrapCoordinator {
        _bills = billRepository,
        _billScheduler = billReminderScheduler,
        _billReminderSettings = billReminderSettings,
+       _streak = streakRepository,
        _onComplete = onComplete,
        _stepTimeout = stepTimeout;
 
@@ -47,6 +50,7 @@ class BootstrapCoordinator {
   final BillRepository _bills;
   final BillReminderScheduler _billScheduler;
   final BillReminderSettingsDatasource _billReminderSettings;
+  final StreakRepository _streak;
   final void Function() _onComplete;
   final Duration _stepTimeout;
 
@@ -65,6 +69,7 @@ class BootstrapCoordinator {
         _budget.syncBudgetFromRemote().timeout(_stepTimeout),
         _goals.syncGoalsFromRemote().timeout(_stepTimeout),
         _bills.syncBillsFromRemote().timeout(_stepTimeout),
+        _streak.syncMarksFromRemote().timeout(_stepTimeout),
       ]);
     } catch (e, s) {
       _recordNonFatal(e, s);
@@ -95,6 +100,15 @@ class BootstrapCoordinator {
             )
             .timeout(_stepTimeout);
       }
+    } catch (e, s) {
+      _recordNonFatal(e, s);
+    }
+    // Dorong penanda yang belum sempat naik (D-9). SENGAJA di luar
+    // `Future.wait`: N panggilan jaringan berurutan tidak muat di jendela
+    // 3 detik, dan menaruhnya di dalam membuat timeout membatalkan
+    // pemulihan yang justru paling penting. Non-fatal.
+    try {
+      await _streak.pushPendingMarks().timeout(const Duration(seconds: 15));
     } catch (e, s) {
       _recordNonFatal(e, s);
     }
