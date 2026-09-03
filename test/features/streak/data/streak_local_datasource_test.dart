@@ -37,7 +37,7 @@ void main() {
         );
   }
 
-  group('watchTransactionDays — jendela createdAt (spec §4.2 aturan 1)', () {
+  group('readTransactionDays — jendela createdAt (spec §4.2 aturan 1)', () {
     test('T5 — date=D, createdAt=D+2 → D aman', () async {
       await tambahTransaksi(
         date: DateTime(2026, 9, 2, 13),
@@ -78,7 +78,9 @@ void main() {
       );
       expect(await ds.readTransactionDays(epochDay: epoch), isEmpty);
     });
+  });
 
+  group('watchTransactionDays — stream & jendela', () {
     test('stream memancarkan ulang saat transaksi baru masuk', () async {
       final emisi = <Set<int>>[];
       final sub = ds.watchTransactionDays(epochDay: epoch).listen(emisi.add);
@@ -91,9 +93,19 @@ void main() {
       await sub.cancel();
       expect(emisi.last, contains(20260905));
     });
+
+    test('jendela createdAt (kasus T6) juga berlaku lewat entry point stream, '
+        'bukan cuma readTransactionDays', () async {
+      await tambahTransaksi(
+        date: DateTime(2026, 9, 2, 13),
+        createdAt: DateTime(2026, 9, 5, 8), // D+3, luar jendela K5
+      );
+      final hasil = await ds.watchTransactionDays(epochDay: epoch).first;
+      expect(hasil, isEmpty);
+    });
   });
 
-  group('watchMarkedDays — baris via-koreksi-jam dikecualikan', () {
+  group('readMarkedDays — baris via-koreksi-jam dikecualikan', () {
     test('baris bertanda TIDAK ikut, baris bersih ikut', () async {
       await ds.insertMark(
         dayKey: 20260902,
@@ -141,6 +153,72 @@ void main() {
     });
   });
 
+  group('watchMarkedDays — tersaring & reaktif', () {
+    test('hanya baris viaClockCorrection==false yang muncul lewat stream',
+        () async {
+      await ds.insertMark(
+        dayKey: 20260902,
+        markedAt: DateTime.utc(2026, 9, 2, 3),
+        timezone: 'WIB',
+        viaClockCorrection: false,
+      );
+      await ds.insertMark(
+        dayKey: 20260903,
+        markedAt: DateTime.utc(2026, 9, 3, 3),
+        timezone: 'WIB',
+        viaClockCorrection: true,
+      );
+
+      final hasil = await ds.watchMarkedDays().first;
+
+      expect(hasil, {20260902},
+          reason: 'entry point stream harus tersaring sama persis dengan '
+              'readMarkedDays — dipakai replay & cellFor');
+    });
+
+    test('memancarkan ulang saat mark bersih baru masuk', () async {
+      final emisi = <Set<int>>[];
+      final sub = ds.watchMarkedDays().listen(emisi.add);
+      await Future<void>.delayed(Duration.zero);
+      await ds.insertMark(
+        dayKey: 20260905,
+        markedAt: DateTime.utc(2026, 9, 5),
+        timezone: 'WIB',
+        viaClockCorrection: false,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await sub.cancel();
+      expect(emisi.last, contains(20260905));
+    });
+  });
+
+  group('watchAllMarkDays — mentah, tanpa filter (D-11)', () {
+    test('mengembalikan SEMUA baris termasuk viaClockCorrection — kontras '
+        'langsung dengan readMarkedDays', () async {
+      await ds.insertMark(
+        dayKey: 20260902,
+        markedAt: DateTime.utc(2026, 9, 2, 3),
+        timezone: 'WIB',
+        viaClockCorrection: false,
+      );
+      await ds.insertMark(
+        dayKey: 20260903,
+        markedAt: DateTime.utc(2026, 9, 3, 3),
+        timezone: 'WIB',
+        viaClockCorrection: true,
+      );
+
+      final mentah = await ds.watchAllMarkDays().first;
+      expect(mentah, {20260902, 20260903},
+          reason: 'D-11: watchAllMarkDays TIDAK PERNAH menyaring — ia '
+              'menjawab "sudah pernah ditekan?", bukan "menghitung?"');
+
+      expect(await ds.readMarkedDays(), {20260902},
+          reason: 'kontras: readMarkedDays (jalur bersih) hanya baris '
+              'viaClockCorrection==false');
+    });
+  });
+
   group('readUnsyncedMarks — bahan dorongan D-6', () {
     test('hanya baris BERSIH yang belum tersinkron', () async {
       await ds.insertMark(
@@ -162,6 +240,30 @@ void main() {
         [20260902],
         reason: '20260903 sudah tersinkron; 20260904 bertanda dan tak pernah '
             'boleh naik ke Firestore (spec §4.7)',
+      );
+    });
+
+    test('urutan hasil MENAIK berdasarkan dayKey walau di-insert acak',
+        () async {
+      await ds.insertMark(
+        dayKey: 20260905, markedAt: DateTime.utc(2026, 9, 5),
+        timezone: 'WIB', viaClockCorrection: false,
+      );
+      await ds.insertMark(
+        dayKey: 20260902, markedAt: DateTime.utc(2026, 9, 2),
+        timezone: 'WIB', viaClockCorrection: false,
+      );
+      await ds.insertMark(
+        dayKey: 20260904, markedAt: DateTime.utc(2026, 9, 4),
+        timezone: 'WIB', viaClockCorrection: false,
+      );
+
+      expect(
+        (await ds.readUnsyncedMarks()).map((e) => e.dayKey).toList(),
+        [20260902, 20260904, 20260905],
+        reason: 'D-18: dayKey paling tua (terkecil) harus pertama — ia '
+            'paling dekat TTL 7 hari SyncQueue, jadi wajib lolos batas '
+            'kMaxPushPerSession lebih dulu',
       );
     });
   });
@@ -216,6 +318,22 @@ void main() {
       await ds.deleteSyncedMarksAbsentFrom({20260905}, sinceDayKey: epoch);
 
       expect(await ds.hasMark(20260905), isTrue);
+    });
+  });
+
+  group('deleteMark', () {
+    test('menghapus baris; hasMark jadi false sesudahnya', () async {
+      await ds.insertMark(
+        dayKey: 20260906, markedAt: DateTime.utc(2026, 9, 6),
+        timezone: 'WIB', viaClockCorrection: false,
+      );
+      expect(await ds.hasMark(20260906), isTrue);
+
+      await ds.deleteMark(20260906);
+
+      expect(await ds.hasMark(20260906), isFalse,
+          reason: 'unmarkToday() (Task 8/9) bergantung pada penghapusan '
+              'nyata di sini, bukan no-op');
     });
   });
 
