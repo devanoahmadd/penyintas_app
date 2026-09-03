@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Animates a number from its previous value to a new value.
-/// Duration 420ms, easeOutCubic. Format via [format] callback.
-class OnboardingCountUp extends StatefulWidget {
-  const OnboardingCountUp({
+/// Menganimasikan angka dari nilai sebelumnya ke nilai baru.
+/// Durasi 420 ms, easeOutCubic. Format lewat callback [format].
+///
+/// Dipromosikan dari `OnboardingCountUp` (milik fitur onboarding) supaya bisa
+/// dipakai lintas-fitur — halaman Konsistensi memerlukannya untuk angka streak.
+class CountUpText extends StatefulWidget {
+  const CountUpText({
     super.key,
     required this.value,
     required this.style,
@@ -15,10 +18,10 @@ class OnboardingCountUp extends StatefulWidget {
   final String Function(int) format;
 
   @override
-  State<OnboardingCountUp> createState() => _OnboardingCountUpState();
+  State<CountUpText> createState() => _CountUpTextState();
 }
 
-class _OnboardingCountUpState extends State<OnboardingCountUp>
+class _CountUpTextState extends State<CountUpText>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late int _from;
@@ -38,7 +41,7 @@ class _OnboardingCountUpState extends State<OnboardingCountUp>
   }
 
   @override
-  void didUpdateWidget(OnboardingCountUp old) {
+  void didUpdateWidget(CountUpText old) {
     super.didUpdateWidget(old);
     if (old.value != widget.value) {
       _from = _displayed;

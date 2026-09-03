@@ -17,8 +17,8 @@ import 'package:penyintas_app/features/notification/presentation/bloc/notificati
 import 'package:penyintas_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_draft_cubit.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/grow_shoot.dart';
-import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_count_up.dart';
 import 'package:penyintas_app/features/onboarding/presentation/widgets/onboarding_ruas_progress.dart';
+import 'package:penyintas_app/widgets/common/count_up_text.dart';
 import 'package:penyintas_app/widgets/common/amount_keypad.dart';
 import '../widgets/weather_scene_widget.dart';
 
@@ -1193,7 +1193,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           ),
                         ),
                         const SizedBox(height: 3),
-                        OnboardingCountUp(
+                        CountUpText(
                           value: calc.daily,
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
@@ -2038,7 +2038,7 @@ class _TotalCard extends StatelessWidget {
               ),
             ],
           ),
-          OnboardingCountUp(
+          CountUpText(
             value: fixed,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
@@ -2127,7 +2127,7 @@ class _SheetKeypad extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                OnboardingCountUp(
+                CountUpText(
                   value: calc.fixed,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',

@@ -22,6 +22,7 @@ import 'package:penyintas_app/features/transaction/presentation/widgets/add_tran
 import 'package:penyintas_app/features/transaction/domain/entities/transaction_entity.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/widgets/common/app_bottom_nav_bar.dart';
+import 'package:penyintas_app/widgets/common/dashed_border_painter.dart';
 import 'package:penyintas_app/widgets/common/email_verification_banner.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bills_bento_tile.dart';
@@ -693,43 +694,6 @@ class _BentoGrid extends StatelessWidget {
 
 // ── Tip card ──────────────────────────────────────────────────────────────
 
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    final rRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rRect);
-
-    const dashLen = 5.0;
-    const gapLen = 4.0;
-    final dashPath = Path();
-    for (final pm in path.computeMetrics()) {
-      double dist = 0;
-      while (dist < pm.length) {
-        dashPath.addPath(pm.extractPath(dist, dist + dashLen), Offset.zero);
-        dist += dashLen + gapLen;
-      }
-    }
-    canvas.drawPath(dashPath, paint);
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) =>
-      old.color != color || old.radius != radius;
-}
-
 class _TipCard extends StatelessWidget {
   const _TipCard();
 
@@ -746,7 +710,7 @@ class _TipCard extends StatelessWidget {
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
     return CustomPaint(
-      foregroundPainter: _DashedBorderPainter(
+      foregroundPainter: DashedBorderPainter(
         color: borderColor,
         radius: AppRadius.md,
       ),
