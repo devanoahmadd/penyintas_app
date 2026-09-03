@@ -419,4 +419,124 @@ void main() {
       });
     },
   );
+
+  group('T11 — jam mundur 1–2 hari (mode netral)', () {
+    test('streak tidak berubah, tidak putus, todayStatus anomaly', () {
+      // lastSeenDay 10 Sep, jam device menunjukkan 9 Sep (selisih 1).
+      final safe = run(20260901, 10); // 1..10 Sep aman
+      final s = compute(tx: safe, lastSeen: 20260910, today: 20260909);
+      expect(s.todayStatus, DayStatus.anomaly);
+      expect(s.today, 20260910, reason: 'effectiveToday = lastSeenDay');
+      expect(s.currentStreak, 10, reason: 'tidak menyusut, tidak putus');
+      expect(
+        s.nextLastSeenDay,
+        20260910,
+        reason: 'lastSeenDay TIDAK diturunkan di mode netral',
+      );
+      expect(s.clockAnomalyDetected, isTrue);
+    });
+
+    test('selisih tepat 2 hari masih mode netral', () {
+      final s = compute(
+        tx: run(20260901, 10),
+        lastSeen: 20260910,
+        today: 20260908,
+      );
+      expect(s.todayStatus, DayStatus.anomaly);
+      expect(s.nextLastSeenDay, 20260910);
+    });
+  });
+
+  group('T21 — jam maju jauh lalu dikembalikan (selisih > 2 hari)', () {
+    test(
+      'TIDAK beku: lastSeenDay turun ke today, perhitungan lanjut normal',
+      () {
+        // lastSeenDay tertinggal di 30 Sep, waktu nyata 10 Sep.
+        final s = compute(
+          tx: run(20260901, 10),
+          lastSeen: 20260930,
+          today: 20260910,
+        );
+        expect(
+          s.todayStatus,
+          DayStatus.safe,
+          reason: 'bukan anomaly — ini koreksi jam',
+        );
+        expect(
+          s.today,
+          20260910,
+          reason: 'effectiveToday = today, bukan lastSeenDay',
+        );
+        expect(
+          s.nextLastSeenDay,
+          20260910,
+          reason: 'penjaga melepaskan diri sendiri',
+        );
+        expect(s.currentStreak, 10);
+        expect(
+          s.clockAnomalyDetected,
+          isTrue,
+          reason: 'tetap dicatat sebagai anomali',
+        );
+      },
+    );
+
+    test('hari maju normal tidak pernah dianggap anomali', () {
+      final s = compute(
+        tx: run(20260901, 5),
+        lastSeen: 20260903,
+        today: 20260905,
+      );
+      expect(s.todayStatus, DayStatus.safe);
+      expect(s.nextLastSeenDay, 20260905);
+      expect(s.clockAnomalyDetected, isFalse);
+    });
+  });
+
+  group('T19 — presedensi petak kalender', () {
+    test('mengikuti tabel spec §5.3 persis', () {
+      // 1–7 Sep aman lewat transaksi (panen 1 jeda), 8 Sep bolong (terserap
+      // jeda), 9 Sep ditandai nihil, 10 Sep aman transaksi DAN ditandai nihil,
+      // hari ini 12 Sep, 11 Sep bolong tanpa jeda.
+      final s = compute(
+        marked: {20260909, 20260910},
+        tx: {...run(20260901, 7), 20260910},
+        today: 20260912,
+      );
+      expect(s.cellFor(20260831), DayCell.beforeStart, reason: 'prioritas 1');
+      expect(s.cellFor(20260913), DayCell.future, reason: 'prioritas 2');
+      expect(s.cellFor(20260912), DayCell.today, reason: 'prioritas 3');
+      expect(s.cellFor(20260903), DayCell.recorded, reason: 'prioritas 4');
+      expect(
+        s.cellFor(20260910),
+        DayCell.recorded,
+        reason: 'transaksi MENANG atas penanda nihil di hari yang sama',
+      );
+      expect(s.cellFor(20260909), DayCell.markedNihil, reason: 'prioritas 5');
+      expect(s.cellFor(20260908), DayCell.graceUsed, reason: 'prioritas 6');
+      expect(s.cellFor(20260911), DayCell.missed, reason: 'prioritas 7');
+    });
+
+    test('hari ini menang atas recorded — hari ini selalu petak "today"', () {
+      final s = compute(tx: run(20260901, 3), today: 20260903);
+      expect(s.cellFor(20260903), DayCell.today);
+    });
+
+    test(
+      'graceUsed yang belakangan disusul transaksi berubah jadi recorded',
+      () {
+        final sebelum = compute(
+          tx: {...run(20260901, 7), 20260909},
+          today: 20260910,
+        );
+        expect(sebelum.cellFor(20260908), DayCell.graceUsed);
+
+        final sesudah = compute(
+          tx: {...run(20260901, 7), 20260908, 20260909},
+          today: 20260910,
+        );
+        expect(sesudah.cellFor(20260908), DayCell.recorded);
+      },
+    );
+  });
 }

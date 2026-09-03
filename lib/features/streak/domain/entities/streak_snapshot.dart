@@ -44,6 +44,7 @@ class StreakSnapshot extends Equatable {
     required this.markedDays,
     required this.markedDaysAll,
     required this.transactionDays,
+    required this.clockAnomalyDetected,
   });
 
   /// false selama belum ada satu pun hari aman sejak epoch. UI wajib
@@ -92,6 +93,27 @@ class StreakSnapshot extends Equatable {
 
   final Set<int> transactionDays;
 
+  /// true bila jam device tertinggal di belakang `lastSeenDay` — baik di mode
+  /// netral (selisih 1–2 hari) maupun di cabang koreksi jam (selisih > 2).
+  /// `StreakBloc` menaikkan `clockAnomalyCount` bila true; ia mencatat, tidak
+  /// menghukum.
+  final bool clockAnomalyDetected;
+
+  /// Status satu petak kalender. Presedensi dikunci (spec §5.3) — satu hari
+  /// bisa memenuhi lebih dari satu sebab sekaligus, dan urutan di bawah
+  /// menentukan siapa yang menang.
+  DayCell cellFor(int dayKey) {
+    if (dayKey < activatedDay) return DayCell.beforeStart; // 1
+    if (dayKey > today) return DayCell.future; // 2
+    if (dayKey == today) return DayCell.today; // 3
+    // 4 — transaksi MENANG atas penanda nihil: kalau hari itu ada pengeluaran
+    // tercatat, "tidak ada pengeluaran" sudah dibantah oleh faktanya sendiri.
+    if (transactionDays.contains(dayKey)) return DayCell.recorded;
+    if (markedDays.contains(dayKey)) return DayCell.markedNihil; // 5
+    if (graceUsedDays.contains(dayKey)) return DayCell.graceUsed; // 6
+    return DayCell.missed; // 7
+  }
+
   @override
   List<Object?> get props => [
     hasStarted,
@@ -108,5 +130,6 @@ class StreakSnapshot extends Equatable {
     markedDays,
     markedDaysAll,
     transactionDays,
+    clockAnomalyDetected,
   ];
 }

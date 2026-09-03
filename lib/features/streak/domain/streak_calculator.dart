@@ -28,10 +28,37 @@ StreakSnapshot computeStreak({
   required int lastSeenDay,
   required int today,
 }) {
-  // Task 5 mengganti dua baris ini dengan klasifikasi tiga cabang penjaga jam.
-  final effectiveToday = today;
-  final nextLastSeenDay = today;
-  const todayIsAnomaly = false;
+  // Penjaga jam tiga cabang (spec §4.6). Dihitung DI DALAM kalkulator supaya
+  // tetap murni dan bisa diuji tanpa database.
+  //
+  //   selisih ≤ 0  → hari maju/normal: lastSeenDay := today
+  //   selisih 1–2  → mode netral: penandaan ditolak, streak beku (maks 2 hari,
+  //                  sembuh sendiri), effectiveToday = lastSeenDay
+  //   selisih > 2  → koreksi jam (RTC reset / user menyetel tanggal), BUKAN
+  //                  kecurangan: lastSeenDay := today, perhitungan lanjut normal
+  //
+  // Ambang 2 hari menutup persis manipulasi yang membayar (memundurkan jam
+  // 1–2 hari untuk menambal gap yang baru terjadi). Invarian tanpa pintu
+  // keluar adalah jebakan, bukan pengamanan: Rev 2 dulu membekukan user
+  // jujur sampai setahun karena `lastSeenDay` hanya boleh naik.
+  final selisih = lastSeenDay - today;
+  final bool todayIsAnomaly;
+  final int effectiveToday;
+  final int nextLastSeenDay;
+  if (selisih <= 0) {
+    todayIsAnomaly = false;
+    effectiveToday = today;
+    nextLastSeenDay = today;
+  } else if (selisih <= 2) {
+    todayIsAnomaly = true;
+    effectiveToday = lastSeenDay;
+    nextLastSeenDay = lastSeenDay; // TIDAK diturunkan
+  } else {
+    todayIsAnomaly = false;
+    effectiveToday = today;
+    nextLastSeenDay = today; // penjaga melepaskan dirinya sendiri
+  }
+  final clockAnomalyDetected = selisih > 0;
 
   // Batas ATAS sama pentingnya dengan batas bawah (spec §5.1, aturan Rev 6).
   // Tanpa `d <= effectiveToday`, satu hari aman bertanggal masa depan — yang
@@ -104,10 +131,6 @@ StreakSnapshot computeStreak({
   }
 
   final DayStatus todayStatus;
-  // Selama `todayIsAnomaly` masih const false, cabang ini memang tak
-  // terjangkau. Ia sengaja ditulis sekarang supaya Task 5 tinggal mengisi
-  // klasifikasi penjaga jam tanpa mengubah bentuk percabangan ini.
-  // ignore: dead_code
   if (todayIsAnomaly) {
     todayStatus = DayStatus.anomaly;
   } else if (effectiveToday < activatedDay) {
@@ -133,5 +156,6 @@ StreakSnapshot computeStreak({
     markedDays: markedDays,
     markedDaysAll: markedDaysAll,
     transactionDays: transactionDays,
+    clockAnomalyDetected: clockAnomalyDetected,
   );
 }
