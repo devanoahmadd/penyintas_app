@@ -452,8 +452,13 @@ void main() {
       'TIDAK beku: lastSeenDay turun ke today, perhitungan lanjut normal',
       () {
         // lastSeenDay tertinggal di 30 Sep, waktu nyata 10 Sep.
+        // 20260915: transaksi tertinggal dari saat jam sempat maju — di
+        // snapshot ini ia jatuh SESUDAH effectiveToday. 20260820: transaksi
+        // sebelum epoch. Keduanya memenuhi DUA kondisi `cellFor` sekaligus,
+        // jadi merekalah yang benar-benar mengunci presedensi 1 dan 2 di atas
+        // prioritas 4 — bukan hari kosong yang cuma memenuhi satu kondisi.
         final s = compute(
-          tx: run(20260901, 10),
+          tx: {...run(20260901, 10), 20260820, 20260915},
           lastSeen: 20260930,
           today: 20260910,
         );
@@ -461,6 +466,20 @@ void main() {
           s.todayStatus,
           DayStatus.safe,
           reason: 'bukan anomaly — ini koreksi jam',
+        );
+        expect(
+          s.cellFor(20260915),
+          DayCell.future,
+          reason:
+              'prioritas 2 MENANG atas prioritas 4 — hari masa depan yang '
+              'punya transaksi tetap petak future, bukan recorded',
+        );
+        expect(
+          s.cellFor(20260820),
+          DayCell.beforeStart,
+          reason:
+              'prioritas 1 MENANG atas prioritas 4 — transaksi sebelum epoch '
+              'tetap petak beforeStart, bukan recorded',
         );
         expect(
           s.today,
@@ -488,6 +507,14 @@ void main() {
         today: 20260905,
       );
       expect(s.todayStatus, DayStatus.safe);
+      expect(
+        s.today,
+        20260905,
+        reason:
+            'effectiveToday = today. Satu-satunya test dengan '
+            'lastSeenDay < today, jadi hanya di sini mutasi '
+            '`effectiveToday = lastSeenDay` di cabang selisih ≤ 0 kelihatan',
+      );
       expect(s.nextLastSeenDay, 20260905);
       expect(s.clockAnomalyDetected, isFalse);
     });
