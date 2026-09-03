@@ -83,10 +83,15 @@ StreakSnapshot computeStreak({
       // Tanpa aturan ini, pola "6 aman + 1 bolong" berulang memanen jeda
       // tanpa henti dan jeda berhenti bermakna.
     } else {
-      lastBreakDay = d;
-      brokenRunLength = run;
+      // Kekosongan bisa lebih dari satu hari. Yang memutus ruas hanya hari
+      // bolong PERTAMA — hari bolong berikutnya menemukan `run` sudah 0 dan
+      // akan menimpa catatan ini jadi "terhenti di 0 hari" (dilarang §8.2).
+      if (run > 0) {
+        lastBreakDay = d;
+        brokenRunLength = run;
+      }
       run = 0;
-      graceCounter = 0; // (C) putus me-reset penghitung
+      graceCounter = 0; // (C) putus me-reset penghitung, tanpa syarat
     }
     d = addDays(d, 1);
   }

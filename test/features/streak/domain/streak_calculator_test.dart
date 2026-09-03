@@ -46,6 +46,16 @@ void main() {
       expect(s.longestRuas, 5);
       expect(s.todayStatus, DayStatus.safe);
       expect(s.lastBreakDay, isNull);
+      expect(
+        s.today,
+        20260905,
+        reason: 'effectiveToday yang dipakai perhitungan',
+      );
+      expect(
+        s.nextLastSeenDay,
+        20260905,
+        reason: 'nilai yang HARUS ditulis StreakBloc ke StreakMeta.lastSeenDay',
+      );
     });
   });
 
@@ -303,6 +313,46 @@ void main() {
       );
       expect(s.currentStreak, 6);
       expect(s.lastBreakDay, isNull);
+    });
+  });
+
+  group('kekosongan lebih dari satu hari', () {
+    test(
+      'putus dicatat SEKALI di hari ruas patah, bukan ditimpa tiap hari bolong',
+      () {
+        // 5 hari aman (belum panen jeda, jadi tak ada yang menyerap) → 3 hari
+        // bolong berturut → 1 hari aman. Pola "user hilang seminggu": akhir
+        // pekan panjang atau mudik, bukan kasus tepi.
+        final s = compute(tx: {...run(20260901, 5), 20260909}, today: 20260909);
+        expect(
+          s.lastBreakDay,
+          20260906,
+          reason: 'hari ruas PATAH, bukan hari terakhir kekosongan (20260908)',
+        );
+        expect(
+          s.brokenRunLength,
+          5,
+          reason:
+              'panjang ruas yang patah — bukan 0 hasil timpa hari bolong ke-2',
+        );
+        expect(s.currentStreak, 1);
+        expect(s.longestRuas, 5);
+        expect(s.graceUsedDays, isEmpty);
+      },
+    );
+  });
+
+  group('hari ini masih sebelum epoch', () {
+    test('todayStatus beforeStart, activatedDay bertahan di epoch', () {
+      final s = compute(today: 20260828);
+      expect(s.todayStatus, DayStatus.beforeStart);
+      expect(
+        s.activatedDay,
+        20260901,
+        reason: 'epoch, bukan hari device yang masih di belakangnya',
+      );
+      expect(s.hasStarted, isFalse);
+      expect(s.currentStreak, 0);
     });
   });
 
