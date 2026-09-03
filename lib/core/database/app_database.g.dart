@@ -5836,6 +5836,803 @@ class BillsCompanion extends UpdateCompanion<Bill> {
   }
 }
 
+class $StreakDayMarksTable extends StreakDayMarks
+    with TableInfo<$StreakDayMarksTable, StreakDayMark> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StreakDayMarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dayKeyMeta = const VerificationMeta('dayKey');
+  @override
+  late final GeneratedColumn<int> dayKey = GeneratedColumn<int>(
+    'day_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _markedAtMeta = const VerificationMeta(
+    'markedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> markedAt = GeneratedColumn<DateTime>(
+    'marked_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timezoneMeta = const VerificationMeta(
+    'timezone',
+  );
+  @override
+  late final GeneratedColumn<String> timezone = GeneratedColumn<String>(
+    'timezone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _viaClockCorrectionMeta =
+      const VerificationMeta('viaClockCorrection');
+  @override
+  late final GeneratedColumn<bool> viaClockCorrection = GeneratedColumn<bool>(
+    'via_clock_correction',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("via_clock_correction" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    dayKey,
+    markedAt,
+    timezone,
+    isSynced,
+    viaClockCorrection,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'streak_day_marks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StreakDayMark> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('day_key')) {
+      context.handle(
+        _dayKeyMeta,
+        dayKey.isAcceptableOrUnknown(data['day_key']!, _dayKeyMeta),
+      );
+    }
+    if (data.containsKey('marked_at')) {
+      context.handle(
+        _markedAtMeta,
+        markedAt.isAcceptableOrUnknown(data['marked_at']!, _markedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_markedAtMeta);
+    }
+    if (data.containsKey('timezone')) {
+      context.handle(
+        _timezoneMeta,
+        timezone.isAcceptableOrUnknown(data['timezone']!, _timezoneMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timezoneMeta);
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('via_clock_correction')) {
+      context.handle(
+        _viaClockCorrectionMeta,
+        viaClockCorrection.isAcceptableOrUnknown(
+          data['via_clock_correction']!,
+          _viaClockCorrectionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {dayKey};
+  @override
+  StreakDayMark map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StreakDayMark(
+      dayKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_key'],
+      )!,
+      markedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}marked_at'],
+      )!,
+      timezone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}timezone'],
+      )!,
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      viaClockCorrection: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}via_clock_correction'],
+      )!,
+    );
+  }
+
+  @override
+  $StreakDayMarksTable createAlias(String alias) {
+    return $StreakDayMarksTable(attachedDatabase, alias);
+  }
+}
+
+class StreakDayMark extends DataClass implements Insertable<StreakDayMark> {
+  /// Tanggal lokal sebagai INT yyyymmdd (20260902) — bukan DateTime, supaya
+  /// tak ada ambiguitas jam saat sinkron lintas device.
+  final int dayKey;
+  final DateTime markedAt;
+  final String timezone;
+  final bool isSynced;
+
+  /// true bila baris ini tercipta saat hari device berada > 2 hari DI BAWAH
+  /// [StreakMeta.maxSeenDay] (spec §4.7). Dikecualikan dari replay dan
+  /// TIDAK PERNAH disinkronkan — baris TETAP ada secara lokal, tidak dihapus,
+  /// tidak ada peringatan ke user.
+  ///
+  /// Pembandingnya `maxSeenDay`, BUKAN `lastSeenDay`: `lastSeenDay` sudah
+  /// diturunkan StreakBloc saat snapshot dihitung — jauh sebelum user sempat
+  /// menekan tombol — sehingga membandingkannya selalu memberi nol.
+  final bool viaClockCorrection;
+  const StreakDayMark({
+    required this.dayKey,
+    required this.markedAt,
+    required this.timezone,
+    required this.isSynced,
+    required this.viaClockCorrection,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['day_key'] = Variable<int>(dayKey);
+    map['marked_at'] = Variable<DateTime>(markedAt);
+    map['timezone'] = Variable<String>(timezone);
+    map['is_synced'] = Variable<bool>(isSynced);
+    map['via_clock_correction'] = Variable<bool>(viaClockCorrection);
+    return map;
+  }
+
+  StreakDayMarksCompanion toCompanion(bool nullToAbsent) {
+    return StreakDayMarksCompanion(
+      dayKey: Value(dayKey),
+      markedAt: Value(markedAt),
+      timezone: Value(timezone),
+      isSynced: Value(isSynced),
+      viaClockCorrection: Value(viaClockCorrection),
+    );
+  }
+
+  factory StreakDayMark.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StreakDayMark(
+      dayKey: serializer.fromJson<int>(json['dayKey']),
+      markedAt: serializer.fromJson<DateTime>(json['markedAt']),
+      timezone: serializer.fromJson<String>(json['timezone']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      viaClockCorrection: serializer.fromJson<bool>(json['viaClockCorrection']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'dayKey': serializer.toJson<int>(dayKey),
+      'markedAt': serializer.toJson<DateTime>(markedAt),
+      'timezone': serializer.toJson<String>(timezone),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'viaClockCorrection': serializer.toJson<bool>(viaClockCorrection),
+    };
+  }
+
+  StreakDayMark copyWith({
+    int? dayKey,
+    DateTime? markedAt,
+    String? timezone,
+    bool? isSynced,
+    bool? viaClockCorrection,
+  }) => StreakDayMark(
+    dayKey: dayKey ?? this.dayKey,
+    markedAt: markedAt ?? this.markedAt,
+    timezone: timezone ?? this.timezone,
+    isSynced: isSynced ?? this.isSynced,
+    viaClockCorrection: viaClockCorrection ?? this.viaClockCorrection,
+  );
+  StreakDayMark copyWithCompanion(StreakDayMarksCompanion data) {
+    return StreakDayMark(
+      dayKey: data.dayKey.present ? data.dayKey.value : this.dayKey,
+      markedAt: data.markedAt.present ? data.markedAt.value : this.markedAt,
+      timezone: data.timezone.present ? data.timezone.value : this.timezone,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      viaClockCorrection: data.viaClockCorrection.present
+          ? data.viaClockCorrection.value
+          : this.viaClockCorrection,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StreakDayMark(')
+          ..write('dayKey: $dayKey, ')
+          ..write('markedAt: $markedAt, ')
+          ..write('timezone: $timezone, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('viaClockCorrection: $viaClockCorrection')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(dayKey, markedAt, timezone, isSynced, viaClockCorrection);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StreakDayMark &&
+          other.dayKey == this.dayKey &&
+          other.markedAt == this.markedAt &&
+          other.timezone == this.timezone &&
+          other.isSynced == this.isSynced &&
+          other.viaClockCorrection == this.viaClockCorrection);
+}
+
+class StreakDayMarksCompanion extends UpdateCompanion<StreakDayMark> {
+  final Value<int> dayKey;
+  final Value<DateTime> markedAt;
+  final Value<String> timezone;
+  final Value<bool> isSynced;
+  final Value<bool> viaClockCorrection;
+  const StreakDayMarksCompanion({
+    this.dayKey = const Value.absent(),
+    this.markedAt = const Value.absent(),
+    this.timezone = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.viaClockCorrection = const Value.absent(),
+  });
+  StreakDayMarksCompanion.insert({
+    this.dayKey = const Value.absent(),
+    required DateTime markedAt,
+    required String timezone,
+    this.isSynced = const Value.absent(),
+    this.viaClockCorrection = const Value.absent(),
+  }) : markedAt = Value(markedAt),
+       timezone = Value(timezone);
+  static Insertable<StreakDayMark> custom({
+    Expression<int>? dayKey,
+    Expression<DateTime>? markedAt,
+    Expression<String>? timezone,
+    Expression<bool>? isSynced,
+    Expression<bool>? viaClockCorrection,
+  }) {
+    return RawValuesInsertable({
+      if (dayKey != null) 'day_key': dayKey,
+      if (markedAt != null) 'marked_at': markedAt,
+      if (timezone != null) 'timezone': timezone,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (viaClockCorrection != null)
+        'via_clock_correction': viaClockCorrection,
+    });
+  }
+
+  StreakDayMarksCompanion copyWith({
+    Value<int>? dayKey,
+    Value<DateTime>? markedAt,
+    Value<String>? timezone,
+    Value<bool>? isSynced,
+    Value<bool>? viaClockCorrection,
+  }) {
+    return StreakDayMarksCompanion(
+      dayKey: dayKey ?? this.dayKey,
+      markedAt: markedAt ?? this.markedAt,
+      timezone: timezone ?? this.timezone,
+      isSynced: isSynced ?? this.isSynced,
+      viaClockCorrection: viaClockCorrection ?? this.viaClockCorrection,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (dayKey.present) {
+      map['day_key'] = Variable<int>(dayKey.value);
+    }
+    if (markedAt.present) {
+      map['marked_at'] = Variable<DateTime>(markedAt.value);
+    }
+    if (timezone.present) {
+      map['timezone'] = Variable<String>(timezone.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (viaClockCorrection.present) {
+      map['via_clock_correction'] = Variable<bool>(viaClockCorrection.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StreakDayMarksCompanion(')
+          ..write('dayKey: $dayKey, ')
+          ..write('markedAt: $markedAt, ')
+          ..write('timezone: $timezone, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('viaClockCorrection: $viaClockCorrection')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StreakMetaTable extends StreakMeta
+    with TableInfo<$StreakMetaTable, StreakMetaData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StreakMetaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _lastSeenDayMeta = const VerificationMeta(
+    'lastSeenDay',
+  );
+  @override
+  late final GeneratedColumn<int> lastSeenDay = GeneratedColumn<int>(
+    'last_seen_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _maxSeenDayMeta = const VerificationMeta(
+    'maxSeenDay',
+  );
+  @override
+  late final GeneratedColumn<int> maxSeenDay = GeneratedColumn<int>(
+    'max_seen_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastCelebratedRuasMeta =
+      const VerificationMeta('lastCelebratedRuas');
+  @override
+  late final GeneratedColumn<int> lastCelebratedRuas = GeneratedColumn<int>(
+    'last_celebrated_ruas',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _clockAnomalyCountMeta = const VerificationMeta(
+    'clockAnomalyCount',
+  );
+  @override
+  late final GeneratedColumn<int> clockAnomalyCount = GeneratedColumn<int>(
+    'clock_anomaly_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _acknowledgedBreakDayMeta =
+      const VerificationMeta('acknowledgedBreakDay');
+  @override
+  late final GeneratedColumn<int> acknowledgedBreakDay = GeneratedColumn<int>(
+    'acknowledged_break_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    lastSeenDay,
+    maxSeenDay,
+    lastCelebratedRuas,
+    clockAnomalyCount,
+    acknowledgedBreakDay,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'streak_meta';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StreakMetaData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('last_seen_day')) {
+      context.handle(
+        _lastSeenDayMeta,
+        lastSeenDay.isAcceptableOrUnknown(
+          data['last_seen_day']!,
+          _lastSeenDayMeta,
+        ),
+      );
+    }
+    if (data.containsKey('max_seen_day')) {
+      context.handle(
+        _maxSeenDayMeta,
+        maxSeenDay.isAcceptableOrUnknown(
+          data['max_seen_day']!,
+          _maxSeenDayMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_celebrated_ruas')) {
+      context.handle(
+        _lastCelebratedRuasMeta,
+        lastCelebratedRuas.isAcceptableOrUnknown(
+          data['last_celebrated_ruas']!,
+          _lastCelebratedRuasMeta,
+        ),
+      );
+    }
+    if (data.containsKey('clock_anomaly_count')) {
+      context.handle(
+        _clockAnomalyCountMeta,
+        clockAnomalyCount.isAcceptableOrUnknown(
+          data['clock_anomaly_count']!,
+          _clockAnomalyCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('acknowledged_break_day')) {
+      context.handle(
+        _acknowledgedBreakDayMeta,
+        acknowledgedBreakDay.isAcceptableOrUnknown(
+          data['acknowledged_break_day']!,
+          _acknowledgedBreakDayMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StreakMetaData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StreakMetaData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      lastSeenDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_seen_day'],
+      )!,
+      maxSeenDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_seen_day'],
+      )!,
+      lastCelebratedRuas: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_celebrated_ruas'],
+      )!,
+      clockAnomalyCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}clock_anomaly_count'],
+      )!,
+      acknowledgedBreakDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}acknowledged_break_day'],
+      )!,
+    );
+  }
+
+  @override
+  $StreakMetaTable createAlias(String alias) {
+    return $StreakMetaTable(attachedDatabase, alias);
+  }
+}
+
+class StreakMetaData extends DataClass implements Insertable<StreakMetaData> {
+  final int id;
+  final int lastSeenDay;
+
+  /// Hari tertinggi yang PERNAH dilihat. Hanya naik, tidak pernah diturunkan
+  /// oleh cabang koreksi jam. Tugasnya TUNGGAL: mendeteksi penandaan yang
+  /// dibuat saat jam device mundur jauh. Ia tidak pernah memblokir apa pun.
+  final int maxSeenDay;
+  final int lastCelebratedRuas;
+  final int clockAnomalyCount;
+
+  /// dayKey putusnya ruas yang sudah pernah diakui user. 0 = belum ada.
+  final int acknowledgedBreakDay;
+  const StreakMetaData({
+    required this.id,
+    required this.lastSeenDay,
+    required this.maxSeenDay,
+    required this.lastCelebratedRuas,
+    required this.clockAnomalyCount,
+    required this.acknowledgedBreakDay,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['last_seen_day'] = Variable<int>(lastSeenDay);
+    map['max_seen_day'] = Variable<int>(maxSeenDay);
+    map['last_celebrated_ruas'] = Variable<int>(lastCelebratedRuas);
+    map['clock_anomaly_count'] = Variable<int>(clockAnomalyCount);
+    map['acknowledged_break_day'] = Variable<int>(acknowledgedBreakDay);
+    return map;
+  }
+
+  StreakMetaCompanion toCompanion(bool nullToAbsent) {
+    return StreakMetaCompanion(
+      id: Value(id),
+      lastSeenDay: Value(lastSeenDay),
+      maxSeenDay: Value(maxSeenDay),
+      lastCelebratedRuas: Value(lastCelebratedRuas),
+      clockAnomalyCount: Value(clockAnomalyCount),
+      acknowledgedBreakDay: Value(acknowledgedBreakDay),
+    );
+  }
+
+  factory StreakMetaData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StreakMetaData(
+      id: serializer.fromJson<int>(json['id']),
+      lastSeenDay: serializer.fromJson<int>(json['lastSeenDay']),
+      maxSeenDay: serializer.fromJson<int>(json['maxSeenDay']),
+      lastCelebratedRuas: serializer.fromJson<int>(json['lastCelebratedRuas']),
+      clockAnomalyCount: serializer.fromJson<int>(json['clockAnomalyCount']),
+      acknowledgedBreakDay: serializer.fromJson<int>(
+        json['acknowledgedBreakDay'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'lastSeenDay': serializer.toJson<int>(lastSeenDay),
+      'maxSeenDay': serializer.toJson<int>(maxSeenDay),
+      'lastCelebratedRuas': serializer.toJson<int>(lastCelebratedRuas),
+      'clockAnomalyCount': serializer.toJson<int>(clockAnomalyCount),
+      'acknowledgedBreakDay': serializer.toJson<int>(acknowledgedBreakDay),
+    };
+  }
+
+  StreakMetaData copyWith({
+    int? id,
+    int? lastSeenDay,
+    int? maxSeenDay,
+    int? lastCelebratedRuas,
+    int? clockAnomalyCount,
+    int? acknowledgedBreakDay,
+  }) => StreakMetaData(
+    id: id ?? this.id,
+    lastSeenDay: lastSeenDay ?? this.lastSeenDay,
+    maxSeenDay: maxSeenDay ?? this.maxSeenDay,
+    lastCelebratedRuas: lastCelebratedRuas ?? this.lastCelebratedRuas,
+    clockAnomalyCount: clockAnomalyCount ?? this.clockAnomalyCount,
+    acknowledgedBreakDay: acknowledgedBreakDay ?? this.acknowledgedBreakDay,
+  );
+  StreakMetaData copyWithCompanion(StreakMetaCompanion data) {
+    return StreakMetaData(
+      id: data.id.present ? data.id.value : this.id,
+      lastSeenDay: data.lastSeenDay.present
+          ? data.lastSeenDay.value
+          : this.lastSeenDay,
+      maxSeenDay: data.maxSeenDay.present
+          ? data.maxSeenDay.value
+          : this.maxSeenDay,
+      lastCelebratedRuas: data.lastCelebratedRuas.present
+          ? data.lastCelebratedRuas.value
+          : this.lastCelebratedRuas,
+      clockAnomalyCount: data.clockAnomalyCount.present
+          ? data.clockAnomalyCount.value
+          : this.clockAnomalyCount,
+      acknowledgedBreakDay: data.acknowledgedBreakDay.present
+          ? data.acknowledgedBreakDay.value
+          : this.acknowledgedBreakDay,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StreakMetaData(')
+          ..write('id: $id, ')
+          ..write('lastSeenDay: $lastSeenDay, ')
+          ..write('maxSeenDay: $maxSeenDay, ')
+          ..write('lastCelebratedRuas: $lastCelebratedRuas, ')
+          ..write('clockAnomalyCount: $clockAnomalyCount, ')
+          ..write('acknowledgedBreakDay: $acknowledgedBreakDay')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    lastSeenDay,
+    maxSeenDay,
+    lastCelebratedRuas,
+    clockAnomalyCount,
+    acknowledgedBreakDay,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StreakMetaData &&
+          other.id == this.id &&
+          other.lastSeenDay == this.lastSeenDay &&
+          other.maxSeenDay == this.maxSeenDay &&
+          other.lastCelebratedRuas == this.lastCelebratedRuas &&
+          other.clockAnomalyCount == this.clockAnomalyCount &&
+          other.acknowledgedBreakDay == this.acknowledgedBreakDay);
+}
+
+class StreakMetaCompanion extends UpdateCompanion<StreakMetaData> {
+  final Value<int> id;
+  final Value<int> lastSeenDay;
+  final Value<int> maxSeenDay;
+  final Value<int> lastCelebratedRuas;
+  final Value<int> clockAnomalyCount;
+  final Value<int> acknowledgedBreakDay;
+  const StreakMetaCompanion({
+    this.id = const Value.absent(),
+    this.lastSeenDay = const Value.absent(),
+    this.maxSeenDay = const Value.absent(),
+    this.lastCelebratedRuas = const Value.absent(),
+    this.clockAnomalyCount = const Value.absent(),
+    this.acknowledgedBreakDay = const Value.absent(),
+  });
+  StreakMetaCompanion.insert({
+    this.id = const Value.absent(),
+    this.lastSeenDay = const Value.absent(),
+    this.maxSeenDay = const Value.absent(),
+    this.lastCelebratedRuas = const Value.absent(),
+    this.clockAnomalyCount = const Value.absent(),
+    this.acknowledgedBreakDay = const Value.absent(),
+  });
+  static Insertable<StreakMetaData> custom({
+    Expression<int>? id,
+    Expression<int>? lastSeenDay,
+    Expression<int>? maxSeenDay,
+    Expression<int>? lastCelebratedRuas,
+    Expression<int>? clockAnomalyCount,
+    Expression<int>? acknowledgedBreakDay,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (lastSeenDay != null) 'last_seen_day': lastSeenDay,
+      if (maxSeenDay != null) 'max_seen_day': maxSeenDay,
+      if (lastCelebratedRuas != null)
+        'last_celebrated_ruas': lastCelebratedRuas,
+      if (clockAnomalyCount != null) 'clock_anomaly_count': clockAnomalyCount,
+      if (acknowledgedBreakDay != null)
+        'acknowledged_break_day': acknowledgedBreakDay,
+    });
+  }
+
+  StreakMetaCompanion copyWith({
+    Value<int>? id,
+    Value<int>? lastSeenDay,
+    Value<int>? maxSeenDay,
+    Value<int>? lastCelebratedRuas,
+    Value<int>? clockAnomalyCount,
+    Value<int>? acknowledgedBreakDay,
+  }) {
+    return StreakMetaCompanion(
+      id: id ?? this.id,
+      lastSeenDay: lastSeenDay ?? this.lastSeenDay,
+      maxSeenDay: maxSeenDay ?? this.maxSeenDay,
+      lastCelebratedRuas: lastCelebratedRuas ?? this.lastCelebratedRuas,
+      clockAnomalyCount: clockAnomalyCount ?? this.clockAnomalyCount,
+      acknowledgedBreakDay: acknowledgedBreakDay ?? this.acknowledgedBreakDay,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (lastSeenDay.present) {
+      map['last_seen_day'] = Variable<int>(lastSeenDay.value);
+    }
+    if (maxSeenDay.present) {
+      map['max_seen_day'] = Variable<int>(maxSeenDay.value);
+    }
+    if (lastCelebratedRuas.present) {
+      map['last_celebrated_ruas'] = Variable<int>(lastCelebratedRuas.value);
+    }
+    if (clockAnomalyCount.present) {
+      map['clock_anomaly_count'] = Variable<int>(clockAnomalyCount.value);
+    }
+    if (acknowledgedBreakDay.present) {
+      map['acknowledged_break_day'] = Variable<int>(acknowledgedBreakDay.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StreakMetaCompanion(')
+          ..write('id: $id, ')
+          ..write('lastSeenDay: $lastSeenDay, ')
+          ..write('maxSeenDay: $maxSeenDay, ')
+          ..write('lastCelebratedRuas: $lastCelebratedRuas, ')
+          ..write('clockAnomalyCount: $clockAnomalyCount, ')
+          ..write('acknowledgedBreakDay: $acknowledgedBreakDay')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5847,6 +6644,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $PreferencesTable preferences = $PreferencesTable(this);
   late final $BillsTable bills = $BillsTable(this);
+  late final $StreakDayMarksTable streakDayMarks = $StreakDayMarksTable(this);
+  late final $StreakMetaTable streakMeta = $StreakMetaTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5860,6 +6659,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     categories,
     preferences,
     bills,
+    streakDayMarks,
+    streakMeta,
   ];
 }
 
@@ -8580,6 +9381,427 @@ typedef $$BillsTableProcessedTableManager =
       Bill,
       PrefetchHooks Function()
     >;
+typedef $$StreakDayMarksTableCreateCompanionBuilder =
+    StreakDayMarksCompanion Function({
+      Value<int> dayKey,
+      required DateTime markedAt,
+      required String timezone,
+      Value<bool> isSynced,
+      Value<bool> viaClockCorrection,
+    });
+typedef $$StreakDayMarksTableUpdateCompanionBuilder =
+    StreakDayMarksCompanion Function({
+      Value<int> dayKey,
+      Value<DateTime> markedAt,
+      Value<String> timezone,
+      Value<bool> isSynced,
+      Value<bool> viaClockCorrection,
+    });
+
+class $$StreakDayMarksTableFilterComposer
+    extends Composer<_$AppDatabase, $StreakDayMarksTable> {
+  $$StreakDayMarksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get markedAt => $composableBuilder(
+    column: $table.markedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get viaClockCorrection => $composableBuilder(
+    column: $table.viaClockCorrection,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$StreakDayMarksTableOrderingComposer
+    extends Composer<_$AppDatabase, $StreakDayMarksTable> {
+  $$StreakDayMarksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get markedAt => $composableBuilder(
+    column: $table.markedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get viaClockCorrection => $composableBuilder(
+    column: $table.viaClockCorrection,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StreakDayMarksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StreakDayMarksTable> {
+  $$StreakDayMarksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get dayKey =>
+      $composableBuilder(column: $table.dayKey, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get markedAt =>
+      $composableBuilder(column: $table.markedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get timezone =>
+      $composableBuilder(column: $table.timezone, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<bool> get viaClockCorrection => $composableBuilder(
+    column: $table.viaClockCorrection,
+    builder: (column) => column,
+  );
+}
+
+class $$StreakDayMarksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StreakDayMarksTable,
+          StreakDayMark,
+          $$StreakDayMarksTableFilterComposer,
+          $$StreakDayMarksTableOrderingComposer,
+          $$StreakDayMarksTableAnnotationComposer,
+          $$StreakDayMarksTableCreateCompanionBuilder,
+          $$StreakDayMarksTableUpdateCompanionBuilder,
+          (
+            StreakDayMark,
+            BaseReferences<_$AppDatabase, $StreakDayMarksTable, StreakDayMark>,
+          ),
+          StreakDayMark,
+          PrefetchHooks Function()
+        > {
+  $$StreakDayMarksTableTableManager(
+    _$AppDatabase db,
+    $StreakDayMarksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StreakDayMarksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StreakDayMarksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StreakDayMarksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> dayKey = const Value.absent(),
+                Value<DateTime> markedAt = const Value.absent(),
+                Value<String> timezone = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> viaClockCorrection = const Value.absent(),
+              }) => StreakDayMarksCompanion(
+                dayKey: dayKey,
+                markedAt: markedAt,
+                timezone: timezone,
+                isSynced: isSynced,
+                viaClockCorrection: viaClockCorrection,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> dayKey = const Value.absent(),
+                required DateTime markedAt,
+                required String timezone,
+                Value<bool> isSynced = const Value.absent(),
+                Value<bool> viaClockCorrection = const Value.absent(),
+              }) => StreakDayMarksCompanion.insert(
+                dayKey: dayKey,
+                markedAt: markedAt,
+                timezone: timezone,
+                isSynced: isSynced,
+                viaClockCorrection: viaClockCorrection,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$StreakDayMarksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StreakDayMarksTable,
+      StreakDayMark,
+      $$StreakDayMarksTableFilterComposer,
+      $$StreakDayMarksTableOrderingComposer,
+      $$StreakDayMarksTableAnnotationComposer,
+      $$StreakDayMarksTableCreateCompanionBuilder,
+      $$StreakDayMarksTableUpdateCompanionBuilder,
+      (
+        StreakDayMark,
+        BaseReferences<_$AppDatabase, $StreakDayMarksTable, StreakDayMark>,
+      ),
+      StreakDayMark,
+      PrefetchHooks Function()
+    >;
+typedef $$StreakMetaTableCreateCompanionBuilder =
+    StreakMetaCompanion Function({
+      Value<int> id,
+      Value<int> lastSeenDay,
+      Value<int> maxSeenDay,
+      Value<int> lastCelebratedRuas,
+      Value<int> clockAnomalyCount,
+      Value<int> acknowledgedBreakDay,
+    });
+typedef $$StreakMetaTableUpdateCompanionBuilder =
+    StreakMetaCompanion Function({
+      Value<int> id,
+      Value<int> lastSeenDay,
+      Value<int> maxSeenDay,
+      Value<int> lastCelebratedRuas,
+      Value<int> clockAnomalyCount,
+      Value<int> acknowledgedBreakDay,
+    });
+
+class $$StreakMetaTableFilterComposer
+    extends Composer<_$AppDatabase, $StreakMetaTable> {
+  $$StreakMetaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSeenDay => $composableBuilder(
+    column: $table.lastSeenDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxSeenDay => $composableBuilder(
+    column: $table.maxSeenDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastCelebratedRuas => $composableBuilder(
+    column: $table.lastCelebratedRuas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get clockAnomalyCount => $composableBuilder(
+    column: $table.clockAnomalyCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get acknowledgedBreakDay => $composableBuilder(
+    column: $table.acknowledgedBreakDay,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$StreakMetaTableOrderingComposer
+    extends Composer<_$AppDatabase, $StreakMetaTable> {
+  $$StreakMetaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSeenDay => $composableBuilder(
+    column: $table.lastSeenDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxSeenDay => $composableBuilder(
+    column: $table.maxSeenDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastCelebratedRuas => $composableBuilder(
+    column: $table.lastCelebratedRuas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get clockAnomalyCount => $composableBuilder(
+    column: $table.clockAnomalyCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get acknowledgedBreakDay => $composableBuilder(
+    column: $table.acknowledgedBreakDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StreakMetaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StreakMetaTable> {
+  $$StreakMetaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get lastSeenDay => $composableBuilder(
+    column: $table.lastSeenDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get maxSeenDay => $composableBuilder(
+    column: $table.maxSeenDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastCelebratedRuas => $composableBuilder(
+    column: $table.lastCelebratedRuas,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get clockAnomalyCount => $composableBuilder(
+    column: $table.clockAnomalyCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get acknowledgedBreakDay => $composableBuilder(
+    column: $table.acknowledgedBreakDay,
+    builder: (column) => column,
+  );
+}
+
+class $$StreakMetaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StreakMetaTable,
+          StreakMetaData,
+          $$StreakMetaTableFilterComposer,
+          $$StreakMetaTableOrderingComposer,
+          $$StreakMetaTableAnnotationComposer,
+          $$StreakMetaTableCreateCompanionBuilder,
+          $$StreakMetaTableUpdateCompanionBuilder,
+          (
+            StreakMetaData,
+            BaseReferences<_$AppDatabase, $StreakMetaTable, StreakMetaData>,
+          ),
+          StreakMetaData,
+          PrefetchHooks Function()
+        > {
+  $$StreakMetaTableTableManager(_$AppDatabase db, $StreakMetaTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StreakMetaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StreakMetaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StreakMetaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> lastSeenDay = const Value.absent(),
+                Value<int> maxSeenDay = const Value.absent(),
+                Value<int> lastCelebratedRuas = const Value.absent(),
+                Value<int> clockAnomalyCount = const Value.absent(),
+                Value<int> acknowledgedBreakDay = const Value.absent(),
+              }) => StreakMetaCompanion(
+                id: id,
+                lastSeenDay: lastSeenDay,
+                maxSeenDay: maxSeenDay,
+                lastCelebratedRuas: lastCelebratedRuas,
+                clockAnomalyCount: clockAnomalyCount,
+                acknowledgedBreakDay: acknowledgedBreakDay,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> lastSeenDay = const Value.absent(),
+                Value<int> maxSeenDay = const Value.absent(),
+                Value<int> lastCelebratedRuas = const Value.absent(),
+                Value<int> clockAnomalyCount = const Value.absent(),
+                Value<int> acknowledgedBreakDay = const Value.absent(),
+              }) => StreakMetaCompanion.insert(
+                id: id,
+                lastSeenDay: lastSeenDay,
+                maxSeenDay: maxSeenDay,
+                lastCelebratedRuas: lastCelebratedRuas,
+                clockAnomalyCount: clockAnomalyCount,
+                acknowledgedBreakDay: acknowledgedBreakDay,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$StreakMetaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StreakMetaTable,
+      StreakMetaData,
+      $$StreakMetaTableFilterComposer,
+      $$StreakMetaTableOrderingComposer,
+      $$StreakMetaTableAnnotationComposer,
+      $$StreakMetaTableCreateCompanionBuilder,
+      $$StreakMetaTableUpdateCompanionBuilder,
+      (
+        StreakMetaData,
+        BaseReferences<_$AppDatabase, $StreakMetaTable, StreakMetaData>,
+      ),
+      StreakMetaData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8600,4 +9822,8 @@ class $AppDatabaseManager {
       $$PreferencesTableTableManager(_db, _db.preferences);
   $$BillsTableTableManager get bills =>
       $$BillsTableTableManager(_db, _db.bills);
+  $$StreakDayMarksTableTableManager get streakDayMarks =>
+      $$StreakDayMarksTableTableManager(_db, _db.streakDayMarks);
+  $$StreakMetaTableTableManager get streakMeta =>
+      $$StreakMetaTableTableManager(_db, _db.streakMeta);
 }

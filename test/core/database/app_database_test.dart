@@ -136,6 +136,22 @@ void main() {
             updatedAt: DateTime(2026, 6, 1),
           ),
         );
+    await db
+        .into(db.streakDayMarks)
+        .insert(
+          StreakDayMarksCompanion.insert(
+            dayKey: const Value(20260601),
+            markedAt: DateTime(2026, 6, 1),
+            timezone: 'Asia/Jakarta',
+          ),
+        );
+    // Baris singleton streak_meta sudah di-seed onCreate — update, bukan insert.
+    await db
+        .into(db.streakMeta)
+        .insert(
+          const StreakMetaCompanion(id: Value(1), lastSeenDay: Value(20260601)),
+          mode: InsertMode.insertOrReplace,
+        );
   }
 
   test('clearAllLocalData mengosongkan SETIAP tabel berdata-akun', () async {
@@ -157,6 +173,12 @@ void main() {
       isEmpty,
       reason: 'tagihan akun lama bocor ke akun berikutnya',
     );
+    // A4: streak_day_marks tersapu generik lewat loop allTables — tak ada
+    // pengecualian khusus seperti categories.
+    expect(await db.select(db.streakDayMarks).get(), isEmpty);
+    // streak_meta ikut tersapu generik dan TIDAK dibuat ulang oleh
+    // clearAllLocalData (beda dari preferences yang punya re-seed eksplisit).
+    expect(await db.select(db.streakMeta).get(), isEmpty);
   });
 
   test('clearAllLocalData mempertahankan bahasa & kategori built-in', () async {
@@ -192,6 +214,8 @@ void main() {
       'categories',
       'preferences',
       'bills',
+      'streak_day_marks',
+      'streak_meta',
     });
   });
 

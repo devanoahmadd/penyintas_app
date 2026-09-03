@@ -212,6 +212,58 @@ class Bills extends Table {
   DateTimeColumn get updatedAt => dateTime()();
 }
 
+/// Penanda "hari ini tidak ada pengeluaran" (A4 Konsistensi, schemaVersion 15).
+///
+/// BUKAN append-only: §4.3 spec memberi user undo di hari yang sama, dan undo
+/// itu adalah DELETE baris — lokal maupun remote (jalur hapus di §6.2).
+class StreakDayMarks extends Table {
+  /// Tanggal lokal sebagai INT yyyymmdd (20260902) — bukan DateTime, supaya
+  /// tak ada ambiguitas jam saat sinkron lintas device.
+  IntColumn get dayKey => integer()();
+  DateTimeColumn get markedAt => dateTime()(); // UTC — audit & merge
+  TextColumn get timezone => text()(); // TZ device saat ditandai — audit
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+
+  /// true bila baris ini tercipta saat hari device berada > 2 hari DI BAWAH
+  /// [StreakMeta.maxSeenDay] (spec §4.7). Dikecualikan dari replay dan
+  /// TIDAK PERNAH disinkronkan — baris TETAP ada secara lokal, tidak dihapus,
+  /// tidak ada peringatan ke user.
+  ///
+  /// Pembandingnya `maxSeenDay`, BUKAN `lastSeenDay`: `lastSeenDay` sudah
+  /// diturunkan StreakBloc saat snapshot dihitung — jauh sebelum user sempat
+  /// menekan tombol — sehingga membandingkannya selalu memberi nol.
+  BoolColumn get viaClockCorrection =>
+      boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {dayKey};
+}
+
+/// Baris tunggal (id = 1) untuk hal yang tidak bisa diturunkan sama sekali.
+///
+/// SELURUH isinya boleh hilang tanpa merusak streak — `clearAllLocalData()`
+/// menyapunya saat logout dan TIDAK membuatnya ulang, jadi setiap pembaca
+/// wajib tahan baris kosong (lihat StreakLocalDatasource.readMeta).
+class StreakMeta extends Table {
+  IntColumn get id => integer().withDefault(const Constant(1))();
+  IntColumn get lastSeenDay => integer().withDefault(const Constant(0))();
+
+  /// Hari tertinggi yang PERNAH dilihat. Hanya naik, tidak pernah diturunkan
+  /// oleh cabang koreksi jam. Tugasnya TUNGGAL: mendeteksi penandaan yang
+  /// dibuat saat jam device mundur jauh. Ia tidak pernah memblokir apa pun.
+  IntColumn get maxSeenDay => integer().withDefault(const Constant(0))();
+  IntColumn get lastCelebratedRuas =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get clockAnomalyCount => integer().withDefault(const Constant(0))();
+
+  /// dayKey putusnya ruas yang sudah pernah diakui user. 0 = belum ada.
+  IntColumn get acknowledgedBreakDay =>
+      integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // ─── Database ──────────────────────────────────────────────────────────────────
 
 @DriftDatabase(
@@ -224,13 +276,15 @@ class Bills extends Table {
     Categories,
     Preferences,
     Bills,
+    StreakDayMarks,
+    StreakMeta,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -254,6 +308,15 @@ class AppDatabase extends _$AppDatabase {
       // Index bantu query watchActive (A1 Tagihan): filter status + sort due_date.
       await m.database.customStatement(
         'CREATE INDEX IF NOT EXISTS idx_bills_status_due ON bills (status, due_date)',
+      );
+      // A4: baris singleton streak_meta + index tanggal transaksi — fresh
+      // install harus mendapat keduanya, persis seperti jalur upgrade.
+      // (Pelajaran seed kategori yang dulu hanya ada di jalur onUpgrade.)
+      await m.database.customStatement(
+        'INSERT OR IGNORE INTO streak_meta (id) VALUES (1)',
+      );
+      await m.database.customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date)',
       );
     },
     beforeOpen: (details) async {
@@ -506,6 +569,38 @@ class AppDatabase extends _$AppDatabase {
         );
         await m.database.customStatement(
           'ALTER TABLE app_settings ADD COLUMN bill_reminder_hour INTEGER NOT NULL DEFAULT 9',
+        );
+      }
+      if (from < 15) {
+        // A4 Konsistensi & Streak: dua tabel baru + index bantu untuk query
+        // turunan hari-transaksi. Raw SQL, konsisten dengan pola from < 13
+        // dan from < 14 di atas.
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS streak_day_marks (
+            day_key               INTEGER NOT NULL PRIMARY KEY,
+            marked_at             INTEGER NOT NULL,
+            timezone              TEXT    NOT NULL,
+            is_synced             INTEGER NOT NULL DEFAULT 0,
+            via_clock_correction  INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS streak_meta (
+            id                     INTEGER NOT NULL PRIMARY KEY,
+            last_seen_day          INTEGER NOT NULL DEFAULT 0,
+            max_seen_day           INTEGER NOT NULL DEFAULT 0,
+            last_celebrated_ruas   INTEGER NOT NULL DEFAULT 0,
+            clock_anomaly_count    INTEGER NOT NULL DEFAULT 0,
+            acknowledged_break_day INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await m.database.customStatement(
+          'INSERT OR IGNORE INTO streak_meta (id) VALUES (1)',
+        );
+        // Query turunan hari-transaksi memfilter transactions.date >= epoch.
+        // Tanpa index ini ia jadi full scan pada tabel paling ramai di app.
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date)',
         );
       }
     },
