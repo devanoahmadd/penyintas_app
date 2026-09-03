@@ -7,6 +7,25 @@ const int _kGracePeriod = 7;
 /// Plafon jeda yang bisa ditahan sekaligus.
 const int _kGraceMax = 2;
 
+/// Selisih KALENDER `a - b` dalam hari, dari dua dayKey berformat `yyyymmdd`.
+///
+/// Pengurangan integer mentah TIDAK mengukur hari — ia mengukur jarak antara
+/// dua bilangan yang kebetulan berbentuk tanggal. `20261001 - 20260930` = 71
+/// padahal jaraknya satu hari, dan `20270101 - 20261231` = 8870 padahal juga
+/// satu hari. Ambang penjaga jam (spec §4.6) dinyatakan dalam HARI, jadi ia
+/// wajib diukur dalam hari — kalau tidak, tiap pergantian bulan melempar
+/// keputusan ke cabang yang salah.
+///
+/// Sengaja lewat `DateTime.utc`, bukan waktu lokal: UTC tak mengenal DST,
+/// sehingga satu hari selalu genap 24 jam dan `.inDays` tak pernah memotong
+/// hari 23 jam menjadi 0. Indonesia memang tanpa DST, tapi kalkulator inti
+/// tidak boleh menggantungkan kebenarannya pada zona waktu penggunanya.
+int _selisihHari(int a, int b) {
+  DateTime utcOf(int dayKey) =>
+      DateTime.utc(dayKey ~/ 10000, (dayKey ~/ 100) % 100, dayKey % 100);
+  return utcOf(a).difference(utcOf(b)).inDays;
+}
+
 /// Hitung snapshot streak dari fakta harian. MURNI: tanpa I/O, tanpa jam,
 /// tanpa database — seluruh turunan sudah terjadi di lapisan datasource.
 ///
@@ -41,7 +60,7 @@ StreakSnapshot computeStreak({
   // 1–2 hari untuk menambal gap yang baru terjadi). Invarian tanpa pintu
   // keluar adalah jebakan, bukan pengamanan: Rev 2 dulu membekukan user
   // jujur sampai setahun karena `lastSeenDay` hanya boleh naik.
-  final selisih = lastSeenDay - today;
+  final selisih = _selisihHari(lastSeenDay, today);
   final bool todayIsAnomaly;
   final int effectiveToday;
   final int nextLastSeenDay;

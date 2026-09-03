@@ -539,4 +539,76 @@ void main() {
       },
     );
   });
+
+  // ── Ambang penjaga jam diukur dalam HARI, bukan jarak angka ────────────────
+  //
+  // Seluruh T11/T21 di atas memakai pasangan tanggal DALAM BULAN YANG SAMA,
+  // dan di situlah pengurangan `yyyymmdd` mentah kebetulan benar (20260910 -
+  // 20260909 = 1). Justru karena itu bug ini lolos. Grup di bawah memakai
+  // pasangan yang melintasi pergantian bulan dan tahun — satu-satunya tempat
+  // "jarak antar bilangan" berpisah jalan dari "jumlah hari".
+  group('ambang penjaga jam melintasi pergantian bulan & tahun', () {
+    test('mundur 1 hari melintasi pergantian bulan tetap mode netral', () {
+      // 1 Okt vs 30 Sep: selisih SATU hari, walau bilangannya berjarak 71.
+      final s = compute(
+        tx: run(20260925, 6), // 25..30 Sep aman
+        lastSeen: 20261001,
+        today: 20260930,
+      );
+      expect(s.clockAnomalyDetected, isTrue);
+      expect(s.todayStatus, DayStatus.anomaly);
+      expect(s.today, 20261001, reason: 'effectiveToday = lastSeenDay');
+      expect(
+        s.nextLastSeenDay,
+        20261001,
+        reason: 'TIDAK diturunkan — penandaan harus tetap ditolak',
+      );
+      expect(s.currentStreak, 6, reason: 'streak beku, tidak putus');
+    });
+
+    test('mundur 2 hari melintasi pergantian bulan tetap mode netral', () {
+      final s = compute(
+        tx: run(20260925, 6),
+        lastSeen: 20261001,
+        today: 20260929,
+      );
+      expect(s.todayStatus, DayStatus.anomaly);
+      expect(s.today, 20261001);
+      expect(s.nextLastSeenDay, 20261001);
+    });
+
+    test(
+      'mundur 3 hari melintasi pergantian bulan masuk cabang koreksi jam',
+      () {
+        // Penjaga ambang: memperbaiki aritmetika TIDAK boleh melebarkan mode
+        // netral melewati 2 hari.
+        final s = compute(
+          tx: run(20260925, 6),
+          lastSeen: 20261001,
+          today: 20260928,
+        );
+        expect(s.todayStatus, DayStatus.safe, reason: 'bukan anomaly');
+        expect(s.today, 20260928, reason: 'effectiveToday = today');
+        expect(
+          s.nextLastSeenDay,
+          20260928,
+          reason: 'penjaga melepaskan diri sendiri',
+        );
+      },
+    );
+
+    test('mundur 1 hari melintasi pergantian tahun tetap mode netral', () {
+      // 1 Jan 2027 vs 31 Des 2026: bilangannya berjarak 8870.
+      final s = compute(
+        tx: run(20261226, 6), // 26..31 Des aman
+        lastSeen: 20270101,
+        today: 20261231,
+      );
+      expect(s.clockAnomalyDetected, isTrue);
+      expect(s.todayStatus, DayStatus.anomaly);
+      expect(s.today, 20270101);
+      expect(s.nextLastSeenDay, 20270101);
+      expect(s.currentStreak, 6);
+    });
+  });
 }
