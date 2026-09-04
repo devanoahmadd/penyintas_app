@@ -493,8 +493,19 @@ class StreakRepositoryImpl implements StreakRepository {
           // `SyncService` sempat memprosesnya duluan) tidak salah kira —
           // tapi kalau BELUM diproses, `create` basi itu tetap tak berguna
           // menunggu di antrean sampai TTL 7 hari.
+          //
+          // TEMUAN R3 — `hanyaOperasi: SyncOperation.create` WAJIB. Purge
+          // di sini TIDAK diikuti penulisan pengganti (beda dari
+          // `markToday()`/`unmarkToday()` yang purge-lalu-langsung-menulis,
+          // self-healing). Tanpa filter, purge ini bisa memakan `delete`
+          // SAH yang baru saja diantre `unmarkToday()` — user menekan Undo
+          // TEPAT selagi `await markSynced()` di atas masih di udara (dua
+          // operasi DB terpisah, bukan satu transaksi) — dan menghapus
+          // jejak penghapusan itu: dokumen remote jadi yatim, kelas bug
+          // yang sama dengan C1, hanya lebih jarang.
           await _local.purgePendingSyncFor(
             'users/$uid/streak_marks/${row.dayKey}',
+            hanyaOperasi: SyncOperation.create,
           );
           naik++;
         } catch (e, s) {

@@ -13,33 +13,49 @@ abstract class StreakRepository {
 
   /// Tandai `today` sebagai hari aman.
   ///
-  /// KONTRAK NILAI BALIK (TEMUAN I5 — wajib dibaca sebelum menangani `Left`):
+  /// KONTRAK NILAI BALIK (TEMUAN I5/R1/R2 — wajib dibaca sebelum menangani
+  /// `Left`):
   ///
   ///  - `Left(ValidationFailure)` — satu-satunya kasus yang BENAR-BENAR
   ///    berarti "tidak ada yang berubah". Ini penjaga jam mode netral:
   ///    penandaan ditolak SEBELUM baris lokal mana pun disentuh.
   ///
-  ///  - `Left(CacheFailure)` — TIDAK berarti "tidak terjadi apa-apa". Ia
-  ///    dikembalikan SESUDAH efek lokal sudah terjadi: baris sudah
-  ///    `insertMark()`-ed dan `requestRecompute()` sudah dipanggil (galat
-  ///    yang ditangkap berasal dari `addToSyncQueue()` yang melempar, bukan
-  ///    dari penulisan lokalnya). Consumer (BLoC) yang memperlakukan `Left`
-  ///    sebagai "no-op" akan menampilkan galat sementara stream snapshot
-  ///    justru sudah menunjukkan hari itu berubah — jangan asumsikan
-  ///    `Left` = rollback otomatis.
+  ///  - `Left(CacheFailure)` — TIDAK MENJAMIN APA PUN soal apakah efek lokal
+  ///    terjadi (TEMUAN R1, koreksi dari draf sebelumnya). Try-block luar
+  ///    membungkus SELURUH method, termasuk pembacaan di awal
+  ///    (`hasMark()`/`readMeta()`) — kalau salah satu dari situ yang
+  ///    melempar, `CacheFailure` yang SAMA PERSIS kembali tapi baris lokal
+  ///    belum tersentuh SAMA SEKALI. Kalau yang melempar `addToSyncQueue()`
+  ///    di akhir, baris lokal SUDAH `insertMark()`-ed dan
+  ///    `requestRecompute()` sudah dipanggil. Nilai balik `CacheFailure`
+  ///    TIDAK BISA membedakan dua keadaan itu — satu-satunya cara consumer
+  ///    (BLoC) tahu keadaan sebenarnya adalah STREAM SNAPSHOT, bukan nilai
+  ///    balik method ini. Jangan asumsikan `Left` = "belum terjadi apa-apa"
+  ///    maupun "sudah rollback otomatis" — keduanya sama-sama bisa salah.
   ///
-  ///  - `Right(null)` mencakup beberapa jalur berbeda: no-op idempoten
-  ///    (hari sudah ditandai, D-4), berhasil tersinkron, berhasil diantre
-  ///    offline, MAUPUN baris `viaClockCorrection` yang sengaja tak pernah
-  ///    diantre (§4.7) — semuanya "sukses" dari sudut pandang caller.
+  ///  - `Right(null)` mencakup beberapa jalur berbeda, SEMUANYA "sukses"
+  ///    dari sudut pandang caller:
+  ///     - no-op idempoten (hari sudah ditandai, D-4);
+  ///     - berhasil tersinkron langsung (online, push ke remote sukses);
+  ///     - diantre ke `SyncQueue` untuk dikirim nanti — ini terjadi BAIK
+  ///       saat offline MAUPUN saat online tapi `remote.saveMark()`
+  ///       melempar (TEMUAN R4, koreksi label "diantre offline" yang
+  ///       sebelumnya melewatkan cabang kedua ini);
+  ///     - baris `viaClockCorrection` yang sengaja tak pernah diantre
+  ///       (§4.7);
+  ///     - user belum login (`uid == null`, TEMUAN R2) — baris lokal
+  ///       TERTULIS tapi TIDAK ADA percobaan sync apa pun, bukan salah satu
+  ///       dari tiga jalur sync di atas.
   Future<Either<Failure, void>> markToday();
 
   /// Urungkan penanda `today` — penghapusan baris, bukan penandaan-terbalik.
   ///
-  /// KONTRAK NILAI BALIK sama seperti [markToday] (TEMUAN I5): `Left`
-  /// method ini SELALU `CacheFailure`, dikembalikan SESUDAH `deleteMark()`
-  /// dan `requestRecompute()` sudah terjadi — bukan sebelum. Jangan
-  /// perlakukan `Left` sebagai bukti baris lokal belum terhapus.
+  /// KONTRAK NILAI BALIK sama seperti [markToday] (TEMUAN I5/R1): `Left`
+  /// method ini SELALU `CacheFailure`, tapi TIDAK MENJAMIN APA PUN soal
+  /// apakah `deleteMark()`/`requestRecompute()` sudah terjadi — try-block
+  /// luar membungkus pembacaan `findMark()` di awal JUGA. Sama seperti
+  /// [markToday], stream snapshot adalah satu-satunya sumber kebenaran;
+  /// nilai balik ini bukan.
   Future<Either<Failure, void>> unmarkToday();
 
   /// Dipakai DailyReminderScheduler. Sengaja BUKAN Either: saat gagal ia

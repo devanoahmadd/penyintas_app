@@ -45,6 +45,24 @@ class _LocalDenganRace extends StreakLocalDatasourceImpl {
   }
 }
 
+/// Datasource nyata dengan jendela race di antara `markSynced()` (fix2
+/// `pushPendingMarks()` menunggu di sini) dan purge fix2 (TEMUAN R3):
+/// keduanya operasi DB TERPISAH, bukan satu transaksi, jadi user bisa
+/// menekan Undo TEPAT di antara keduanya.
+class _LocalDenganRaceMarkSynced extends StreakLocalDatasourceImpl {
+  _LocalDenganRaceMarkSynced(super.db);
+
+  Future<void> Function()? saatSesudahMarkSynced;
+
+  @override
+  Future<void> markSynced(int dayKey) async {
+    await super.markSynced(dayKey);
+    final hook = saatSesudahMarkSynced;
+    saatSesudahMarkSynced = null; // sekali pakai
+    if (hook != null) await hook();
+  }
+}
+
 void main() {
   setUpAll(() => registerFallbackValue(_FakeMark()));
 
@@ -591,6 +609,51 @@ void main() {
         expect(naik, 0, reason: 'baris sudah lenyap, tak ada yang sah');
         verifyNever(() => remote.saveMark(any()));
         expect(await baris(20260905), isNull);
+      },
+    );
+  });
+
+  group('TEMUAN R3 — Ronde Perbaikan 2', () {
+    test(
+      'delete SAH yang diantre TEPAT antara markSynced() dan purge fix2 '
+      'harus SELAMAT, bukan ikut termakan',
+      () async {
+        final racing = _LocalDenganRaceMarkSynced(db);
+        final repoRace = StreakRepositoryImpl(
+          local: racing,
+          remote: remote,
+          network: network,
+          auth: auth,
+          clock: clock,
+          epochDay: 20260901,
+        );
+        addTearDown(repoRace.dispose);
+
+        when(() => network.isConnected).thenAnswer((_) async => false);
+        await repoRace.markToday(); // create menunggu di antrean
+        when(() => network.isConnected).thenAnswer((_) async => true);
+
+        // Jendela race NYATA: markSynced() sukses (baris sudah isSynced di
+        // DB), TAPI purge fix2 belum sempat jalan — dua panggilan DB
+        // terpisah, bukan satu transaksi. User menekan Undo tepat di sini;
+        // unmarkToday() jalan SAMPAI SELESAI dan mengantre delete yang SAH.
+        racing.saatSesudahMarkSynced = () async {
+          await repoRace.unmarkToday();
+        };
+
+        final naik = await repoRace.pushPendingMarks();
+
+        expect(naik, 1, reason: 'push-nya sendiri tetap sukses');
+        final q = await antrean();
+        expect(
+          q,
+          hasLength(1),
+          reason:
+              'delete SAH dari unmarkToday() tak boleh dimakan purge fix2 '
+              'yang tak berfilter operasi',
+        );
+        expect(q.single.operation, SyncOperation.delete);
+        expect(q.single.collectionPath, path);
       },
     );
   });

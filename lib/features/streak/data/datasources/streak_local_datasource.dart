@@ -43,7 +43,21 @@ abstract class StreakLocalDatasource {
 
   /// Buang item `SyncQueue` tertunda untuk [collectionPath] yang sama persis.
   /// Mengembalikan jumlah item ber-operasi `create` yang dibuang.
-  Future<int> purgePendingSyncFor(String collectionPath);
+  ///
+  /// [hanyaOperasi] (TEMUAN R3) — kalau diisi, HANYA item dengan operasi itu
+  /// yang disaring & dibuang; item lain untuk path yang sama TIDAK
+  /// tersentuh. `null` (default) mempertahankan perilaku lama: buang semua
+  /// operasi untuk path itu. Pemanggil yang purge-lalu-langsung-menulis
+  /// ulang (`markToday()`/`unmarkToday()`) aman memakai default — baris
+  /// penggantinya selalu ditulis tepat sesudahnya (self-healing). Pemanggil
+  /// yang purge-dan-selesai TANPA tulis pengganti (`pushPendingMarks()`)
+  /// WAJIB memakai filter, supaya tidak ikut memakan operasi lain (mis.
+  /// `delete` sah dari `unmarkToday()`) yang kebetulan menunggu untuk path
+  /// yang sama.
+  Future<int> purgePendingSyncFor(
+    String collectionPath, {
+    SyncOperation? hanyaOperasi,
+  });
 
   Future<void> addToSyncQueue({
     required String itemId,
@@ -241,14 +255,26 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
           .write(const StreakDayMarksCompanion(isSynced: Value(true)));
 
   @override
-  Future<int> purgePendingSyncFor(String collectionPath) async {
+  Future<int> purgePendingSyncFor(
+    String collectionPath, {
+    SyncOperation? hanyaOperasi,
+  }) async {
+    // TEMUAN R3 — predikat SELALU menyertakan collectionPath; `hanyaOperasi`
+    // MEMPERSEMPIT (bukan menggantikan) predikat itu. Predikat yang sama
+    // dipakai untuk select (hitung create yang kena) dan delete (buang
+    // fisik), supaya keduanya selalu sepakat baris mana yang tersentuh.
+    Expression<bool> predikat($SyncQueueTable t) {
+      final samaPath = t.collectionPath.equals(collectionPath);
+      return hanyaOperasi == null
+          ? samaPath
+          : samaPath & t.operation.equalsValue(hanyaOperasi);
+    }
+
     final tertunda = await (_db.select(
       _db.syncQueue,
-    )..where((t) => t.collectionPath.equals(collectionPath))).get();
+    )..where(predikat)).get();
     if (tertunda.isEmpty) return 0;
-    await (_db.delete(
-      _db.syncQueue,
-    )..where((t) => t.collectionPath.equals(collectionPath))).go();
+    await (_db.delete(_db.syncQueue)..where(predikat)).go();
     return tertunda.where((e) => e.operation == SyncOperation.create).length;
   }
 

@@ -393,6 +393,31 @@ void main() {
         'users/u1/goals/g1',
       });
     });
+
+    test(
+      'TEMUAN R3 — hanyaOperasi: create membuang create, MENINGGALKAN '
+      'delete untuk path yang sama',
+      () async {
+        const path = 'users/u1/streak_marks/20260902';
+        await antre(path, SyncOperation.create);
+        await antre(path, SyncOperation.delete);
+
+        final dibuang = await ds.purgePendingSyncFor(
+          path,
+          hanyaOperasi: SyncOperation.create,
+        );
+        expect(dibuang, 1, reason: 'satu create yang kena filter operasi');
+
+        final sisa = await db.select(db.syncQueue).get();
+        expect(
+          sisa,
+          hasLength(1),
+          reason: 'delete untuk path yang sama WAJIB selamat',
+        );
+        expect(sisa.single.operation, SyncOperation.delete);
+        expect(sisa.single.collectionPath, path);
+      },
+    );
   });
 
   group('upsertMarksFromRemote — insert-if-absent, tak pernah menimpa '
