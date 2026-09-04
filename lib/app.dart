@@ -15,6 +15,8 @@ import 'package:penyintas_app/features/notification/presentation/bloc/notificati
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
 import 'package:penyintas_app/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_bloc.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
 
 class PenyintasApp extends StatefulWidget {
   const PenyintasApp({super.key});
@@ -39,6 +41,16 @@ class _PenyintasAppState extends State<PenyintasApp>
     // tak perlu diblokir frame pertama; AppLockGate fail-closed (shade) saat
     // AppLockUnknown sebelum init selesai.
     unawaited(sl<AppLockCubit>().init());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Streak dihitung dari hari lokal; app yang kembali dari background bisa
+    // sudah melewati tengah malam. AppLockGate punya observer-nya sendiri —
+    // yang ini khusus milik StreakBloc.
+    if (state == AppLifecycleState.resumed) {
+      sl<StreakBloc>().add(StreakRefreshed());
+    }
   }
 
   @override

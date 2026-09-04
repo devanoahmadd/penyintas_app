@@ -145,6 +145,8 @@ import 'package:penyintas_app/features/streak/domain/repositories/streak_reposit
 import 'package:penyintas_app/features/streak/domain/usecases/mark_today_no_spend_usecase.dart';
 import 'package:penyintas_app/features/streak/domain/usecases/undo_today_no_spend_usecase.dart';
 import 'package:penyintas_app/features/streak/domain/usecases/watch_streak_snapshot_usecase.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_bloc.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/transaction/presentation/bloc/transaction_list_bloc.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/create_category_usecase.dart';
@@ -373,7 +375,12 @@ void _initOnboarding() {
       billReminderScheduler: sl(),
       billReminderSettings: sl(),
       streakRepository: sl(),
-      onComplete: () => sl<OnboardingGuard>().resetCache(),
+      onComplete: () {
+        sl<OnboardingGuard>().resetCache();
+        // Riwayat penanda baru saja tiba dari Firestore — lepaskan state
+        // `restoring` StreakBloc dan hitung ulang dengan data lengkap.
+        sl<StreakBloc>().add(StreakRefreshed());
+      },
     ),
   );
 }
@@ -682,7 +689,20 @@ void _initStreak() {
   sl.registerLazySingleton(() => WatchStreakSnapshotUseCase(sl()));
   sl.registerLazySingleton(() => MarkTodayNoSpendUseCase(sl()));
   sl.registerLazySingleton(() => UndoTodayNoSpendUseCase(sl()));
-  // StreakBloc didaftarkan di Task 11.
+  // Singleton app-scoped: dipakai bersama halaman /consistency, tile bento,
+  // dan kartu sore. Route memasangnya dengan BlocProvider.value — JANGAN
+  // `create:`, itu membuat provider mengklaim lifecycle dan meng-close
+  // singleton ini untuk sisa umur proses.
+  sl.registerLazySingleton(
+    () => StreakBloc(
+      watchSnapshot: sl(),
+      markToday: sl(),
+      undoToday: sl(),
+      repository: sl(),
+      clock: sl(),
+      isBootstrapDone: () => sl<BootstrapCoordinator>().isDone,
+    ),
+  );
 }
 
 void _initPreferences() {
