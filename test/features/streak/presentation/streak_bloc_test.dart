@@ -99,6 +99,7 @@ void main() {
   void metaBerstatus({
     StreakMetaValues awal = StreakMetaValues.empty,
     Duration tunda = Duration.zero,
+    Duration tundaSimpan = Duration.zero,
   }) {
     var tersimpan = awal;
     when(() => repo.readMeta()).thenAnswer((_) async {
@@ -111,6 +112,14 @@ void main() {
       return foto;
     });
     when(() => repo.saveMeta(any())).thenAnswer((inv) async {
+      // Cermin sengaja ASIMETRIS terhadap `readMeta` di atas, dan asimetri
+      // itulah yang benar: pembacaan MENGAMATI di awal, penulisan MENGIKAT
+      // di akhir. Kalau `tersimpan` di-set sebelum penundaan, tulisan itu
+      // seolah sudah komit padahal `await`-nya belum kembali — dan jendela
+      // "reset lewat selagi saveMeta tertunda" tak akan pernah terbuka.
+      if (tundaSimpan > Duration.zero) {
+        await Future<void>.delayed(tundaSimpan);
+      }
       tersimpan = inv.positionalArguments.first as StreakMetaValues;
     });
   }
@@ -773,6 +782,71 @@ void main() {
           ditulis.lastSeenDay,
           20260906,
           reason: 'serapan snapshot juga tidak boleh hilang',
+        );
+      },
+    );
+  });
+
+  group('IB1 — tiap penjaga generasi terkunci sendiri-sendiri', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    // Grup IB1 sebelumnya hanya membuktikan "ada SETIDAKNYA satu penjaga":
+    // resep S9 membuang keduanya sekaligus. Dibuang satu per satu, keduanya
+    // hijau — penjaga yang tersisa menutupi gejala milik penjaga yang hilang.
+    // Dua test di bawah memerahkan penjaga yang BERBEDA, lewat akibat yang
+    // berbeda pula: yang satu tulisan meta, yang lain emisi state.
+
+    blocTest<StreakBloc, StreakState>(
+      'reset selagi readMeta tertunda → meta akun lama TIDAK ditulis ke '
+      'penyimpanan akun baru',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 7));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus(tunda: const Duration(milliseconds: 40));
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        // Reset mendarat SELAGI readMeta masih tertunda. Penjaga (b) tidak
+        // bisa menolong di sini: ia berdiri SESUDAH saveMeta, jadi tulisannya
+        // sudah terlanjur mendarat saat ia sempat memeriksa apa pun.
+        await tunggu(15);
+        b.resetForNewSession();
+      },
+      wait: const Duration(milliseconds: 120),
+      verify: (_) {
+        verifyNever(() => repo.saveMeta(any()));
+      },
+    );
+
+    blocTest<StreakBloc, StreakState>(
+      'reset selagi saveMeta tertunda → state akun lama TIDAK di-emit '
+      'sesudahnya',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 7));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus(tundaSimpan: const Duration(milliseconds: 40));
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        // Kali ini readMeta lewat seketika, jadi penjaga (a) SUDAH meloloskan
+        // serapan ini dengan benar — generasinya memang masih cocok saat itu.
+        // Reset baru mendarat sesudahnya, selagi saveMeta tertunda. Hanya
+        // penjaga (b) yang berdiri di antara titik itu dan emit.
+        await tunggu(15);
+        b.resetForNewSession();
+      },
+      wait: const Duration(milliseconds: 120),
+      verify: (b) {
+        expect(
+          b.state.snapshot,
+          isNull,
+          reason:
+              'serapan yang generasinya kedaluwarsa selagi saveMeta tertunda '
+              'tidak boleh mendarat di state sesi baru',
         );
       },
     );
