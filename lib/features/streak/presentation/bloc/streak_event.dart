@@ -18,6 +18,12 @@ final class StreakMilestoneShown extends StreakEvent {
 
 final class StreakBreakAcknowledged extends StreakEvent {}
 
+/// INTERNAL — dikirim `resetForNewSession()` saat logout, tidak pernah oleh
+/// UI. Membuang state akun lama (D-16/C2): mereset field privat saja tidak
+/// cukup, karena `snapshot`/`pendingCelebration`/`failure` akun sebelumnya
+/// ikut menyeberang ke akun berikutnya.
+final class StreakSessionReset extends StreakEvent {}
+
 /// INTERNAL — dikirim timer, tidak pernah oleh UI. Melepaskan `restoring`
 /// yang menunggu bootstrap yang mungkin tidak akan pernah selesai (S6).
 final class StreakRestoringTimedOut extends StreakEvent {}

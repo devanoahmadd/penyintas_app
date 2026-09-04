@@ -6,6 +6,7 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
+import 'package:penyintas_app/features/streak/domain/entities/streak_meta_values.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_snapshot.dart';
 import 'package:penyintas_app/features/streak/domain/repositories/streak_repository.dart';
 import 'package:penyintas_app/features/streak/domain/usecases/mark_today_no_spend_usecase.dart';
@@ -14,6 +15,15 @@ import 'package:penyintas_app/features/streak/domain/usecases/watch_streak_snaps
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_state.dart';
 
+/// CATATAN DESAIN (jangan diubah tanpa alasan kuat): `_serapSekali` meng-emit
+/// dari helper, di luar alur kendali handler-nya. Itu konsekuensi
+/// `emit.onEach`, yang `onData`-nya bertipe `void Function(T)` dan karena itu
+/// TIDAK ditunggu. `emit.onEach` tetap primitif yang benar di sini —
+/// langganan-nya dibatalkan otomatis oleh `restartable()` dan oleh `close()`.
+/// Harganya: `_gerbang` (serialisasi) dan tiga penjaga `emit.isDone` ada
+/// SEMATA karena pola ini. Mengganti helper dengan `await for` di dalam
+/// handler menghapus keduanya, tapi juga menghapus pembatalan otomatis itu.
+///
 /// Ambang ruas bambu. Tanpa poin, koin, atau level — mata uang virtual di app
 /// keuangan rancu dengan uang nyata.
 const _kRuas = <int>[3, 7, 14, 30, 60, 100];
@@ -56,6 +66,18 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
       if (state.status == StreakStatus.restoring) {
         emit(state.copyWith(status: StreakStatus.ready));
       }
+    });
+    on<StreakSessionReset>((_, emit) {
+      // C2: MEMBUANG STATE, bukan cuma field privat. BLoC ini singleton
+      // seumur proses; tanpa emisi state kosong, akun berikutnya mewarisi
+      // `snapshot`, `pendingCelebration`, dan `failure` milik akun sebelumnya
+      // — dan penjaga `state.snapshot == null` di `_onSubscribed` ikut
+      // menekan gerbang `loading` tepat saat ia paling dibutuhkan.
+      _restoringTimer?.cancel();
+      _restoringTimer = null;
+      _restoringHabis = false;
+      _anomaliSebelumnya = false;
+      emit(const StreakState());
     });
     on<StreakTodayMarked>(_onMarked);
     on<StreakTodayMarkUndone>(_onUndone);
@@ -120,7 +142,46 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   Future<void> _serap(StreakSnapshot snapshot, Emitter<StreakState> emit) {
     _gerbang = _gerbang
         .then((_) => _serapSekali(snapshot, emit))
-        .catchError((Object _) {});
+        .catchError((Object e, StackTrace s) {
+          // I2: JANGAN ditelan. `readMeta()` mendelegasikan mentah ke Drift;
+          // kalau ia melempar, menelannya berarti nol emisi, nol status
+          // galat, dan nol jejak Crashlytics — skeleton abadi lewat pintu
+          // yang tak dijaga `_restoringTimer` (timer itu baru dipasang DI
+          // DALAM `_serapSekali`, yang justru tak pernah sampai).
+          addError(e, s);
+          if (!emit.isDone) {
+            emit(
+              state.copyWith(
+                status: StreakStatus.failure,
+                failure: const CacheFailure(),
+              ),
+            );
+          }
+        });
+    return _gerbang;
+  }
+
+  /// Satu-satunya pintu tulis StreakMeta di LUAR [_serapSekali] — dan ia
+  /// memakai antrean yang SAMA (`_gerbang`).
+  ///
+  /// C1: ada tiga penulis meta, semuanya read-modify-write async.
+  /// `_onMilestoneShown` dan `_onBreakAcknowledged` adalah handler terpisah
+  /// dengan transformer `concurrent` bawaan, jadi tanpa antrean bersama
+  /// tulisannya bisa terselip di antara `readMeta` dan `saveMeta` milik
+  /// serapan snapshot — lalu tertimpa meta basi. Akibatnya nyata: toast ruas
+  /// yang sama muncul dua kali, dan banner "ruas putus" hidup lagi setelah
+  /// ditutup. Jendelanya normal: `markToday()` memanggil `requestRecompute()`
+  /// dan repo men-debounce 150 ms, jadi dua snapshot berdekatan itu biasa.
+  Future<void> _ubahMeta(StreakMetaValues Function(StreakMetaValues) ubah) {
+    _gerbang = _gerbang
+        .then((_) async {
+          final meta = await _repo.readMeta();
+          final next = ubah(meta);
+          if (next != meta) await _repo.saveMeta(next);
+        })
+        .catchError((Object e, StackTrace s) {
+          addError(e, s);
+        });
     return _gerbang;
   }
 
@@ -175,13 +236,28 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     // `_restoringHabis` memberi keadaan itu batas waktu (S6).
     final memulihkan =
         !_isBootstrapDone() && !snapshot.hasStarted && !_restoringHabis;
-    if (memulihkan) _armRestoringTimer();
 
+    // M1: penjaga DULU. Serapan basi tidak boleh memasang timer yang lalu
+    // menembakkan `add(...)` ke bloc yang sudah ditutup.
     if (emit.isDone) return;
+    if (memulihkan) {
+      _armRestoringTimer();
+    } else {
+      // M2: keluar dari `restoring` secara normal juga harus mematikan
+      // timernya. Kalau tidak, ia tetap menyalak di detik ke-20 dan menyetel
+      // `_restoringHabis` semu — mematikan jaring S6 untuk sisa sesi.
+      _restoringTimer?.cancel();
+      _restoringTimer = null;
+    }
     emit(
       state.copyWith(
         status: memulihkan ? StreakStatus.restoring : StreakStatus.ready,
         snapshot: snapshot,
+        // I1: snapshot segar mengakhiri galat lama. Tanpa ini `failure`
+        // menetap selamanya dan `status: ready` + `failure: CacheFailure`
+        // jadi kombinasi tanpa arti yang tak bisa dibedakan listener mana pun
+        // dari galat yang baru datang.
+        clearFailure: true,
         pendingCelebration: ruasBaru,
         clearCelebration: ruasBaru == null,
         unacknowledgedBreakRun: putusBelumDiakui
@@ -231,12 +307,12 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     // optimistik di sini; yang dilakukan hanya menaruh galat untuk SnackBar.
     emit(
       hasil.fold(
-        (f) => state.copyWith(
-          isMarking: false,
-          status: StreakStatus.ready,
-          failure: f,
-        ),
-        (_) => state.copyWith(isMarking: false),
+        // M3: JANGAN memaksa `status: ready` di sini. Snapshot lama sengaja
+        // dipertahankan saat galat supaya kartunya tetap terender — menaikkan
+        // status ke `ready` menyembunyikan indikator galat sambil memajang
+        // angka basi seolah segar. Cabang `Right` pun tidak memaksa status.
+        (f) => state.copyWith(isMarking: false, failure: f),
+        (_) => state.copyWith(isMarking: false, clearFailure: true),
       ),
     );
   }
@@ -259,10 +335,7 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     StreakMilestoneShown e,
     Emitter<StreakState> emit,
   ) async {
-    final meta = await _repo.readMeta();
-    if (meta.lastCelebratedRuas != e.ruas) {
-      await _repo.saveMeta(meta.copyWith(lastCelebratedRuas: e.ruas));
-    }
+    await _ubahMeta((meta) => meta.copyWith(lastCelebratedRuas: e.ruas));
     emit(state.copyWith(clearCelebration: true));
   }
 
@@ -272,10 +345,7 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   ) async {
     final hariPutus = state.snapshot?.lastBreakDay;
     if (hariPutus == null) return;
-    final meta = await _repo.readMeta();
-    if (meta.acknowledgedBreakDay != hariPutus) {
-      await _repo.saveMeta(meta.copyWith(acknowledgedBreakDay: hariPutus));
-    }
+    await _ubahMeta((meta) => meta.copyWith(acknowledgedBreakDay: hariPutus));
     emit(state.copyWith(clearBreak: true));
   }
 
@@ -285,12 +355,7 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   /// sudah menyalak untuk satu akun tetap terkunci "habis" untuk akun
   /// berikutnya dalam sesi proses yang sama, dan proteksi T24 (riwayat belum
   /// tiba ≠ streak nol) berhenti berlaku justru saat paling dibutuhkan.
-  void resetForNewSession() {
-    _restoringTimer?.cancel();
-    _restoringTimer = null;
-    _restoringHabis = false;
-    _anomaliSebelumnya = false;
-  }
+  void resetForNewSession() => add(StreakSessionReset());
 
   @override
   Future<void> close() {

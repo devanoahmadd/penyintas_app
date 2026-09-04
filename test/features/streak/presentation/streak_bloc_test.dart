@@ -4,6 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_meta_values.dart';
@@ -51,8 +52,13 @@ StreakSnapshot snap({
   transactionDays: const {},
 );
 
-/// Aliran yang TIDAK PERNAH ditutup — persis `StreakRepository.watchSnapshot()`
-/// di produksi (BehaviorSubject seumur repository singleton).
+/// Aliran yang TIDAK PERNAH ditutup selama masih dilanggan — itulah sifat
+/// `StreakRepositoryImpl.watchSnapshot()` yang ditiru di sini.
+///
+/// Yang TIDAK ditiru, supaya tidak menyesatkan: watchSnapshot() membuat
+/// `StreamController` BARU tiap panggilan, tanpa seed, dan menutup dirinya
+/// lewat `onCancel`. Yang berumur sepanjang repository singleton hanyalah
+/// `_pemicu`, bukan aliran snapshot-nya.
 ///
 /// Penting, bukan kosmetik: `Stream.value(...)` MENUTUP dirinya sendiri, jadi
 /// `emit.onEach` selesai dan handler `StreakSubscribed` ikut selesai SEBELUM
@@ -90,13 +96,27 @@ void main() {
 
   /// Penyimpanan meta yang benar-benar mengingat — dibutuhkan tiap kali test
   /// memeriksa BERAPA KALI `saveMeta` dipanggil.
-  void metaBerstatus([StreakMetaValues awal = StreakMetaValues.empty]) {
+  void metaBerstatus({
+    StreakMetaValues awal = StreakMetaValues.empty,
+    Duration tunda = Duration.zero,
+  }) {
     var tersimpan = awal;
-    when(() => repo.readMeta()).thenAnswer((_) async => tersimpan);
+    when(() => repo.readMeta()).thenAnswer((_) async {
+      // Nilai difoto SAAT pembacaan DIMULAI, bukan saat ia selesai — itulah
+      // semantik baca database yang sesungguhnya, dan itulah satu-satunya cara
+      // jendela lost-update C1 bisa terbuka di test. Mock yang membaca
+      // `tersimpan` sesudah penundaan diam-diam menyembunyikan bug-nya.
+      final foto = tersimpan;
+      if (tunda > Duration.zero) await Future<void>.delayed(tunda);
+      return foto;
+    });
     when(() => repo.saveMeta(any())).thenAnswer((inv) async {
       tersimpan = inv.positionalArguments.first as StreakMetaValues;
     });
   }
+
+  Future<void> tunggu(int ms) =>
+      Future<void>.delayed(Duration(milliseconds: ms));
 
   setUp(() {
     watch = _MockWatch();
@@ -164,16 +184,20 @@ void main() {
     );
 
     blocTest<StreakBloc, StreakState>(
-      'anomali dicatat sekali saat transisi',
+      'anomali dicatat sekali saat transisi — snapshot anomali KEDUA tidak '
+      'menaikkannya lagi',
       setUp: () {
-        when(() => repo.readMeta()).thenAnswer(
-          (_) async => StreakMetaValues.empty.copyWith(
+        metaBerstatus(
+          awal: StreakMetaValues.empty.copyWith(
             lastSeenDay: 20261005,
             maxSeenDay: 20261005,
           ),
         );
+        // DUA snapshot anomali beruntun: satu snapshot saja tidak pernah bisa
+        // membuktikan kata "transisi" di judul test ini.
         when(() => watch()).thenAnswer(
           (_) => aliran([
+            snap(streak: 1, nextLastSeenDay: 20260905, anomaly: true),
             snap(streak: 1, nextLastSeenDay: 20260905, anomaly: true),
           ]),
         );
@@ -368,11 +392,51 @@ void main() {
         b.add(StreakBreakAcknowledged());
       },
       wait: const Duration(milliseconds: 60),
-      verify: (b) => expect(b.state.unacknowledgedBreakRun, isNull),
+      verify: (b) {
+        expect(b.state.unacknowledgedBreakRun, isNull);
+        final ditulis =
+            verify(() => repo.saveMeta(captureAny())).captured.last
+                as StreakMetaValues;
+        expect(
+          ditulis.acknowledgedBreakDay,
+          20260904,
+          reason: 'tanpa persistensi, banner hidup lagi di cold start '
+              'berikutnya walau user sudah menutupnya',
+        );
+      },
     );
   });
 
   group('galat', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    blocTest<StreakBloc, StreakState>(
+      'M6 — galat SESUDAH snapshot mendarat: angka lama dipertahankan, tidak '
+      'diganti nol',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 7));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus();
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(40);
+        expect(b.state.snapshot, isNotNull);
+        kanal.addError(Exception('putus'));
+      },
+      wait: const Duration(milliseconds: 40),
+      verify: (b) {
+        expect(b.state.status, StreakStatus.failure);
+        expect(
+          b.state.snapshot?.currentStreak,
+          7,
+          reason: 'inilah yang dijanjikan judulnya — angka terakhir bertahan',
+        );
+      },
+    );
+
     blocTest<StreakBloc, StreakState>(
       'error di stream snapshot → status failure, snapshot lama TIDAK diganti '
       'angka nol',
@@ -387,6 +451,204 @@ void main() {
       verify: (b) {
         expect(b.state.status, StreakStatus.failure);
         expect(b.state.snapshot, isNull);
+      },
+    );
+  });
+
+  group('C1 — tulisan StreakMeta tidak saling menimpa', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    blocTest<StreakBloc, StreakState>(
+      'StreakMilestoneShown yang bersaing dengan serapan snapshot tidak hilang '
+      'tertimpa meta basi',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 3));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus(tunda: const Duration(milliseconds: 30));
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(50);
+        expect(b.state.pendingCelebration, 3);
+
+        // Pembacaan milestone berangkat lebih dulu...
+        b.add(StreakMilestoneShown(3));
+        await tunggu(10);
+        // ...lalu serapan snapshot kedua membaca meta yang MASIH basi. Tanpa
+        // antrean bersama, tulisannya mendarat belakangan dan mengembalikan
+        // lastCelebratedRuas ke 0 — toast ruas 3 lalu muncul untuk kedua
+        // kalinya.
+        kanal.add(snap(streak: 3, nextLastSeenDay: 20260906));
+      },
+      wait: const Duration(milliseconds: 150),
+      verify: (_) {
+        final ditulis =
+            verify(() => repo.saveMeta(captureAny())).captured.last
+                as StreakMetaValues;
+        expect(
+          ditulis.lastCelebratedRuas,
+          3,
+          reason: 'perayaan yang sudah dikonsumsi tidak boleh hilang',
+        );
+        expect(
+          ditulis.lastSeenDay,
+          20260906,
+          reason: 'serapan snapshot juga tidak boleh hilang',
+        );
+      },
+    );
+  });
+
+  group('C2 — reset sesi membuang data akun lama', () {
+    blocTest<StreakBloc, StreakState>(
+      'resetForNewSession mengosongkan state DAN menghidupkan lagi gerbang '
+      'loading untuk akun berikutnya',
+      setUp: () {
+        when(() => watch()).thenAnswer((_) => aliran([snap(streak: 5)]));
+        metaBerstatus();
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(30);
+        expect(b.state.snapshot, isNotNull);
+        expect(b.state.pendingCelebration, 3);
+
+        b.resetForNewSession();
+        await tunggu(20);
+        expect(
+          b.state.snapshot,
+          isNull,
+          reason: 'angka streak akun sebelumnya tidak boleh menyeberang',
+        );
+        expect(
+          b.state.pendingCelebration,
+          isNull,
+          reason: 'perayaan akun sebelumnya tidak boleh meledak di sesi ini',
+        );
+
+        b.add(StreakSubscribed());
+      },
+      wait: const Duration(milliseconds: 60),
+      expect: () => [
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.loading,
+        ),
+        isA<StreakState>().having((s) => s.status, 'status', StreakStatus.ready),
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.initial,
+        ),
+        // Gerbang `loading` HIDUP LAGI — inilah yang mati kalau reset hanya
+        // menyentuh field privat: `state.snapshot != null` menekannya.
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.loading,
+        ),
+        isA<StreakState>().having((s) => s.status, 'status', StreakStatus.ready),
+      ],
+    );
+  });
+
+  group('I1 — galat tidak menetap di state', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    blocTest<StreakBloc, StreakState>(
+      'failure dibersihkan oleh snapshot segar DAN oleh mark yang berhasil',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 1));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus();
+        when(
+          () => mark(const NoParams()),
+        ).thenAnswer((_) async => const Left(CacheFailure()));
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(30);
+
+        b.add(StreakTodayMarked());
+        await tunggu(20);
+        expect(b.state.failure, isNotNull);
+
+        kanal.add(snap(streak: 2));
+        await tunggu(30);
+        expect(
+          b.state.failure,
+          isNull,
+          reason: 'snapshot segar mengakhiri galat lama — `ready` + `failure` '
+              'sekaligus adalah kombinasi tanpa arti',
+        );
+
+        b.add(StreakTodayMarked());
+        await tunggu(20);
+        expect(b.state.failure, isNotNull);
+
+        when(
+          () => mark(const NoParams()),
+        ).thenAnswer((_) async => const Right(null));
+        b.add(StreakTodayMarked());
+      },
+      wait: const Duration(milliseconds: 40),
+      verify: (b) => expect(
+        b.state.failure,
+        isNull,
+        reason: 'mark yang berhasil mengakhiri galat percobaan sebelumnya',
+      ),
+    );
+  });
+
+  group('I2 — galat serapan tidak ditelan diam-diam', () {
+    blocTest<StreakBloc, StreakState>(
+      'readMeta melempar → disalurkan ke Bloc.onError dan jadi status failure, '
+      'bukan skeleton abadi',
+      setUp: () {
+        when(() => watch()).thenAnswer((_) => aliran([snap(streak: 1)]));
+        when(() => repo.readMeta()).thenThrow(Exception('drift mati'));
+      },
+      build: buat,
+      act: (b) => b.add(StreakSubscribed()),
+      wait: const Duration(milliseconds: 50),
+      errors: () => [isA<Exception>()],
+      verify: (b) => expect(b.state.status, StreakStatus.failure),
+    );
+  });
+
+  group('I3 — event yang sebelumnya nol test', () {
+    blocTest<StreakBloc, StreakState>(
+      'StreakRefreshed memaksa repository menghitung ulang — ia pelepas normal '
+      'state restoring',
+      setUp: () {
+        when(() => watch()).thenAnswer((_) => aliran([]));
+      },
+      build: buat,
+      act: (b) => b.add(StreakRefreshed()),
+      wait: const Duration(milliseconds: 30),
+      verify: (_) => verify(() => repo.requestRecompute()).called(1),
+    );
+
+    blocTest<StreakBloc, StreakState>(
+      'StreakTodayMarkUndone memanggil usecase dan menaruh galatnya di state',
+      setUp: () {
+        when(() => watch()).thenAnswer((_) => aliran([]));
+        when(
+          () => undo(const NoParams()),
+        ).thenAnswer((_) async => const Left(CacheFailure()));
+      },
+      build: buat,
+      act: (b) => b.add(StreakTodayMarkUndone()),
+      wait: const Duration(milliseconds: 30),
+      verify: (b) {
+        verify(() => undo(const NoParams())).called(1);
+        expect(b.state.failure, isA<CacheFailure>());
       },
     );
   });
