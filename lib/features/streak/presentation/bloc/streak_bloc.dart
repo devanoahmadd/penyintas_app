@@ -77,6 +77,10 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
       _restoringTimer = null;
       _restoringHabis = false;
       _anomaliSebelumnya = false;
+      // IB1: naikkan SEBELUM emit — `_serapSekali` yang sedang berjalan
+      // (dari langganan sesi lama) memotret generasi lama dan akan
+      // membandingkannya dengan nilai baru ini sesudah `await`-nya kembali.
+      _generasi++;
       emit(const StreakState());
     });
     on<StreakTodayMarked>(_onMarked);
@@ -96,6 +100,30 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   Timer? _midnightTimer;
   Timer? _restoringTimer;
   bool _restoringHabis = false;
+
+  /// IB1: penghitung generasi sesi. `StreakSessionReset` MENAIKKANNYA.
+  /// `_onSubscribed` memotretnya SEKALI saat langganan dimulai (bukan
+  /// `_serapSekali`, dan bukan per snapshot) — potretan itu lalu diteruskan
+  /// apa adanya ke tiap `_serapSekali` lewat `_serap`, yang membandingkannya
+  /// lagi sesudah titik `await`. Memotret ulang di dalam `_serapSekali` tidak
+  /// menjaga apa pun: snapshot yang tiba SESUDAH reset akan memotret
+  /// `_generasi` yang SUDAH versi baru, jadi pembandingnya selalu cocok
+  /// dengan dirinya sendiri.
+  ///
+  /// Dipilih generasi, BUKAN pembatalan langganan `_watchSnapshot()`, karena
+  /// `restartable()` di `_onSubscribed` adalah `switchMap` — ia hanya
+  /// membatalkan emitter LAMA saat `StreakSubscribed` BARU datang, bukan saat
+  /// `StreakSessionReset`. Tanpa penjaga ini, langganan sesi lama tetap hidup
+  /// sesudah reset; kalau stream lama memancarkan satu snapshot susulan (mis.
+  /// notifikasi Drift dari `clearAllLocalData()` saat logout), `_serapSekali`
+  /// akan meng-emit lewat emitter LAMA — yang belum `isDone` — dan menimpa
+  /// balik `StreakState()` kosong dengan data akun lama.
+  ///
+  /// Solusinya terkurung PENUH di dalam BLoC ini: `resetForNewSession()`
+  /// tetap `add(StreakSessionReset())` polos, tidak perlu tahu apa pun soal
+  /// siklus hidup `emit.onEach` — pemanggilnya (Task 12, di lokasi lain) juga
+  /// tidak perlu tahu.
+  int _generasi = 0;
 
   /// Anomali dicatat hanya saat TRANSISI, bukan tiap hitung ulang — kalau
   /// tidak, satu pembekuan dua hari akan menggelembungkan diagnostiknya.
@@ -122,9 +150,17 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
       emit(state.copyWith(status: StreakStatus.loading));
     }
     _armMidnightTimer();
+    // IB1: generasi milik LANGGANAN ini, dipotret SEKALI saat langganan
+    // dimulai — BUKAN per snapshot di dalam `_serapSekali`. Memotret ulang
+    // tiap snapshot tidak menjaga apa pun: snapshot yang tiba SESUDAH
+    // `StreakSessionReset` akan memotret `_generasi` yang SUDAH versi baru,
+    // sehingga pembandingnya selalu sama dengan dirinya sendiri. Potretan
+    // sekali-per-langganan inilah yang tetap membeku ke generasi LAMA
+    // selamanya sesudah reset, apa pun kapan snapshot-nya tiba.
+    final generasi = _generasi;
     await emit.onEach<StreakSnapshot>(
       _watchSnapshot(),
-      onData: (snapshot) => _serap(snapshot, emit),
+      onData: (snapshot) => _serap(snapshot, emit, generasi),
       onError: (e, s) {
         if (emit.isDone) return;
         emit(
@@ -138,10 +174,15 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   }
 
   /// Dijalankan berurutan lewat [_gerbang]; galat satu putaran tidak boleh
-  /// mematikan rantainya.
-  Future<void> _serap(StreakSnapshot snapshot, Emitter<StreakState> emit) {
+  /// mematikan rantainya. [generasi] diteruskan apa adanya dari langganan
+  /// yang memanggilnya — lihat catatan IB1 di [_onSubscribed].
+  Future<void> _serap(
+    StreakSnapshot snapshot,
+    Emitter<StreakState> emit,
+    int generasi,
+  ) {
     _gerbang = _gerbang
-        .then((_) => _serapSekali(snapshot, emit))
+        .then((_) => _serapSekali(snapshot, emit, generasi))
         .catchError((Object e, StackTrace s) {
           // I2: JANGAN ditelan. `readMeta()` mendelegasikan mentah ke Drift;
           // kalau ia melempar, menelannya berarti nol emisi, nol status
@@ -188,12 +229,16 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   Future<void> _serapSekali(
     StreakSnapshot snapshot,
     Emitter<StreakState> emit,
+    int generasi,
   ) async {
     // `emit.onEach` tidak menunggu `onData`, jadi handler-nya bisa SUDAH mati
     // saat pekerjaan async di bawah selesai — misalnya karena `restartable()`
     // membatalkannya ketika rute lain men-dispatch StreakSubscribed lagi.
     if (emit.isDone) return;
     final meta = await _repo.readMeta();
+    // IB1: reset terjadi SELAMA `readMeta()` tertunda → jangan tulis balik
+    // meta akun lama ke penyimpanan yang kini milik akun baru (atau kosong).
+    if (generasi != _generasi) return;
     final hariDevice = localDayKey(_clock.now());
 
     // `maxSeenDay` HANYA NAIK — termasuk di cabang koreksi jam yang justru
@@ -238,8 +283,10 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
         !_isBootstrapDone() && !snapshot.hasStarted && !_restoringHabis;
 
     // M1: penjaga DULU. Serapan basi tidak boleh memasang timer yang lalu
-    // menembakkan `add(...)` ke bloc yang sudah ditutup.
-    if (emit.isDone) return;
+    // menembakkan `add(...)` ke bloc yang sudah ditutup. IB1: `saveMeta()` di
+    // atas juga sebuah `await` — reset bisa lewat selama itu, jadi generasi
+    // dicek lagi di sini sebelum emit.
+    if (emit.isDone || generasi != _generasi) return;
     if (memulihkan) {
       _armRestoringTimer();
     } else {

@@ -681,4 +681,100 @@ void main() {
       verifyNever(() => repo.dispose());
     });
   });
+
+  group('IB1 — reset sesi membatalkan serapan dari langganan lama', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    blocTest<StreakBloc, StreakState>(
+      'snapshot yang tiba dari langganan SEBELUM reset tidak menimpa balik '
+      'StreakState() kosong sesudahnya',
+      setUp: () {
+        // StreamController manual, BUKAN `aliran(...)` — kanal ini harus
+        // tetap bisa menerima emisi SESUDAH reset, bukan diisi di muka.
+        kanal = StreamController<StreakSnapshot>();
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus();
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(
+          20,
+        ); // langganan sudah terpasang, belum ada snapshot apa pun
+
+        b.resetForNewSession();
+        await tunggu(10);
+        expect(b.state.snapshot, isNull);
+
+        // Langganan LAMA (kanal) TIDAK dibatalkan oleh StreakSessionReset —
+        // restartable() hanya membatalkan emitter lama saat StreakSubscribed
+        // BARU datang. Pancarkan satu snapshot susulan, meniru notifikasi
+        // Drift yang dipicu clearAllLocalData() saat logout.
+        kanal.add(snap(streak: 9));
+      },
+      wait: const Duration(milliseconds: 60),
+      verify: (b) {
+        expect(
+          b.state.snapshot,
+          isNull,
+          reason:
+              'serapan dari langganan sesi LAMA tidak boleh menimpa balik '
+              'StreakState() kosong dengan data akun lama',
+        );
+      },
+    );
+  });
+
+  group('IB2 — cermin C1 untuk jalur acknowledgedBreakDay', () {
+    late StreamController<StreakSnapshot> kanal;
+
+    blocTest<StreakBloc, StreakState>(
+      'StreakBreakAcknowledged yang bersaing dengan serapan snapshot tidak '
+      'hilang tertimpa meta basi',
+      setUp: () {
+        kanal = StreamController<StreakSnapshot>();
+        kanal.add(snap(streak: 0, lastBreakDay: 20260904, brokenRun: 40));
+        when(() => watch()).thenAnswer((_) => kanal.stream);
+        metaBerstatus(tunda: const Duration(milliseconds: 30));
+      },
+      build: buat,
+      act: (b) async {
+        b.add(StreakSubscribed());
+        await tunggu(50);
+        expect(b.state.unacknowledgedBreakRun, 40);
+
+        // Pengakuan banner putus berangkat lebih dulu...
+        b.add(StreakBreakAcknowledged());
+        await tunggu(10);
+        // ...lalu serapan snapshot kedua membaca meta yang MASIH basi. Tanpa
+        // antrean bersama, tulisannya mendarat belakangan dan mengembalikan
+        // acknowledgedBreakDay ke 0 — banner "ruas putus" hidup lagi setelah
+        // ditutup.
+        kanal.add(
+          snap(
+            streak: 0,
+            lastBreakDay: 20260904,
+            brokenRun: 40,
+            nextLastSeenDay: 20260906,
+          ),
+        );
+      },
+      wait: const Duration(milliseconds: 150),
+      verify: (_) {
+        final ditulis =
+            verify(() => repo.saveMeta(captureAny())).captured.last
+                as StreakMetaValues;
+        expect(
+          ditulis.acknowledgedBreakDay,
+          20260904,
+          reason: 'pengakuan yang sudah dikonsumsi tidak boleh hilang',
+        );
+        expect(
+          ditulis.lastSeenDay,
+          20260906,
+          reason: 'serapan snapshot juga tidak boleh hilang',
+        );
+      },
+    );
+  });
 }
