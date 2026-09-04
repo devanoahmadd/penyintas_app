@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -397,6 +399,199 @@ void main() {
         isFalse,
         reason: 'baris bertanda tak boleh pernah dicap tersinkron',
       );
+      // M5 — antrean di akhir race ini BUKAN kosong: satu `delete` basi
+      // (dari `unmarkToday()` di dalam hook, atas baris jujur semula) masih
+      // menunggu. Itu BENAR — delete berasal dari undo pada baris jujur,
+      // dan mark-ulang bertanda tidak boleh membatalkannya. Nyatakan
+      // sebagai asersi supaya keadaan ini tidak diam-diam berubah.
+      final q = await antrean();
+      expect(q, hasLength(1));
+      expect(q.single.operation, SyncOperation.delete);
     });
+  });
+
+  group('TEMUAN C1/I1/I2/I3/I4 — Ronde Perbaikan 1', () {
+    test(
+      'C1 — mark offline lalu pushPendingMarks() lalu undo mengantre '
+      'TEPAT satu delete (dokumen remote tak boleh jadi yatim)',
+      () async {
+        when(() => network.isConnected).thenAnswer((_) async => false);
+        await repo.markToday(); // create menunggu di antrean, isSynced=false
+        expect((await antrean()).single.operation, SyncOperation.create);
+
+        when(() => network.isConnected).thenAnswer((_) async => true);
+        final naik = await repo.pushPendingMarks();
+        expect(naik, 1);
+        final rowSesudahPush = await baris(20260905);
+        expect(
+          rowSesudahPush!.isSynced,
+          isTrue,
+          reason: 'dokumen remote sudah ada lewat pushPendingMarks()',
+        );
+
+        await repo.unmarkToday();
+
+        final q = await antrean();
+        expect(
+          q,
+          hasLength(1),
+          reason:
+              'delete WAJIB diantre — dokumen remote sudah dibuat lewat '
+              'pushPendingMarks(), bukan lewat SyncQueue',
+        );
+        expect(q.single.operation, SyncOperation.delete);
+        expect(q.single.collectionPath, path);
+      },
+    );
+
+    test(
+      'C1 (minimal, terisolasi dari fix menyeluruh) — row.isSynced=true '
+      'dengan create basi tersisa di antrean tetap mengantre delete',
+      () async {
+        // Keadaan disuntik LANGSUNG (bukan lewat pushPendingMarks()) supaya
+        // test ini murni mengunci penjaga `!row.isSynced` milik unmarkToday()
+        // — TIDAK bergantung pada purge di pushPendingMarks() (fix
+        // menyeluruh, dikunci test terpisah di bawah).
+        await local.insertMark(
+          dayKey: 20260905,
+          markedAt: DateTime.utc(2026, 9, 5, 3),
+          timezone: 'WIB',
+          viaClockCorrection: false,
+        );
+        await local.markSynced(20260905);
+        await local.addToSyncQueue(
+          itemId: '20260905',
+          collectionPath: path,
+          data: const {'dayKey': 20260905},
+          operation: SyncOperation.create,
+        );
+
+        await repo.unmarkToday();
+
+        final q = await antrean();
+        expect(
+          q,
+          hasLength(1),
+          reason:
+              'row.isSynced=true berarti dokumen remote memang ada — '
+              'delete WAJIB diantre meski createDibuang > 0',
+        );
+        expect(q.single.operation, SyncOperation.delete);
+      },
+    );
+
+    test(
+      'C1 (menyeluruh) — pushPendingMarks() membuang create basi dari '
+      'antrean sesudah mendorong baris langsung',
+      () async {
+        when(() => network.isConnected).thenAnswer((_) async => false);
+        await repo.markToday(); // create menunggu di antrean
+        expect((await antrean()).single.operation, SyncOperation.create);
+
+        when(() => network.isConnected).thenAnswer((_) async => true);
+        final naik = await repo.pushPendingMarks();
+        expect(naik, 1);
+
+        expect(
+          await antrean(),
+          isEmpty,
+          reason:
+              'create basi WAJIB dibuang begitu baris naik langsung lewat '
+              'pushPendingMarks() — tak boleh menunggu TTL 7 hari tanpa '
+              'guna',
+        );
+      },
+    );
+
+    test(
+      'I1 — ambang penjaga netral diukur dalam HARI, bukan jarak angka '
+      'yyyymmdd — pergantian bulan tidak boleh meloloskan penandaan curang',
+      () async {
+        // lastSeenDay 1 Okt, jam device mundur ke 30 Sep: kalender selisih
+        // 1 hari → penjaga netral WAJIB menolak. Pengurangan yyyymmdd
+        // mentah (20261001 - 20260930 = 71) akan salah menyimpulkan aman.
+        clock.at = DateTime(2026, 9, 30, 10);
+        await local.saveMeta(
+          StreakMetaValues.empty.copyWith(
+            lastSeenDay: 20261001,
+            maxSeenDay: 20261001,
+          ),
+        );
+        final hasil = await repo.markToday();
+        expect(hasil.isLeft(), isTrue);
+        expect(
+          await baris(20260930),
+          isNull,
+          reason: 'tak ada baris tercipta — penjaga netral menolak',
+        );
+      },
+    );
+
+    test(
+      'I2 — online tapi push ke remote gagal → baris lokal tetap tercipta '
+      'dan diantre, bukan dibuang',
+      () async {
+        when(() => remote.saveMark(any())).thenThrow(Exception('boom'));
+
+        final hasil = await repo.markToday();
+
+        expect(hasil.isRight(), isTrue, reason: 'gagal push bukan galat user');
+        expect(await baris(20260905), isNotNull);
+        final q = await antrean();
+        expect(q, hasLength(1));
+        expect(q.single.operation, SyncOperation.create);
+      },
+    );
+
+    test(
+      'I3 — payload yang diantre saat offline berisi field yang benar',
+      () async {
+        when(() => network.isConnected).thenAnswer((_) async => false);
+        await repo.markToday();
+
+        final q = await antrean();
+        final data = jsonDecode(q.single.data) as Map<String, dynamic>;
+        expect(data['dayKey'], 20260905);
+        expect(data['markedAt'], isA<int>());
+        expect(data['timezone'], isA<String>());
+        expect(data['updatedAt'], isA<int>());
+      },
+    );
+
+    test(
+      'I4 — baris terhapus tepat di jendela readUnsyncedMarks→findMark '
+      'tidak jadi didorong',
+      () async {
+        final racing = _LocalDenganRace(db);
+        final repoRace = StreakRepositoryImpl(
+          local: racing,
+          remote: remote,
+          network: network,
+          auth: auth,
+          clock: clock,
+          epochDay: 20260901,
+        );
+        addTearDown(repoRace.dispose);
+
+        await racing.insertMark(
+          dayKey: 20260905,
+          markedAt: DateTime.utc(2026, 9, 5, 3),
+          timezone: 'WIB',
+          viaClockCorrection: false,
+        );
+
+        // Jendela race: baris lenyap (mis. diurungkan) TEPAT sesudah daftar
+        // "belum naik" dipegang loop dan SEBELUM baca-ulang findMark().
+        racing.saatBacaBelumNaik = () async {
+          await racing.deleteMark(20260905);
+        };
+
+        final naik = await repoRace.pushPendingMarks();
+
+        expect(naik, 0, reason: 'baris sudah lenyap, tak ada yang sah');
+        verifyNever(() => remote.saveMark(any()));
+        expect(await baris(20260905), isNull);
+      },
+    );
   });
 }

@@ -328,7 +328,18 @@ class StreakRepositoryImpl implements StreakRepository {
 
       final path = 'users/$uid/streak_marks/$today';
       final createDibuang = await _local.purgePendingSyncFor(path);
-      if (createDibuang > 0) {
+      // TEMUAN C1 — `createDibuang > 0` SENDIRIAN tidak cukup. Ada DUA jalur
+      // unggah yang tidak saling tahu: `markToday()` offline mengantre
+      // `create` ke `SyncQueue`, TAPI `pushPendingMarks()` (bootstrap login
+      // berikutnya) mendorong baris itu lewat `_remote.saveMark()`
+      // LANGSUNG lalu `markSynced()` — ia tidak pernah menyentuh
+      // `SyncQueue`. Kalau itu yang terjadi, dokumen remote SUDAH ADA
+      // (`row.isSynced == true`) sekalipun `create` basi masih kebetulan
+      // nangkring di antrean (mis. belum sempat diproses `SyncService`).
+      // Purge di atas membuangnya, tapi itu tak berarti "dokumen remote
+      // belum pernah ada" — jadi wajib periksa `row.isSynced` juga sebelum
+      // memutuskan delete tidak perlu diantre.
+      if (createDibuang > 0 && !row.isSynced) {
         // Purge baru saja membuang satu-satunya `create` yang belum pernah
         // terkirim — dokumen remote memang belum pernah ada.
         return const Right(null);
@@ -432,7 +443,8 @@ class StreakRepositoryImpl implements StreakRepository {
   Future<int> pushPendingMarks() async {
     try {
       if (!await _network.isConnected) return 0;
-      if (_auth.currentUser == null) return 0;
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return 0;
 
       // `SyncQueue` membuang itemnya sendiri sesudah 7 hari
       // (`sync_service.dart:61-77`) dan TIDAK ADA yang pernah mengantre
@@ -469,6 +481,21 @@ class StreakRepositoryImpl implements StreakRepository {
             continue;
           }
           await _local.markSynced(row.dayKey);
+
+          // TEMUAN C1 (menyeluruh) — jalur ini naik LANGSUNG lewat
+          // `_remote.saveMark()`, bukan lewat `SyncQueue`, jadi purge-
+          // sebelum-enqueue yang dipakai `markToday()`/`unmarkToday()` tidak
+          // pernah menyentuhnya. Kalau baris ini SEBELUMNYA dibuat offline,
+          // item `create` untuk path yang sama masih bisa nangkring di
+          // antrean sekarang jadi basi (dokumen remote sudah ada lewat
+          // baris di atas). Purge di sini menutup jalur kedua: tanpanya,
+          // undo berikutnya yang menemukan antrean sudah kosong (mis.
+          // `SyncService` sempat memprosesnya duluan) tidak salah kira —
+          // tapi kalau BELUM diproses, `create` basi itu tetap tak berguna
+          // menunggu di antrean sampai TTL 7 hari.
+          await _local.purgePendingSyncFor(
+            'users/$uid/streak_marks/${row.dayKey}',
+          );
           naik++;
         } catch (e, s) {
           // Satu baris gagal tidak boleh menggagalkan sisanya. Ia tetap

@@ -11,8 +11,36 @@ abstract class StreakRepository {
   /// untuk timer tengah malam dan saat app kembali ke foreground.
   void requestRecompute();
 
-  Future<Either<Failure, void>> markToday(); // Task 9
-  Future<Either<Failure, void>> unmarkToday(); // Task 9
+  /// Tandai `today` sebagai hari aman.
+  ///
+  /// KONTRAK NILAI BALIK (TEMUAN I5 — wajib dibaca sebelum menangani `Left`):
+  ///
+  ///  - `Left(ValidationFailure)` — satu-satunya kasus yang BENAR-BENAR
+  ///    berarti "tidak ada yang berubah". Ini penjaga jam mode netral:
+  ///    penandaan ditolak SEBELUM baris lokal mana pun disentuh.
+  ///
+  ///  - `Left(CacheFailure)` — TIDAK berarti "tidak terjadi apa-apa". Ia
+  ///    dikembalikan SESUDAH efek lokal sudah terjadi: baris sudah
+  ///    `insertMark()`-ed dan `requestRecompute()` sudah dipanggil (galat
+  ///    yang ditangkap berasal dari `addToSyncQueue()` yang melempar, bukan
+  ///    dari penulisan lokalnya). Consumer (BLoC) yang memperlakukan `Left`
+  ///    sebagai "no-op" akan menampilkan galat sementara stream snapshot
+  ///    justru sudah menunjukkan hari itu berubah — jangan asumsikan
+  ///    `Left` = rollback otomatis.
+  ///
+  ///  - `Right(null)` mencakup beberapa jalur berbeda: no-op idempoten
+  ///    (hari sudah ditandai, D-4), berhasil tersinkron, berhasil diantre
+  ///    offline, MAUPUN baris `viaClockCorrection` yang sengaja tak pernah
+  ///    diantre (§4.7) — semuanya "sukses" dari sudut pandang caller.
+  Future<Either<Failure, void>> markToday();
+
+  /// Urungkan penanda `today` — penghapusan baris, bukan penandaan-terbalik.
+  ///
+  /// KONTRAK NILAI BALIK sama seperti [markToday] (TEMUAN I5): `Left`
+  /// method ini SELALU `CacheFailure`, dikembalikan SESUDAH `deleteMark()`
+  /// dan `requestRecompute()` sudah terjadi — bukan sebelum. Jangan
+  /// perlakukan `Left` sebagai bukti baris lokal belum terhapus.
+  Future<Either<Failure, void>> unmarkToday();
 
   /// Dipakai DailyReminderScheduler. Sengaja BUKAN Either: saat gagal ia
   /// mengembalikan `false` (= pengingat tetap dikirim). Gagal ke arah
