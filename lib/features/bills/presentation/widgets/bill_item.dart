@@ -93,7 +93,8 @@ class BillItem extends StatelessWidget {
     // diterjemahkan. Frasa lengkapnya sekarang tampil di sheet Tandai Lunas
     // (`_BillSummary` di `mark_bill_paid_sheet.dart`), tempat yang ruangnya
     // cukup dan konteksnya lebih pas.
-    final installmentLabel = (total == null || bill.status == BillStatus.completed)
+    final installmentLabel =
+        (total == null || bill.status == BillStatus.completed)
         ? null
         : '${bill.installmentsPaid + 1}/$total';
 

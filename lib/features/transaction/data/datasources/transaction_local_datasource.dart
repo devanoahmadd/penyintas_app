@@ -154,15 +154,14 @@ class TransactionLocalDataSourceImpl implements TransactionLocalDataSource {
 
   @override
   Future<List<TransactionModel>> getBySourceBillId(int billId) async {
-    final rows = await (_db.select(_db.transactions)
-          ..where((t) => t.sourceBillId.equals(billId)))
-        .get();
+    final rows = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.sourceBillId.equals(billId))).get();
     return rows.map(TransactionModel.fromDrift).toList();
   }
 
   @override
-  Future<void> deleteBySourceBillId(int billId) =>
-      (_db.delete(_db.transactions)
-            ..where((t) => t.sourceBillId.equals(billId)))
-          .go();
+  Future<void> deleteBySourceBillId(int billId) => (_db.delete(
+    _db.transactions,
+  )..where((t) => t.sourceBillId.equals(billId))).go();
 }

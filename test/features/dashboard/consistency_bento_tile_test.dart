@@ -43,26 +43,24 @@ void main() {
   late AppLocalizations l10n;
   late MockStreakBloc bloc;
 
-  StreakSnapshot buildSnapshot({
-    bool hasStarted = true,
-    int streak = 12,
-  }) => StreakSnapshot(
-    hasStarted: hasStarted,
-    activatedDay: 20260101,
-    currentStreak: streak,
-    longestRuas: 21,
-    graceAvailable: 2,
-    graceUsedDays: const {},
-    todayStatus: DayStatus.pending,
-    today: 20260905,
-    nextLastSeenDay: 20260905,
-    lastBreakDay: null,
-    brokenRunLength: 0,
-    markedDays: const {},
-    markedDaysAll: const {},
-    transactionDays: const {},
-    clockAnomalyDetected: false,
-  );
+  StreakSnapshot buildSnapshot({bool hasStarted = true, int streak = 12}) =>
+      StreakSnapshot(
+        hasStarted: hasStarted,
+        activatedDay: 20260101,
+        currentStreak: streak,
+        longestRuas: 21,
+        graceAvailable: 2,
+        graceUsedDays: const {},
+        todayStatus: DayStatus.pending,
+        today: 20260905,
+        nextLastSeenDay: 20260905,
+        lastBreakDay: null,
+        brokenRunLength: 0,
+        markedDays: const {},
+        markedDaysAll: const {},
+        transactionDays: const {},
+        clockAnomalyDetected: false,
+      );
 
   StreakState buildState({
     StreakStatus status = StreakStatus.ready,
@@ -137,17 +135,16 @@ void main() {
     expect(find.text('12 hari berturut'), findsOneWidget);
   });
 
-  testWidgets(
-    'hasStarted == false → sub-teks ajakan, BUKAN "0 hari"',
-    (tester) async {
-      stub(buildState(snapshot: buildSnapshot(hasStarted: false, streak: 0)));
-      await tester.pumpWidget(harness());
-      await tester.pump();
+  testWidgets('hasStarted == false → sub-teks ajakan, BUKAN "0 hari"', (
+    tester,
+  ) async {
+    stub(buildState(snapshot: buildSnapshot(hasStarted: false, streak: 0)));
+    await tester.pumpWidget(harness());
+    await tester.pump();
 
-      expect(find.text('Mulai hari ini'), findsOneWidget);
-      expect(find.textContaining('0'), findsNothing);
-    },
-  );
+    expect(find.text('Mulai hari ini'), findsOneWidget);
+    expect(find.textContaining('0'), findsNothing);
+  });
 
   testWidgets('status restoring → skeleton, BUKAN "0 hari"', (tester) async {
     stub(buildState(status: StreakStatus.restoring));
@@ -155,10 +152,7 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('0'), findsNothing);
-    expect(
-      find.byKey(const Key('consistency-bento-skeleton')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('consistency-bento-skeleton')), findsOneWidget);
   });
 
   testWidgets('status failure → sub-teks netral, BUKAN "0 hari"', (
@@ -172,10 +166,7 @@ void main() {
 
     expect(find.textContaining('0'), findsNothing);
     expect(find.text('Mulai hari ini'), findsOneWidget);
-    expect(
-      find.byKey(const Key('consistency-bento-skeleton')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('consistency-bento-skeleton')), findsNothing);
   });
 
   testWidgets(
@@ -199,10 +190,7 @@ void main() {
       // sedangkan `go` MENGGANTI seluruh tumpukan dengan lokasi baru
       // (canPop == false, tak ada apa pun untuk di-back). Dibuktikan
       // empiris lewat probe terpisah sebelum ditulis di sini.
-      expect(
-        find.text('CONSISTENCY_PAGE_MARKER canPop=true'),
-        findsOneWidget,
-      );
+      expect(find.text('CONSISTENCY_PAGE_MARKER canPop=true'), findsOneWidget);
     },
   );
 

@@ -352,19 +352,21 @@ void main() {
   // konteksnya pas (pengguna sedang mau bayar, wajar ingin tahu ini
   // pembayaran keberapa).
 
-  testWidgets('tagihan bertenor → kartu ringkasan menampilkan progres cicilan', (
-    tester,
-  ) async {
-    // installmentTotal: 12, installmentsPaid: 3 → pembayaran BERIKUTNYA ke-4.
-    await pumpSheet(tester, bill: billBerjalan());
+  testWidgets(
+    'tagihan bertenor → kartu ringkasan menampilkan progres cicilan',
+    (tester) async {
+      // installmentTotal: 12, installmentsPaid: 3 → pembayaran BERIKUTNYA ke-4.
+      await pumpSheet(tester, bill: billBerjalan());
 
-    expect(
-      find.text(l10n.billsInstallmentProgress(4, 12)),
-      findsOneWidget,
-      reason: 'Progres cicilan harus tampil persis seperti frasa l10n — '
-          'dulu tak pernah dipakai di sheet ini sama sekali.',
-    );
-  });
+      expect(
+        find.text(l10n.billsInstallmentProgress(4, 12)),
+        findsOneWidget,
+        reason:
+            'Progres cicilan harus tampil persis seperti frasa l10n — '
+            'dulu tak pernah dipakai di sheet ini sama sekali.',
+      );
+    },
+  );
 
   testWidgets(
     'tagihan tanpa tenor (sekali-jalan) → TIDAK ada progres cicilan',
@@ -374,7 +376,8 @@ void main() {
       expect(
         find.textContaining('Cicilan ke-'),
         findsNothing,
-        reason: 'Tagihan tanpa installmentTotal tak punya progres untuk '
+        reason:
+            'Tagihan tanpa installmentTotal tak punya progres untuk '
             'ditampilkan — memaksakan teksnya akan menyesatkan.',
       );
     },

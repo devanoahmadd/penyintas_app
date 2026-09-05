@@ -120,9 +120,7 @@ GoRouter createAppRouter() => GoRouter(
       builder: (context, state) => MultiBlocProvider(
         providers: [
           // .value — StreakBloc singleton, jangan di-close saat route di-pop.
-          BlocProvider.value(
-            value: sl<StreakBloc>()..add(StreakSubscribed()),
-          ),
+          BlocProvider.value(value: sl<StreakBloc>()..add(StreakSubscribed())),
           BlocProvider.value(value: sl<SurvivalBloc>()),
         ],
         child: const ConsistencyPage(),

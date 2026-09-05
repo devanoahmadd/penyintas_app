@@ -115,7 +115,8 @@ void main() {
     expect(
       paragraph.didExceedMaxLines,
       isFalse,
-      reason: 'Bahkan bentuk pendek "4/12" tak boleh terpotong di lebar '
+      reason:
+          'Bahkan bentuk pendek "4/12" tak boleh terpotong di lebar '
           'HP normal — kalau ini pun gagal, ada yang salah lebih dalam.',
     );
   });
@@ -137,7 +138,8 @@ void main() {
       expect(
         find.textContaining('CICILAN', findRichText: true),
         findsNothing,
-        reason: 'Frasa panjang seharusnya sudah tak ada lagi di list item — '
+        reason:
+            'Frasa panjang seharusnya sudah tak ada lagi di list item — '
             'kalau masih ada, redesign belum benar-benar diterapkan.',
       );
     },

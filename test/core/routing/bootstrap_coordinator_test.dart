@@ -134,36 +134,28 @@ void main() {
     },
   );
 
-  test(
-    'ensure() mendorong penanda belum sinkron (pushPendingMarks) sesudah '
-    'langkah lain selesai',
-    () async {
-      final c = build();
-      await c.ensure();
-      verify(() => streakRepo.pushPendingMarks()).called(1);
-    },
-  );
+  test('ensure() mendorong penanda belum sinkron (pushPendingMarks) sesudah '
+      'langkah lain selesai', () async {
+    final c = build();
+    await c.ensure();
+    verify(() => streakRepo.pushPendingMarks()).called(1);
+  });
 
-  test(
-    'non-fatal: streak sync/push gagal → langkah lain tetap jalan, ensure() '
-    'selesai',
-    () async {
-      when(
-        () => streakRepo.syncMarksFromRemote(),
-      ).thenThrow(Exception('offline'));
-      when(
-        () => streakRepo.pushPendingMarks(),
-      ).thenThrow(Exception('offline'));
-      final c = build();
-      await c.ensure(); // tak melempar
-      verify(
-        () => prefsRepo.syncOnLaunch(
-          budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
-        ),
-      ).called(1);
-      expect(c.isDone, true);
-    },
-  );
+  test('non-fatal: streak sync/push gagal → langkah lain tetap jalan, ensure() '
+      'selesai', () async {
+    when(
+      () => streakRepo.syncMarksFromRemote(),
+    ).thenThrow(Exception('offline'));
+    when(() => streakRepo.pushPendingMarks()).thenThrow(Exception('offline'));
+    final c = build();
+    await c.ensure(); // tak melempar
+    verify(
+      () => prefsRepo.syncOnLaunch(
+        budgetOnboardingCompleted: any(named: 'budgetOnboardingCompleted'),
+      ),
+    ).called(1);
+    expect(c.isDone, true);
+  });
 
   test('(a) memanggil scheduler.rescheduleAll pengingat tagihan setelah sync '
       'bills (device baru/reinstall langsung dapat pengingat)', () async {

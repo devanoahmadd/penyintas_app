@@ -56,29 +56,31 @@ void main() {
       expect(result.first.sourceBillId, equals(9));
     });
 
-    test('mengembalikan list kosong jika tidak ada matching sourceBillId',
-        () async {
-      // Arrange
-      final tx1 = TransactionModel(
-        id: 'tx-1',
-        amount: 50000,
-        category: 'food',
-        type: TransactionType.expense,
-        date: DateTime(2026, 5, 8),
-        isFixed: false,
-        isSynced: false,
-        createdAt: DateTime(2026, 5, 8),
-        updatedAt: DateTime(2026, 5, 8),
-        sourceBillId: 5,
-      );
-      await datasource.saveTransaction(tx1);
+    test(
+      'mengembalikan list kosong jika tidak ada matching sourceBillId',
+      () async {
+        // Arrange
+        final tx1 = TransactionModel(
+          id: 'tx-1',
+          amount: 50000,
+          category: 'food',
+          type: TransactionType.expense,
+          date: DateTime(2026, 5, 8),
+          isFixed: false,
+          isSynced: false,
+          createdAt: DateTime(2026, 5, 8),
+          updatedAt: DateTime(2026, 5, 8),
+          sourceBillId: 5,
+        );
+        await datasource.saveTransaction(tx1);
 
-      // Act
-      final result = await datasource.getBySourceBillId(9);
+        // Act
+        final result = await datasource.getBySourceBillId(9);
 
-      // Assert
-      expect(result, isEmpty);
-    });
+        // Assert
+        expect(result, isEmpty);
+      },
+    );
   });
 
   group('deleteBySourceBillId', () {
@@ -125,30 +127,32 @@ void main() {
       expect(afterDelete.first.txId, equals('tx-2'));
     });
 
-    test('tidak menghapus apa pun jika tidak ada matching sourceBillId',
-        () async {
-      // Arrange
-      final tx1 = TransactionModel(
-        id: 'tx-1',
-        amount: 50000,
-        category: 'food',
-        type: TransactionType.expense,
-        date: DateTime(2026, 5, 8),
-        isFixed: false,
-        isSynced: false,
-        createdAt: DateTime(2026, 5, 8),
-        updatedAt: DateTime(2026, 5, 8),
-        sourceBillId: 5,
-      );
-      await datasource.saveTransaction(tx1);
+    test(
+      'tidak menghapus apa pun jika tidak ada matching sourceBillId',
+      () async {
+        // Arrange
+        final tx1 = TransactionModel(
+          id: 'tx-1',
+          amount: 50000,
+          category: 'food',
+          type: TransactionType.expense,
+          date: DateTime(2026, 5, 8),
+          isFixed: false,
+          isSynced: false,
+          createdAt: DateTime(2026, 5, 8),
+          updatedAt: DateTime(2026, 5, 8),
+          sourceBillId: 5,
+        );
+        await datasource.saveTransaction(tx1);
 
-      // Act
-      await datasource.deleteBySourceBillId(9);
+        // Act
+        await datasource.deleteBySourceBillId(9);
 
-      // Assert: Transaksi asli tetap ada
-      final result = await (db.select(db.transactions).get());
-      expect(result, hasLength(1));
-      expect(result.first.txId, equals('tx-1'));
-    });
+        // Assert: Transaksi asli tetap ada
+        final result = await (db.select(db.transactions).get());
+        expect(result, hasLength(1));
+        expect(result.first.txId, equals('tx-1'));
+      },
+    );
   });
 }

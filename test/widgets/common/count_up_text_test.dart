@@ -78,7 +78,9 @@ void main() {
       expect(find.text('100'), findsOneWidget);
     });
 
-    testWidgets('menggunakan format callback untuk menampilkan teks', (tester) async {
+    testWidgets('menggunakan format callback untuk menampilkan teks', (
+      tester,
+    ) async {
       const testStyle = TextStyle(fontSize: 16);
 
       await tester.pumpWidget(
