@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/features/streak/domain/entities/streak_snapshot.dart';
@@ -41,6 +44,11 @@ void main() {
 
   setUpAll(() async {
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
+    // `StreakEvent` sealed DAN tanpa Equatable: ia tak bisa di-`Fake` dari
+    // library lain, dan dua instance `StreakTodayMarkUndone()` tidak pernah
+    // sama. Jadi fallback-nya instance event sungguhan, dan verifikasinya
+    // memakai matcher TIPE, bukan kesetaraan nilai.
+    registerFallbackValue(StreakRefreshed());
   });
 
   /// Fixture snapshot — nilai default meniru pengguna yang sudah berjalan
@@ -94,13 +102,45 @@ void main() {
     tips: [],
   );
 
+  /// Pembungkus MaterialApp bersama untuk `harness()` dan `harnessTransisi()`.
+  Widget bungkus({
+    required StreakBloc streakBloc,
+    required SurvivalBloc survivalBloc,
+    bool disableAnimations = false,
+  }) => MaterialApp(
+    locale: const Locale('id'),
+    supportedLocales: const [Locale('id'), Locale('en')],
+    localizationsDelegates: [
+      _SyncL10nDelegate(l10n),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: MediaQuery(
+      data: const MediaQueryData().copyWith(
+        disableAnimations: disableAnimations,
+      ),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<StreakBloc>.value(value: streakBloc),
+          BlocProvider<SurvivalBloc>.value(value: survivalBloc),
+        ],
+        child: const ConsistencyPage(),
+      ),
+    ),
+  );
+
   Widget harness({
     required StreakState state,
     SurvivalState survivalState = const SurvivalInactive(),
     bool disableAnimations = false,
   }) {
     final streakBloc = MockStreakBloc();
-    whenListen(streakBloc, Stream<StreakState>.value(state), initialState: state);
+    whenListen(
+      streakBloc,
+      Stream<StreakState>.value(state),
+      initialState: state,
+    );
     final survivalBloc = MockSurvivalBloc();
     whenListen(
       survivalBloc,
@@ -108,28 +148,32 @@ void main() {
       initialState: survivalState,
     );
 
-    return MaterialApp(
-      locale: const Locale('id'),
-      supportedLocales: const [Locale('id'), Locale('en')],
-      localizationsDelegates: [
-        _SyncL10nDelegate(l10n),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: MediaQuery(
-        data: const MediaQueryData().copyWith(
-          disableAnimations: disableAnimations,
-        ),
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<StreakBloc>.value(value: streakBloc),
-            BlocProvider<SurvivalBloc>.value(value: survivalBloc),
-          ],
-          child: const ConsistencyPage(),
-        ),
-      ),
+    return bungkus(
+      streakBloc: streakBloc,
+      survivalBloc: survivalBloc,
+      disableAnimations: disableAnimations,
     );
+  }
+
+  /// Varian harness untuk test `BlocListener`. `listenWhen` di halaman
+  /// membandingkan state SEBELUM dan SESUDAH, jadi ia menuntut TRANSISI —
+  /// satu state tunggal seperti di `harness()` tidak akan pernah memicunya,
+  /// dan itulah sebabnya seluruh jalur SnackBar lolos dari Step 2. Bloc-nya
+  /// diserahkan pemanggil supaya test bisa memverifikasi event yang di-add
+  /// BALIK oleh tombol di dalam SnackBar.
+  Widget harnessTransisi(
+    MockStreakBloc streakBloc,
+    Stream<StreakState> aliran,
+    StreakState awal,
+  ) {
+    whenListen(streakBloc, aliran, initialState: awal);
+    final survivalBloc = MockSurvivalBloc();
+    whenListen(
+      survivalBloc,
+      Stream<SurvivalState>.value(const SurvivalInactive()),
+      initialState: const SurvivalInactive(),
+    );
+    return bungkus(streakBloc: streakBloc, survivalBloc: survivalBloc);
   }
 
   testWidgets('status ready menampilkan angka streak dan label', (
@@ -156,25 +200,22 @@ void main() {
     expect(find.byKey(const Key('consistency-skeleton')), findsOneWidget);
   });
 
-  testWidgets(
-    'status failure menampilkan pesan + tombol coba lagi, '
-    'BUKAN angka 0 dan BUKAN kalender kosong',
-    (tester) async {
-      await tester.pumpWidget(
-        harness(
-          state: buildState(
-            status: StreakStatus.failure,
-            failure: const CacheFailure(),
-          ),
+  testWidgets('status failure menampilkan pesan + tombol coba lagi, '
+      'BUKAN angka 0 dan BUKAN kalender kosong', (tester) async {
+    await tester.pumpWidget(
+      harness(
+        state: buildState(
+          status: StreakStatus.failure,
+          failure: const CacheFailure(),
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.text('0'), findsNothing);
-      expect(find.byKey(const Key('consistency-calendar')), findsNothing);
-      expect(find.text('Coba lagi'), findsOneWidget);
-    },
-  );
+    expect(find.text('0'), findsNothing);
+    expect(find.byKey(const Key('consistency-calendar')), findsNothing);
+    expect(find.text('Coba lagi'), findsOneWidget);
+  });
 
   testWidgets('hasStarted == false menampilkan empty state, bukan angka 0', (
     tester,
@@ -182,7 +223,12 @@ void main() {
     await tester.pumpWidget(
       harness(
         state: buildState(
-          snapshot: buildSnapshot(hasStarted: false, streak: 0, longestRuas: 0, graceAvailable: 0),
+          snapshot: buildSnapshot(
+            hasStarted: false,
+            streak: 0,
+            longestRuas: 0,
+            graceAvailable: 0,
+          ),
         ),
       ),
     );
@@ -202,9 +248,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       harness(
-        state: buildState(
-          snapshot: buildSnapshot(todayStatus: DayStatus.safe),
-        ),
+        state: buildState(snapshot: buildSnapshot(todayStatus: DayStatus.safe)),
       ),
     );
     await tester.pump();
@@ -284,27 +328,24 @@ void main() {
     },
   );
 
-  testWidgets(
-    'T-ANOM: CTA hilang & chip anomali saat todayStatus == anomaly',
-    (tester) async {
-      await tester.pumpWidget(
-        harness(
-          state: buildState(
-            snapshot: buildSnapshot(todayStatus: DayStatus.anomaly),
-          ),
+  testWidgets('T-ANOM: CTA hilang & chip anomali saat todayStatus == anomaly', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(
+        state: buildState(
+          snapshot: buildSnapshot(todayStatus: DayStatus.anomaly),
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.text('Hari ini tidak ada pengeluaran'), findsNothing);
-      expect(
-        find.text(
-          'Jam perangkatmu sedang tidak pas. Hitungan kami tahan dulu.',
-        ),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('Hari ini tidak ada pengeluaran'), findsNothing);
+    expect(
+      find.text('Jam perangkatmu sedang tidak pas. Hitungan kami tahan dulu.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'T-RAW: jalur failure tidak pernah merender pesan mentah dari Failure',
@@ -339,4 +380,156 @@ void main() {
       expect(find.text('7'), findsOneWidget);
     },
   );
+
+  group('Jalur SnackBar & sheet aturan — pintu yang tak disediakan Step 2', () {
+    /// Semua test di grup ini memakai transisi `isMarking: true -> false`,
+    /// karena itulah yang dibandingkan `listenWhen` di halaman.
+    StreakState sedangMenandai() =>
+        buildState(snapshot: buildSnapshot(), isMarking: true);
+
+    testWidgets(
+      'penandaan sukses memunculkan SnackBar beserta tombol Urungkan',
+      (tester) async {
+        final bloc = MockStreakBloc();
+        final kanal = StreamController<StreakState>.broadcast();
+        addTearDown(kanal.close);
+
+        await tester.pumpWidget(
+          harnessTransisi(bloc, kanal.stream, sedangMenandai()),
+        );
+        // WAJIB sebelum `kanal.add`: delegate l10n `load()` bersifat async, jadi
+        // `Localizations` menahan subtree-nya selama satu frame — halaman belum
+        // ter-mount dan `BlocListener` belum berlangganan. Menembak ke
+        // `StreamController.broadcast()` yang belum punya pelanggan membuang
+        // event itu TANPA SUARA, dan testnya merah karena alasan yang salah.
+        await tester.pump();
+        kanal.add(
+          buildState(snapshot: buildSnapshot(todayStatus: DayStatus.safe)),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text('Hari ini ditandai tanpa pengeluaran.'),
+          findsOneWidget,
+        );
+        expect(find.text('Urungkan'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'SnackBar sukses MENGHILANG sesudah durasinya lewat (persist: false)',
+      (tester) async {
+        final bloc = MockStreakBloc();
+        final kanal = StreamController<StreakState>.broadcast();
+        addTearDown(kanal.close);
+
+        await tester.pumpWidget(
+          harnessTransisi(bloc, kanal.stream, sedangMenandai()),
+        );
+        // Lihat catatan pump-sebelum-add di test pertama grup ini.
+        await tester.pump();
+        kanal.add(
+          buildState(snapshot: buildSnapshot(todayStatus: DayStatus.safe)),
+        );
+        await tester.pump();
+        // Animasi MASUK harus tuntas dulu: timer auto-dismiss baru dipasang
+        // sesudah SnackBar benar-benar terlihat, jadi tanpa ini penundaan di
+        // bawah menghitung dari titik yang salah.
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Hari ini ditandai tanpa pengeluaran.'),
+          findsOneWidget,
+        );
+
+        // SDK: `persist = persist ?? action != null`. SnackBar BERTOMBOL
+        // karenanya default MENETAP dan mengabaikan `duration` di atasnya —
+        // diam-diam, tanpa galat. Repo ini sudah pernah mengirimnya dalam
+        // keadaan rusak di tiga lokasi (diperbaiki 2026-08-31), jadi aturan
+        // yang sudah pernah patah sekali ini tidak boleh hidup tanpa penjaga.
+        await tester.pump(const Duration(seconds: 6));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Hari ini ditandai tanpa pengeluaran.'),
+          findsNothing,
+          reason: 'SnackBar bertombol wajib tetap menghormati `duration`',
+        );
+      },
+    );
+
+    testWidgets('tombol Urungkan mengirim StreakTodayMarkUndone ke bloc', (
+      tester,
+    ) async {
+      final bloc = MockStreakBloc();
+      final kanal = StreamController<StreakState>.broadcast();
+      addTearDown(kanal.close);
+
+      await tester.pumpWidget(
+        harnessTransisi(bloc, kanal.stream, sedangMenandai()),
+      );
+      // WAJIB sebelum `kanal.add`: delegate l10n `load()` bersifat async, jadi
+      // `Localizations` menahan subtree-nya selama satu frame — halaman belum
+      // ter-mount dan `BlocListener` belum berlangganan. Menembak ke
+      // `StreamController.broadcast()` yang belum punya pelanggan membuang
+      // event itu TANPA SUARA, dan testnya merah karena alasan yang salah.
+      await tester.pump();
+      kanal.add(
+        buildState(snapshot: buildSnapshot(todayStatus: DayStatus.safe)),
+      );
+      await tester.pump();
+      // Tanpa menuntaskan animasi masuk, tombolnya masih di y=624 — di luar
+      // viewport test 800x600 — dan `tap()` menolak dengan "would not hit
+      // test on the specified widget".
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Urungkan'));
+      await tester.pump();
+
+      verify(() => bloc.add(any(that: isA<StreakTodayMarkUndone>()))).called(1);
+    });
+
+    testWidgets(
+      'penandaan gagal memakai key l10n, BUKAN pesan mentah dari Failure',
+      (tester) async {
+        final bloc = MockStreakBloc();
+        final kanal = StreamController<StreakState>.broadcast();
+        addTearDown(kanal.close);
+
+        await tester.pumpWidget(
+          harnessTransisi(bloc, kanal.stream, sedangMenandai()),
+        );
+        // Lihat catatan pump-sebelum-add di test pertama grup ini.
+        await tester.pump();
+        kanal.add(
+          buildState(
+            snapshot: buildSnapshot(),
+            failure: const CacheFailure('GALAT MENTAH JANGAN TAMPIL'),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        // T-RAW mengunci aturan yang sama untuk BADAN halaman. Penandaan yang
+        // gagal lewat pintu yang sama sekali berbeda — SnackBar — jadi satu
+        // test saja meninggalkan separuh aturan tanpa penjaga.
+        expect(find.text('GALAT MENTAH JANGAN TAMPIL'), findsNothing);
+        expect(find.text('Belum bisa menandai hari ini.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('ikon (?) di AppBar membuka sheet "Cara hitungnya"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        harness(state: buildState(snapshot: buildSnapshot())),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('consistency-help')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cara hitungnya'), findsOneWidget);
+    });
+  });
 }
