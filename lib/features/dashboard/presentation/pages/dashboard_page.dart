@@ -261,7 +261,6 @@ class _DashboardBody extends StatelessWidget {
                     clock: sl<AppClock>(),
                     onRecord: onAddTap,
                   ),
-                  const SizedBox(height: AppSpacing.lg),
 
                   // Akses Cepat
                   _SectionHeader(

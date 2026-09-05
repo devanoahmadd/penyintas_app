@@ -77,12 +77,21 @@ class EveningNudgeCard extends StatelessWidget {
         }
         if (!_isPastThreshold) return const SizedBox.shrink();
 
+        // Jarak bawahnya milik KARTU, bukan milik dashboard. Keempat cabang
+        // di atas menyembunyikan kartu ini, dan keadaan tersembunyi itulah
+        // keadaan NORMALNYA — ia hanya muncul sesudah ambang sore DAN saat
+        // hari ini belum aman. Kalau jaraknya dipasang di sisi dashboard, ia
+        // tetap terbit sepanjang sisa hari dan meninggalkan celah kosong di
+        // layar utama hampir sepanjang waktu, untuk setiap pengguna.
         return BlocBuilder<SurvivalBloc, SurvivalState>(
           builder: (context, survivalState) {
-            return _EveningNudgeCardBody(
-              isSurvivalActive: survivalState is SurvivalActive,
-              isMarking: streakState.isMarking,
-              onRecord: onRecord,
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+              child: _EveningNudgeCardBody(
+                isSurvivalActive: survivalState is SurvivalActive,
+                isMarking: streakState.isMarking,
+                onRecord: onRecord,
+              ),
             );
           },
         );

@@ -217,9 +217,7 @@ void main() {
   testWidgets('tidak muncul saat hasStarted == false', (tester) async {
     await tester.pumpWidget(
       harness(
-        streakState: buildState(
-          snapshot: buildSnapshot(hasStarted: false),
-        ),
+        streakState: buildState(snapshot: buildSnapshot(hasStarted: false)),
         now: DateTime(2026, 9, 5, 20, 0),
         reminderHour: 20,
       ),
@@ -353,9 +351,7 @@ void main() {
     await tester.tap(find.byKey(const Key('evening-nudge-no-spend')));
     await tester.pump();
 
-    verify(() => streakBloc.add(any(that: isA<StreakTodayMarked>()))).called(
-      1,
-    );
+    verify(() => streakBloc.add(any(that: isA<StreakTodayMarked>()))).called(1);
   });
 
   testWidgets('tombol Catat memanggil onRecord, BUKAN buka sheet kedua', (
@@ -377,4 +373,30 @@ void main() {
 
     expect(recordTapped, 1);
   });
+
+  testWidgets(
+    'keadaan tersembunyi bertinggi NOL — tak menyisakan celah di dashboard',
+    (tester) async {
+      // Tersembunyi adalah keadaan NORMAL kartu ini: ia hanya muncul sesudah
+      // ambang sore DAN saat hari ini belum aman. Jadi kalau jarak bawahnya
+      // ikut terbit selagi tersembunyi, celah kosongnya menetap di layar
+      // utama hampir sepanjang hari, untuk setiap pengguna.
+      await tester.pumpWidget(
+        harness(
+          streakState: buildState(
+            snapshot: buildSnapshot(todayStatus: DayStatus.safe),
+          ),
+          now: DateTime(2026, 9, 5, 20, 0),
+          reminderHour: 20,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.getSize(find.byType(EveningNudgeCard)).height,
+        0,
+        reason: 'kartu tersembunyi tidak boleh memakan tinggi sama sekali',
+      );
+    },
+  );
 }
