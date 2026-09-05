@@ -786,6 +786,28 @@ class AppLocalizations {
   String get dashboardTiedNegativeHintSpending =>
       _t('dashboard_tied_negative_hint_spending');
   String get dashboardTiedNudge => _t('dashboard_tied_nudge');
+
+  // ── Halaman `/consistency` (Task 12) ──
+  String get consistencyTitle => _t('consistency_title');
+  String get consistencyDaysLabel => _t('consistency_days_label');
+  String get consistencyTodayDone => _t('consistency_today_done');
+  String get consistencyTodayPending => _t('consistency_today_pending');
+  String get consistencyTodayMarked => _t('consistency_today_marked');
+  String get consistencyTodayAnomaly => _t('consistency_today_anomaly');
+  String get consistencyCtaNoSpend => _t('consistency_cta_no_spend');
+  String get consistencyLongest => _t('consistency_longest');
+  String get consistencyGraceLeft => _t('consistency_grace_left');
+  String get consistencyEmpty => _t('consistency_empty');
+  String get consistencyError => _t('consistency_error');
+  String get consistencyRetry => _t('consistency_retry');
+  String consistencySurvivalDays(int days) =>
+      _t('consistency_survival_days').replaceAll('{days}', '$days');
+  String get consistencyUndo => _t('consistency_undo');
+  String get consistencyMarkedSnack => _t('consistency_marked_snack');
+  String get consistencyMarkFailed => _t('consistency_mark_failed');
+  String get consistencyRulesTitle => _t('consistency_rules_title');
+  String get consistencyRulesBody => _t('consistency_rules_body');
+  String get consistencyRulesA11y => _t('consistency_rules_a11y');
 }
 
 class _AppLocalizationsDelegate

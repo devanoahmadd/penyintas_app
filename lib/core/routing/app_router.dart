@@ -16,6 +16,9 @@ import 'package:penyintas_app/features/onboarding/presentation/cubit/onboarding_
 import 'package:penyintas_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:penyintas_app/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:penyintas_app/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_bloc.dart';
+import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
+import 'package:penyintas_app/features/streak/presentation/pages/consistency_page.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/survival/presentation/pages/survival_tips_page.dart';
 import 'package:penyintas_app/features/report/presentation/bloc/report_bloc.dart';
@@ -94,6 +97,12 @@ GoRouter createAppRouter() => GoRouter(
             BlocProvider.value(
               value: sl<BillsBloc>()..add(const BillsSubscribed()),
             ),
+            // Task 12: tile & kartu sore butuh StreakBloc di scope dashboard.
+            // Aman di-dispatch ulang tiap masuk route — StreakSubscribed
+            // pakai transformer restartable() (langganan lama dibatalkan).
+            BlocProvider.value(
+              value: sl<StreakBloc>()..add(StreakSubscribed()),
+            ),
           ],
           child: const DashboardPage(),
         ),
@@ -104,6 +113,19 @@ GoRouter createAppRouter() => GoRouter(
       builder: (context, state) => BlocProvider.value(
         value: sl<SurvivalBloc>(),
         child: const SurvivalTipsPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/consistency',
+      builder: (context, state) => MultiBlocProvider(
+        providers: [
+          // .value — StreakBloc singleton, jangan di-close saat route di-pop.
+          BlocProvider.value(
+            value: sl<StreakBloc>()..add(StreakSubscribed()),
+          ),
+          BlocProvider.value(value: sl<SurvivalBloc>()),
+        ],
+        child: const ConsistencyPage(),
       ),
     ),
     GoRoute(
@@ -235,6 +257,7 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
       sl<OnboardingGuard>().resetCache(); // reset saat logout
       sl<BootstrapCoordinator>()
           .reset(); // Temuan 1: bootstrap fresh utk user berikutnya
+      sl<StreakBloc>().resetForNewSession(); // D-16: buang state akun lama
       return publicRoutes.contains(location) ? null : '/login';
     }
 
