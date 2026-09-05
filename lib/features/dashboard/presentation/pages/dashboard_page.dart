@@ -26,6 +26,7 @@ import 'package:penyintas_app/widgets/common/dashed_border_painter.dart';
 import 'package:penyintas_app/widgets/common/email_verification_banner.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bills_bento_tile.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/consistency_bento_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
@@ -677,14 +678,9 @@ class _BentoGrid extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm2),
-            Expanded(
-              child: _BentoQuickTile(
-                icon: Icons.emoji_events_outlined,
-                label: l10n.dashboardBentoChallengeLabel,
-                sub: l10n.dashboardBentoChallengeSub,
-                onTap: () => _comingSoon(context),
-              ),
-            ),
+            // Task 16: tile hidup, angka streak nyata dari StreakBloc —
+            // lihat ConsistencyBentoTile.
+            const Expanded(child: ConsistencyBentoTile()),
           ],
         ),
       ],

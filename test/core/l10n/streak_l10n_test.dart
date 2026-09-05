@@ -197,6 +197,52 @@ void main() {
     }
   });
 
+  // ── Task 16 — tile bento Konsistensi di dashboard ──
+  //
+  // Key BARU, bukan menimpa `dashboard_bento_challenge_label`/`_sub` (masih
+  // dipakai tile Tantangan placeholder Fase 2 — lihat plan Task 16).
+  const consistencyBentoKeys = [
+    'dashboard_bento_consistency_label',
+    'dashboard_bento_consistency_sub',
+    'dashboard_bento_consistency_days',
+    'dashboard_bento_consistency_start',
+  ];
+
+  test('id.json & en.json memuat semua key tile bento Konsistensi', () {
+    for (final k in consistencyBentoKeys) {
+      expect(id.containsKey(k), isTrue, reason: 'id.json kekurangan "$k"');
+      expect(en.containsKey(k), isTrue, reason: 'en.json kekurangan "$k"');
+    }
+  });
+
+  test('key dashboard_bento_challenge_label/_sub TIDAK berubah nilainya '
+      '(masih dipakai Fase 2)', () {
+    expect(id['dashboard_bento_challenge_label'], 'Tantangan');
+    expect(id['dashboard_bento_challenge_sub'], 'Mingguan');
+    expect(en['dashboard_bento_challenge_label'], 'Challenge');
+    expect(en['dashboard_bento_challenge_sub'], 'Weekly');
+  });
+
+  test('placeholder {days} tile bento Konsistensi sama persis di ID & EN', () {
+    expect(
+      id['dashboard_bento_consistency_days'] as String,
+      contains('{days}'),
+      reason:
+          'id.json "dashboard_bento_consistency_days" kehilangan placeholder',
+    );
+    expect(
+      en['dashboard_bento_consistency_days'] as String,
+      contains('{days}'),
+      reason:
+          'en.json "dashboard_bento_consistency_days" kehilangan placeholder',
+    );
+  });
+
+  test('dashboardBentoConsistencyDays(12) menyisipkan angka streak', () {
+    expect(l10nId.dashboardBentoConsistencyDays(12), '12 hari berturut');
+    expect(l10nEn.dashboardBentoConsistencyDays(12), '12 days in a row');
+  });
+
   test('halaman galat tidak pernah menyalahkan koneksi', () {
     // Kegagalan baca snapshot lokal murni Drift — tak ada jaringan.
     expect(

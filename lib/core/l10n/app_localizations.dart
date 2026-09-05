@@ -376,6 +376,16 @@ class AppLocalizations {
       _t('dashboard_bento_challenge_label');
   String get dashboardBentoChallengeSub => _t('dashboard_bento_challenge_sub');
 
+  // ── Tile Konsistensi di dashboard (Task 16) ──
+  String get dashboardBentoConsistencyLabel =>
+      _t('dashboard_bento_consistency_label');
+  String get dashboardBentoConsistencySub =>
+      _t('dashboard_bento_consistency_sub');
+  String dashboardBentoConsistencyDays(int days) =>
+      _t('dashboard_bento_consistency_days').replaceAll('{days}', '$days');
+  String get dashboardBentoConsistencyStart =>
+      _t('dashboard_bento_consistency_start');
+
   // Common
   String get commonComingSoon => _t('common_coming_soon');
 
