@@ -909,6 +909,41 @@ void main() {
     });
 
     blocTest<StreakBloc, StreakState>(
+      'kabel yang MELEMPAR tidak merembes keluar dari jalur penandaan',
+      setUp: () => when(
+        () => mark(const NoParams()),
+      ).thenAnswer((_) async => const Right(null)),
+      build: () => StreakBloc(
+        watchSnapshot: watch,
+        markToday: mark,
+        undoToday: undo,
+        repository: repo,
+        clock: clock,
+        isBootstrapDone: () => bootstrapDone,
+        restoringGrace: const Duration(milliseconds: 60),
+        // `reschedule()` menyentuh plugin notifikasi — di Android 12+ alarm
+        // presisi melempar begitu izinnya dicabut. Tanpa penjaga, galatnya
+        // dilempar ulang ke zona dan test ini gagal walau penandaannya
+        // sendiri berhasil.
+        onDaySafetyChanged: () async => throw StateError('reschedule gagal'),
+      ),
+      act: (b) => b.add(StreakTodayMarked()),
+      wait: const Duration(milliseconds: 80),
+      verify: (b) {
+        expect(
+          b.state.isMarking,
+          isFalse,
+          reason: 'penandaannya sendiri berhasil dan harus selesai bersih',
+        );
+        expect(
+          b.state.failure,
+          isNull,
+          reason: 'gagal menjadwalkan pengingat BUKAN gagal menandai hari',
+        );
+      },
+    );
+
+    blocTest<StreakBloc, StreakState>(
       'penandaan BERHASIL → kabel dipanggil sekali',
       setUp: () => when(
         () => mark(const NoParams()),

@@ -377,7 +377,27 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     // HANYA cabang `Right`: kegagalan tidak membuat hari ini jadi aman, jadi
     // pengingat tak boleh ikut didiamkan. Efeknya idempoten, jadi urutannya
     // terhadap `emit` tidak kritis.
-    if (hasil.isRight()) await _onDaySafetyChanged?.call();
+    if (hasil.isRight()) await _jalankanKabelAman();
+  }
+
+  /// Penjadwalan ulang pengingat BUKAN bagian dari kontrak "tandai nihil".
+  ///
+  /// `reschedule()` menyentuh plugin notifikasi, dan di Android 12+ alarm
+  /// presisi bisa melempar begitu izinnya dicabut — kondisi nyata yang bisa
+  /// dicapai pengguna, bukan hipotesis. Tanpa penjaga ini, galat itu lolos
+  /// dari handler lalu DILEMPAR ULANG ke zona: penandaannya sendiri berhasil
+  /// dan state-nya sudah benar, tapi laporan galatnya menuding jalur
+  /// penandaan. `addError` melaporkan TANPA melempar ulang, jadi pengamatan
+  /// tetap ada tanpa memfitnah jalur yang tidak bersalah.
+  ///
+  /// Aman ditelan karena penjadwalannya konvergen: `InitNotification`
+  /// menjalankan `reschedule()` lagi di tiap cold start.
+  Future<void> _jalankanKabelAman() async {
+    try {
+      await _onDaySafetyChanged?.call();
+    } catch (e, s) {
+      addError(e, s);
+    }
   }
 
   Future<void> _onUndone(
@@ -391,7 +411,7 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     hasil.fold((f) => emit(state.copyWith(failure: f)), (_) {});
     // Undo yang berhasil mengembalikan hari ini ke "belum aman" — pengingat
     // harian harus hidup lagi.
-    if (hasil.isRight()) await _onDaySafetyChanged?.call();
+    if (hasil.isRight()) await _jalankanKabelAman();
   }
 
   /// Konsumsi sekali-pakai `pendingCelebration`. BlocListener memanggil ini
