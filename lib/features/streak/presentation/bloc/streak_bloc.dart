@@ -48,8 +48,19 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     /// persis kebohongan T24. Ia murni jaring pengaman — pelepas normalnya
     /// `StreakRefreshed` dari `BootstrapCoordinator.onComplete`.
     Duration restoringGrace = const Duration(seconds: 20),
+
+    /// Dipanggil sesudah penandaan / undo yang BERHASIL — yaitu setiap kali
+    /// status "hari ini aman" bisa berubah. Diisi DI dengan
+    /// `DailyReminderScheduler.reschedule()`: hari yang jadi aman harus
+    /// mendiamkan pengingat harian, dan undo harus menghidupkannya lagi.
+    ///
+    /// Lewat callback, BLoC tidak bergantung pada kelas notifikasi mana pun.
+    /// OPSIONAL dan berdefault no-op supaya test yang tidak peduli soal
+    /// pengingat tak perlu menyediakannya.
+    Future<void> Function()? onDaySafetyChanged,
   }) : _watchSnapshot = watchSnapshot,
        _restoringGrace = restoringGrace,
+       _onDaySafetyChanged = onDaySafetyChanged,
        _markToday = markToday,
        _undoToday = undoToday,
        _repo = repository,
@@ -96,6 +107,7 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
   final AppClock _clock;
   final bool Function() _isBootstrapDone;
   final Duration _restoringGrace;
+  final Future<void> Function()? _onDaySafetyChanged;
 
   Timer? _midnightTimer;
   Timer? _restoringTimer;
@@ -362,6 +374,10 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
         (_) => state.copyWith(isMarking: false, clearFailure: true),
       ),
     );
+    // HANYA cabang `Right`: kegagalan tidak membuat hari ini jadi aman, jadi
+    // pengingat tak boleh ikut didiamkan. Efeknya idempoten, jadi urutannya
+    // terhadap `emit` tidak kritis.
+    if (hasil.isRight()) await _onDaySafetyChanged?.call();
   }
 
   Future<void> _onUndone(
@@ -373,6 +389,9 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     // "berhasil diurungkan" — perubahan nyata datang lewat stream snapshot.
     final hasil = await _undoToday(const NoParams());
     hasil.fold((f) => emit(state.copyWith(failure: f)), (_) {});
+    // Undo yang berhasil mengembalikan hari ini ke "belum aman" — pengingat
+    // harian harus hidup lagi.
+    if (hasil.isRight()) await _onDaySafetyChanged?.call();
   }
 
   /// Konsumsi sekali-pakai `pendingCelebration`. BlocListener memanggil ini

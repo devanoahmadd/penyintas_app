@@ -18,6 +18,7 @@ import 'package:penyintas_app/features/app_lock/data/repositories/app_lock_repos
 import 'package:penyintas_app/features/app_lock/domain/repositories/app_lock_repository.dart';
 import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
+import 'package:penyintas_app/features/notification/data/services/daily_reminder_scheduler.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_local_datasource.dart';
 import 'package:penyintas_app/features/report/data/datasources/report_remote_datasource.dart';
 import 'package:penyintas_app/features/report/data/repositories/report_repository_impl.dart';
@@ -541,8 +542,7 @@ void _initNotification() {
       requestPermission: sl(),
       registerToken: sl(),
       setPushPreference: sl(),
-      scheduleDailyReminder: sl(),
-      cancelDailyReminder: sl(),
+      scheduler: sl(),
       messaging: sl(),
       auth: sl(),
       local: sl(),
@@ -560,12 +560,24 @@ void _initNotification() {
 
   sl.registerLazySingleton(() => NotificationLaunchHolder());
 
+  // SATU PINTU penjadwalan pengingat harian — dilewati `_onInit` (tiap cold
+  // start), `_onSchedule`, `_onCancel`, dan `StreakBloc` sesudah
+  // penandaan/undo.
+  sl.registerLazySingleton(
+    () => DailyReminderScheduler(
+      local: sl(),
+      streak: sl(),
+      db: sl(),
+      clock: sl(),
+    ),
+  );
+
   sl.registerLazySingleton<NotificationRepository>(
     () => NotificationRepositoryImpl(local: sl(), remote: sl()),
   );
 
   sl.registerLazySingleton<NotificationLocalDatasource>(
-    () => NotificationLocalDatasourceImpl(),
+    () => NotificationLocalDatasourceImpl(sl()),
   );
   sl.registerLazySingleton<NotificationRemoteDatasource>(
     () => NotificationRemoteDatasourceImpl(messaging: sl(), firestore: sl()),
@@ -701,6 +713,10 @@ void _initStreak() {
       repository: sl(),
       clock: sl(),
       isBootstrapDone: () => sl<BootstrapCoordinator>().isDone,
+      // Hari yang jadi aman harus mendiamkan pengingat harian; undo harus
+      // menghidupkannya lagi. `sl<...>()` ditunda sampai callback dipanggil
+      // agar tak ada ketergantungan urutan registrasi antar-fitur.
+      onDaySafetyChanged: () => sl<DailyReminderScheduler>().reschedule(),
     ),
   );
 }

@@ -8,10 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/notification/notification_launch_holder.dart';
 import 'package:penyintas_app/features/notification/data/datasources/notification_local_datasource.dart';
-import 'package:penyintas_app/features/notification/domain/usecases/cancel_daily_reminder_usecase.dart';
+import 'package:penyintas_app/features/notification/data/services/daily_reminder_scheduler.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/register_fcm_token_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/request_permission_usecase.dart';
-import 'package:penyintas_app/features/notification/domain/usecases/schedule_daily_reminder_usecase.dart';
 import 'package:penyintas_app/features/notification/domain/usecases/set_push_preference_usecase.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
@@ -21,8 +20,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     required RequestPermissionUseCase requestPermission,
     required RegisterFcmTokenUseCase registerToken,
     required SetPushPreferenceUseCase setPushPreference,
-    required ScheduleDailyReminderUseCase scheduleDailyReminder,
-    required CancelDailyReminderUseCase cancelDailyReminder,
+    required DailyReminderScheduler scheduler,
     required FirebaseMessaging messaging,
     required FirebaseAuth auth,
     required NotificationLocalDatasource local,
@@ -31,8 +29,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }) : _requestPermission = requestPermission,
        _registerToken = registerToken,
        _setPushPreference = setPushPreference,
-       _scheduleDailyReminder = scheduleDailyReminder,
-       _cancelDailyReminder = cancelDailyReminder,
+       _scheduler = scheduler,
        _messaging = messaging,
        _auth = auth,
        _local = local,
@@ -52,8 +49,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final RequestPermissionUseCase _requestPermission;
   final RegisterFcmTokenUseCase _registerToken;
   final SetPushPreferenceUseCase _setPushPreference;
-  final ScheduleDailyReminderUseCase _scheduleDailyReminder;
-  final CancelDailyReminderUseCase _cancelDailyReminder;
+
+  /// SATU PINTU penjadwalan. Bloc tidak lagi memutuskan sendiri apakah
+  /// pengingat perlu dijadwalkan — keputusannya (termasuk "lewati hari ini"
+  /// saat hari sudah aman) ada di [DailyReminderScheduler].
+  final DailyReminderScheduler _scheduler;
   final FirebaseMessaging _messaging;
   final FirebaseAuth _auth;
   final NotificationLocalDatasource _local;
@@ -98,15 +98,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       // G6: app diluncurkan dari terminated via tap notif → simpan route.
       add(const CheckInitialMessage());
 
-      final settings = await (_db.select(
-        _db.appSettings,
-      )..where((t) => t.id.equals(1))).getSingleOrNull();
-      if (settings != null && settings.reminderEnabled) {
-        await _local.scheduleDailyReminder(
-          hour: settings.reminderHour,
-          minute: settings.reminderMinute,
-        );
-      }
+      // Dulu di sini `app_settings` dibaca lalu datasource dipanggil polos —
+      // penjadwalan yang tak tahu apa-apa soal streak. Sekarang lewat pintu
+      // tunggal, yang juga menyembuhkan keadaan menyimpang tiap cold start.
+      await _scheduler.reschedule();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(e, s);
     }
@@ -153,46 +148,101 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(NotificationTapHandled(event.payload ?? '/dashboard'));
   }
 
+  /// Meniru `BootstrapCoordinator._recordNonFatal`: `FirebaseCrashlytics
+  /// .instance` MELEMPAR bila Firebase belum diinisialisasi. Tanpa penjaga
+  /// ini, jalur galat yang seharusnya memulihkan `app_settings` malah mati
+  /// duluan di baris pelaporannya sendiri.
+  static void _catatNonFatal(Object e, StackTrace s) {
+    try {
+      FirebaseCrashlytics.instance.recordError(e, s, fatal: false);
+    } catch (_) {}
+  }
+
+  Future<AppSetting?> _bacaSettings() => (_db.select(
+    _db.appSettings,
+  )..where((t) => t.id.equals(1))).getSingleOrNull();
+
+  /// `insertOnConflictUpdate`, BUKAN `update`: barisnya bisa belum ada
+  /// sesudah logout (`clearAllLocalData()` menyapu `app_settings`), dan
+  /// `update` pada baris yang tidak ada menulis nol baris diam-diam.
+  Future<void> _tulisPengingat({
+    required bool enabled,
+    int? hour,
+    int? minute,
+  }) => _db
+      .into(_db.appSettings)
+      .insertOnConflictUpdate(
+        AppSettingsCompanion(
+          id: const Value(1),
+          reminderEnabled: Value(enabled),
+          reminderHour: hour == null ? const Value.absent() : Value(hour),
+          reminderMinute: minute == null ? const Value.absent() : Value(minute),
+        ),
+      );
+
+  /// D-12. Urutan lama (jadwalkan dulu, simpan belakangan) gagal SEBELUM apa
+  /// pun tersimpan, dan `settings_page.dart` mengandalkan itu: ia
+  /// mengembalikan posisi toggle begitu menerima [NotificationError]. Karena
+  /// urutannya kini dibalik, kegagalan WAJIB menulis balik nilai lama — kalau
+  /// tidak, toggle mati di layar sementara `app_settings` bilang hidup, dan
+  /// cold start berikutnya menghidupkannya lagi.
+  Future<void> _pulihkanSettings(AppSetting? sebelum) async {
+    if (sebelum == null) {
+      // Tidak ada baris sebelumnya → yang benar adalah menghapus baris yang
+      // baru saja kita sisipkan, bukan meninggalkan baris serba-baku.
+      await (_db.delete(_db.appSettings)..where((t) => t.id.equals(1))).go();
+      return;
+    }
+    await _tulisPengingat(
+      enabled: sebelum.reminderEnabled,
+      hour: sebelum.reminderHour,
+      minute: sebelum.reminderMinute,
+    );
+  }
+
   Future<void> _onSchedule(
     ScheduleDailyReminder event,
     Emitter<NotificationState> emit,
   ) async {
-    final result = await _scheduleDailyReminder(
-      hour: event.hour,
-      minute: event.minute,
-    );
-    await result.fold(
-      (failure) async => emit(NotificationError(failure.message)),
-      (_) async {
-        await (_db.update(_db.appSettings)..where((t) => t.id.equals(1))).write(
-          AppSettingsCompanion(
-            reminderEnabled: const Value(true),
-            reminderHour: Value(event.hour),
-            reminderMinute: Value(event.minute),
-          ),
-        );
-        emit(NotificationScheduled(hour: event.hour, minute: event.minute));
-      },
-    );
+    // Baca nilai lama SEBELUM menulis (D-12).
+    final sebelum = await _bacaSettings();
+    try {
+      // Simpan DULU, baru jadwalkan: `reschedule()` membaca jam dari
+      // `app_settings`. Urutan lama membuatnya membaca jam LAMA — user
+      // menyetel 21:00 dan tetap mendapat 20:00.
+      await _tulisPengingat(
+        enabled: true,
+        hour: event.hour,
+        minute: event.minute,
+      );
+      await _scheduler.reschedule();
+    } catch (e, s) {
+      _catatNonFatal(e, s);
+      await _pulihkanSettings(sebelum);
+      emit(NotificationError(e.toString()));
+      return;
+    }
+    emit(NotificationScheduled(hour: event.hour, minute: event.minute));
   }
 
   Future<void> _onCancel(
     CancelDailyReminder event,
     Emitter<NotificationState> emit,
   ) async {
-    final result = await _cancelDailyReminder();
-    await result.fold(
-      (failure) async {
-        FirebaseCrashlytics.instance.recordError(failure, null);
-        emit(NotificationError(failure.message));
-      },
-      (_) async {
-        await (_db.update(_db.appSettings)..where((t) => t.id.equals(1))).write(
-          const AppSettingsCompanion(reminderEnabled: Value(false)),
-        );
-        emit(const NotificationCancelled());
-      },
-    );
+    final sebelum = await _bacaSettings();
+    try {
+      // Sama: simpan `reminderEnabled = false` dulu, lalu lewat pintu yang
+      // sama — `reschedule()` yang akan membatalkan karena membaca `false`.
+      // Tidak ada jalur pintas ke datasource.
+      await _tulisPengingat(enabled: false);
+      await _scheduler.reschedule();
+    } catch (e, s) {
+      _catatNonFatal(e, s);
+      await _pulihkanSettings(sebelum);
+      emit(NotificationError(e.toString()));
+      return;
+    }
+    emit(const NotificationCancelled());
   }
 
   Future<void> _onSetPushPreference(

@@ -550,5 +550,8 @@
   "consistency_break_title": "This run stopped at {days} days.",
   "consistency_break_body": "Your record is safe. Start a new run today.",
   "consistency_break_ok": "OK",
-  "consistency_cell_semantics": "{date}, {status}"
+  "consistency_cell_semantics": "{date}, {status}",
+
+  "notification_daily_title": "Don't forget to log today's spending!",
+  "notification_daily_body": "One small note now, safer until month's end."
 }

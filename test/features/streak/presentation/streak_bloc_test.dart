@@ -881,4 +881,75 @@ void main() {
       },
     );
   });
+
+  group('T-KABEL — onDaySafetyChanged menyambung streak ke pengingat', () {
+    // Kabel inilah yang membuat aturan "hari jadi aman → pengingat didiamkan"
+    // benar-benar terjadi. Tanpa panggilan ini, `DailyReminderScheduler` hanya
+    // dijalankan saat cold start dan halaman pengaturan — user yang menandai
+    // nihil pukul 10:00 tetap dikejar pengingat pukul 20:00 di hari yang sama.
+    //
+    // Parameternya OPSIONAL supaya 25 test lain di berkas ini tidak perlu
+    // disentuh; karena itu ia dibangun lewat pembuat tersendiri di sini.
+    late int panggilan;
+
+    StreakBloc buatDenganKabel() => StreakBloc(
+      watchSnapshot: watch,
+      markToday: mark,
+      undoToday: undo,
+      repository: repo,
+      clock: clock,
+      isBootstrapDone: () => bootstrapDone,
+      restoringGrace: const Duration(milliseconds: 60),
+      onDaySafetyChanged: () async => panggilan++,
+    );
+
+    setUp(() {
+      panggilan = 0;
+      when(() => watch()).thenAnswer((_) => aliran([]));
+    });
+
+    blocTest<StreakBloc, StreakState>(
+      'penandaan BERHASIL → kabel dipanggil sekali',
+      setUp: () => when(
+        () => mark(const NoParams()),
+      ).thenAnswer((_) async => const Right(null)),
+      build: buatDenganKabel,
+      act: (b) => b.add(StreakTodayMarked()),
+      wait: const Duration(milliseconds: 40),
+      verify: (_) => expect(panggilan, 1),
+    );
+
+    blocTest<StreakBloc, StreakState>(
+      'penandaan GAGAL → kabel TIDAK dipanggil (hari tidak jadi aman)',
+      setUp: () => when(
+        () => mark(const NoParams()),
+      ).thenAnswer((_) async => const Left(CacheFailure())),
+      build: buatDenganKabel,
+      act: (b) => b.add(StreakTodayMarked()),
+      wait: const Duration(milliseconds: 40),
+      verify: (_) => expect(panggilan, 0),
+    );
+
+    blocTest<StreakBloc, StreakState>(
+      'undo BERHASIL → kabel dipanggil sekali (pengingat hidup lagi)',
+      setUp: () => when(
+        () => undo(const NoParams()),
+      ).thenAnswer((_) async => const Right(null)),
+      build: buatDenganKabel,
+      act: (b) => b.add(StreakTodayMarkUndone()),
+      wait: const Duration(milliseconds: 40),
+      verify: (_) => expect(panggilan, 1),
+    );
+
+    blocTest<StreakBloc, StreakState>(
+      'undo GAGAL → kabel TIDAK dipanggil',
+      setUp: () => when(
+        () => undo(const NoParams()),
+      ).thenAnswer((_) async => const Left(CacheFailure())),
+      build: buatDenganKabel,
+      act: (b) => b.add(StreakTodayMarkUndone()),
+      wait: const Duration(milliseconds: 40),
+      verify: (_) => expect(panggilan, 0),
+    );
+  });
 }

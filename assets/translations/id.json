@@ -550,5 +550,8 @@
   "consistency_break_title": "Ruas ini terhenti di {days} hari.",
   "consistency_break_body": "Rekormu tetap tersimpan. Mulai ruas baru hari ini.",
   "consistency_break_ok": "Oke",
-  "consistency_cell_semantics": "{date}, {status}"
+  "consistency_cell_semantics": "{date}, {status}",
+
+  "notification_daily_title": "Jangan lupa catat pengeluaran hari ini!",
+  "notification_daily_body": "Satu catatan kecil sekarang, lebih aman sampai akhir bulan."
 }

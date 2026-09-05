@@ -1,12 +1,25 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 abstract class NotificationLocalDatasource {
   Future<void> initialize({required void Function(String? payload) onTap});
   Future<bool> requestPermission();
-  Future<void> scheduleDailyReminder({required int hour, required int minute});
+
+  /// Jadwalkan pengingat harian pada [hour]:[minute] waktu lokal.
+  ///
+  /// [skipToday] datang dari `DailyReminderScheduler` — SATU-SATUNYA tempat
+  /// yang tahu soal streak. Datasource ini tetap primitif bodoh: ia hanya
+  /// menggeser jadwal ke besok bila diminta.
+  Future<void> scheduleDailyReminder({
+    required int hour,
+    required int minute,
+    bool skipToday = false,
+  });
   Future<void> cancelDailyReminder();
 
   /// Tampilkan notifikasi seketika (dipakai untuk pesan FCM saat app
@@ -45,6 +58,13 @@ abstract class NotificationLocalDatasource {
 }
 
 class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
+  NotificationLocalDatasourceImpl(this._db);
+
+  /// Dibutuhkan HANYA untuk membaca `preferences.language`: penjadwalan
+  /// terjadi di luar widget tree, jadi teks notifikasi tak bisa diambil lewat
+  /// `AppLocalizations.of(context)`.
+  final AppDatabase _db;
+
   final _plugin = FlutterLocalNotificationsPlugin();
 
   static const _dailyReminderId = 1;
@@ -114,10 +134,23 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
     return true;
   }
 
+  /// Resolver l10n tanpa `BuildContext` — penjadwalan terjadi di luar widget
+  /// tree. `delegateFor(...).load(...)` membaca `assets/translations/*.json`
+  /// langsung lewat `rootBundle`.
+  Future<AppLocalizations> _l10n() async {
+    final row = await (_db.select(
+      _db.preferences,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
+    final lang = row?.language ?? 'id';
+    final locale = Locale(lang);
+    return AppLocalizations.delegateFor(locale).load(locale);
+  }
+
   @override
   Future<void> scheduleDailyReminder({
     required int hour,
     required int minute,
+    bool skipToday = false,
   }) async {
     await cancelDailyReminder();
 
@@ -130,14 +163,15 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
       hour,
       minute,
     );
-    if (scheduled.isBefore(now)) {
+    if (skipToday || scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
+    final l10n = await _l10n();
     await _plugin.zonedSchedule(
       id: _dailyReminderId,
-      title: 'Jangan lupa catat pengeluaran hari ini!',
-      body: 'Satu catatan kecil sekarang, lebih aman sampai akhir bulan.',
+      title: l10n.notificationDailyTitle,
+      body: l10n.notificationDailyBody,
       scheduledDate: scheduled,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -148,7 +182,12 @@ class NotificationLocalDatasourceImpl implements NotificationLocalDatasource {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      // DIPERTAHANKAN: pengulangan hariannya harus jalan terus supaya user
+      // yang berminggu-minggu tak membuka app tetap diingatkan.
       matchDateTimeComponents: DateTimeComponents.time,
+      // Ketukan mengarah ke halaman Konsistensi (spec §7.3);
+      // `notification_bloc.dart` meneruskan payload jadi `NotificationTapped`.
+      payload: '/consistency',
     );
   }
 

@@ -830,6 +830,15 @@ class AppLocalizations {
       _t('consistency_break_title').replaceAll('{days}', '$days');
   String get consistencyBreakBody => _t('consistency_break_body');
   String get consistencyBreakOk => _t('consistency_break_ok');
+
+  // ── Pengingat harian (Task 15, spec §7.2) ──
+  //
+  // Teks ini dipakai di LUAR widget tree (penjadwalan lokal), jadi ia dibaca
+  // lewat `delegateFor(...).load(...)` — bukan `AppLocalizations.of(context)`.
+  // Nadanya sengaja bertanya netral tanpa menuntut: spec §7.4 melarang keras
+  // notifikasi bernada kecemasan ("streak kamu akan hilang!").
+  String get notificationDailyTitle => _t('notification_daily_title');
+  String get notificationDailyBody => _t('notification_daily_body');
 }
 
 class _AppLocalizationsDelegate
