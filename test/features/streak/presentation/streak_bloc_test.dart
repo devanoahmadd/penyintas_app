@@ -138,8 +138,12 @@ void main() {
     when(() => repo.saveMeta(any())).thenAnswer((_) async {});
     when(() => repo.requestRecompute()).thenReturn(null);
     when(() => repo.dispose()).thenReturn(null);
-    when(() => mark(const NoParams())).thenAnswer((_) async => const Right(null));
-    when(() => undo(const NoParams())).thenAnswer((_) async => const Right(null));
+    when(
+      () => mark(const NoParams()),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => undo(const NoParams()),
+    ).thenAnswer((_) async => const Right(null));
   });
 
   group('T18 — invarian tulis StreakMeta', () {
@@ -228,7 +232,9 @@ void main() {
       'restoring selama bootstrap belum selesai DAN belum ada hari aman',
       setUp: () {
         bootstrapDone = false;
-        when(() => watch()).thenAnswer((_) => aliran([snap(hasStarted: false)]));
+        when(
+          () => watch(),
+        ).thenAnswer((_) => aliran([snap(hasStarted: false)]));
       },
       build: buat,
       act: (b) => b.add(StreakSubscribed()),
@@ -251,7 +257,9 @@ void main() {
       'user baru yang bootstrap-nya SUDAH selesai langsung ready, bukan restoring',
       setUp: () {
         bootstrapDone = true;
-        when(() => watch()).thenAnswer((_) => aliran([snap(hasStarted: false)]));
+        when(
+          () => watch(),
+        ).thenAnswer((_) => aliran([snap(hasStarted: false)]));
       },
       build: buat,
       act: (b) => b.add(StreakSubscribed()),
@@ -264,7 +272,9 @@ void main() {
       'kunjung selesai',
       setUp: () {
         bootstrapDone = false;
-        when(() => watch()).thenAnswer((_) => aliran([snap(hasStarted: false)]));
+        when(
+          () => watch(),
+        ).thenAnswer((_) => aliran([snap(hasStarted: false)]));
       },
       build: buat,
       act: (b) => b.add(StreakSubscribed()),
@@ -283,7 +293,9 @@ void main() {
       'bukan langsung ready karena akun SEBELUMNYA pernah menghabiskan grace',
       setUp: () {
         bootstrapDone = false;
-        when(() => watch()).thenAnswer((_) => aliran([snap(hasStarted: false)]));
+        when(
+          () => watch(),
+        ).thenAnswer((_) => aliran([snap(hasStarted: false)]));
       },
       build: buat,
       act: (b) async {
@@ -299,7 +311,8 @@ void main() {
       verify: (b) => expect(
         b.state.status,
         StreakStatus.restoring,
-        reason: 'jaring pengaman T24/S6 wajib berlaku lagi untuk akun '
+        reason:
+            'jaring pengaman T24/S6 wajib berlaku lagi untuk akun '
             'berikutnya, bukan cuma sekali seumur proses',
       ),
     );
@@ -325,7 +338,11 @@ void main() {
           'status',
           StreakStatus.loading,
         ),
-        isA<StreakState>().having((s) => s.status, 'status', StreakStatus.ready),
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.ready,
+        ),
       ],
       // Persis dua state. Emisi `loading` kedua berarti tile berkedip dari
       // angka nyata ke "Mulai hari ini" tiap kali user membuka dashboard.
@@ -409,7 +426,8 @@ void main() {
         expect(
           ditulis.acknowledgedBreakDay,
           20260904,
-          reason: 'tanpa persistensi, banner hidup lagi di cold start '
+          reason:
+              'tanpa persistensi, banner hidup lagi di cold start '
               'berikutnya walau user sudah menutupnya',
         );
       },
@@ -547,7 +565,11 @@ void main() {
           'status',
           StreakStatus.loading,
         ),
-        isA<StreakState>().having((s) => s.status, 'status', StreakStatus.ready),
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.ready,
+        ),
         isA<StreakState>().having(
           (s) => s.status,
           'status',
@@ -560,7 +582,11 @@ void main() {
           'status',
           StreakStatus.loading,
         ),
-        isA<StreakState>().having((s) => s.status, 'status', StreakStatus.ready),
+        isA<StreakState>().having(
+          (s) => s.status,
+          'status',
+          StreakStatus.ready,
+        ),
       ],
     );
   });
@@ -593,7 +619,8 @@ void main() {
         expect(
           b.state.failure,
           isNull,
-          reason: 'snapshot segar mengakhiri galat lama — `ready` + `failure` '
+          reason:
+              'snapshot segar mengakhiri galat lama — `ready` + `failure` '
               'sekaligus adalah kombinasi tanpa arti',
         );
 
@@ -683,12 +710,15 @@ void main() {
   });
 
   group('B1 — kepemilikan lifecycle repository', () {
-    test('close() TIDAK menutup StreakRepository yang dipakai bersama', () async {
-      when(() => watch()).thenAnswer((_) => aliran([]));
-      final b = buat();
-      await b.close();
-      verifyNever(() => repo.dispose());
-    });
+    test(
+      'close() TIDAK menutup StreakRepository yang dipakai bersama',
+      () async {
+        when(() => watch()).thenAnswer((_) => aliran([]));
+        final b = buat();
+        await b.close();
+        verifyNever(() => repo.dispose());
+      },
+    );
   });
 
   group('IB1 — reset sesi membatalkan serapan dari langganan lama', () {

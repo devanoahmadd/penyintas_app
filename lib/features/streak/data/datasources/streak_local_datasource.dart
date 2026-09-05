@@ -128,14 +128,11 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
   /// kelas bawah, hanya untuk membaca dua tanggal.
   JoinedSelectStatement<$TransactionsTable, Transaction> _txSejak(
     int epochDay,
-  ) =>
-      _db.selectOnly(_db.transactions)
-        ..addColumns([_db.transactions.date, _db.transactions.createdAt])
-        ..where(
-          _db.transactions.date.isBiggerOrEqualValue(
-            localMidnightOf(epochDay),
-          ),
-        );
+  ) => _db.selectOnly(_db.transactions)
+    ..addColumns([_db.transactions.date, _db.transactions.createdAt])
+    ..where(
+      _db.transactions.date.isBiggerOrEqualValue(localMidnightOf(epochDay)),
+    );
 
   Set<int> _keHariAman(List<TypedResult> rows) {
     final days = <int>{};
@@ -238,8 +235,7 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
       (_db.select(_db.streakDayMarks)
             ..where(
               (t) =>
-                  t.isSynced.equals(false) &
-                  t.viaClockCorrection.equals(false),
+                  t.isSynced.equals(false) & t.viaClockCorrection.equals(false),
             )
             ..orderBy([(t) => OrderingTerm(expression: t.dayKey)]))
           .get();
@@ -270,9 +266,7 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
           : samaPath & t.operation.equalsValue(hanyaOperasi);
     }
 
-    final tertunda = await (_db.select(
-      _db.syncQueue,
-    )..where(predikat)).get();
+    final tertunda = await (_db.select(_db.syncQueue)..where(predikat)).get();
     if (tertunda.isEmpty) return 0;
     await (_db.delete(_db.syncQueue)..where(predikat)).go();
     return tertunda.where((e) => e.operation == SyncOperation.create).length;
@@ -305,13 +299,14 @@ class StreakLocalDatasourceImpl implements StreakLocalDatasource {
     Set<int> survivingDayKeys, {
     required int sinceDayKey,
   }) async {
-    final kandidat = await (_db.select(_db.streakDayMarks)..where(
-          (t) =>
-              t.isSynced.equals(true) &
-              t.viaClockCorrection.equals(false) &
-              t.dayKey.isBiggerOrEqualValue(sinceDayKey),
-        ))
-        .get();
+    final kandidat =
+        await (_db.select(_db.streakDayMarks)..where(
+              (t) =>
+                  t.isSynced.equals(true) &
+                  t.viaClockCorrection.equals(false) &
+                  t.dayKey.isBiggerOrEqualValue(sinceDayKey),
+            ))
+            .get();
     final dibuang = kandidat
         .where((r) => !survivingDayKeys.contains(r.dayKey))
         .map((r) => r.dayKey)

@@ -210,7 +210,11 @@ class _StreakCalendarState extends State<StreakCalendar> {
           }).toList(),
         ),
         const SizedBox(height: AppSpacing.md),
-        _Legend(key: const Key('consistency-legend'), l10n: l10n, isDark: isDark),
+        _Legend(
+          key: const Key('consistency-legend'),
+          l10n: l10n,
+          isDark: isDark,
+        ),
       ],
     );
   }
@@ -434,7 +438,10 @@ class _TodayCellPopState extends State<_TodayCellPop>
           child: Container(
             key: Key('cell-${widget.dayKey}'),
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: markerColor, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: markerColor,
+              shape: BoxShape.circle,
+            ),
             child: Text(
               '$day',
               style: AppTextStyles.numericSm.copyWith(
@@ -468,7 +475,8 @@ class _Legend extends StatelessWidget {
     final mutedBorder = isDark ? AppColors.borderDark : AppColors.borderLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
 
-    Widget swatch(Widget glyph) => SizedBox(width: 14, height: 14, child: glyph);
+    Widget swatch(Widget glyph) =>
+        SizedBox(width: 14, height: 14, child: glyph);
 
     // Setiap entri dibungkus `Expanded` di level BARIS (bukan `Wrap`
     // ber-`mainAxisSize.min`) supaya label terpanjang ("ditandai tanpa

@@ -63,7 +63,9 @@ class StreakMarkRemoteDatasourceImpl implements StreakMarkRemoteDatasource {
       await _col(uid)
           .doc(mark.docId)
           .set(
-            mark.toFirestore(updatedAtMs: DateTime.now().millisecondsSinceEpoch),
+            mark.toFirestore(
+              updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+            ),
           );
     } catch (e, stack) {
       _logError(e, stack);

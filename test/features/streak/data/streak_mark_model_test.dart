@@ -12,15 +12,24 @@ void main() {
     expect(mark.docId, '20260902');
   });
 
-  test('toFirestore memakai millis dan menyertakan updatedAt yang disuntik', () {
-    final map = mark.toFirestore(updatedAtMs: 1756800000000);
-    expect(map['dayKey'], 20260902);
-    expect(map['markedAt'], DateTime.utc(2026, 9, 2, 3, 15).millisecondsSinceEpoch);
-    expect(map['timezone'], 'Asia/Jakarta');
-    expect(map['updatedAt'], 1756800000000);
-    expect(map.containsKey('viaClockCorrection'), isFalse,
-        reason: 'kolom lokal — tak pernah dikirim ke Firestore');
-  });
+  test(
+    'toFirestore memakai millis dan menyertakan updatedAt yang disuntik',
+    () {
+      final map = mark.toFirestore(updatedAtMs: 1756800000000);
+      expect(map['dayKey'], 20260902);
+      expect(
+        map['markedAt'],
+        DateTime.utc(2026, 9, 2, 3, 15).millisecondsSinceEpoch,
+      );
+      expect(map['timezone'], 'Asia/Jakarta');
+      expect(map['updatedAt'], 1756800000000);
+      expect(
+        map.containsKey('viaClockCorrection'),
+        isFalse,
+        reason: 'kolom lokal — tak pernah dikirim ke Firestore',
+      );
+    },
+  );
 
   test('fromFirestore membaca kembali bentuk yang sama', () {
     final map = mark.toFirestore(updatedAtMs: 1);

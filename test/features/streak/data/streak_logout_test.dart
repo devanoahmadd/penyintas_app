@@ -70,65 +70,70 @@ void main() {
     );
   });
 
-  test('T15 — KETAHANAN: logout lalu login ulang mengembalikan streak UTUH', () async {
-    // Akun A: 10 hari aman berturut, semuanya sudah tersinkron.
-    for (var i = 1; i <= 10; i++) {
-      await ds.insertMark(
-        dayKey: 20260900 + i,
-        markedAt: DateTime.utc(2026, 9, i),
-        timezone: 'WIB',
-        viaClockCorrection: false,
-      );
-    }
-    final ditandaiSebelum = await ds.readMarkedDays();
-    final sebelum = computeStreak(
-      markedDays: ditandaiSebelum,
-      markedDaysAll: ditandaiSebelum,
-      transactionDays: const {},
-      epochDay: 20260901,
-      lastSeenDay: 20260910,
-      today: 20260910,
-    );
-    expect(sebelum.currentStreak, 10);
-    expect(sebelum.activatedDay, 20260901);
-
-    // Logout menyapu semuanya.
-    await db.clearAllLocalData();
-    expect(await ds.readMarkedDays(), isEmpty);
-
-    // Login ulang: gerbang bootstrap menarik penanda kembali dari Firestore.
-    await ds.upsertMarksFromRemote([
-      for (var i = 1; i <= 10; i++)
-        StreakMarkModel(
+  test(
+    'T15 — KETAHANAN: logout lalu login ulang mengembalikan streak UTUH',
+    () async {
+      // Akun A: 10 hari aman berturut, semuanya sudah tersinkron.
+      for (var i = 1; i <= 10; i++) {
+        await ds.insertMark(
           dayKey: 20260900 + i,
           markedAt: DateTime.utc(2026, 9, i),
           timezone: 'WIB',
-        ),
-    ]);
+          viaClockCorrection: false,
+        );
+      }
+      final ditandaiSebelum = await ds.readMarkedDays();
+      final sebelum = computeStreak(
+        markedDays: ditandaiSebelum,
+        markedDaysAll: ditandaiSebelum,
+        transactionDays: const {},
+        epochDay: 20260901,
+        lastSeenDay: 20260910,
+        today: 20260910,
+      );
+      expect(sebelum.currentStreak, 10);
+      expect(sebelum.activatedDay, 20260901);
 
-    final ditandaiSesudah = await ds.readMarkedDays();
-    final sesudah = computeStreak(
-      markedDays: ditandaiSesudah,
-      markedDaysAll: ditandaiSesudah,
-      transactionDays: const {},
-      epochDay: 20260901,
-      lastSeenDay: 0, // StreakMeta tersapu — mulai dari nol, itu tidak apa-apa
-      today: 20260910,
-    );
-    expect(
-      sesudah.currentStreak,
-      10,
-      reason: 'streak 10 hari tidak boleh lenyap hanya karena user login ulang',
-    );
-    expect(
-      sesudah.activatedDay,
-      20260901,
-      reason:
-          'activatedDay TERHITUNG ULANG dari hari aman pertama, '
-          'bukan disetel ke hari ini',
-    );
-    expect(sesudah.hasStarted, isTrue);
-  });
+      // Logout menyapu semuanya.
+      await db.clearAllLocalData();
+      expect(await ds.readMarkedDays(), isEmpty);
+
+      // Login ulang: gerbang bootstrap menarik penanda kembali dari Firestore.
+      await ds.upsertMarksFromRemote([
+        for (var i = 1; i <= 10; i++)
+          StreakMarkModel(
+            dayKey: 20260900 + i,
+            markedAt: DateTime.utc(2026, 9, i),
+            timezone: 'WIB',
+          ),
+      ]);
+
+      final ditandaiSesudah = await ds.readMarkedDays();
+      final sesudah = computeStreak(
+        markedDays: ditandaiSesudah,
+        markedDaysAll: ditandaiSesudah,
+        transactionDays: const {},
+        epochDay: 20260901,
+        lastSeenDay:
+            0, // StreakMeta tersapu — mulai dari nol, itu tidak apa-apa
+        today: 20260910,
+      );
+      expect(
+        sesudah.currentStreak,
+        10,
+        reason:
+            'streak 10 hari tidak boleh lenyap hanya karena user login ulang',
+      );
+      expect(
+        sesudah.activatedDay,
+        20260901,
+        reason:
+            'activatedDay TERHITUNG ULANG dari hari aman pertama, '
+            'bukan disetel ke hari ini',
+      );
+      expect(sesudah.hasStarted, isTrue);
+    },
+  );
 
   group('T10-a — cabang uid == null: nol percobaan sync', () {
     // Baris lokal tercipta/terhapus seperti biasa, hasilnya Right(null), TAPI
@@ -161,113 +166,119 @@ void main() {
     });
     tearDown(() => repo.dispose());
 
-    test('markToday — baris lokal tetap tercipta, sync_queue tetap kosong', () async {
-      final hasil = await repo.markToday();
+    test(
+      'markToday — baris lokal tetap tercipta, sync_queue tetap kosong',
+      () async {
+        final hasil = await repo.markToday();
 
-      expect(hasil.isRight(), isTrue);
-      expect(await ds.readMarkedDays(), {20260905});
+        expect(hasil.isRight(), isTrue);
+        expect(await ds.readMarkedDays(), {20260905});
+        expect(
+          await db.select(db.syncQueue).get(),
+          isEmpty,
+          reason:
+              'belum login — bukan "diantre offline", nol percobaan sync '
+              'sama sekali',
+        );
+        verifyNever(() => remote.saveMark(any()));
+        verifyNever(() => network.isConnected);
+      },
+    );
+
+    test(
+      'unmarkToday — baris lokal tetap terhapus, sync_queue tetap kosong',
+      () async {
+        await ds.insertMark(
+          dayKey: 20260905,
+          markedAt: DateTime.utc(2026, 9, 5),
+          timezone: 'WIB',
+          viaClockCorrection: false,
+        );
+
+        final hasil = await repo.unmarkToday();
+
+        expect(hasil.isRight(), isTrue);
+        expect(await ds.hasMark(20260905), isFalse);
+        expect(await db.select(db.syncQueue).get(), isEmpty);
+        verifyNever(() => remote.deleteMark(any()));
+        verifyNever(() => network.isConnected);
+      },
+    );
+  });
+
+  test('T10-b — penanda PERTAMA akun baru (meta kosong pasca logout) TIDAK '
+      'ditandai viaClockCorrection', () async {
+    // Akun LAMA meninggalkan jejak jam tinggi sebelum logout.
+    await ds.insertMark(
+      dayKey: 20260810,
+      markedAt: DateTime.utc(2026, 8, 10),
+      timezone: 'WIB',
+      viaClockCorrection: false,
+    );
+    await ds.saveMeta(
+      StreakMetaValues.empty.copyWith(
+        lastSeenDay: 20260810,
+        maxSeenDay: 20260810,
+      ),
+    );
+
+    await db.clearAllLocalData(); // logout — streak_meta ikut tersapu
+    expect(await ds.readMeta(), StreakMetaValues.empty);
+
+    // Login akun BARU, tandai hari ini untuk pertama kalinya.
+    final remote = _MockRemote();
+    final network = _MockNetwork();
+    final auth = _MockAuth();
+    final user = _MockUser();
+    when(() => user.uid).thenReturn('uidBaru');
+    when(() => auth.currentUser).thenReturn(user);
+    when(() => network.isConnected).thenAnswer((_) async => true);
+    when(() => remote.saveMark(any())).thenAnswer((_) async {});
+    final clock = FixedClock(DateTime(2026, 9, 5, 10));
+    final repo = StreakRepositoryImpl(
+      local: ds,
+      remote: remote,
+      network: network,
+      auth: auth,
+      clock: clock,
+      epochDay: 20260901,
+    );
+    addTearDown(repo.dispose);
+
+    await repo.markToday();
+
+    final row = await ds.findMark(20260905);
+    expect(row, isNotNull);
+    expect(
+      row!.viaClockCorrection,
+      isFalse,
+      reason:
+          'akun baru tanpa riwayat jam tidak boleh dicap koreksi jam '
+          'hanya karena maxSeenDay masih nol — addDays(0, -2) menghitung '
+          'mundur dari tanggal tak bermakna',
+    );
+  });
+
+  test(
+    'T10-c — item sync_queue milik akun LAMA tidak boleh selamat logout',
+    () async {
+      await ds.addToSyncQueue(
+        itemId: '20260901',
+        collectionPath: 'users/uidLama/streak_marks/20260901',
+        data: const {'dayKey': 20260901},
+        operation: SyncOperation.create,
+      );
+      expect(await db.select(db.syncQueue).get(), hasLength(1));
+
+      await db.clearAllLocalData();
+
       expect(
         await db.select(db.syncQueue).get(),
         isEmpty,
         reason:
-            'belum login — bukan "diantre offline", nol percobaan sync '
-            'sama sekali',
-      );
-      verifyNever(() => remote.saveMark(any()));
-      verifyNever(() => network.isConnected);
-    });
-
-    test('unmarkToday — baris lokal tetap terhapus, sync_queue tetap kosong', () async {
-      await ds.insertMark(
-        dayKey: 20260905,
-        markedAt: DateTime.utc(2026, 9, 5),
-        timezone: 'WIB',
-        viaClockCorrection: false,
-      );
-
-      final hasil = await repo.unmarkToday();
-
-      expect(hasil.isRight(), isTrue);
-      expect(await ds.hasMark(20260905), isFalse);
-      expect(await db.select(db.syncQueue).get(), isEmpty);
-      verifyNever(() => remote.deleteMark(any()));
-      verifyNever(() => network.isConnected);
-    });
-  });
-
-  test(
-    'T10-b — penanda PERTAMA akun baru (meta kosong pasca logout) TIDAK '
-    'ditandai viaClockCorrection',
-    () async {
-      // Akun LAMA meninggalkan jejak jam tinggi sebelum logout.
-      await ds.insertMark(
-        dayKey: 20260810,
-        markedAt: DateTime.utc(2026, 8, 10),
-        timezone: 'WIB',
-        viaClockCorrection: false,
-      );
-      await ds.saveMeta(
-        StreakMetaValues.empty.copyWith(
-          lastSeenDay: 20260810,
-          maxSeenDay: 20260810,
-        ),
-      );
-
-      await db.clearAllLocalData(); // logout — streak_meta ikut tersapu
-      expect(await ds.readMeta(), StreakMetaValues.empty);
-
-      // Login akun BARU, tandai hari ini untuk pertama kalinya.
-      final remote = _MockRemote();
-      final network = _MockNetwork();
-      final auth = _MockAuth();
-      final user = _MockUser();
-      when(() => user.uid).thenReturn('uidBaru');
-      when(() => auth.currentUser).thenReturn(user);
-      when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.saveMark(any())).thenAnswer((_) async {});
-      final clock = FixedClock(DateTime(2026, 9, 5, 10));
-      final repo = StreakRepositoryImpl(
-        local: ds,
-        remote: remote,
-        network: network,
-        auth: auth,
-        clock: clock,
-        epochDay: 20260901,
-      );
-      addTearDown(repo.dispose);
-
-      await repo.markToday();
-
-      final row = await ds.findMark(20260905);
-      expect(row, isNotNull);
-      expect(
-        row!.viaClockCorrection,
-        isFalse,
-        reason:
-            'akun baru tanpa riwayat jam tidak boleh dicap koreksi jam '
-            'hanya karena maxSeenDay masih nol — addDays(0, -2) menghitung '
-            'mundur dari tanggal tak bermakna',
+            'item yang selamat akan didispatch dengan kredensial akun baru '
+            'dan ditolak firestore.rules',
       );
     },
   );
-
-  test('T10-c — item sync_queue milik akun LAMA tidak boleh selamat logout', () async {
-    await ds.addToSyncQueue(
-      itemId: '20260901',
-      collectionPath: 'users/uidLama/streak_marks/20260901',
-      data: const {'dayKey': 20260901},
-      operation: SyncOperation.create,
-    );
-    expect(await db.select(db.syncQueue).get(), hasLength(1));
-
-    await db.clearAllLocalData();
-
-    expect(
-      await db.select(db.syncQueue).get(),
-      isEmpty,
-      reason:
-          'item yang selamat akan didispatch dengan kredensial akun baru '
-          'dan ditolak firestore.rules',
-    );
-  });
 }

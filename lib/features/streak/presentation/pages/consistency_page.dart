@@ -109,9 +109,7 @@ class _ConsistencyPageState extends State<ConsistencyPage> {
                     SnackBar(
                       content: Text(
                         l10n.consistencyMarkFailed,
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.white,
-                        ),
+                        style: AppTextStyles.body.copyWith(color: Colors.white),
                       ),
                       backgroundColor: AppColors.warn,
                       behavior: SnackBarBehavior.floating,
@@ -244,7 +242,9 @@ class _SkeletonBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final skeletonColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final skeletonColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
 
     Widget bar(double width, double height) => Container(
       width: width,
@@ -299,7 +299,9 @@ class _ReadyBody extends StatelessWidget {
       snapshot.markedDaysAll.contains(snapshot.today);
 
   String _chipText(AppLocalizations l10n) {
-    if (snapshot.todayStatus == DayStatus.safe) return l10n.consistencyTodayDone;
+    if (snapshot.todayStatus == DayStatus.safe) {
+      return l10n.consistencyTodayDone;
+    }
     if (snapshot.todayStatus == DayStatus.anomaly) {
       return l10n.consistencyTodayAnomaly;
     }
@@ -315,7 +317,9 @@ class _ReadyBody extends StatelessWidget {
     final l10n = context.l10n;
     final textColor = isDark ? AppColors.textDark : AppColors.textLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return SingleChildScrollView(
@@ -439,8 +443,7 @@ class _ReadyBody extends StatelessWidget {
               key: const Key('consistency-cta'),
               onPressed: isMarking
                   ? null
-                  : () =>
-                        context.read<StreakBloc>().add(StreakTodayMarked()),
+                  : () => context.read<StreakBloc>().add(StreakTodayMarked()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 disabledBackgroundColor: AppColors.primary.withAlpha(100),

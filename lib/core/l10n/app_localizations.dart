@@ -817,10 +817,9 @@ class AppLocalizations {
   String get consistencyCellMissed => _t('consistency_cell_missed');
   String get consistencyCellToday => _t('consistency_cell_today');
   String get consistencyCellFuture => _t('consistency_cell_future');
-  String consistencyCellSemantics(String date, String status) =>
-      _t('consistency_cell_semantics')
-          .replaceAll('{date}', date)
-          .replaceAll('{status}', status);
+  String consistencyCellSemantics(String date, String status) => _t(
+    'consistency_cell_semantics',
+  ).replaceAll('{date}', date).replaceAll('{status}', status);
 
   // ── Kartu pengakuan saat sebuah ruas terhenti (Task 14, spec §8.5) ──
   //

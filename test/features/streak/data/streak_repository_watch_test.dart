@@ -112,66 +112,63 @@ void main() {
     expect(
       emisi.length - sebelum,
       1,
-      reason: 'satu batch penyimpanan menyentuh dua tabel yang keduanya '
+      reason:
+          'satu batch penyimpanan menyentuh dua tabel yang keduanya '
           'diawasi — tanpa debounce kalkulator berjalan dua kali',
     );
   });
 
-  test(
-    'requestRecompute memicu emisi walau data tak berubah — dipakai timer '
-    'tengah malam',
-    () async {
-      final emisi = <StreakSnapshot>[];
-      final sub = repo.watchSnapshot().listen(emisi.add);
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      final sebelum = emisi.length;
+  test('requestRecompute memicu emisi walau data tak berubah — dipakai timer '
+      'tengah malam', () async {
+    final emisi = <StreakSnapshot>[];
+    final sub = repo.watchSnapshot().listen(emisi.add);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final sebelum = emisi.length;
 
-      clock.at = DateTime(2026, 9, 6, 0, 1);
-      repo.requestRecompute();
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      await sub.cancel();
+    clock.at = DateTime(2026, 9, 6, 0, 1);
+    repo.requestRecompute();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await sub.cancel();
 
-      expect(emisi.length, sebelum + 1);
-      expect(
-        emisi.last.today,
-        20260906,
-        reason: 'hari berganti tanpa perubahan tabel',
-      );
-    },
-  );
+    expect(emisi.length, sebelum + 1);
+    expect(
+      emisi.last.today,
+      20260906,
+      reason: 'hari berganti tanpa perubahan tabel',
+    );
+  });
 
-  test(
-    'D-17 — penanda viaClockCorrection masuk markedDaysAll TAPI TIDAK '
-    'menghitung ruas',
-    () async {
-      final emisi = <StreakSnapshot>[];
-      final sub = repo.watchSnapshot().listen(emisi.add);
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+  test('D-17 — penanda viaClockCorrection masuk markedDaysAll TAPI TIDAK '
+      'menghitung ruas', () async {
+    final emisi = <StreakSnapshot>[];
+    final sub = repo.watchSnapshot().listen(emisi.add);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
 
-      await local.insertMark(
-        dayKey: 20260905,
-        markedAt: DateTime.utc(2026, 9, 5, 3),
-        timezone: 'WIB',
-        viaClockCorrection: true,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      await sub.cancel();
+    await local.insertMark(
+      dayKey: 20260905,
+      markedAt: DateTime.utc(2026, 9, 5, 3),
+      timezone: 'WIB',
+      viaClockCorrection: true,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await sub.cancel();
 
-      expect(
-        emisi.last.markedDaysAll.contains(20260905),
-        isTrue,
-        reason: 'markedDaysAll MENTAH — penanda hasil koreksi jam tetap '
-            'harus terlihat di sana (dipakai aturan CTA)',
-      );
-      expect(
-        emisi.last.hasStarted,
-        isFalse,
-        reason: 'tapi kalkulator DILARANG membacanya — tidak boleh '
-            'menghitung ruas sama sekali',
-      );
-      expect(emisi.last.currentStreak, 0);
-    },
-  );
+    expect(
+      emisi.last.markedDaysAll.contains(20260905),
+      isTrue,
+      reason:
+          'markedDaysAll MENTAH — penanda hasil koreksi jam tetap '
+          'harus terlihat di sana (dipakai aturan CTA)',
+    );
+    expect(
+      emisi.last.hasStarted,
+      isFalse,
+      reason:
+          'tapi kalkulator DILARANG membacanya — tidak boleh '
+          'menghitung ruas sama sekali',
+    );
+    expect(emisi.last.currentStreak, 0);
+  });
 
   group('isTodaySafe', () {
     test('true saat hari ini punya penanda', () async {
@@ -194,20 +191,26 @@ void main() {
     });
   });
 
-  test('syncMarksFromRemote menarik penanda dan tidak menimpa baris lokal', () async {
-    when(() => network.isConnected).thenAnswer((_) async => true);
-    when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
-        .thenAnswer((_) async => [
-              StreakMarkModel(
-                dayKey: 20260902,
-                markedAt: DateTime.utc(2026, 9, 2),
-                timezone: 'WIB',
-              ),
-            ]);
-    final hasil = await repo.syncMarksFromRemote();
-    expect(hasil, const Right<Failure, int>(1));
-    expect(await local.readMarkedDays(), {20260902});
-  });
+  test(
+    'syncMarksFromRemote menarik penanda dan tidak menimpa baris lokal',
+    () async {
+      when(() => network.isConnected).thenAnswer((_) async => true);
+      when(
+        () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+      ).thenAnswer(
+        (_) async => [
+          StreakMarkModel(
+            dayKey: 20260902,
+            markedAt: DateTime.utc(2026, 9, 2),
+            timezone: 'WIB',
+          ),
+        ],
+      );
+      final hasil = await repo.syncMarksFromRemote();
+      expect(hasil, const Right<Failure, int>(1));
+      expect(await local.readMarkedDays(), {20260902});
+    },
+  );
 
   test('offline → no-op, bukan galat', () async {
     when(() => network.isConnected).thenAnswer((_) async => false);
@@ -215,91 +218,91 @@ void main() {
     verifyNever(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')));
   });
 
-  test('T33 — penanda yang belum pernah tersinkron DIDORONG naik lebih dulu', () async {
-    // CATATAN PENYIMPANGAN DARI RENCANA: draf rencana memanggil
-    // `repo.syncMarksFromRemote()` di sini, tapi kode `syncMarksFromRemote()`
-    // yang diberikan rencana sendiri TARIK SAJA (komentar "D-9" di
-    // implementasi) — dorongan sudah dipindah ke `pushPendingMarks()`
-    // ("Rev 2 menaruh dorongan lebih dulu di sini" = fosil revisi lama).
-    // Assersi test ini (dorongan naik, viaClockCorrection dikecualikan,
-    // isSynced jadi true) persis perilaku `pushPendingMarks()` — jadi
-    // dipanggil di sini, bukan `syncMarksFromRemote()`.
-    when(() => network.isConnected).thenAnswer((_) async => true);
-    when(() => remote.saveMark(any())).thenAnswer((_) async {});
-
-    // Persis keadaan sesudah antrean kedaluwarsa 7 hari: baris ada di lokal,
-    // dokumennya tidak pernah tercipta di Firestore.
-    await local.insertMark(
-      dayKey: 20260903,
-      markedAt: DateTime.utc(2026, 9, 3),
-      timezone: 'WIB',
-      viaClockCorrection: false,
-    );
-    await local.insertMark(
-      dayKey: 20260904,
-      markedAt: DateTime.utc(2026, 9, 4),
-      timezone: 'WIB',
-      viaClockCorrection: true,
-    );
-
-    await repo.pushPendingMarks();
-
-    final terkirim = verify(() => remote.saveMark(captureAny()))
-        .captured
-        .cast<StreakMarkModel>()
-        .map((m) => m.dayKey)
-        .toList();
-    expect(
-      terkirim,
-      [20260903],
-      reason: 'baris bertanda TIDAK PERNAH naik ke Firestore (spec §4.7)',
-    );
-    expect(
-      (await local.findMark(20260903))!.isSynced,
-      isTrue,
-      reason: 'sesudah naik ia tidak boleh didorong lagi tiap login',
-    );
-  });
-
   test(
-    'T44 — undo yang menang race SELAGI pushPendingMarks di udara '
-    'menghapus balik dokumen yang baru saja terunggah (D-15)',
+    'T33 — penanda yang belum pernah tersinkron DIDORONG naik lebih dulu',
     () async {
+      // CATATAN PENYIMPANGAN DARI RENCANA: draf rencana memanggil
+      // `repo.syncMarksFromRemote()` di sini, tapi kode `syncMarksFromRemote()`
+      // yang diberikan rencana sendiri TARIK SAJA (komentar "D-9" di
+      // implementasi) — dorongan sudah dipindah ke `pushPendingMarks()`
+      // ("Rev 2 menaruh dorongan lebih dulu di sini" = fosil revisi lama).
+      // Assersi test ini (dorongan naik, viaClockCorrection dikecualikan,
+      // isSynced jadi true) persis perilaku `pushPendingMarks()` — jadi
+      // dipanggil di sini, bukan `syncMarksFromRemote()`.
       when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
-          .thenAnswer((_) async => const <StreakMarkModel>[]);
+      when(() => remote.saveMark(any())).thenAnswer((_) async {});
 
+      // Persis keadaan sesudah antrean kedaluwarsa 7 hari: baris ada di lokal,
+      // dokumennya tidak pernah tercipta di Firestore.
       await local.insertMark(
-        dayKey: 20260905,
-        markedAt: DateTime.utc(2026, 9, 5),
+        dayKey: 20260903,
+        markedAt: DateTime.utc(2026, 9, 3),
         timezone: 'WIB',
         viaClockCorrection: false,
       );
-
-      // Simulasikan tepat jendela race: begitu `saveMark` "sampai" di remote,
-      // user sudah mengurungkan baris itu di lokal — sebelum
-      // `pushPendingMarks()` sempat membaca ulang dan menandainya sinkron.
-      when(() => remote.saveMark(any())).thenAnswer((_) async {
-        await local.deleteMark(20260905);
-      });
-      when(() => remote.deleteMark(any())).thenAnswer((_) async {});
-
-      final naik = await repo.pushPendingMarks();
-
-      expect(
-        naik,
-        0,
-        reason: 'baris yang lenyap di tengah jalan tidak dihitung naik',
+      await local.insertMark(
+        dayKey: 20260904,
+        markedAt: DateTime.utc(2026, 9, 4),
+        timezone: 'WIB',
+        viaClockCorrection: true,
       );
-      verify(() => remote.deleteMark(20260905)).called(1);
+
+      await repo.pushPendingMarks();
+
+      final terkirim = verify(
+        () => remote.saveMark(captureAny()),
+      ).captured.cast<StreakMarkModel>().map((m) => m.dayKey).toList();
       expect(
-        await local.hasMark(20260905),
-        isFalse,
-        reason: 'undo user tidak boleh dibatalkan diam-diam oleh dorongan '
-            'bootstrap miliknya sendiri',
+        terkirim,
+        [20260903],
+        reason: 'baris bertanda TIDAK PERNAH naik ke Firestore (spec §4.7)',
+      );
+      expect(
+        (await local.findMark(20260903))!.isSynced,
+        isTrue,
+        reason: 'sesudah naik ia tidak boleh didorong lagi tiap login',
       );
     },
   );
+
+  test('T44 — undo yang menang race SELAGI pushPendingMarks di udara '
+      'menghapus balik dokumen yang baru saja terunggah (D-15)', () async {
+    when(() => network.isConnected).thenAnswer((_) async => true);
+    when(
+      () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+    ).thenAnswer((_) async => const <StreakMarkModel>[]);
+
+    await local.insertMark(
+      dayKey: 20260905,
+      markedAt: DateTime.utc(2026, 9, 5),
+      timezone: 'WIB',
+      viaClockCorrection: false,
+    );
+
+    // Simulasikan tepat jendela race: begitu `saveMark` "sampai" di remote,
+    // user sudah mengurungkan baris itu di lokal — sebelum
+    // `pushPendingMarks()` sempat membaca ulang dan menandainya sinkron.
+    when(() => remote.saveMark(any())).thenAnswer((_) async {
+      await local.deleteMark(20260905);
+    });
+    when(() => remote.deleteMark(any())).thenAnswer((_) async {});
+
+    final naik = await repo.pushPendingMarks();
+
+    expect(
+      naik,
+      0,
+      reason: 'baris yang lenyap di tengah jalan tidak dihitung naik',
+    );
+    verify(() => remote.deleteMark(20260905)).called(1);
+    expect(
+      await local.hasMark(20260905),
+      isFalse,
+      reason:
+          'undo user tidak boleh dibatalkan diam-diam oleh dorongan '
+          'bootstrap miliknya sendiri',
+    );
+  });
 
   // ── Ronde review 1 ───────────────────────────────────────────────────────
 
@@ -308,8 +311,9 @@ void main() {
     'absen dari tarikan (D-13/D-14, kabel repository ke deleteSyncedMarksAbsentFrom)',
     () async {
       when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
-          .thenAnswer((_) async => const <StreakMarkModel>[]);
+      when(
+        () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+      ).thenAnswer((_) async => const <StreakMarkModel>[]);
 
       // Baris SUDAH PERNAH naik (isSynced=true) tapi remote tak lagi
       // membawanya — persis "dihapus di device lain".
@@ -326,7 +330,8 @@ void main() {
       expect(
         await local.hasMark(20260903),
         isFalse,
-        reason: 'remote berwenang untuk baris yang PERNAH naik — dihapus di '
+        reason:
+            'remote berwenang untuk baris yang PERNAH naik — dihapus di '
             'device lain harus tercermin di sini',
       );
     },
@@ -344,8 +349,9 @@ void main() {
 
     test('ServerException dari remote → Left(ServerFailure)', () async {
       when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
-          .thenThrow(const ServerException('gagal ambil'));
+      when(
+        () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+      ).thenThrow(const ServerException('gagal ambil'));
       final hasil = await repo.syncMarksFromRemote();
       expect(
         hasil.isLeft() && hasil.fold((f) => f is ServerFailure, (_) => false),
@@ -355,8 +361,9 @@ void main() {
 
     test('exception umum dari remote → Left(CacheFailure)', () async {
       when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')))
-          .thenThrow(Exception('boom'));
+      when(
+        () => remote.getMarks(sinceDayKey: any(named: 'sinceDayKey')),
+      ).thenThrow(Exception('boom'));
       final hasil = await repo.syncMarksFromRemote();
       expect(
         hasil.isLeft() && hasil.fold((f) => f is CacheFailure, (_) => false),
@@ -389,41 +396,36 @@ void main() {
   // penuh — `streak_repository_write_test.dart` (idempotensi, penjaga
   // jam, purge-sebelum-enqueue, jalur hapus).
 
-  test(
-    'Temuan 5 — requestRecompute() aman dipanggil sesudah dispose() (LIHAT '
-    'komentar dispose(): bukan kontrak untuk dipanggil BLoC manapun)',
-    () {
-      repo.dispose();
-      expect(() => repo.requestRecompute(), returnsNormally);
-    },
-  );
+  test('Temuan 5 — requestRecompute() aman dipanggil sesudah dispose() (LIHAT '
+      'komentar dispose(): bukan kontrak untuk dipanggil BLoC manapun)', () {
+    repo.dispose();
+    expect(() => repo.requestRecompute(), returnsNormally);
+  });
 
-  test(
-    'Temuan 6 — pushPendingMarks() membatasi dorongan ke kMaxPushPerSession '
-    'per sesi',
-    () async {
-      when(() => network.isConnected).thenAnswer((_) async => true);
-      when(() => remote.saveMark(any())).thenAnswer((_) async {});
+  test('Temuan 6 — pushPendingMarks() membatasi dorongan ke kMaxPushPerSession '
+      'per sesi', () async {
+    when(() => network.isConnected).thenAnswer((_) async => true);
+    when(() => remote.saveMark(any())).thenAnswer((_) async {});
 
-      const jumlahBacklog = StreakRepositoryImpl.kMaxPushPerSession + 1;
-      for (var i = 0; i < jumlahBacklog; i++) {
-        final dayKey = addDays(20260101, i);
-        await local.insertMark(
-          dayKey: dayKey,
-          markedAt: localMidnightOf(dayKey).toUtc(),
-          timezone: 'WIB',
-          viaClockCorrection: false,
-        );
-      }
-
-      final naik = await repo.pushPendingMarks();
-
-      expect(
-        naik,
-        StreakRepositoryImpl.kMaxPushPerSession,
-        reason: 'backlog lebih besar dari batas tidak boleh terkuras '
-            'sekaligus — sisanya terkuras sesi berikutnya',
+    const jumlahBacklog = StreakRepositoryImpl.kMaxPushPerSession + 1;
+    for (var i = 0; i < jumlahBacklog; i++) {
+      final dayKey = addDays(20260101, i);
+      await local.insertMark(
+        dayKey: dayKey,
+        markedAt: localMidnightOf(dayKey).toUtc(),
+        timezone: 'WIB',
+        viaClockCorrection: false,
       );
-    },
-  );
+    }
+
+    final naik = await repo.pushPendingMarks();
+
+    expect(
+      naik,
+      StreakRepositoryImpl.kMaxPushPerSession,
+      reason:
+          'backlog lebih besar dari batas tidak boleh terkuras '
+          'sekaligus — sisanya terkuras sesi berikutnya',
+    );
+  });
 }

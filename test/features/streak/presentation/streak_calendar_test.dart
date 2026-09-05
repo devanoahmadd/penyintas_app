@@ -88,9 +88,7 @@ void main() {
         disableAnimations: disableAnimations,
       ),
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: StreakCalendar(snapshot: snapshot),
-        ),
+        body: SingleChildScrollView(child: StreakCalendar(snapshot: snapshot)),
       ),
     ),
   );
@@ -115,7 +113,10 @@ void main() {
     await tester.pump();
 
     expect(find.bySemanticsLabel('2 September, tercatat'), findsOneWidget);
-    expect(find.bySemanticsLabel('3 September, ditandai tanpa pengeluaran'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('3 September, ditandai tanpa pengeluaran'),
+      findsOneWidget,
+    );
     expect(find.bySemanticsLabel('4 September, jeda terpakai'), findsOneWidget);
     expect(find.bySemanticsLabel('5 September, terlewat'), findsOneWidget);
     expect(find.bySemanticsLabel('10 September, hari ini'), findsOneWidget);
@@ -137,9 +138,7 @@ void main() {
 
   testWidgets('chevron mundur disabled di bulan activatedDay', (tester) async {
     await tester.pumpWidget(
-      harness(
-        snapshot: buildSnapshot(activatedDay: 20260901, today: 20260902),
-      ),
+      harness(snapshot: buildSnapshot(activatedDay: 20260901, today: 20260902)),
     );
     await tester.pump();
 
@@ -159,9 +158,7 @@ void main() {
 
   testWidgets('chevron memenuhi 48dp bahkan saat disabled', (tester) async {
     await tester.pumpWidget(
-      harness(
-        snapshot: buildSnapshot(activatedDay: 20260901, today: 20260902),
-      ),
+      harness(snapshot: buildSnapshot(activatedDay: 20260901, today: 20260902)),
     );
     await tester.pump();
 
@@ -217,17 +214,18 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         harness(
-          snapshot: buildSnapshot(
-            activatedDay: 20260101,
-            today: 20260815,
-          ),
+          snapshot: buildSnapshot(activatedDay: 20260101, today: 20260815),
           l10n: l10nEn,
           locale: const Locale('en'),
         ),
       );
       await tester.pump();
 
-      expect(find.text('August 2026'), findsOneWidget, reason: 'harus lewat DateFormat(locale), bukan array diketik tangan');
+      expect(
+        find.text('August 2026'),
+        findsOneWidget,
+        reason: 'harus lewat DateFormat(locale), bukan array diketik tangan',
+      );
       expect(find.text('Agustus 2026'), findsNothing);
 
       // Kepala kolom hari: EEEEE narrow, Senin..Minggu, mengikuti locale EN —
@@ -259,8 +257,10 @@ void main() {
     );
     await tester.pump();
 
-    double scaleAt() =>
-        tester.widget<ScaleTransition>(find.byKey(const Key('today-cell-scale'))).scale.value;
+    double scaleAt() => tester
+        .widget<ScaleTransition>(find.byKey(const Key('today-cell-scale')))
+        .scale
+        .value;
 
     expect(scaleAt(), 1.0);
 
@@ -299,8 +299,10 @@ void main() {
     );
     await tester.pump();
 
-    double scaleAt() =>
-        tester.widget<ScaleTransition>(find.byKey(const Key('today-cell-scale'))).scale.value;
+    double scaleAt() => tester
+        .widget<ScaleTransition>(find.byKey(const Key('today-cell-scale')))
+        .scale
+        .value;
 
     await tester.pumpWidget(
       harness(
@@ -353,6 +355,7 @@ void main() {
         final w = tester.widget(cellFinder);
         return w is CustomPaint && w.foregroundPainter is DashedBorderPainter;
       }
+
       bool hasFill(Finder cellFinder) {
         final w = tester.widget(cellFinder);
         if (w is Container) {
@@ -365,10 +368,13 @@ void main() {
           final inner = tester.widgetList<Container>(
             find.descendant(of: cellFinder, matching: find.byType(Container)),
           );
-          return inner.any((c) => (c.decoration as BoxDecoration?)?.color != null);
+          return inner.any(
+            (c) => (c.decoration as BoxDecoration?)?.color != null,
+          );
         }
         return false;
       }
+
       bool hasBorder(Finder cellFinder) {
         final w = tester.widget(cellFinder);
         if (w is Container) {
@@ -453,7 +459,10 @@ void main() {
         findsNothing,
       );
       // Hari sebelum `today` di bulan yang sama harus positif "sebelum mulai".
-      expect(find.bySemanticsLabel('1 September, sebelum mulai'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('1 September, sebelum mulai'),
+        findsOneWidget,
+      );
     },
   );
 
@@ -472,15 +481,14 @@ void main() {
       await tester.pump();
 
       // Tidak ada label "terlewat" untuk tanggal hari ini.
-      expect(
-        find.bySemanticsLabel('2 September, terlewat'),
-        findsNothing,
-      );
+      expect(find.bySemanticsLabel('2 September, terlewat'), findsNothing);
       // Tidak ada marker lingkaran (BoxShape.circle) di seluruh kalender —
       // itulah petak "hari ini" yang dilarang dirender saat anomaly.
       final hasCircleMarker = tester
           .widgetList<Container>(find.byType(Container))
-          .any((c) => (c.decoration as BoxDecoration?)?.shape == BoxShape.circle);
+          .any(
+            (c) => (c.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          );
       expect(hasCircleMarker, isFalse);
     },
   );

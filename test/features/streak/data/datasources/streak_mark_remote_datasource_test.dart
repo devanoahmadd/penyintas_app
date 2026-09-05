@@ -40,7 +40,10 @@ void main() {
     user = MockUser();
     when(() => user.uid).thenReturn(tUid);
     when(() => auth.currentUser).thenReturn(user);
-    datasource = StreakMarkRemoteDatasourceImpl(auth: auth, firestore: firestore);
+    datasource = StreakMarkRemoteDatasourceImpl(
+      auth: auth,
+      firestore: firestore,
+    );
   });
 
   group('getMarks', () {
@@ -48,11 +51,13 @@ void main() {
       expect(await datasource.getMarks(), isEmpty);
     });
 
-    test('returns [] jika uid null (belum login) — read tak melempar auth',
-        () async {
-      when(() => auth.currentUser).thenReturn(null);
-      expect(await datasource.getMarks(), isEmpty);
-    });
+    test(
+      'returns [] jika uid null (belum login) — read tak melempar auth',
+      () async {
+        when(() => auth.currentUser).thenReturn(null);
+        expect(await datasource.getMarks(), isEmpty);
+      },
+    );
 
     test('dokumen yang ada kembali sebagai model lewat fromFirestore(docId, '
         'data)', () async {
@@ -87,8 +92,11 @@ void main() {
 
       final result = await datasource.getMarks(sinceDayKey: 20260902);
 
-      expect(result.map((m) => m.dayKey).toSet(), {20260902, 20260903},
-          reason: '20260901 ada di bawah ambang — harus tersaring');
+      expect(
+        result.map((m) => m.dayKey).toSet(),
+        {20260902, 20260903},
+        reason: '20260901 ada di bawah ambang — harus tersaring',
+      );
     });
 
     test('panggilan TANPA argumen mengembalikan SEMUA dokumen — mengunci '
@@ -130,8 +138,11 @@ void main() {
       expect(data['dayKey'], tModel.dayKey);
       expect(data['markedAt'], tModel.markedAt.toUtc().millisecondsSinceEpoch);
       expect(data['timezone'], tModel.timezone);
-      expect(data.containsKey('viaClockCorrection'), isFalse,
-          reason: 'kolom lokal — tak pernah dikirim ke Firestore');
+      expect(
+        data.containsKey('viaClockCorrection'),
+        isFalse,
+        reason: 'kolom lokal — tak pernah dikirim ke Firestore',
+      );
       expect(
         data['updatedAt'],
         allOf(greaterThanOrEqualTo(sebelum), lessThanOrEqualTo(sesudah)),
@@ -141,10 +152,7 @@ void main() {
     test('throws AuthException jika belum login — TIDAK terbungkus '
         'ServerException', () async {
       when(() => auth.currentUser).thenReturn(null);
-      expect(
-        () => datasource.saveMark(tModel),
-        throwsA(isA<AuthException>()),
-      );
+      expect(() => datasource.saveMark(tModel), throwsA(isA<AuthException>()));
     });
   });
 
@@ -163,9 +171,13 @@ void main() {
       final dihapus = await col.doc('20260902').get();
       final sisa = await col.doc('20260903').get();
       expect(dihapus.exists, isFalse);
-      expect(sisa.exists, isTrue,
-          reason: 'dayKey lain dalam koleksi yang sama tidak boleh ikut '
-              'terhapus');
+      expect(
+        sisa.exists,
+        isTrue,
+        reason:
+            'dayKey lain dalam koleksi yang sama tidak boleh ikut '
+            'terhapus',
+      );
     });
 
     test('throws AuthException jika belum login', () async {

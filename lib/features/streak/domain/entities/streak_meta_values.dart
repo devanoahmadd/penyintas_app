@@ -48,7 +48,10 @@ class StreakMetaValues extends Equatable {
 
   @override
   List<Object?> get props => [
-    lastSeenDay, maxSeenDay, lastCelebratedRuas, clockAnomalyCount,
+    lastSeenDay,
+    maxSeenDay,
+    lastCelebratedRuas,
+    clockAnomalyCount,
     acknowledgedBreakDay,
   ];
 }
