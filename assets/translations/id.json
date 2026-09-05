@@ -547,5 +547,8 @@
   "consistency_cell_missed": "terlewat",
   "consistency_cell_today": "hari ini",
   "consistency_cell_future": "belum tiba",
+  "consistency_break_title": "Ruas ini terhenti di {days} hari.",
+  "consistency_break_body": "Rekormu tetap tersimpan. Mulai ruas baru hari ini.",
+  "consistency_break_ok": "Oke",
   "consistency_cell_semantics": "{date}, {status}"
 }

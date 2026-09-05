@@ -821,6 +821,16 @@ class AppLocalizations {
       _t('consistency_cell_semantics')
           .replaceAll('{date}', date)
           .replaceAll('{status}', status);
+
+  // ── Kartu pengakuan saat sebuah ruas terhenti (Task 14, spec §8.5) ──
+  //
+  // Yang disebut adalah panjang ruas yang BENAR-BENAR dicapai, bukan angka
+  // nol. Perayaannya sendiri memakai key kanonik [milestoneCopy] yang sudah
+  // ada — tidak ada key perayaan baru di sini.
+  String consistencyBreakTitle(int days) =>
+      _t('consistency_break_title').replaceAll('{days}', '$days');
+  String get consistencyBreakBody => _t('consistency_break_body');
+  String get consistencyBreakOk => _t('consistency_break_ok');
 }
 
 class _AppLocalizationsDelegate

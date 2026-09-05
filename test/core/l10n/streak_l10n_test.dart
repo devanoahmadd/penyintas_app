@@ -67,6 +67,10 @@ void main() {
     'consistency_cell_today',
     'consistency_cell_future',
     'consistency_cell_semantics',
+    // Task 14 — kartu pengakuan saat sebuah ruas terhenti (spec §8.5)
+    'consistency_break_title',
+    'consistency_break_body',
+    'consistency_break_ok',
   ];
 
   test('id.json memuat semua key Konsistensi', () {
@@ -138,6 +142,59 @@ void main() {
       l10nEn.consistencyCellSemantics('2 September', 'recorded'),
       '2 September, recorded',
     );
+  });
+
+  test('placeholder {days} kartu ruas terhenti sama persis di ID & EN', () {
+    expect(
+      id['consistency_break_title'] as String,
+      contains('{days}'),
+      reason: 'id.json "consistency_break_title" kehilangan placeholder',
+    );
+    expect(
+      en['consistency_break_title'] as String,
+      contains('{days}'),
+      reason: 'en.json "consistency_break_title" kehilangan placeholder',
+    );
+  });
+
+  test('consistencyBreakTitle(40) menyebut panjang ruas yang DICAPAI', () {
+    expect(l10nId.consistencyBreakTitle(40), 'Ruas ini terhenti di 40 hari.');
+    expect(l10nEn.consistencyBreakTitle(40), 'This run stopped at 40 days.');
+  });
+
+  test('copy ruas terhenti tidak menuduh dan tidak memamerkan angka nol', () {
+    // Aturan copy §8.5: yang disebut adalah panjang ruas yang benar-benar
+    // terjadi. Tidak ada tuduhan, tidak ada nol yang dipamerkan.
+    const tuduhanId = ['gagal', 'hilang', 'putus'];
+    const tuduhanEn = ['fail', 'lost', 'broke'];
+    for (final k in ['consistency_break_title', 'consistency_break_body']) {
+      final teksId = (id[k] as String).toLowerCase();
+      final teksEn = (en[k] as String).toLowerCase();
+      for (final kata in tuduhanId) {
+        expect(
+          teksId,
+          isNot(contains(kata)),
+          reason: 'id.json "$k" memakai kata menuduh "$kata"',
+        );
+      }
+      for (final kata in tuduhanEn) {
+        expect(
+          teksEn,
+          isNot(contains(kata)),
+          reason: 'en.json "$k" memakai kata menuduh "$kata"',
+        );
+      }
+      expect(
+        teksId,
+        isNot(contains('0')),
+        reason: 'id.json "$k" memamerkan angka nol',
+      );
+      expect(
+        teksEn,
+        isNot(contains('0')),
+        reason: 'en.json "$k" memamerkan angka nol',
+      );
+    }
   });
 
   test('halaman galat tidak pernah menyalahkan koneksi', () {

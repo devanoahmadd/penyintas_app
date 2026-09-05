@@ -547,5 +547,8 @@
   "consistency_cell_missed": "missed",
   "consistency_cell_today": "today",
   "consistency_cell_future": "not yet here",
+  "consistency_break_title": "This run stopped at {days} days.",
+  "consistency_break_body": "Your record is safe. Start a new run today.",
+  "consistency_break_ok": "OK",
   "consistency_cell_semantics": "{date}, {status}"
 }

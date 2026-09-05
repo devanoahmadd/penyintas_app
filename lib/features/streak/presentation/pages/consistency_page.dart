@@ -9,10 +9,12 @@ import 'package:penyintas_app/features/streak/domain/entities/streak_snapshot.da
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_bloc.dart';
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_state.dart';
+import 'package:penyintas_app/features/streak/presentation/widgets/streak_break_card.dart';
 import 'package:penyintas_app/features/streak/presentation/widgets/streak_calendar.dart';
 import 'package:penyintas_app/features/streak/presentation/widgets/streak_rules_sheet.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/widgets/common/count_up_text.dart';
+import 'package:penyintas_app/widgets/common/milestone_toast.dart';
 
 /// Halaman `/consistency` (spec §8). Konsumen `StreakBloc` & `SurvivalBloc`
 /// yang SUDAH dipasang di provider rute (lihat `app_router.dart`) — halaman
@@ -21,8 +23,22 @@ import 'package:penyintas_app/widgets/common/count_up_text.dart';
 /// Kalender sesungguhnya (petak, legend, aksesibilitas) milik Task 13. Yang
 /// ada di sini hanya SLOT ber-`Key('consistency-calendar')` — lihat catatan
 /// di `_ReadyBody`.
-class ConsistencyPage extends StatelessWidget {
+class ConsistencyPage extends StatefulWidget {
   const ConsistencyPage({super.key});
+
+  @override
+  State<ConsistencyPage> createState() => _ConsistencyPageState();
+}
+
+class _ConsistencyPageState extends State<ConsistencyPage> {
+  /// SnackBar "Urungkan" yang sedang hidup, atau null.
+  ///
+  /// Perayaan (§7.5) menunggunya tertutup sebelum tampil:
+  /// `MilestoneToast.show()` memanggil `hideCurrentSnackBar()`
+  /// (`milestone_toast.dart:41`), jadi merayakan lebih awal MEMBUNUH tombol
+  /// undo sebelum user sempat melihatnya. Halaman ini `StatefulWidget`
+  /// justru supaya controller-nya punya tempat tinggal.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _snackBarUndo;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +75,7 @@ class ConsistencyPage extends StatelessWidget {
               listenWhen: (prev, curr) =>
                   prev.isMarking && !curr.isMarking && curr.failure == null,
               listener: (context, state) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                final undo = ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.consistencyMarkedSnack),
                     duration: const Duration(seconds: 5),
@@ -72,6 +88,13 @@ class ConsistencyPage extends StatelessWidget {
                     ),
                   ),
                 );
+                _snackBarUndo = undo;
+                undo.closed.then((_) {
+                  // Hanya kosongkan bila ia MASIH controller yang sama:
+                  // SnackBar undo berikutnya boleh sudah menggantikannya
+                  // sebelum `.closed` milik yang lama selesai.
+                  if (identical(_snackBarUndo, undo)) _snackBarUndo = null;
+                });
               },
             ),
             // Gagal menandai — key l10n `consistency_mark_failed`, TIDAK
@@ -101,6 +124,46 @@ class ConsistencyPage extends StatelessWidget {
                   );
               },
             ),
+            // Perayaan ruas (§7.5). `pendingCelebration` adalah antrean SATU
+            // SLOT; ia dikonsumsi listener, BUKAN builder — perayaan adalah
+            // efek samping sekali-jalan, bukan bagian dari gambar layar.
+            //
+            // URUTAN dalam daftar ini MENGIKAT: `MultiBlocListener`
+            // menyarangkan listener sesuai urutan, dan yang terluar
+            // berlangganan lebih dulu. Satu emisi bisa membawa "penandaan
+            // selesai" DAN "ruas tercapai" sekaligus; listener SnackBar di
+            // atas harus sudah menyetel `_snackBarUndo` saat yang ini
+            // berjalan. Jangan pindahkan ke atas.
+            BlocListener<StreakBloc, StreakState>(
+              listenWhen: (prev, curr) =>
+                  prev.pendingCelebration != curr.pendingCelebration,
+              listener: (context, state) {
+                final ruas = state.pendingCelebration;
+                if (ruas == null) return;
+                final bloc = context.read<StreakBloc>();
+                final teks = l10n.milestoneCopy;
+
+                void rayakan() {
+                  if (!context.mounted) return;
+                  // Baca ULANG: kalau user menekan Urungkan, ruasnya sudah
+                  // tidak tercapai lagi dan perayaan TIDAK JADI ditampilkan.
+                  if (bloc.state.pendingCelebration != ruas) return;
+                  MilestoneToast.show(context, teks);
+                  // Kosongkan slotnya. Tanpa ini perayaan yang sama bisa
+                  // muncul lagi pada snapshot berikutnya.
+                  bloc.add(StreakMilestoneShown(ruas));
+                }
+
+                final undoAktif = _snackBarUndo;
+                if (undoAktif != null) {
+                  // Aturan 1 & 2 §7.5: SnackBar undo tampil lebih dulu dan
+                  // tidak boleh diganggu.
+                  undoAktif.closed.then((_) => rayakan());
+                } else {
+                  rayakan();
+                }
+              },
+            ),
           ],
           child: BlocBuilder<StreakBloc, StreakState>(
             builder: (context, state) {
@@ -117,7 +180,11 @@ class ConsistencyPage extends StatelessWidget {
                 case StreakStatus.ready:
                   final snapshot = state.snapshot;
                   if (snapshot == null) return const _SkeletonBody();
-                  return _ReadyBody(snapshot: snapshot, isMarking: state.isMarking);
+                  return _ReadyBody(
+                    snapshot: snapshot,
+                    isMarking: state.isMarking,
+                    breakRun: state.unacknowledgedBreakRun,
+                  );
               }
             },
           ),
@@ -209,10 +276,19 @@ class _SkeletonBody extends StatelessWidget {
 }
 
 class _ReadyBody extends StatelessWidget {
-  const _ReadyBody({required this.snapshot, required this.isMarking});
+  const _ReadyBody({
+    required this.snapshot,
+    required this.isMarking,
+    required this.breakRun,
+  });
 
   final StreakSnapshot snapshot;
   final bool isMarking;
+
+  /// Panjang ruas yang terhenti dan belum diakui user (§8.5); null = tidak
+  /// ada. Bukan bagian dari `StreakSnapshot` — ia hasil pembandingan
+  /// snapshot dengan `StreakMeta.acknowledgedBreakDay` di BLoC.
+  final int? breakRun;
 
   /// D-11 + aturan render Step 4: CTA hilang untuk TIGA alasan berbeda —
   /// masing-masing punya sabotase & test sendiri (S2/S3, T-D11/T-ANOM).
@@ -247,6 +323,16 @@ class _ReadyBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // §8.5 — kartu pengakuan, di ATAS kalender. Tampil sekali per
+          // kejadian putus; ditutup lewat "Oke" -> StreakBreakAcknowledged.
+          if (breakRun != null) ...[
+            StreakBreakCard(
+              runLength: breakRun!,
+              onAcknowledge: () =>
+                  context.read<StreakBloc>().add(StreakBreakAcknowledged()),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           Center(
             child: Column(
               children: [
@@ -263,7 +349,11 @@ class _ReadyBody extends StatelessWidget {
                       style: AppTextStyles.body.copyWith(color: mutedColor),
                     ),
                   )
-                else
+                // Ruas baru saja terhenti -> `currentStreak` nol. Memajang
+                // "0" DI SAMPING kartu yang baru saja menyebut 40 hari
+                // adalah persis kekejaman yang §8.5 dibuat untuk mencegah,
+                // jadi angkanya diam sampai kartunya diakui.
+                else if (breakRun == null)
                   BlocBuilder<SurvivalBloc, SurvivalState>(
                     builder: (context, survivalState) {
                       final survivalActive = survivalState is SurvivalActive;
