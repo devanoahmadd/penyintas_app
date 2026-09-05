@@ -808,6 +808,19 @@ class AppLocalizations {
   String get consistencyRulesTitle => _t('consistency_rules_title');
   String get consistencyRulesBody => _t('consistency_rules_body');
   String get consistencyRulesA11y => _t('consistency_rules_a11y');
+
+  // ── Kalender konsistensi — label Semantics per petak (Task 13) ──
+  String get consistencyCellBeforeStart => _t('consistency_cell_before_start');
+  String get consistencyCellRecorded => _t('consistency_cell_recorded');
+  String get consistencyCellMarkedNihil => _t('consistency_cell_marked_nihil');
+  String get consistencyCellGraceUsed => _t('consistency_cell_grace_used');
+  String get consistencyCellMissed => _t('consistency_cell_missed');
+  String get consistencyCellToday => _t('consistency_cell_today');
+  String get consistencyCellFuture => _t('consistency_cell_future');
+  String consistencyCellSemantics(String date, String status) =>
+      _t('consistency_cell_semantics')
+          .replaceAll('{date}', date)
+          .replaceAll('{status}', status);
 }
 
 class _AppLocalizationsDelegate

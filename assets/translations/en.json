@@ -539,5 +539,13 @@
   "consistency_mark_failed": "Couldn't mark today.",
   "consistency_rules_title": "How it works",
   "consistency_rules_body": "A day counts when you record a transaction, or mark it as no-spend. Every 7 safe days earns 1 grace day (max 2), which automatically covers a missed day.",
-  "consistency_rules_a11y": "How consistency is counted"
+  "consistency_rules_a11y": "How consistency is counted",
+  "consistency_cell_before_start": "before start",
+  "consistency_cell_recorded": "recorded",
+  "consistency_cell_marked_nihil": "marked as no-spend",
+  "consistency_cell_grace_used": "grace day used",
+  "consistency_cell_missed": "missed",
+  "consistency_cell_today": "today",
+  "consistency_cell_future": "not yet here",
+  "consistency_cell_semantics": "{date}, {status}"
 }

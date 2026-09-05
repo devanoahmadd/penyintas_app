@@ -539,5 +539,13 @@
   "consistency_mark_failed": "Belum bisa menandai hari ini.",
   "consistency_rules_title": "Cara hitungnya",
   "consistency_rules_body": "Hari dihitung aman kalau ada transaksi tercatat, atau kamu menandainya tanpa pengeluaran. Tiap 7 hari aman kamu dapat 1 jeda (maksimal 2) yang otomatis menutup satu hari terlewat.",
-  "consistency_rules_a11y": "Cara kerja hitungan konsistensi"
+  "consistency_rules_a11y": "Cara kerja hitungan konsistensi",
+  "consistency_cell_before_start": "sebelum mulai",
+  "consistency_cell_recorded": "tercatat",
+  "consistency_cell_marked_nihil": "ditandai tanpa pengeluaran",
+  "consistency_cell_grace_used": "jeda terpakai",
+  "consistency_cell_missed": "terlewat",
+  "consistency_cell_today": "hari ini",
+  "consistency_cell_future": "belum tiba",
+  "consistency_cell_semantics": "{date}, {status}"
 }

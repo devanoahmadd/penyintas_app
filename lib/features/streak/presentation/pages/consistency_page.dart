@@ -9,6 +9,7 @@ import 'package:penyintas_app/features/streak/domain/entities/streak_snapshot.da
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_bloc.dart';
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_event.dart';
 import 'package:penyintas_app/features/streak/presentation/bloc/streak_state.dart';
+import 'package:penyintas_app/features/streak/presentation/widgets/streak_calendar.dart';
 import 'package:penyintas_app/features/streak/presentation/widgets/streak_rules_sheet.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/widgets/common/count_up_text.dart';
@@ -317,10 +318,13 @@ class _ReadyBody extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           const SizedBox(height: AppSpacing.lg),
-          // Slot kalender — grid petak, legend & aksesibilitas milik Task 13
-          // (Koreksi A). Placeholder ukuran tetap supaya layout tidak
-          // melompat saat kalender sungguhan dipasang.
-          const SizedBox(key: Key('consistency-calendar'), height: 220),
+          // Kalender konsistensi (Task 13) — grid petak, legend & label
+          // Semantics. `Key('consistency-calendar')` dipertahankan: jalur
+          // galat (`_FailureBody`) mengasersi key ini HILANG sepenuhnya.
+          KeyedSubtree(
+            key: const Key('consistency-calendar'),
+            child: StreakCalendar(snapshot: snapshot),
+          ),
           const SizedBox(height: AppSpacing.lg),
           if (snapshot.hasStarted) ...[
             Divider(color: borderColor, height: AppSpacing.xl),

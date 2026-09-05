@@ -58,6 +58,15 @@ void main() {
     'consistency_rules_title',
     'consistency_rules_body',
     'consistency_rules_a11y',
+    // Task 13 — label Semantics per petak kalender
+    'consistency_cell_before_start',
+    'consistency_cell_recorded',
+    'consistency_cell_marked_nihil',
+    'consistency_cell_grace_used',
+    'consistency_cell_missed',
+    'consistency_cell_today',
+    'consistency_cell_future',
+    'consistency_cell_semantics',
   ];
 
   test('id.json memuat semua key Konsistensi', () {
@@ -103,6 +112,32 @@ void main() {
   test('consistencySurvivalDays(12) menyisipkan angka ke kalimat', () {
     expect(l10nId.consistencySurvivalDays(12), 'Hari ke-12 kamu bertahan');
     expect(l10nEn.consistencySurvivalDays(12), 'Day 12 of holding on');
+  });
+
+  test('placeholder {date} & {status} sama persis di ID & EN', () {
+    for (final placeholder in ['{date}', '{status}']) {
+      expect(
+        id['consistency_cell_semantics'] as String,
+        contains(placeholder),
+        reason: 'id.json "consistency_cell_semantics" kehilangan $placeholder',
+      );
+      expect(
+        en['consistency_cell_semantics'] as String,
+        contains(placeholder),
+        reason: 'en.json "consistency_cell_semantics" kehilangan $placeholder',
+      );
+    }
+  });
+
+  test('consistencyCellSemantics menyisipkan tanggal & status ke kalimat', () {
+    expect(
+      l10nId.consistencyCellSemantics('2 September', 'tercatat'),
+      '2 September, tercatat',
+    );
+    expect(
+      l10nEn.consistencyCellSemantics('2 September', 'recorded'),
+      '2 September, recorded',
+    );
   });
 
   test('halaman galat tidak pernah menyalahkan koneksi', () {
