@@ -555,6 +555,9 @@
   "consistency_break_body": "Your record is safe. Start a new run today.",
   "consistency_break_ok": "OK",
   "consistency_cell_semantics": "{date}, {status}",
+  "consistency_evening_title": "Nothing recorded today. Was there really no spending?",
+  "consistency_evening_title_survival": "Log it if you can. It's okay if you haven't.",
+  "consistency_evening_record": "Record",
 
   "notification_daily_title": "Don't forget to log today's spending!",
   "notification_daily_body": "One small note now, safer until month's end."

@@ -831,6 +831,12 @@ class AppLocalizations {
     'consistency_cell_semantics',
   ).replaceAll('{date}', date).replaceAll('{status}', status);
 
+  // ── Kartu sore di dashboard (Task 17, spec §9.2) ──
+  String get consistencyEveningTitle => _t('consistency_evening_title');
+  String get consistencyEveningTitleSurvival =>
+      _t('consistency_evening_title_survival');
+  String get consistencyEveningRecord => _t('consistency_evening_record');
+
   // ── Kartu pengakuan saat sebuah ruas terhenti (Task 14, spec §8.5) ──
   //
   // Yang disebut adalah panjang ruas yang BENAR-BENAR dicapai, bukan angka

@@ -71,6 +71,10 @@ void main() {
     'consistency_break_title',
     'consistency_break_body',
     'consistency_break_ok',
+    // Task 17 — kartu sore di dashboard (spec §9.2)
+    'consistency_evening_title',
+    'consistency_evening_title_survival',
+    'consistency_evening_record',
   ];
 
   test('id.json memuat semua key Konsistensi', () {

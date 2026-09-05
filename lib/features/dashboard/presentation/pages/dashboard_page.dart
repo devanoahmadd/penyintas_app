@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
+import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/saldo_card.dart';
@@ -30,6 +32,7 @@ import 'package:penyintas_app/features/dashboard/presentation/widgets/consistenc
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
 import 'package:penyintas_app/features/budget/presentation/bloc/budget_limits_bloc.dart';
+import 'package:penyintas_app/features/streak/presentation/widgets/evening_nudge_card.dart';
 import 'package:penyintas_app/features/survival/presentation/bloc/survival_bloc.dart';
 import 'package:penyintas_app/features/preferences/presentation/cubit/timezone_reconciliation_cubit.dart';
 
@@ -41,6 +44,14 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  // Jam pengingat harian — dipakai kartu sore (Task 17) untuk ambangnya.
+  // Default meniru default kolom `app_settings` (schemaVersion 2): baris bisa
+  // TIDAK ADA (mis. sesudah logout, sebelum bootstrap memulihkannya) — itu
+  // diperlakukan sebagai "pengingat memakai nilai baku", bukan galat.
+  bool _reminderEnabled = true;
+  int _reminderHour = 20;
+  int _reminderMinute = 0;
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +69,22 @@ class _DashboardPageState extends State<DashboardPage> {
       if (mounted) {
         context.read<TimezoneReconciliationCubit>().check();
       }
+    });
+    _loadReminderSettings();
+  }
+
+  /// Baca jam pengingat dari `app_settings` (Task 17) — pola sama seperti
+  /// `SettingsPage._loadReminder`. Baris `id == 1` bisa tidak ada; itu
+  /// diperlakukan sebagai nilai baku, bukan galat.
+  Future<void> _loadReminderSettings() async {
+    final row = await (sl<AppDatabase>().select(
+      sl<AppDatabase>().appSettings,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
+    if (!mounted) return;
+    setState(() {
+      _reminderEnabled = row?.reminderEnabled ?? true;
+      _reminderHour = row?.reminderHour ?? 20;
+      _reminderMinute = row?.reminderMinute ?? 0;
     });
   }
 
@@ -140,6 +167,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   const DashboardRefreshed(),
                 ),
                 onSeeAllTap: () => context.go('/transactions'),
+                reminderEnabled: _reminderEnabled,
+                reminderHour: _reminderHour,
+                reminderMinute: _reminderMinute,
               );
             },
           ),
@@ -161,12 +191,21 @@ class _DashboardBody extends StatelessWidget {
     required this.onAddTap,
     required this.onRefresh,
     required this.onSeeAllTap,
+    required this.reminderEnabled,
+    required this.reminderHour,
+    required this.reminderMinute,
   });
 
   final DashboardEntity entity;
   final VoidCallback onAddTap;
   final Future<void> Function() onRefresh;
   final VoidCallback onSeeAllTap;
+
+  // Task 17 — jam pengingat harian dari `app_settings`, dioper ke
+  // `EveningNudgeCard` sebagai ambang kemunculannya.
+  final bool reminderEnabled;
+  final int reminderHour;
+  final int reminderMinute;
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +249,19 @@ class _DashboardBody extends StatelessWidget {
                     onDetailTap: () => context.go('/transactions'),
                   ),
                   const SizedBox(height: AppSpacing.xxl),
+
+                  // Task 17: kartu sore — bertanya, bukan menagih. Dipasang
+                  // DI ATAS grid bento, bukan menggantikan apa pun. Widget
+                  // ini sendiri yang menyembunyikan diri (SizedBox.shrink)
+                  // bila aturan tampil tidak terpenuhi.
+                  EveningNudgeCard(
+                    reminderEnabled: reminderEnabled,
+                    reminderHour: reminderHour,
+                    reminderMinute: reminderMinute,
+                    clock: sl<AppClock>(),
+                    onRecord: onAddTap,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // Akses Cepat
                   _SectionHeader(
