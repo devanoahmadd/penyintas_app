@@ -110,6 +110,39 @@ service cloud.firestore {
           && request.resource.data.updatedAt is number;
       }
 
+      // A4 Fase 2 — satu dokumen per minggu. Pola bills/streak_marks: owner-check
+      // + validasi tipe ringan, TANPA hasOnly. Field baru di masa depan tidak
+      // boleh mendadak memicu permission-denied.
+      // Field opsional divalidasi HANYA bila hadir: baris `held` memang tak punya
+      // category/targetAmount/baselineAmount.
+      match /challenges/{weekKey} {
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null && request.auth.uid == userId
+          && request.resource.data.weekKey is int
+          && request.resource.data.weekKey >= minWritableDayKey()
+          && request.resource.data.weekKey <= maxWritableDayKey()
+          && string(request.resource.data.weekKey) == weekKey
+          && request.resource.data.status in ['active','achieved','missed','held','skipped']
+          && request.resource.data.timezone is string
+          && request.resource.data.timezone.size() > 0
+          && request.resource.data.timezone.size() <= 64
+          && request.resource.data.createdAt is number
+          && request.resource.data.updatedAt is number
+          && (!('category' in request.resource.data) || (
+               request.resource.data.category is string
+               && request.resource.data.category.size() > 0
+               && request.resource.data.category.size() <= 64))
+          && (!('targetAmount' in request.resource.data) || (
+               request.resource.data.targetAmount is int
+               && request.resource.data.targetAmount >= 0))
+          && (!('baselineAmount' in request.resource.data) || (
+               request.resource.data.baselineAmount is int
+               && request.resource.data.baselineAmount >= 0))
+          && (!('finalSpent' in request.resource.data) || (
+               request.resource.data.finalSpent is int
+               && request.resource.data.finalSpent >= 0));
+      }
+
       // Tagihan/kewajiban rutin (A1 bills). Pola goals: owner-check + validasi
       // tipe ringan pada field inti, TANPA hasOnly (field baru tetap lolos —
       // hindari drift permission-denied).
