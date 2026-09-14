@@ -1,5 +1,8 @@
+import 'package:equatable/equatable.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart'; // addDays — C3
 import 'package:penyintas_app/features/challenge/domain/challenge_constants.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_candidate.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/weekly_spend.dart';
 
 /// Jantung fitur: seluruh aturan T2–T9 hidup di berkas ini, dan HANYA di sini.
@@ -13,7 +16,8 @@ import 'package:penyintas_app/features/challenge/domain/entities/weekly_spend.da
 /// pembagi tetap membuat user yang baru punya 2 minggu data mendapat basis
 /// setengah kebiasaannya, lalu dipotong 15% lagi — target mustahil sejak hari
 /// pertama.
-({Map<String, int> baselines, Map<String, int> weeksWithData}) computeBaselines({
+({Map<String, int> baselines, Map<String, int> weeksWithData})
+computeBaselines({
   required List<WeeklySpend> spends,
   required int currentWeekKey,
 }) {
@@ -54,4 +58,90 @@ int computeTarget(int baseline) {
   if (baseline <= 0) return 0;
   final mentah = baseline * kTargetRatio;
   return (mentah ~/ kRoundingStep) * kRoundingStep;
+}
+
+/// Bentuk riwayat seminimalnya yang dibutuhkan kalkulator. Sengaja bukan baris
+/// Drift: kalkulator tidak boleh kenal database.
+class ResolvedWeek extends Equatable {
+  const ResolvedWeek({
+    required this.weekKey,
+    required this.category,
+    required this.status,
+  });
+
+  final int weekKey;
+  final String? category;
+  final ChallengeStatus status;
+
+  @override
+  List<Object?> get props => [weekKey, category, status];
+}
+
+/// Berapa minggu BERTURUT terakhir kategori ini berstatus `achieved` (T5).
+///
+/// [history] harus terurut weekKey MENURUN (terbaru dulu).
+///
+/// `held` dan `skipped` TRANSPARAN: tidak memutus dan tidak menambah. Kalau
+/// `held` memutus, user yang ditahan sekali mendapat reset rotasi gratis; kalau
+/// ia menambah, app menghitung kemenangan yang tidak pernah terjadi.
+int consecutiveWins(List<ResolvedWeek> history, String category) {
+  var n = 0;
+  for (final baris in history) {
+    if (baris.status == ChallengeStatus.held ||
+        baris.status == ChallengeStatus.skipped) {
+      continue;
+    }
+    if (baris.status == ChallengeStatus.achieved &&
+        baris.category == category) {
+      n++;
+    } else {
+      break;
+    }
+  }
+  return n;
+}
+
+/// Kandidat terurut, maksimal [kMaxCandidates] (T3, T5, T17).
+List<ChallengeCandidate> selectCandidates({
+  required Map<String, int> baselines,
+  required Map<String, int> weeksWithData,
+  required Set<String> limitableSlugs,
+  required List<ResolvedWeek> history,
+}) {
+  final layak = <ChallengeCandidate>[];
+  for (final e in baselines.entries) {
+    if (!limitableSlugs.contains(e.key)) continue;
+    if ((weeksWithData[e.key] ?? 0) < kMinBaselineWeeksWithData) continue;
+    if (e.value < kMinWeeklyBaseline) continue;
+    layak.add(
+      ChallengeCandidate(
+        category: e.key,
+        baseline: e.value,
+        target: computeTarget(e.value),
+      ),
+    );
+  }
+
+  // Basis menurun; seri diputus slug abjad supaya dua device yang sama-sama
+  // offline menghasilkan baris IDENTIK untuk minggu yang sama (T17 aturan 1).
+  layak.sort((a, b) {
+    final cmp = b.baseline.compareTo(a.baseline);
+    return cmp != 0 ? cmp : a.category.compareTo(b.category);
+  });
+
+  // Rem rotasi (T5): PENGURUTAN, bukan larangan. Kategori yang sudah menang
+  // kRotationWins kali berturut turun ke urutan terakhir — tapi kalau ia
+  // satu-satunya kandidat, ia tetap dipakai. Melarangnya berarti menghukum
+  // user karena berhasil.
+  final jenuh = <ChallengeCandidate>[];
+  final segar = <ChallengeCandidate>[];
+  for (final c in layak) {
+    if (consecutiveWins(history, c.category) >= kRotationWins) {
+      jenuh.add(c);
+    } else {
+      segar.add(c);
+    }
+  }
+
+  return [...segar, ...jenuh].take(kMaxCandidates).toList();
 }
