@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:penyintas_app/features/budget/domain/entities/budget_cycle.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 
 part 'app_database.g.dart';
 
@@ -30,6 +31,22 @@ class BudgetCycleConverter extends TypeConverter<BudgetCycle, String> {
 
   @override
   String toSql(BudgetCycle v) => v.name;
+}
+
+class ChallengeStatusConverter extends TypeConverter<ChallengeStatus, String> {
+  const ChallengeStatusConverter();
+
+  @override
+  ChallengeStatus fromSql(String s) {
+    // Fallback, JANGAN byName() yang melempar: converter yang melempar
+    // mematikan seluruh stream snapshot, artinya satu dokumen asing membuat
+    // halaman kosong permanen (§3 Rev 2).
+    return ChallengeStatus.values.where((e) => e.name == s).firstOrNull ??
+        ChallengeStatus.unknown;
+  }
+
+  @override
+  String toSql(ChallengeStatus v) => v.name;
 }
 
 // ─── Tables ────────────────────────────────────────────────────────────────────
@@ -68,6 +85,10 @@ class AppSettings extends Table {
   IntColumn get billReminderDaysBefore =>
       integer().withDefault(const Constant(1))();
   IntColumn get billReminderHour => integer().withDefault(const Constant(9))();
+  // A4 Fase 2 (schemaVersion 16) — sakelar fitur Tantangan Mingguan.
+  // Default false: fitur tak pernah menyala tanpa user menyalakannya (D3).
+  BoolColumn get challengeEnabled =>
+      boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -239,6 +260,42 @@ class StreakDayMarks extends Table {
   Set<Column> get primaryKey => {dayKey};
 }
 
+/// Satu baris per minggu kalender (Senin–Minggu). `weekKey` = dayKey Senin
+/// dalam format yyyymmdd — bentuknya sengaja meniru StreakDayMarks{dayKey}
+/// supaya pola tulis/sinkron yang sudah teruji dipakai ulang.
+class WeeklyChallenges extends Table {
+  IntColumn get weekKey => integer()();
+
+  /// NULL untuk baris `held`/`skipped` yang tak pernah jadi tantangan (§3).
+  TextColumn get category => text().nullable()();
+  IntColumn get targetAmount => integer().nullable()();
+  IntColumn get baselineAmount => integer().nullable()();
+
+  TextColumn get status => text().map(const ChallengeStatusConverter())();
+
+  /// Dibekukan saat evaluasi (T9); null selagi `active`.
+  IntColumn get finalSpent => integer().nullable()();
+  TextColumn get timezone => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  /// D23 — pemutus presedensi merge T17. HANYA digeser oleh tulis yang mengubah
+  /// field ber-payload (create/hold/resolve/changeCategory/skip). markResultSeen,
+  /// markOlderResultsSeen dan markSynced TIDAK menggesernya.
+  DateTimeColumn get updatedAt => dateTime()();
+
+  DateTimeColumn get resolvedAt => dateTime().nullable()();
+
+  /// D11 — LOKAL SAJA, tak pernah masuk payload, tak pernah ditimpa tarikan.
+  /// Satu-satunya kolom lokal-saja di tabel ini; `toCompanion` WAJIB
+  /// mempertahankannya lewat parameter yang `required` (Task 7).
+  DateTimeColumn get resultSeenAt => dateTime().nullable()();
+
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {weekKey};
+}
+
 /// Baris tunggal (id = 1) untuk hal yang tidak bisa diturunkan sama sekali.
 ///
 /// SELURUH isinya boleh hilang tanpa merusak streak — `clearAllLocalData()`
@@ -278,13 +335,14 @@ class StreakMeta extends Table {
     Bills,
     StreakDayMarks,
     StreakMeta,
+    WeeklyChallenges,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -601,6 +659,29 @@ class AppDatabase extends _$AppDatabase {
         // Tanpa index ini ia jadi full scan pada tabel paling ramai di app.
         await m.database.customStatement(
           'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date)',
+        );
+      }
+      if (from < 16) {
+        // A4 Fase 2: satu tabel baru + satu kolom sakelar. Raw SQL, konsisten
+        // dengan pola from < 13/14/15 di atas.
+        await m.database.customStatement('''
+          CREATE TABLE IF NOT EXISTS weekly_challenges (
+            week_key           INTEGER NOT NULL PRIMARY KEY,
+            category           TEXT,
+            target_amount      INTEGER,
+            baseline_amount    INTEGER,
+            status             TEXT    NOT NULL,
+            final_spent        INTEGER,
+            timezone           TEXT    NOT NULL,
+            created_at         INTEGER NOT NULL,
+            updated_at         INTEGER NOT NULL,
+            resolved_at        INTEGER,
+            result_seen_at     INTEGER,
+            is_synced          INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        await m.database.customStatement(
+          'ALTER TABLE app_settings ADD COLUMN challenge_enabled INTEGER NOT NULL DEFAULT 0',
         );
       }
     },

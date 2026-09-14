@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 AppDatabase _openTestDb() => AppDatabase(NativeDatabase.memory());
@@ -152,6 +153,17 @@ void main() {
           const StreakMetaCompanion(id: Value(1), lastSeenDay: Value(20260601)),
           mode: InsertMode.insertOrReplace,
         );
+    await db
+        .into(db.weeklyChallenges)
+        .insert(
+          WeeklyChallengesCompanion.insert(
+            weekKey: const Value(20260601),
+            status: ChallengeStatus.active,
+            timezone: 'Asia/Jakarta',
+            createdAt: DateTime(2026, 6, 1),
+            updatedAt: DateTime(2026, 6, 1),
+          ),
+        );
   }
 
   test('clearAllLocalData mengosongkan SETIAP tabel berdata-akun', () async {
@@ -179,6 +191,10 @@ void main() {
     // streak_meta ikut tersapu generik dan TIDAK dibuat ulang oleh
     // clearAllLocalData (beda dari preferences yang punya re-seed eksplisit).
     expect(await db.select(db.streakMeta).get(), isEmpty);
+    // A4 Fase 2: weekly_challenges adalah data akun tersinkron (isSynced,
+    // updatedAt, resolvedAt mengarah ke Firestore per-user) — tersapu generik
+    // lewat loop allTables, tak ada pengecualian.
+    expect(await db.select(db.weeklyChallenges).get(), isEmpty);
   });
 
   test('clearAllLocalData mempertahankan bahasa & kategori built-in', () async {
@@ -216,6 +232,7 @@ void main() {
       'bills',
       'streak_day_marks',
       'streak_meta',
+      'weekly_challenges',
     });
   });
 

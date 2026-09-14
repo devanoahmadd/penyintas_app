@@ -4,11 +4,10 @@ import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 // Bentuk MINIMAL skema v14 untuk migrasi 14→15. HANYA `transactions` yang
-// perlu direplikasi: dari `from = 14` cuma blok `if (from < 15)` yang jalan,
-// dan satu-satunya tabel lama yang disentuhnya adalah transactions (dapat
-// index baru). `beforeOpen` di app_database.dart hanya menyetel
-// `PRAGMA foreign_keys` — ia tidak menyentuh tabel mana pun, jadi fixture
-// sesempit ini aman. (Bandingkan bills_schema_migration_test.dart yang
+// perlu direplikasi untuk blok `if (from < 15)` yang menambah index baru.
+// `beforeOpen` di app_database.dart hanya menyetel `PRAGMA foreign_keys` —
+// ia tidak menyentuh tabel mana pun, jadi fixture sesempit ini aman untuk
+// bagian streak. (Bandingkan bills_schema_migration_test.dart yang
 // mereplikasi tiga tabel karena migrasi 13→14 memang menyentuh ketiganya.)
 const _createTransactionsV14 = '''
   CREATE TABLE transactions (
@@ -28,6 +27,17 @@ const _createTransactionsV14 = '''
   )
 ''';
 
+// `AppDatabase.schemaVersion` sekarang 16 (A4 Fase 2), jadi membuka DB fixture
+// ini selalu ikut menjalankan blok `if (from < 16)` sesudah `if (from < 15)`.
+// Blok itu meng-ALTER TABLE `app_settings` (kolom `challenge_enabled`) —
+// bentuk minimal ini HANYA ada supaya ALTER TABLE punya tabel untuk disentuh;
+// isinya tidak diperiksa oleh test apa pun di berkas ini.
+const _createAppSettingsV14 = '''
+  CREATE TABLE app_settings (
+    id INTEGER NOT NULL PRIMARY KEY
+  )
+''';
+
 void main() {
   late Database raw;
   late AppDatabase db;
@@ -35,6 +45,7 @@ void main() {
   setUp(() {
     raw = sqlite3.openInMemory();
     raw.execute(_createTransactionsV14);
+    raw.execute(_createAppSettingsV14);
     raw.execute('PRAGMA user_version = 14');
   });
 

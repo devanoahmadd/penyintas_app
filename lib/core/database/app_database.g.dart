@@ -266,6 +266,21 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(9),
   );
+  static const VerificationMeta _challengeEnabledMeta = const VerificationMeta(
+    'challengeEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> challengeEnabled = GeneratedColumn<bool>(
+    'challenge_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("challenge_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -290,6 +305,7 @@ class $AppSettingsTable extends AppSettings
     partialOnboardingAt,
     billReminderDaysBefore,
     billReminderHour,
+    challengeEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -489,6 +505,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('challenge_enabled')) {
+      context.handle(
+        _challengeEnabledMeta,
+        challengeEnabled.isAcceptableOrUnknown(
+          data['challenge_enabled']!,
+          _challengeEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -586,6 +611,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}bill_reminder_hour'],
       )!,
+      challengeEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}challenge_enabled'],
+      )!,
     );
   }
 
@@ -618,6 +647,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int? partialOnboardingAt;
   final int billReminderDaysBefore;
   final int billReminderHour;
+  final bool challengeEnabled;
   const AppSetting({
     required this.id,
     required this.locale,
@@ -641,6 +671,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.partialOnboardingAt,
     required this.billReminderDaysBefore,
     required this.billReminderHour,
+    required this.challengeEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -677,6 +708,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     map['bill_reminder_days_before'] = Variable<int>(billReminderDaysBefore);
     map['bill_reminder_hour'] = Variable<int>(billReminderHour);
+    map['challenge_enabled'] = Variable<bool>(challengeEnabled);
     return map;
   }
 
@@ -712,6 +744,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           : Value(partialOnboardingAt),
       billReminderDaysBefore: Value(billReminderDaysBefore),
       billReminderHour: Value(billReminderHour),
+      challengeEnabled: Value(challengeEnabled),
     );
   }
 
@@ -755,6 +788,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         json['billReminderDaysBefore'],
       ),
       billReminderHour: serializer.fromJson<int>(json['billReminderHour']),
+      challengeEnabled: serializer.fromJson<bool>(json['challengeEnabled']),
     );
   }
   @override
@@ -785,6 +819,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'partialOnboardingAt': serializer.toJson<int?>(partialOnboardingAt),
       'billReminderDaysBefore': serializer.toJson<int>(billReminderDaysBefore),
       'billReminderHour': serializer.toJson<int>(billReminderHour),
+      'challengeEnabled': serializer.toJson<bool>(challengeEnabled),
     };
   }
 
@@ -811,6 +846,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<int?> partialOnboardingAt = const Value.absent(),
     int? billReminderDaysBefore,
     int? billReminderHour,
+    bool? challengeEnabled,
   }) => AppSetting(
     id: id ?? this.id,
     locale: locale ?? this.locale,
@@ -843,6 +879,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     billReminderDaysBefore:
         billReminderDaysBefore ?? this.billReminderDaysBefore,
     billReminderHour: billReminderHour ?? this.billReminderHour,
+    challengeEnabled: challengeEnabled ?? this.challengeEnabled,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -906,6 +943,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       billReminderHour: data.billReminderHour.present
           ? data.billReminderHour.value
           : this.billReminderHour,
+      challengeEnabled: data.challengeEnabled.present
+          ? data.challengeEnabled.value
+          : this.challengeEnabled,
     );
   }
 
@@ -933,7 +973,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('partialOnboardingStep: $partialOnboardingStep, ')
           ..write('partialOnboardingAt: $partialOnboardingAt, ')
           ..write('billReminderDaysBefore: $billReminderDaysBefore, ')
-          ..write('billReminderHour: $billReminderHour')
+          ..write('billReminderHour: $billReminderHour, ')
+          ..write('challengeEnabled: $challengeEnabled')
           ..write(')'))
         .toString();
   }
@@ -962,6 +1003,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     partialOnboardingAt,
     billReminderDaysBefore,
     billReminderHour,
+    challengeEnabled,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -988,7 +1030,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.partialOnboardingStep == this.partialOnboardingStep &&
           other.partialOnboardingAt == this.partialOnboardingAt &&
           other.billReminderDaysBefore == this.billReminderDaysBefore &&
-          other.billReminderHour == this.billReminderHour);
+          other.billReminderHour == this.billReminderHour &&
+          other.challengeEnabled == this.challengeEnabled);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -1014,6 +1057,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int?> partialOnboardingAt;
   final Value<int> billReminderDaysBefore;
   final Value<int> billReminderHour;
+  final Value<bool> challengeEnabled;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locale = const Value.absent(),
@@ -1037,6 +1081,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.partialOnboardingAt = const Value.absent(),
     this.billReminderDaysBefore = const Value.absent(),
     this.billReminderHour = const Value.absent(),
+    this.challengeEnabled = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -1061,6 +1106,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.partialOnboardingAt = const Value.absent(),
     this.billReminderDaysBefore = const Value.absent(),
     this.billReminderHour = const Value.absent(),
+    this.challengeEnabled = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -1085,6 +1131,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? partialOnboardingAt,
     Expression<int>? billReminderDaysBefore,
     Expression<int>? billReminderHour,
+    Expression<bool>? challengeEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1115,6 +1162,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (billReminderDaysBefore != null)
         'bill_reminder_days_before': billReminderDaysBefore,
       if (billReminderHour != null) 'bill_reminder_hour': billReminderHour,
+      if (challengeEnabled != null) 'challenge_enabled': challengeEnabled,
     });
   }
 
@@ -1141,6 +1189,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int?>? partialOnboardingAt,
     Value<int>? billReminderDaysBefore,
     Value<int>? billReminderHour,
+    Value<bool>? challengeEnabled,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -1168,6 +1217,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       billReminderDaysBefore:
           billReminderDaysBefore ?? this.billReminderDaysBefore,
       billReminderHour: billReminderHour ?? this.billReminderHour,
+      challengeEnabled: challengeEnabled ?? this.challengeEnabled,
     );
   }
 
@@ -1248,6 +1298,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (billReminderHour.present) {
       map['bill_reminder_hour'] = Variable<int>(billReminderHour.value);
     }
+    if (challengeEnabled.present) {
+      map['challenge_enabled'] = Variable<bool>(challengeEnabled.value);
+    }
     return map;
   }
 
@@ -1275,7 +1328,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('partialOnboardingStep: $partialOnboardingStep, ')
           ..write('partialOnboardingAt: $partialOnboardingAt, ')
           ..write('billReminderDaysBefore: $billReminderDaysBefore, ')
-          ..write('billReminderHour: $billReminderHour')
+          ..write('billReminderHour: $billReminderHour, ')
+          ..write('challengeEnabled: $challengeEnabled')
           ..write(')'))
         .toString();
   }
@@ -6633,6 +6687,742 @@ class StreakMetaCompanion extends UpdateCompanion<StreakMetaData> {
   }
 }
 
+class $WeeklyChallengesTable extends WeeklyChallenges
+    with TableInfo<$WeeklyChallengesTable, WeeklyChallenge> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WeeklyChallengesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _weekKeyMeta = const VerificationMeta(
+    'weekKey',
+  );
+  @override
+  late final GeneratedColumn<int> weekKey = GeneratedColumn<int>(
+    'week_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetAmountMeta = const VerificationMeta(
+    'targetAmount',
+  );
+  @override
+  late final GeneratedColumn<int> targetAmount = GeneratedColumn<int>(
+    'target_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _baselineAmountMeta = const VerificationMeta(
+    'baselineAmount',
+  );
+  @override
+  late final GeneratedColumn<int> baselineAmount = GeneratedColumn<int>(
+    'baseline_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<ChallengeStatus, String> status =
+      GeneratedColumn<String>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<ChallengeStatus>($WeeklyChallengesTable.$converterstatus);
+  static const VerificationMeta _finalSpentMeta = const VerificationMeta(
+    'finalSpent',
+  );
+  @override
+  late final GeneratedColumn<int> finalSpent = GeneratedColumn<int>(
+    'final_spent',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timezoneMeta = const VerificationMeta(
+    'timezone',
+  );
+  @override
+  late final GeneratedColumn<String> timezone = GeneratedColumn<String>(
+    'timezone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resolvedAtMeta = const VerificationMeta(
+    'resolvedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> resolvedAt = GeneratedColumn<DateTime>(
+    'resolved_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resultSeenAtMeta = const VerificationMeta(
+    'resultSeenAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> resultSeenAt = GeneratedColumn<DateTime>(
+    'result_seen_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    weekKey,
+    category,
+    targetAmount,
+    baselineAmount,
+    status,
+    finalSpent,
+    timezone,
+    createdAt,
+    updatedAt,
+    resolvedAt,
+    resultSeenAt,
+    isSynced,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'weekly_challenges';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WeeklyChallenge> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('week_key')) {
+      context.handle(
+        _weekKeyMeta,
+        weekKey.isAcceptableOrUnknown(data['week_key']!, _weekKeyMeta),
+      );
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+        _targetAmountMeta,
+        targetAmount.isAcceptableOrUnknown(
+          data['target_amount']!,
+          _targetAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('baseline_amount')) {
+      context.handle(
+        _baselineAmountMeta,
+        baselineAmount.isAcceptableOrUnknown(
+          data['baseline_amount']!,
+          _baselineAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('final_spent')) {
+      context.handle(
+        _finalSpentMeta,
+        finalSpent.isAcceptableOrUnknown(data['final_spent']!, _finalSpentMeta),
+      );
+    }
+    if (data.containsKey('timezone')) {
+      context.handle(
+        _timezoneMeta,
+        timezone.isAcceptableOrUnknown(data['timezone']!, _timezoneMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timezoneMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('resolved_at')) {
+      context.handle(
+        _resolvedAtMeta,
+        resolvedAt.isAcceptableOrUnknown(data['resolved_at']!, _resolvedAtMeta),
+      );
+    }
+    if (data.containsKey('result_seen_at')) {
+      context.handle(
+        _resultSeenAtMeta,
+        resultSeenAt.isAcceptableOrUnknown(
+          data['result_seen_at']!,
+          _resultSeenAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {weekKey};
+  @override
+  WeeklyChallenge map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WeeklyChallenge(
+      weekKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}week_key'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
+      targetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_amount'],
+      ),
+      baselineAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}baseline_amount'],
+      ),
+      status: $WeeklyChallengesTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+      finalSpent: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}final_spent'],
+      ),
+      timezone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}timezone'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      resolvedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}resolved_at'],
+      ),
+      resultSeenAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}result_seen_at'],
+      ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+    );
+  }
+
+  @override
+  $WeeklyChallengesTable createAlias(String alias) {
+    return $WeeklyChallengesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<ChallengeStatus, String> $converterstatus =
+      const ChallengeStatusConverter();
+}
+
+class WeeklyChallenge extends DataClass implements Insertable<WeeklyChallenge> {
+  final int weekKey;
+
+  /// NULL untuk baris `held`/`skipped` yang tak pernah jadi tantangan (§3).
+  final String? category;
+  final int? targetAmount;
+  final int? baselineAmount;
+  final ChallengeStatus status;
+
+  /// Dibekukan saat evaluasi (T9); null selagi `active`.
+  final int? finalSpent;
+  final String timezone;
+  final DateTime createdAt;
+
+  /// D23 — pemutus presedensi merge T17. HANYA digeser oleh tulis yang mengubah
+  /// field ber-payload (create/hold/resolve/changeCategory/skip). markResultSeen,
+  /// markOlderResultsSeen dan markSynced TIDAK menggesernya.
+  final DateTime updatedAt;
+  final DateTime? resolvedAt;
+
+  /// D11 — LOKAL SAJA, tak pernah masuk payload, tak pernah ditimpa tarikan.
+  /// Satu-satunya kolom lokal-saja di tabel ini; `toCompanion` WAJIB
+  /// mempertahankannya lewat parameter yang `required` (Task 7).
+  final DateTime? resultSeenAt;
+  final bool isSynced;
+  const WeeklyChallenge({
+    required this.weekKey,
+    this.category,
+    this.targetAmount,
+    this.baselineAmount,
+    required this.status,
+    this.finalSpent,
+    required this.timezone,
+    required this.createdAt,
+    required this.updatedAt,
+    this.resolvedAt,
+    this.resultSeenAt,
+    required this.isSynced,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['week_key'] = Variable<int>(weekKey);
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
+    }
+    if (!nullToAbsent || targetAmount != null) {
+      map['target_amount'] = Variable<int>(targetAmount);
+    }
+    if (!nullToAbsent || baselineAmount != null) {
+      map['baseline_amount'] = Variable<int>(baselineAmount);
+    }
+    {
+      map['status'] = Variable<String>(
+        $WeeklyChallengesTable.$converterstatus.toSql(status),
+      );
+    }
+    if (!nullToAbsent || finalSpent != null) {
+      map['final_spent'] = Variable<int>(finalSpent);
+    }
+    map['timezone'] = Variable<String>(timezone);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || resolvedAt != null) {
+      map['resolved_at'] = Variable<DateTime>(resolvedAt);
+    }
+    if (!nullToAbsent || resultSeenAt != null) {
+      map['result_seen_at'] = Variable<DateTime>(resultSeenAt);
+    }
+    map['is_synced'] = Variable<bool>(isSynced);
+    return map;
+  }
+
+  WeeklyChallengesCompanion toCompanion(bool nullToAbsent) {
+    return WeeklyChallengesCompanion(
+      weekKey: Value(weekKey),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
+      targetAmount: targetAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetAmount),
+      baselineAmount: baselineAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(baselineAmount),
+      status: Value(status),
+      finalSpent: finalSpent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(finalSpent),
+      timezone: Value(timezone),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      resolvedAt: resolvedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedAt),
+      resultSeenAt: resultSeenAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resultSeenAt),
+      isSynced: Value(isSynced),
+    );
+  }
+
+  factory WeeklyChallenge.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WeeklyChallenge(
+      weekKey: serializer.fromJson<int>(json['weekKey']),
+      category: serializer.fromJson<String?>(json['category']),
+      targetAmount: serializer.fromJson<int?>(json['targetAmount']),
+      baselineAmount: serializer.fromJson<int?>(json['baselineAmount']),
+      status: serializer.fromJson<ChallengeStatus>(json['status']),
+      finalSpent: serializer.fromJson<int?>(json['finalSpent']),
+      timezone: serializer.fromJson<String>(json['timezone']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      resolvedAt: serializer.fromJson<DateTime?>(json['resolvedAt']),
+      resultSeenAt: serializer.fromJson<DateTime?>(json['resultSeenAt']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'weekKey': serializer.toJson<int>(weekKey),
+      'category': serializer.toJson<String?>(category),
+      'targetAmount': serializer.toJson<int?>(targetAmount),
+      'baselineAmount': serializer.toJson<int?>(baselineAmount),
+      'status': serializer.toJson<ChallengeStatus>(status),
+      'finalSpent': serializer.toJson<int?>(finalSpent),
+      'timezone': serializer.toJson<String>(timezone),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'resolvedAt': serializer.toJson<DateTime?>(resolvedAt),
+      'resultSeenAt': serializer.toJson<DateTime?>(resultSeenAt),
+      'isSynced': serializer.toJson<bool>(isSynced),
+    };
+  }
+
+  WeeklyChallenge copyWith({
+    int? weekKey,
+    Value<String?> category = const Value.absent(),
+    Value<int?> targetAmount = const Value.absent(),
+    Value<int?> baselineAmount = const Value.absent(),
+    ChallengeStatus? status,
+    Value<int?> finalSpent = const Value.absent(),
+    String? timezone,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> resolvedAt = const Value.absent(),
+    Value<DateTime?> resultSeenAt = const Value.absent(),
+    bool? isSynced,
+  }) => WeeklyChallenge(
+    weekKey: weekKey ?? this.weekKey,
+    category: category.present ? category.value : this.category,
+    targetAmount: targetAmount.present ? targetAmount.value : this.targetAmount,
+    baselineAmount: baselineAmount.present
+        ? baselineAmount.value
+        : this.baselineAmount,
+    status: status ?? this.status,
+    finalSpent: finalSpent.present ? finalSpent.value : this.finalSpent,
+    timezone: timezone ?? this.timezone,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    resolvedAt: resolvedAt.present ? resolvedAt.value : this.resolvedAt,
+    resultSeenAt: resultSeenAt.present ? resultSeenAt.value : this.resultSeenAt,
+    isSynced: isSynced ?? this.isSynced,
+  );
+  WeeklyChallenge copyWithCompanion(WeeklyChallengesCompanion data) {
+    return WeeklyChallenge(
+      weekKey: data.weekKey.present ? data.weekKey.value : this.weekKey,
+      category: data.category.present ? data.category.value : this.category,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      baselineAmount: data.baselineAmount.present
+          ? data.baselineAmount.value
+          : this.baselineAmount,
+      status: data.status.present ? data.status.value : this.status,
+      finalSpent: data.finalSpent.present
+          ? data.finalSpent.value
+          : this.finalSpent,
+      timezone: data.timezone.present ? data.timezone.value : this.timezone,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      resolvedAt: data.resolvedAt.present
+          ? data.resolvedAt.value
+          : this.resolvedAt,
+      resultSeenAt: data.resultSeenAt.present
+          ? data.resultSeenAt.value
+          : this.resultSeenAt,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WeeklyChallenge(')
+          ..write('weekKey: $weekKey, ')
+          ..write('category: $category, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('baselineAmount: $baselineAmount, ')
+          ..write('status: $status, ')
+          ..write('finalSpent: $finalSpent, ')
+          ..write('timezone: $timezone, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('resolvedAt: $resolvedAt, ')
+          ..write('resultSeenAt: $resultSeenAt, ')
+          ..write('isSynced: $isSynced')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    weekKey,
+    category,
+    targetAmount,
+    baselineAmount,
+    status,
+    finalSpent,
+    timezone,
+    createdAt,
+    updatedAt,
+    resolvedAt,
+    resultSeenAt,
+    isSynced,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WeeklyChallenge &&
+          other.weekKey == this.weekKey &&
+          other.category == this.category &&
+          other.targetAmount == this.targetAmount &&
+          other.baselineAmount == this.baselineAmount &&
+          other.status == this.status &&
+          other.finalSpent == this.finalSpent &&
+          other.timezone == this.timezone &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.resolvedAt == this.resolvedAt &&
+          other.resultSeenAt == this.resultSeenAt &&
+          other.isSynced == this.isSynced);
+}
+
+class WeeklyChallengesCompanion extends UpdateCompanion<WeeklyChallenge> {
+  final Value<int> weekKey;
+  final Value<String?> category;
+  final Value<int?> targetAmount;
+  final Value<int?> baselineAmount;
+  final Value<ChallengeStatus> status;
+  final Value<int?> finalSpent;
+  final Value<String> timezone;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> resolvedAt;
+  final Value<DateTime?> resultSeenAt;
+  final Value<bool> isSynced;
+  const WeeklyChallengesCompanion({
+    this.weekKey = const Value.absent(),
+    this.category = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.baselineAmount = const Value.absent(),
+    this.status = const Value.absent(),
+    this.finalSpent = const Value.absent(),
+    this.timezone = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.resolvedAt = const Value.absent(),
+    this.resultSeenAt = const Value.absent(),
+    this.isSynced = const Value.absent(),
+  });
+  WeeklyChallengesCompanion.insert({
+    this.weekKey = const Value.absent(),
+    this.category = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.baselineAmount = const Value.absent(),
+    required ChallengeStatus status,
+    this.finalSpent = const Value.absent(),
+    required String timezone,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.resolvedAt = const Value.absent(),
+    this.resultSeenAt = const Value.absent(),
+    this.isSynced = const Value.absent(),
+  }) : status = Value(status),
+       timezone = Value(timezone),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<WeeklyChallenge> custom({
+    Expression<int>? weekKey,
+    Expression<String>? category,
+    Expression<int>? targetAmount,
+    Expression<int>? baselineAmount,
+    Expression<String>? status,
+    Expression<int>? finalSpent,
+    Expression<String>? timezone,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? resolvedAt,
+    Expression<DateTime>? resultSeenAt,
+    Expression<bool>? isSynced,
+  }) {
+    return RawValuesInsertable({
+      if (weekKey != null) 'week_key': weekKey,
+      if (category != null) 'category': category,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (baselineAmount != null) 'baseline_amount': baselineAmount,
+      if (status != null) 'status': status,
+      if (finalSpent != null) 'final_spent': finalSpent,
+      if (timezone != null) 'timezone': timezone,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (resolvedAt != null) 'resolved_at': resolvedAt,
+      if (resultSeenAt != null) 'result_seen_at': resultSeenAt,
+      if (isSynced != null) 'is_synced': isSynced,
+    });
+  }
+
+  WeeklyChallengesCompanion copyWith({
+    Value<int>? weekKey,
+    Value<String?>? category,
+    Value<int?>? targetAmount,
+    Value<int?>? baselineAmount,
+    Value<ChallengeStatus>? status,
+    Value<int?>? finalSpent,
+    Value<String>? timezone,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? resolvedAt,
+    Value<DateTime?>? resultSeenAt,
+    Value<bool>? isSynced,
+  }) {
+    return WeeklyChallengesCompanion(
+      weekKey: weekKey ?? this.weekKey,
+      category: category ?? this.category,
+      targetAmount: targetAmount ?? this.targetAmount,
+      baselineAmount: baselineAmount ?? this.baselineAmount,
+      status: status ?? this.status,
+      finalSpent: finalSpent ?? this.finalSpent,
+      timezone: timezone ?? this.timezone,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      resultSeenAt: resultSeenAt ?? this.resultSeenAt,
+      isSynced: isSynced ?? this.isSynced,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (weekKey.present) {
+      map['week_key'] = Variable<int>(weekKey.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<int>(targetAmount.value);
+    }
+    if (baselineAmount.present) {
+      map['baseline_amount'] = Variable<int>(baselineAmount.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(
+        $WeeklyChallengesTable.$converterstatus.toSql(status.value),
+      );
+    }
+    if (finalSpent.present) {
+      map['final_spent'] = Variable<int>(finalSpent.value);
+    }
+    if (timezone.present) {
+      map['timezone'] = Variable<String>(timezone.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (resolvedAt.present) {
+      map['resolved_at'] = Variable<DateTime>(resolvedAt.value);
+    }
+    if (resultSeenAt.present) {
+      map['result_seen_at'] = Variable<DateTime>(resultSeenAt.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WeeklyChallengesCompanion(')
+          ..write('weekKey: $weekKey, ')
+          ..write('category: $category, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('baselineAmount: $baselineAmount, ')
+          ..write('status: $status, ')
+          ..write('finalSpent: $finalSpent, ')
+          ..write('timezone: $timezone, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('resolvedAt: $resolvedAt, ')
+          ..write('resultSeenAt: $resultSeenAt, ')
+          ..write('isSynced: $isSynced')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6646,6 +7436,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BillsTable bills = $BillsTable(this);
   late final $StreakDayMarksTable streakDayMarks = $StreakDayMarksTable(this);
   late final $StreakMetaTable streakMeta = $StreakMetaTable(this);
+  late final $WeeklyChallengesTable weeklyChallenges = $WeeklyChallengesTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6661,6 +7454,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     bills,
     streakDayMarks,
     streakMeta,
+    weeklyChallenges,
   ];
 }
 
@@ -6688,6 +7482,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int?> partialOnboardingAt,
       Value<int> billReminderDaysBefore,
       Value<int> billReminderHour,
+      Value<bool> challengeEnabled,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -6713,6 +7508,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int?> partialOnboardingAt,
       Value<int> billReminderDaysBefore,
       Value<int> billReminderHour,
+      Value<bool> challengeEnabled,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -6831,6 +7627,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get billReminderHour => $composableBuilder(
     column: $table.billReminderHour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get challengeEnabled => $composableBuilder(
+    column: $table.challengeEnabled,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6953,6 +7754,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.billReminderHour,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get challengeEnabled => $composableBuilder(
+    column: $table.challengeEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -7067,6 +7873,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.billReminderHour,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get challengeEnabled => $composableBuilder(
+    column: $table.challengeEnabled,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -7122,6 +7933,7 @@ class $$AppSettingsTableTableManager
                 Value<int?> partialOnboardingAt = const Value.absent(),
                 Value<int> billReminderDaysBefore = const Value.absent(),
                 Value<int> billReminderHour = const Value.absent(),
+                Value<bool> challengeEnabled = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locale: locale,
@@ -7145,6 +7957,7 @@ class $$AppSettingsTableTableManager
                 partialOnboardingAt: partialOnboardingAt,
                 billReminderDaysBefore: billReminderDaysBefore,
                 billReminderHour: billReminderHour,
+                challengeEnabled: challengeEnabled,
               ),
           createCompanionCallback:
               ({
@@ -7170,6 +7983,7 @@ class $$AppSettingsTableTableManager
                 Value<int?> partialOnboardingAt = const Value.absent(),
                 Value<int> billReminderDaysBefore = const Value.absent(),
                 Value<int> billReminderHour = const Value.absent(),
+                Value<bool> challengeEnabled = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locale: locale,
@@ -7193,6 +8007,7 @@ class $$AppSettingsTableTableManager
                 partialOnboardingAt: partialOnboardingAt,
                 billReminderDaysBefore: billReminderDaysBefore,
                 billReminderHour: billReminderHour,
+                challengeEnabled: challengeEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -9802,6 +10617,350 @@ typedef $$StreakMetaTableProcessedTableManager =
       StreakMetaData,
       PrefetchHooks Function()
     >;
+typedef $$WeeklyChallengesTableCreateCompanionBuilder =
+    WeeklyChallengesCompanion Function({
+      Value<int> weekKey,
+      Value<String?> category,
+      Value<int?> targetAmount,
+      Value<int?> baselineAmount,
+      required ChallengeStatus status,
+      Value<int?> finalSpent,
+      required String timezone,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> resolvedAt,
+      Value<DateTime?> resultSeenAt,
+      Value<bool> isSynced,
+    });
+typedef $$WeeklyChallengesTableUpdateCompanionBuilder =
+    WeeklyChallengesCompanion Function({
+      Value<int> weekKey,
+      Value<String?> category,
+      Value<int?> targetAmount,
+      Value<int?> baselineAmount,
+      Value<ChallengeStatus> status,
+      Value<int?> finalSpent,
+      Value<String> timezone,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> resolvedAt,
+      Value<DateTime?> resultSeenAt,
+      Value<bool> isSynced,
+    });
+
+class $$WeeklyChallengesTableFilterComposer
+    extends Composer<_$AppDatabase, $WeeklyChallengesTable> {
+  $$WeeklyChallengesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get weekKey => $composableBuilder(
+    column: $table.weekKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get baselineAmount => $composableBuilder(
+    column: $table.baselineAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<ChallengeStatus, ChallengeStatus, String>
+  get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<int> get finalSpent => $composableBuilder(
+    column: $table.finalSpent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get resultSeenAt => $composableBuilder(
+    column: $table.resultSeenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WeeklyChallengesTableOrderingComposer
+    extends Composer<_$AppDatabase, $WeeklyChallengesTable> {
+  $$WeeklyChallengesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get weekKey => $composableBuilder(
+    column: $table.weekKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get baselineAmount => $composableBuilder(
+    column: $table.baselineAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get finalSpent => $composableBuilder(
+    column: $table.finalSpent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timezone => $composableBuilder(
+    column: $table.timezone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get resultSeenAt => $composableBuilder(
+    column: $table.resultSeenAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WeeklyChallengesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WeeklyChallengesTable> {
+  $$WeeklyChallengesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get weekKey =>
+      $composableBuilder(column: $table.weekKey, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<int> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get baselineAmount => $composableBuilder(
+    column: $table.baselineAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<ChallengeStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get finalSpent => $composableBuilder(
+    column: $table.finalSpent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timezone =>
+      $composableBuilder(column: $table.timezone, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get resultSeenAt => $composableBuilder(
+    column: $table.resultSeenAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+}
+
+class $$WeeklyChallengesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WeeklyChallengesTable,
+          WeeklyChallenge,
+          $$WeeklyChallengesTableFilterComposer,
+          $$WeeklyChallengesTableOrderingComposer,
+          $$WeeklyChallengesTableAnnotationComposer,
+          $$WeeklyChallengesTableCreateCompanionBuilder,
+          $$WeeklyChallengesTableUpdateCompanionBuilder,
+          (
+            WeeklyChallenge,
+            BaseReferences<
+              _$AppDatabase,
+              $WeeklyChallengesTable,
+              WeeklyChallenge
+            >,
+          ),
+          WeeklyChallenge,
+          PrefetchHooks Function()
+        > {
+  $$WeeklyChallengesTableTableManager(
+    _$AppDatabase db,
+    $WeeklyChallengesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WeeklyChallengesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WeeklyChallengesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WeeklyChallengesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> weekKey = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<int?> targetAmount = const Value.absent(),
+                Value<int?> baselineAmount = const Value.absent(),
+                Value<ChallengeStatus> status = const Value.absent(),
+                Value<int?> finalSpent = const Value.absent(),
+                Value<String> timezone = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> resolvedAt = const Value.absent(),
+                Value<DateTime?> resultSeenAt = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+              }) => WeeklyChallengesCompanion(
+                weekKey: weekKey,
+                category: category,
+                targetAmount: targetAmount,
+                baselineAmount: baselineAmount,
+                status: status,
+                finalSpent: finalSpent,
+                timezone: timezone,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                resolvedAt: resolvedAt,
+                resultSeenAt: resultSeenAt,
+                isSynced: isSynced,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> weekKey = const Value.absent(),
+                Value<String?> category = const Value.absent(),
+                Value<int?> targetAmount = const Value.absent(),
+                Value<int?> baselineAmount = const Value.absent(),
+                required ChallengeStatus status,
+                Value<int?> finalSpent = const Value.absent(),
+                required String timezone,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> resolvedAt = const Value.absent(),
+                Value<DateTime?> resultSeenAt = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+              }) => WeeklyChallengesCompanion.insert(
+                weekKey: weekKey,
+                category: category,
+                targetAmount: targetAmount,
+                baselineAmount: baselineAmount,
+                status: status,
+                finalSpent: finalSpent,
+                timezone: timezone,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                resolvedAt: resolvedAt,
+                resultSeenAt: resultSeenAt,
+                isSynced: isSynced,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WeeklyChallengesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WeeklyChallengesTable,
+      WeeklyChallenge,
+      $$WeeklyChallengesTableFilterComposer,
+      $$WeeklyChallengesTableOrderingComposer,
+      $$WeeklyChallengesTableAnnotationComposer,
+      $$WeeklyChallengesTableCreateCompanionBuilder,
+      $$WeeklyChallengesTableUpdateCompanionBuilder,
+      (
+        WeeklyChallenge,
+        BaseReferences<_$AppDatabase, $WeeklyChallengesTable, WeeklyChallenge>,
+      ),
+      WeeklyChallenge,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9826,4 +10985,6 @@ class $AppDatabaseManager {
       $$StreakDayMarksTableTableManager(_db, _db.streakDayMarks);
   $$StreakMetaTableTableManager get streakMeta =>
       $$StreakMetaTableTableManager(_db, _db.streakMeta);
+  $$WeeklyChallengesTableTableManager get weeklyChallenges =>
+      $$WeeklyChallengesTableTableManager(_db, _db.weeklyChallenges);
 }
