@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
+import 'package:penyintas_app/features/challenge/domain/challenge_calculator.dart'
+    show weekKeyOf;
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_week.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/weekly_spend.dart';
@@ -76,7 +78,7 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
     for (final r in await q.get()) {
       final tanggal = r.read(t.date)!;
       final kunci = (
-        weekKey: _weekKeyOfDate(tanggal),
+        weekKey: weekKeyOf(tanggal),
         category: r.read(t.category)!,
       );
       total[kunci] = (total[kunci] ?? 0) + r.read(t.amount)!;
@@ -144,12 +146,6 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
       });
     final row = await q.getSingleOrNull();
     return row?.read(jumlah) ?? 0;
-  }
-
-  int _weekKeyOfDate(DateTime d) {
-    final senin = DateTime(d.year, d.month, d.day)
-        .subtract(Duration(days: d.weekday - DateTime.monday));
-    return localDayKey(senin);
   }
 
   // ─── Baris tantangan ───────────────────────────────────────────────────────
