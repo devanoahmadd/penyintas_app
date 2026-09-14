@@ -2,7 +2,10 @@ import 'package:equatable/equatable.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart'; // addDays — C3
 import 'package:penyintas_app/features/challenge/domain/challenge_constants.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_candidate.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_environment.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_phase.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_week.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/weekly_spend.dart';
 
 /// Jantung fitur: seluruh aturan T2–T9 hidup di berkas ini, dan HANYA di sini.
@@ -170,3 +173,67 @@ ChallengeStatus evaluateResult({
   required int target,
   required int finalSpent,
 }) => finalSpent <= target ? ChallengeStatus.achieved : ChallengeStatus.missed;
+
+/// Presedensi keadaan — DUA TINGKAT (D20).
+///
+/// Tingkat 2 memakai `switch` atas [ChallengeStatus] TANPA `default`: begitu
+/// status baru ditambahkan tanpa cabangnya ditulis, compiler menolak berkas
+/// ini. Jangan pernah menambahkan `default` di sana — jaminan kelengkapan
+/// presedensi datang dari compiler, bukan dari test.
+///
+/// Urutan tingkat 3 MENIRU PERSIS langkah 4→5→6 alur tulis (§4). Kalau kedua
+/// urutan berbeda, UI dan alur tulis bisa mengatakan hal berbeda tentang minggu
+/// yang sama.
+ChallengePhase resolveChallengePhase({
+  required ChallengeWeek? weekThisWeek,
+  required int spentThisWeek,
+  required bool enabled,
+  required ChallengeEnvironment? env,
+  required int? candidateCount,
+  required bool historyEmpty,
+  required DateTime localNow,
+}) {
+  // Tingkat 1
+  if (!enabled) return const PhaseDisabled();
+
+  // Tingkat 2 — ada baris untuk minggu ini
+  final week = weekThisWeek;
+  if (week != null) {
+    switch (week.status) {
+      case ChallengeStatus.active:
+        final target = week.targetAmount ?? 0;
+        return spentThisWeek > target
+            ? PhaseOver(week: week, spent: spentThisWeek)
+            : PhaseActive(week: week, spent: spentThisWeek);
+      case ChallengeStatus.held:
+        return PhaseHeld(week);
+      case ChallengeStatus.skipped:
+      case ChallengeStatus.achieved:
+      case ChallengeStatus.missed:
+      case ChallengeStatus.unknown:
+        return PhaseSettledThisWeek(week);
+    }
+  }
+
+  // ── Tingkat 3 — belum ada baris ────────────────────────────────────────
+  // URUTAN DI BAWAH ADALAH CERMIN langkah 4→5→6 alur tulis, baris demi baris.
+  // Selama keduanya kembar, `candidateCount`/`env` hanya dibutuhkan tepat pada
+  // saat ensure menghitungnya — itulah yang membuat S-B mungkin. Kalau suatu
+  // saat keduanya bercabang, gejalanya langsung terlihat: skeleton yang tak
+  // kunjung selesai.
+  if (!isCreationWindow(localNow)) {
+    return PhaseOutOfWindow(isFirstWeek: historyEmpty);
+  }
+
+  // null = ensure belum sempat menghitung. Sementara, bukan jawaban.
+  if (candidateCount == null) return const PhaseUndetermined();
+
+  // 0 = sudah dihitung, memang tak ada yang layak. TERMINAL — dan ensure
+  // keluar di langkah 5 tanpa pernah membaca lingkungan, jadi `env` yang masih
+  // null di sini WAJAR dan tidak boleh menggeser jawabannya jadi skeleton.
+  if (candidateCount == 0) return const PhaseNotEnoughData();
+
+  if (env == null) return const PhaseUndetermined();
+  if (!env.budgetConfigured) return const PhaseBudgetNotSet();
+  return const PhasePreparing();
+}
