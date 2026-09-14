@@ -19,7 +19,7 @@ sealed class ChallengePhase extends Equatable {
 
 /// Sakelar mati. Selalu menang atas apa pun (jaring 1b menjamin kombinasi
 /// "sakelar mati + baris active" tak bertahan lebih dari satu kali ensure).
-class PhaseDisabled extends ChallengePhase {
+final class PhaseDisabled extends ChallengePhase {
   const PhaseDisabled();
 }
 
@@ -28,7 +28,7 @@ class PhaseDisabled extends ChallengePhase {
 /// menghasilkan dua `PhaseActive` yang dianggap sama, dan kartu tidak pernah
 /// dirender ulang dengan kategori barunya. `ChallengeWeek` sudah sempit, jadi
 /// membandingkannya utuh tidak menambah rebuild yang sia-sia.
-class PhaseActive extends ChallengePhase {
+final class PhaseActive extends ChallengePhase {
   const PhaseActive({required this.week, required this.spent});
 
   final ChallengeWeek week;
@@ -38,7 +38,7 @@ class PhaseActive extends ChallengePhase {
   List<Object?> get props => [week, spent];
 }
 
-class PhaseOver extends ChallengePhase {
+final class PhaseOver extends ChallengePhase {
   const PhaseOver({required this.week, required this.spent});
 
   final ChallengeWeek week;
@@ -48,7 +48,7 @@ class PhaseOver extends ChallengePhase {
   List<Object?> get props => [week, spent];
 }
 
-class PhaseHeld extends ChallengePhase {
+final class PhaseHeld extends ChallengePhase {
   const PhaseHeld(this.week);
 
   final ChallengeWeek week;
@@ -60,7 +60,7 @@ class PhaseHeld extends ChallengePhase {
 /// Minggu ini sudah selesai urusannya: dilewati, sudah dievaluasi (bisa terjadi
 /// lewat merge lintas-device), atau berstatus tak dikenal dari versi app lebih
 /// baru. Ketiganya berkata sama ke user: "Mulai Senin depan."
-class PhaseSettledThisWeek extends ChallengePhase {
+final class PhaseSettledThisWeek extends ChallengePhase {
   const PhaseSettledThisWeek(this.week);
 
   final ChallengeWeek week;
@@ -69,7 +69,7 @@ class PhaseSettledThisWeek extends ChallengePhase {
   List<Object?> get props => [week];
 }
 
-class PhaseOutOfWindow extends ChallengePhase {
+final class PhaseOutOfWindow extends ChallengePhase {
   const PhaseOutOfWindow({required this.isFirstWeek});
 
   final bool isFirstWeek;
@@ -78,7 +78,7 @@ class PhaseOutOfWindow extends ChallengePhase {
   List<Object?> get props => [isFirstWeek];
 }
 
-class PhaseNotEnoughData extends ChallengePhase {
+final class PhaseNotEnoughData extends ChallengePhase {
   const PhaseNotEnoughData();
 }
 
@@ -90,15 +90,15 @@ class PhaseNotEnoughData extends ChallengePhase {
 /// Ini keadaan SEMENTARA. Jangan pernah menaruh keadaan terminal di sini —
 /// skeleton yang tak pernah selesai adalah salah satu kerusakan yang paling
 /// lama tak dilaporkan user, karena tampak seperti koneksi lambat.
-class PhaseUndetermined extends ChallengePhase {
+final class PhaseUndetermined extends ChallengePhase {
   const PhaseUndetermined();
 }
 
-class PhaseBudgetNotSet extends ChallengePhase {
+final class PhaseBudgetNotSet extends ChallengePhase {
   const PhaseBudgetNotSet();
 }
 
 /// Semua syarat lolos, ensure belum sempat menulis. Berumur milidetik.
-class PhasePreparing extends ChallengePhase {
+final class PhasePreparing extends ChallengePhase {
   const PhasePreparing();
 }

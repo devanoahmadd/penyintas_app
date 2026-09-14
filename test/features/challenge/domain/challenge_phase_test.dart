@@ -183,4 +183,63 @@ void main() {
       expect(a, isNot(equals(b)));
     });
   });
+
+  // ── Ronde 2 · kisi irisan tingkat 3 ─────────────────────────────────────
+  // Tiap test di bawah menyetel DUA syarat sekaligus, jadi ia hanya bisa lolos
+  // kalau URUTAN pemeriksaannya benar — bukan sekadar kalau cabangnya bisa
+  // dicapai. Tanpa ketiganya, tiga pasangan presedensi bisa ditukar posisinya
+  // tanpa satu pun test berubah warna.
+  group('Irisan presedensi tingkat 3 — mengunci urutan, bukan cabang', () {
+    test('IRISAN: luar jendela DAN kandidat belum terhitung → outOfWindow', () {
+      // Irisan yang PALING SERING terjadi di produksi: di luar jendela, alur
+      // tulis tidak pernah menghitung kandidat, jadi `candidateCount` memang
+      // null tiap Rabu–Minggu. Kalau cek jendela turun ke bawah cek kandidat,
+      // setiap user melihat skeleton yang tak kunjung selesai selama lima hari
+      // seminggu — alih-alih "Mulai Senin depan".
+      //
+      // Bandingkan U27 (luar jendela + kandidat 0): kombinasi itu justru TIDAK
+      // bisa diproduksi alur tulis, karena kandidat tak pernah dihitung di luar
+      // jendela. U27 menjaga batas yang sintetis; test ini menjaga yang nyata.
+      expect(
+        _phase(week: null, candidates: null, now: _rabu),
+        isA<PhaseOutOfWindow>(),
+      );
+    });
+
+    test('IRISAN: luar jendela DAN budget belum diatur → outOfWindow', () {
+      // Jendela menang atas anggaran. Kalau `budgetConfigured` naik ke atas cek
+      // jendela, user tanpa anggaran diberi tahu "atur anggaran dulu" pada hari
+      // yang app-nya sendiri tak akan berbuat apa-apa — ajakan bertindak yang
+      // tak mengubah apa pun sampai Senin.
+      expect(
+        _phase(
+          week: null,
+          now: _rabu,
+          env: const ChallengeEnvironment(
+            budgetConfigured: false,
+            survivalActive: false,
+          ),
+        ),
+        isA<PhaseOutOfWindow>(),
+      );
+    });
+
+    test('IRISAN: kandidat 0 DAN budget belum diatur → notEnoughData', () {
+      // Kandidat menang atas anggaran. Alur tulis keluar di langkah kandidat
+      // SEBELUM menyentuh lingkungan, jadi jawaban yang jujur adalah "belum ada
+      // kategori yang layak" — bukan menyuruh user mengatur anggaran yang, bahkan
+      // setelah diatur, tetap tak memunculkan tantangan minggu ini.
+      expect(
+        _phase(
+          week: null,
+          candidates: 0,
+          env: const ChallengeEnvironment(
+            budgetConfigured: false,
+            survivalActive: false,
+          ),
+        ),
+        isA<PhaseNotEnoughData>(),
+      );
+    });
+  });
 }
