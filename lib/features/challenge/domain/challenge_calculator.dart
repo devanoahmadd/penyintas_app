@@ -145,3 +145,28 @@ List<ChallengeCandidate> selectCandidates({
 
   return [...segar, ...jenuh].take(kMaxCandidates).toList();
 }
+
+/// dayKey Senin minggu tempat [localNow] berada (D2).
+///
+/// [localNow] WAJIB wall-clock lokal dari `AppClock` — bukan UTC. Seluruh app
+/// merender tanggal transaksi dengan wall-clock device; minggu yang memakai
+/// sumber lain akan berselisih satu hari dengan daftar transaksi.
+int weekKeyOf(DateTime localNow) {
+  final senin = DateTime(localNow.year, localNow.month, localNow.day)
+      .subtract(Duration(days: localNow.weekday - DateTime.monday));
+  return localDayKey(senin);
+}
+
+/// Apakah [localNow] berada di jendela pembuatan Senin–Selasa (T6).
+bool isCreationWindow(DateTime localNow) =>
+    localNow.weekday == DateTime.monday || localNow.weekday == DateTime.tuesday;
+
+/// Sisa hari kalender minggu ini, TERMASUK hari ini (§7.4).
+/// Senin = 7, Minggu = 1. Tidak pernah nol.
+int daysLeftInWeek(DateTime localNow) => 8 - localNow.weekday;
+
+/// Hasil satu minggu (T9). Batas inklusif: tepat di target berarti berhasil.
+ChallengeStatus evaluateResult({
+  required int target,
+  required int finalSpent,
+}) => finalSpent <= target ? ChallengeStatus.achieved : ChallengeStatus.missed;
