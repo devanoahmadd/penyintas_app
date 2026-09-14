@@ -219,9 +219,21 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     return true;
   }
 
+  /// Temuan review Task 7 — SATU TEMPAT, sengaja di ekor ini dan bukan di
+  /// badan `resolveWeek`/`changeCategory`: keduanya bakal ditulis ulang
+  /// (Task 10/12), tapi ekor ini bertahan dan mewarisi perbaikannya gratis.
+  ///
+  /// Baris yang diubah lewat jalur ini sebelumnya sudah `isSynced=true`.
+  /// Tanpa menjatuhkannya di sini, `pendingRows()` (isSynced=false) tak akan
+  /// pernah menjemput baris ini kalau antrian sync-nya sendiri hilang —
+  /// jaring pengaman `pushPendingChallenges()` yang Task 13 kaitkan ke
+  /// `bootstrap_coordinator` jadi tak pernah menyala untuknya.
   Future<bool> _ubahDanKirim(
       int weekKey, WeeklyChallengesCompanion patch) async {
-    final tersentuh = await _local.updateWeek(weekKey, patch);
+    final tersentuh = await _local.updateWeek(
+      weekKey,
+      patch.copyWith(isSynced: const Value(false)),
+    );
     if (tersentuh == 0) return false; // baris tak ada — pemanggil melapor Left
     await _kirim(weekKey);
     return true;

@@ -172,6 +172,47 @@ void main() {
     );
   });
 
+  // Temuan review Task 7: baris yang sudah isSynced=true lalu DIUBAH lewat
+  // _ubahDanKirim (resolveWeek/changeCategory) harus menjatuhkan isSynced,
+  // supaya pushPendingChallenges() — jaring pengaman kalau antrian sync-nya
+  // sendiri hilang — benar-benar menjemputnya.
+  test('resolveWeek offline menjatuhkan isSynced — baris terjemput '
+      'pushPendingChallenges (jaring pengaman)', () async {
+    // Baris awal SUDAH tersinkron (mis. dibuat saat online sebelumnya).
+    await db.into(db.weeklyChallenges).insertOnConflictUpdate(
+          WeeklyChallengesCompanion.insert(
+            weekKey: const Value(20260907),
+            category: const Value('food'),
+            targetAmount: const Value(115000),
+            baselineAmount: const Value(140000),
+            status: ChallengeStatus.active,
+            timezone: 'WIB',
+            createdAt: DateTime.utc(2026, 9, 7),
+            updatedAt: DateTime.utc(2026, 9, 7),
+            isSynced: const Value(true),
+          ),
+        );
+
+    when(() => network.isConnected).thenAnswer((_) async => false);
+    final hasil = await repo.resolveWeek(
+        weekKey: 20260907, status: ChallengeStatus.achieved, finalSpent: 90000);
+    expect(hasil.isRight(), isTrue);
+
+    // isSynced dijatuhkan meski antrian sync ADA — jaring pengaman push
+    // harus tetap bisa menjemputnya seandainya antrian itu sendiri hilang.
+    expect((await local.findWeek(20260907))!.isSynced, isFalse);
+    expect((await local.pendingRows()).map((r) => r.weekKey), contains(20260907));
+
+    // Buktikan jaring pengaman benar-benar bekerja: jaringan pulih, push
+    // dipanggil LANGSUNG (bukan lewat antrian) — baris harus terjemput dan
+    // ditandai synced kembali.
+    when(() => network.isConnected).thenAnswer((_) async => true);
+    when(() => remote.upsertChallenge(any(), any())).thenAnswer((_) async {});
+    await repo.pushPendingChallenges();
+
+    expect((await local.findWeek(20260907))!.isSynced, isTrue);
+  });
+
   // Kewajiban cakupan dari review Task 6: `pendingRows` belum punya test yang
   // benar-benar memanggilnya lewat jalur publik — hanya menyiapkan datanya
   // saja tidak cukup, ia harus ditarik lewat `pushPendingChallenges`.
