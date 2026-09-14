@@ -171,7 +171,6 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
           finalSpent: Value(finalSpent),
           resolvedAt: Value(now.toUtc()),
           updatedAt: Value(now.toUtc()),
-          isSynced: const Value(false),
         ),
       );
       if (!berhasil) {

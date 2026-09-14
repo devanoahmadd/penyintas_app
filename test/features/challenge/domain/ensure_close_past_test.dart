@@ -21,6 +21,8 @@ import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable
 
 class _MockAuth extends Mock implements FirebaseAuth {}
 
+class _MockUser extends Mock implements User {}
+
 class _MockNetwork extends Mock implements NetworkInfo {}
 
 class _MockRemote extends Mock implements ChallengeRemoteDatasource {}
@@ -68,23 +70,32 @@ void main() {
   late _MockGetLimitable getLimitable;
   late FixedClock clock;
   late EnsureAndResolveChallenge usecase;
+  late _MockAuth auth;
+  late _MockNetwork network;
 
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     local = ChallengeLocalDatasourceImpl(db);
     sakelar = ChallengeSettingsDatasourceImpl(db);
 
-    final auth = _MockAuth();
-    // Tanpa uid: `_kirim` di repo berhenti sebelum menyentuh jaringan/antrian,
-    // jadi test ini bisa fokus murni ke efek lokal (kecuali U76, yang justru
-    // memanfaatkan itu untuk membuktikan NOL item antrian baru).
+    auth = _MockAuth();
+    network = _MockNetwork();
+    // Default TANPA uid: `_kirim` di repo berhenti sebelum menyentuh
+    // jaringan/antrian, jadi mayoritas test di berkas ini bisa fokus murni ke
+    // efek lokal. `auth`/`network` sengaja disimpan sebagai field bersama
+    // (bukan variabel lokal `setUp`) supaya test yang BENAR-BENAR perlu
+    // menguji efek antrian (lih. grup U76 di bawah) bisa meng-override stub
+    // ini sendiri dengan uid nyata + network offline sebelum memanggil
+    // usecase — tanpa itu, `_kirim` selalu keluar di `uid == null` terlepas
+    // dari apakah `resolveWeek` dipanggil sama sekali, dan assert antrian
+    // kosong tidak membuktikan apa-apa (temuan review Task 10).
     when(() => auth.currentUser).thenReturn(null);
 
     clock = FixedClock(DateTime(2026, 9, 7, 9));
     repo = ChallengeRepositoryImpl(
       local: local,
       remote: _MockRemote(),
-      network: _MockNetwork(),
+      network: network,
       auth: auth,
       clock: clock,
     );
@@ -227,7 +238,13 @@ void main() {
   });
 
   group('U76 (DIBALIK) · sakelar mati tidak menyentuh minggu berjalan', () {
-    test('baris active minggu INI tetap active meski sakelar mati', () async {
+    // Dipecah jadi DUA test (temuan review Task 10). `expect()` Dart berhenti
+    // di kegagalan pertama dalam satu `test()` — satu test dengan tiga
+    // asersi berurutan hanya membuktikan asersi PERTAMA benar-benar
+    // mengunci sabotase; yang sesudahnya bisa saja tidak pernah tereksekusi
+    // pada run yang merah. Memecahnya memastikan tiap asersi diverifikasi
+    // sendiri-sendiri.
+    test('baris active minggu INI tetap active meski sakelar mati (status & resolvedAt)', () async {
       // Keputusan 1. Baris `active` minggu ini dengan sakelar mati hanya bisa
       // datang dari device lain — dan menutupnya di sini membunuh minggu yang
       // sedang berjalan di sana, permanen, karena mergeRank membuat `skipped`
@@ -241,8 +258,33 @@ void main() {
       final row = await local.findWeek(20260907);
       expect(row!.status, ChallengeStatus.active);
       expect(row.resolvedAt, isNull);
-      expect(await db.select(db.syncQueue).get(), isEmpty);
     });
+
+    test(
+      'baris active minggu INI TIDAK mengantre sinkron meski sakelar mati',
+      () async {
+        // Beri uid NYATA + network OFFLINE — bukan uid null seperti default
+        // `setUp`. Dengan uid null, `_kirim` keluar di baris pertama
+        // (`if (uid == null) return`) TERLEPAS dari apakah `resolveWeek`
+        // sungguh dipanggil, jadi `isEmpty` akan selalu benar secara
+        // struktural dan tidak membuktikan apa-apa tentang perilaku kode.
+        // Dengan uid nyata + offline, KALAU blok 1b Rev 1 hidup lagi dan
+        // memanggil `resolveWeek`, item akan BENAR-BENAR masuk antrian —
+        // barulah `isEmpty` di sini punya daya pembeda.
+        final user = _MockUser();
+        when(() => user.uid).thenReturn('uid-nyata-u76');
+        when(() => auth.currentUser).thenReturn(user);
+        when(() => network.isConnected).thenAnswer((_) async => false);
+
+        await tulisBaris(weekKey: 20260907, status: ChallengeStatus.active);
+        await sakelar.setEnabled(false);
+        clock.at = DateTime(2026, 9, 9, 9); // Rabu, minggu yang sama
+
+        await usecase(const NoParams());
+
+        expect(await db.select(db.syncQueue).get(), isEmpty);
+      },
+    );
   });
 
   group('langkah 1c · rapikan hasil lama (D22)', () {
