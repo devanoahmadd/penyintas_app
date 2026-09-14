@@ -150,29 +150,38 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
   Future<Either<Failure, void>> holdWeek(int weekKey) =>
       throw UnimplementedError('diisi di Task 11');
 
-  /// Implementasi MINIMAL — hanya plumbing ubah+kirim yang diuji Task 7
-  /// (S-A, M8). `markOlderResultsSeen` dan penghitungan `finalSpent` dari
-  /// proyeksi belanja nyata menyusul di Task 10.
+  /// Field ber-payload berubah → updatedAt DIGESER (D23).
+  ///
+  /// M8 — `_ubahDanKirim`, bukan upsert: companion ini PARSIAL (tanpa
+  /// `timezone`/`createdAt`), jadi kalau barisnya tak ada, upsert akan mencoba
+  /// INSERT dan melanggar NOT NULL. Update yang mengenai nol baris dilaporkan
+  /// sebagai `Left` — kegagalan yang jujur, bukan insert diam.
   @override
   Future<Either<Failure, void>> resolveWeek({
     required int weekKey,
     required ChallengeStatus status,
     required int finalSpent,
   }) async {
-    final now = _clock.now();
-    final berhasil = await _ubahDanKirim(
-      weekKey,
-      WeeklyChallengesCompanion(
-        status: Value(status),
-        finalSpent: Value(finalSpent),
-        resolvedAt: Value(now),
-        updatedAt: Value(now),
-      ),
-    );
-    if (!berhasil) {
-      return Left(CacheFailure('Minggu ini belum tercatat, tidak bisa dievaluasi.'));
+    try {
+      final now = _clock.now();
+      final berhasil = await _ubahDanKirim(
+        weekKey,
+        WeeklyChallengesCompanion(
+          status: Value(status),
+          finalSpent: Value(finalSpent),
+          resolvedAt: Value(now.toUtc()),
+          updatedAt: Value(now.toUtc()),
+          isSynced: const Value(false),
+        ),
+      );
+      if (!berhasil) {
+        return Left(CacheFailure('Minggu tantangan itu tidak ditemukan.'));
+      }
+      return const Right(null);
+    } catch (e, s) {
+      _log(e, s, 'resolveWeek');
+      return Left(CacheFailure('Gagal menutup minggu tantangan.'));
     }
-    return const Right(null);
   }
 
   @override
@@ -184,13 +193,35 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
   }) =>
       throw UnimplementedError('diisi di Task 12');
 
+  /// Kolom lokal saja: TIDAK menggeser updatedAt, TIDAK menyetel isSynced=false
+  /// — menandai baris "belum tersinkron" akan mendorong ulang dokumen yang
+  /// isinya identik, tiap kali user menutup kartu.
   @override
-  Future<Either<Failure, void>> markResultSeen(int weekKey) =>
-      throw UnimplementedError('diisi di Task 10');
+  Future<Either<Failure, void>> markResultSeen(int weekKey) async {
+    try {
+      await _local.markResultSeen(weekKey: weekKey, at: _clock.now().toUtc());
+      return const Right(null);
+    } catch (e, s) {
+      _log(e, s, 'markResultSeen');
+      return Left(CacheFailure('Gagal menandai hasil.'));
+    }
+  }
 
   @override
-  Future<Either<Failure, void>> markOlderResultsSeen({required int keepWeekKey}) =>
-      throw UnimplementedError('diisi di Task 10');
+  Future<Either<Failure, void>> markOlderResultsSeen({
+    required int keepWeekKey,
+  }) async {
+    try {
+      await _local.markOlderResultsSeen(
+        keepWeekKey: keepWeekKey,
+        at: _clock.now().toUtc(),
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _log(e, s, 'markOlderResultsSeen');
+      return Left(CacheFailure('Gagal merapikan hasil lama.'));
+    }
+  }
 
   @override
   Future<Either<Failure, List<ChallengeCandidate>>> getCandidates(int weekKey) =>
