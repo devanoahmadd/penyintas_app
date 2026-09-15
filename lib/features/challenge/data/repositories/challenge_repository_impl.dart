@@ -272,7 +272,6 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
           targetAmount: Value(targetAmount),
           baselineAmount: Value(baselineAmount),
           updatedAt: Value(now.toUtc()),
-          isSynced: const Value(false),
         ),
       );
       if (!berhasil) {
