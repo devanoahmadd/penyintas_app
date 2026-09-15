@@ -8,6 +8,7 @@ import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
@@ -256,6 +257,10 @@ Future<String?> _redirect(BuildContext context, GoRouterState state) async {
       sl<BootstrapCoordinator>()
           .reset(); // Temuan 1: bootstrap fresh utk user berikutnya
       sl<StreakBloc>().resetForNewSession(); // D-16: buang state akun lama
+      // CRITICAL-1: `ChallengeBloc` juga `registerLazySingleton` seumur
+      // proses — tanpa ini, akun berikutnya yang login di minggu yang SAMA
+      // mewarisi `lastEnsuredWeekKey`/`snapshot`/`lastOutcome` akun lama.
+      sl<ChallengeBloc>().resetForNewSession();
       return publicRoutes.contains(location) ? null : '/login';
     }
 

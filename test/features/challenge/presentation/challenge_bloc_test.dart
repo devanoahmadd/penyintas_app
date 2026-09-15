@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dartz/dartz.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
@@ -213,6 +214,25 @@ const _kategoriDefault = [
 /// Jeda cukup untuk satu putaran Drift notify → recompute → emit bloc.
 Future<void> _tunggu([int ms = 250]) =>
     Future<void>.delayed(Duration(milliseconds: ms));
+
+/// Polling berdeadline longgar — pengganti `_tunggu` untuk asersi NILAI
+/// ABSOLUT sesudah tidur tetap. Tidur tetap MERAH di CI lambat (pipeline
+/// belum tuntas saat waktunya habis) dan bisa HAMPA di CI lambat yang lain
+/// (jendela race tertutup sebelum tidurnya selesai — lihat U69b). Daya
+/// pembeda asersinya utuh; yang hilang cuma ketergantungan pada kecepatan
+/// mesin yang menjalankannya.
+Future<void> tungguSampai(
+  bool Function() kondisi, {
+  Duration batas = const Duration(seconds: 5),
+}) async {
+  final akhir = DateTime.now().add(batas);
+  while (!kondisi()) {
+    if (DateTime.now().isAfter(akhir)) {
+      fail('tungguSampai: kondisi tak terpenuhi dalam $batas');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -480,13 +500,19 @@ void main() {
     await beriBasis('food', 200000);
     await tulisBaris(weekKey: _mingguLalu, status: ChallengeStatus.active);
 
-    buatBloc().add(const ChallengeStarted());
-    await _tunggu(400);
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => ensureCalls >= 1); // ensure pertama SUDAH selesai
 
     // Tiga perubahan tabel transaksi — tiap satunya memicu emit stream.
+    // Ditunggu lewat `tercatat` (bukan waktu tetap) supaya tiap iterasi
+    // benar-benar menunggu `_onInputsUpdated` SELESAI diproses sebelum
+    // menulis transaksi berikutnya.
     for (var i = 0; i < 3; i++) {
+      final sebelum = b.tercatat.whereType<ChallengeInputsUpdated>().length;
       await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
-      await _tunggu(120);
+      await tungguSampai(
+        () => b.tercatat.whereType<ChallengeInputsUpdated>().length > sebelum,
+      );
     }
 
     expect(ensureCalls, 1);
@@ -511,12 +537,15 @@ void main() {
       'selagi ensure berjalan tidak memanggil ensure lagi', () async {
     // Ditambahkan sesudah verifikasi sabotase: memindahkan
     // `emit(lastEnsuredWeekKey)` ke BAWAH `await _ensure(...)` semula tidak
-    // memerahkan satu test pun. Jendelanya cuma terbuka selama ensure masih
-    // berjalan — dan ensure nyata memang lambat (ia membaca dashboard dengan
-    // anggaran tiga detik), jadi jendela itu bukan hipotesis.
+    // memerahkan satu test pun — versi lama menahan jendelanya dengan
+    // `Future.delayed` di kedua sisi, dan tak ada jaminan tidur test SELESAI
+    // pas di tengah tidur ensure. `Completer` membuat urutannya
+    // DETERMINISTIK: ensure pertama ditahan sampai test sendiri yang
+    // melepaskannya, sesudah memastikan emit KEDUA sudah diproses penuh.
+    final gerbang = Completer<void>();
     when(() => ensureMock(any())).thenAnswer((_) async {
       ensureCalls++;
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      await gerbang.future;
       return Right(
         EnsureOutcome(
           weekKey: weekKeyOf(clock.now()),
@@ -526,12 +555,21 @@ void main() {
       );
     });
 
-    buatBloc().add(const ChallengeStarted());
-    await _tunggu(150); // ensure sudah berjalan, belum selesai
-    await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
-    await _tunggu(600); // lewat titik selesai ensure
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => ensureCalls == 1); // ensure pertama SUDAH mulai
 
-    expect(ensureCalls, 1);
+    final sebelum = b.tercatat.whereType<ChallengeInputsUpdated>().length;
+    await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
+    await tungguSampai(
+      () => b.tercatat.whereType<ChallengeInputsUpdated>().length > sebelum,
+    ); // emit KEDUA sudah diproses _onInputsUpdated — penjaganya sudah dicek
+
+    expect(ensureCalls, 1); // masih 1: penjaga menahan panggilan kedua
+
+    // Lepas ensure pertama — jangan tinggalkan Future menggantung ke test
+    // berikutnya.
+    gerbang.complete();
+    await tungguSampai(() => b.state.lastOutcome != null);
   });
 
   // ── U70 · fitur ini tidak pernah menyentuh penanda konsistensi ────────────
@@ -570,39 +608,47 @@ void main() {
 
   test('U71 · geser FixedClock ke hari lain → daysLeft snapshot ikut '
       'bergeser', () async {
-    buatBloc().add(const ChallengeStarted());
-    await _tunggu();
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => b.state.snapshot != null);
 
     clock.at = DateTime(2026, 9, 9, 9); // Rabu di minggu yang sama
     await tambahTx(tanggal: DateTime(2026, 9, 9, 10), nominal: 10000);
-    await _tunggu();
+    await tungguSampai(() => b.state.snapshot?.daysLeft == 5);
 
-    expect(bloc!.state.snapshot!.daysLeft, 5); // 8 - weekday(Rabu=3)
+    expect(b.state.snapshot!.daysLeft, 5); // 8 - weekday(Rabu=3)
   });
 
-  // ── U97 · satu phase untuk tile dan halaman ───────────────────────────────
+  // ── U97 pengganti · ChallengeBloc dibagi tile & halaman (DI) ──────────────
+  //
+  // U97 lama memasang DUA listener pada `b.stream` yang SAMA lalu mengasersi
+  // `identical(tile.last, halaman.last)` — benar untuk implementasi APA PUN,
+  // karena kedua daftar menerima objek state dari satu broadcast yang sama.
+  // Yang sebenarnya dituntut U97 — bahwa tile dashboard dan halaman
+  // `/challenge` berbagi INSTANS `ChallengeBloc` — tak terkunci sama sekali
+  // di situ, dan itu hidup di PENDAFTARAN DI (`registerLazySingleton`), bukan
+  // di perilaku bloc.
+  //
+  // Membangun `sl` sungguhan lewat `injection_container.dart` butuh Firebase
+  // penuh (tak ada presedennya di suite ini — test lain yang memakai `sl`,
+  // mis. `redirect_bootstrap_gate_test.dart`, selalu MENIMPA registrasi
+  // produksi dengan mock, bukan menjalankan `init()` sungguhan), jadi test
+  // ini mengunci registrasinya langsung di SUMBER `injection_container.dart`.
+  test('DI · injection_container.dart mendaftarkan ChallengeBloc sebagai '
+      'registerLazySingleton, BUKAN registerFactory', () {
+    final sumber = File(
+      'lib/core/di/injection_container.dart',
+    ).readAsStringSync();
+    final idx = sumber.indexOf('() => ChallengeBloc(');
+    expect(
+      idx,
+      greaterThan(-1),
+      reason: 'registrasi ChallengeBloc tidak ditemukan di sumber',
+    );
 
-  test(
-    'U97 · tile dan halaman membaca phase yang IDENTIK dari satu bloc',
-    () async {
-      final b = buatBloc();
-      final tile = <ChallengePhase>[];
-      final halaman = <ChallengePhase>[];
-      final s1 = b.stream.listen((s) {
-        if (s.snapshot != null) tile.add(s.snapshot!.phase);
-      });
-      final s2 = b.stream.listen((s) {
-        if (s.snapshot != null) halaman.add(s.snapshot!.phase);
-      });
-
-      b.add(const ChallengeStarted());
-      await _tunggu();
-      await s1.cancel();
-      await s2.cancel();
-
-      expect(identical(tile.last, halaman.last), isTrue);
-    },
-  );
+    final sebelum = sumber.substring((idx - 80).clamp(0, sumber.length), idx);
+    expect(sebelum, contains('registerLazySingleton'));
+    expect(sebelum, isNot(contains('registerFactory')));
+  });
 
   // ── M3 · resume WAJIB punya handler ───────────────────────────────────────
 
@@ -644,7 +690,7 @@ void main() {
       // Penjaga anti-hampa: kalau `n1` di M3b ternyata nol, "nol tambahan"
       // tidak membuktikan apa pun.
       buatBloc().add(const ChallengeStarted());
-      await _tunggu();
+      await tungguSampai(() => ensureCalls == 1);
       expect(ensureCalls, 1);
     },
   );
@@ -658,7 +704,7 @@ void main() {
       b.add(const ChallengeStarted());
       b.add(const ChallengeStarted());
       b.add(const ChallengeStarted());
-      await _tunggu(400);
+      await tungguSampai(() => repo.langgananAktif == 1);
 
       expect(repo.langgananAktif, 1);
     },
@@ -719,22 +765,81 @@ void main() {
     });
 
     final b = buatBloc()..add(const ChallengeStarted());
-    await _tunggu(400);
+    await tungguSampai(() => b.state.snapshot?.phase is PhasePreparing);
 
     expect(b.state.snapshot!.phase, isA<PhasePreparing>());
   });
 
-  test('S-B · sakelar dinyalakan dari Pengaturan, tanpa perubahan tabel lain → '
-      'phase berpindah dari disabled', () async {
+  test('S-B · sakelar dinyalakan dari Pengaturan → penjaga dilepas, ensure '
+      'dipanggil lagi, DAN phase keluar dari PhaseUndetermined', () async {
+    // IMPORTANT-2 — versi lama asersinya `isNot(isA<PhaseDisabled>())`: itu
+    // tak membedakan "berpindah ke phase konkret" dari "berpindah lalu
+    // menggantung SELAMANYA di PhaseUndetermined". Panggilan PERTAMA (selagi
+    // sakelar masih mati) sengaja mengembalikan `candidateCount: null`
+    // (skeleton) — meniru ensure yang belum sempat menghitung apa pun
+    // berguna saat itu. Kalau penjaga tak pernah dilepas, TAK ADA panggilan
+    // kedua yang bisa memperbaikinya, dan phase menggantung di
+    // PhaseUndetermined selamanya (BUKAN kembali ke PhaseDisabled — enabled
+    // sudah true di stream, cuma outcome-nya yang basi).
+    when(() => ensureMock(any())).thenAnswer((_) async {
+      ensureCalls++;
+      if (ensureCalls == 1) {
+        return const Right(
+          EnsureOutcome(weekKey: _mingguIni, candidateCount: null, env: null),
+        );
+      }
+      return const Right(
+        EnsureOutcome(weekKey: _mingguIni, candidateCount: 3, env: _envSehat),
+      );
+    });
+
     await sakelar.setEnabled(false);
     final b = buatBloc()..add(const ChallengeStarted());
-    await _tunggu();
+    await tungguSampai(() => b.state.snapshot != null);
     expect(b.state.snapshot!.phase, isA<PhaseDisabled>()); // prasyarat
+    final n1 = ensureCalls;
+    expect(n1, 1); // anti-hampa: ensure memang sudah jalan sekali
 
-    await sakelar.setEnabled(true);
-    await _tunggu();
+    // Lepas penjaga LEBIH DULU, baru tulis ke datasource sungguhan — supaya
+    // urutan tak bergantung pada seberapa cepat stream `watchEnabled()`
+    // menoleh (koalesensi 16 ms). Ini juga persis urutan yang dijamin
+    // `_onEnabledToggled`: penjaga dilepas SEBELUM hasil apa pun bisa datang
+    // dari stream.
+    b.add(const ChallengeEnabledToggled(true)); // lepas penjaga (IMPORTANT-2)
+    await tungguSampai(() => b.state.lastEnsuredWeekKey == null);
+    await sakelar.setEnabled(true); // baru sekarang stream `enabled` jadi true
 
+    await tungguSampai(
+      () =>
+          b.state.snapshot?.phase is! PhaseDisabled &&
+          b.state.snapshot?.phase is! PhaseUndetermined,
+      batas: const Duration(seconds: 3),
+    );
+
+    expect(ensureCalls, greaterThan(n1));
     expect(b.state.snapshot!.phase, isNot(isA<PhaseDisabled>()));
+    expect(b.state.snapshot!.phase, isNot(isA<PhaseUndetermined>()));
+  });
+
+  test('IMPORTANT-2 · ensure gagal (Left) → penjaga dilepas, retry '
+      'berikutnya mencoba lagi (bukan terkunci sampai minggu depan)', () async {
+    // Skenario "kegagalan transien" dari review: sebelum perbaikan, penjaga
+    // sudah terpasang SEBELUM `await _ensure(...)`, jadi `Left` (mis. gagal
+    // menulis DB sesaat) mengunci minggu ini sampai minggu depan — nol
+    // percobaan ulang. Sesudah perbaikan, `Left` melepas penjaga lagi.
+    when(() => ensureMock(any())).thenAnswer((_) async {
+      ensureCalls++;
+      return const Left(ServerFailure('gagal transien'));
+    });
+
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => b.state.failure != null);
+    expect(b.state.lastEnsuredWeekKey, isNull); // penjaga dilepas
+
+    await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
+    await tungguSampai(() => ensureCalls == 2);
+
+    expect(ensureCalls, 2); // retry benar-benar terjadi, bukan terkunci
   });
 
   test('S-B · perakitan ulang SESUDAH ensure selesai → skeleton Senin pertama '
@@ -754,6 +859,55 @@ void main() {
     await _tunggu(500);
 
     expect(b.state.snapshot!.phase, isA<PhasePreparing>());
+  });
+
+  // ── CRITICAL-1 · resetForNewSession membuang state akun lama ──────────────
+
+  group('CRITICAL-1 · resetForNewSession', () {
+    test('state PENUH (snapshot + lastOutcome + lastEnsuredWeekKey terisi) → '
+        'resetForNewSession() → ketiganya kembali null', () async {
+      when(() => ensureMock(any())).thenAnswer((_) async {
+        ensureCalls++;
+        return const Right(
+          EnsureOutcome(weekKey: _mingguIni, candidateCount: 3, env: _envSehat),
+        );
+      });
+
+      final b = buatBloc()..add(const ChallengeStarted());
+      await tungguSampai(
+        () =>
+            b.state.snapshot != null &&
+            b.state.lastOutcome != null &&
+            b.state.lastEnsuredWeekKey != null,
+      ); // state PENUH — prasyarat
+
+      b.resetForNewSession();
+      await tungguSampai(() => b.state.snapshot == null);
+
+      expect(b.state.snapshot, isNull);
+      expect(b.state.lastOutcome, isNull);
+      expect(b.state.lastEnsuredWeekKey, isNull);
+    });
+
+    test('akun B "resume" di minggu YANG SAMA sesudah reset → ensure dipanggil '
+        'lagi (bukan dipulangkan penjaga akun lama)', () async {
+      // Skenario CRITICAL-1 persis: akun A login Senin (ensure sekali,
+      // lastEnsuredWeekKey terpasang) → logout → akun B login di minggu
+      // yang SAMA. Tanpa reset, `_pastikanMingguIni` memulangkan diri di
+      // baris pertama untuk akun B — `ensure` TAK PERNAH dipanggil untuk
+      // akun baru.
+      final b = buatBloc()..add(const ChallengeStarted());
+      await tungguSampai(() => ensureCalls == 1); // akun A: ensure sekali
+      final n1 = ensureCalls;
+
+      b.resetForNewSession(); // logout
+      await tungguSampai(() => b.state.lastEnsuredWeekKey == null);
+
+      b.add(const ChallengeAppResumed()); // akun B login & resume
+      await tungguSampai(() => ensureCalls == n1 + 1);
+
+      expect(ensureCalls, n1 + 1);
+    });
   });
 
   // ── Aksi user ─────────────────────────────────────────────────────────────

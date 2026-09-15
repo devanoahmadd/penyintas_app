@@ -82,3 +82,12 @@ final class ChallengeEnabledToggled extends ChallengeEvent {
   @override
   List<Object?> get props => [enabled];
 }
+
+/// CRITICAL-1 — logout/login. `ChallengeBloc` adalah `registerLazySingleton`
+/// seumur proses, jadi tanpa event ini akun berikutnya yang login di minggu
+/// yang SAMA mewarisi `lastEnsuredWeekKey`/`snapshot`/`lastOutcome` akun lama
+/// — lihat dartdoc `resetForNewSession` di `challenge_bloc.dart`. Preseden
+/// persis: `StreakSessionReset`.
+final class ChallengeSessionReset extends ChallengeEvent {
+  const ChallengeSessionReset();
+}

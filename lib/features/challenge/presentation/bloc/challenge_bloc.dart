@@ -61,6 +61,7 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     on<ChallengeWeekSkipped>(_onWeekSkipped);
     on<ChallengeResultDismissed>(_onResultDismissed);
     on<ChallengeEnabledToggled>(_onEnabledToggled);
+    on<ChallengeSessionReset>(_onSessionReset);
   }
 
   final WatchChallengeSnapshot _watchInputs;
@@ -117,7 +118,13 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
       state.copyWith(
         snapshot: _rakit(event.inputs, now),
         status: ChallengeViewStatus.ready,
-        clearFailure: true,
+        // Minor-6: HANYA hapus failure kalau ia berasal dari STREAM yang baru
+        // saja pulih (`status` masih `failure`). Failure dari AKSI user yang
+        // BARU SAJA gagal (mis. `skipWeek` ditolak) tetap `status: ready` —
+        // emit stream dari tabel yang sama sekali tak berhubungan (mis. tick
+        // transaksi lain) tidak boleh menghapusnya sebelum user sempat
+        // membacanya.
+        clearFailure: state.status == ChallengeViewStatus.failure,
       ),
     );
     await _pastikanMingguIni(emit, event.inputs);
@@ -190,7 +197,46 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     final hasil = await _setEnabled(
       SetChallengeEnabledParams(enabled: event.enabled),
     );
+    // IMPORTANT-2 — sakelar DINYALAKAN: lepas penjaga minggu supaya `ensure`
+    // boleh dicoba lagi. Tanpa ini, kalau `ensure` terakhir kali jalan keluar
+    // lewat gerbang murah `!aktif` (sakelar masih mati saat itu), tantangan
+    // TAK PERNAH dibuat sampai Senin berikutnya walau user baru saja
+    // menyalakannya — penjaga `lastEnsuredWeekKey` sudah terlanjur terpasang
+    // untuk minggu ini dan tak ada jalur lain yang melepasnya.
+    if (event.enabled && hasil.isRight() && !emit.isDone) {
+      emit(state.copyWith(clearLastEnsuredWeekKey: true));
+    }
     _serapHasilAksi(hasil, emit);
+  }
+
+  /// CRITICAL-1 — dipanggil dari `app_router.dart` di sebelah
+  /// `StreakBloc.resetForNewSession()`, tiap kali user keluar dari akun
+  /// (redirect ke `/login`). `ChallengeBloc` adalah `registerLazySingleton`
+  /// seumur proses (dibagi tile dashboard dan halaman `/challenge`), jadi
+  /// tanpa reset ini akun BERIKUTNYA yang login di minggu yang SAMA mewarisi
+  /// `lastEnsuredWeekKey` akun lama: `_pastikanMingguIni` memulangkan diri di
+  /// baris pertama dan `ensure` TAK PERNAH dipanggil untuk akun baru — baris
+  /// minggu ini tak pernah dibuat, dan baris `active` lampau akun baru (yang
+  /// baru saja ditarik `syncChallengesFromRemote`) tak pernah ditutup.
+  /// `snapshot` dan `lastOutcome` lama juga dibuang: `_onInputsFailed`
+  /// sengaja MEMPERTAHANKAN snapshot lama, jadi tanpa reset ini kategori dan
+  /// riwayat akun lama bisa terender sesaat di layar akun baru.
+  void resetForNewSession() => add(const ChallengeSessionReset());
+
+  void _onSessionReset(
+    ChallengeSessionReset event,
+    Emitter<ChallengeState> emit,
+  ) {
+    _inputsTerakhir = null;
+    emit(
+      state.copyWith(
+        status: ChallengeViewStatus.initial,
+        clearSnapshot: true,
+        clearFailure: true,
+        clearLastEnsuredWeekKey: true,
+        clearLastOutcome: true,
+      ),
+    );
   }
 
   /// Aksi yang BERHASIL sengaja tidak meng-emit snapshot baru: perubahannya
@@ -272,21 +318,33 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
 
     final hasil = await _ensure(const NoParams());
     if (emit.isDone) return;
-    hasil.fold((f) => emit(state.copyWith(failure: f)), (outcome) {
-      // S-B — simpan apa yang ensure pelajari, lalu RAKIT ULANG: tanpa ini,
-      // layar tetap menampilkan skeleton sampai ada perubahan tabel
-      // berikutnya. Di Senin pertama seorang user, perubahan itu bisa tidak
-      // pernah datang.
-      emit(state.copyWith(lastOutcome: outcome));
-      final terakhir = inputs;
-      if (terakhir != null) {
-        emit(
-          state.copyWith(
-            snapshot: _rakit(terakhir, _clock.now()),
-            status: ChallengeViewStatus.ready,
-          ),
-        );
-      }
-    });
+    hasil.fold(
+      (f) => emit(
+        state.copyWith(
+          failure: f,
+          // IMPORTANT-2 — "sudah DICOBA" ≠ "sudah TUNTAS". Kegagalan transien
+          // (mis. `createChallenge`/`holdWeek` mengembalikan `Left`) tidak
+          // boleh mengunci minggu ini selamanya: lepas penjaga supaya jalur
+          // berikutnya (resume, atau tick transaksi lain) boleh mencoba lagi.
+          clearLastEnsuredWeekKey: true,
+        ),
+      ),
+      (outcome) {
+        // S-B — simpan apa yang ensure pelajari, lalu RAKIT ULANG: tanpa ini,
+        // layar tetap menampilkan skeleton sampai ada perubahan tabel
+        // berikutnya. Di Senin pertama seorang user, perubahan itu bisa tidak
+        // pernah datang.
+        emit(state.copyWith(lastOutcome: outcome));
+        final terakhir = inputs;
+        if (terakhir != null) {
+          emit(
+            state.copyWith(
+              snapshot: _rakit(terakhir, _clock.now()),
+              status: ChallengeViewStatus.ready,
+            ),
+          );
+        }
+      },
+    );
   }
 }

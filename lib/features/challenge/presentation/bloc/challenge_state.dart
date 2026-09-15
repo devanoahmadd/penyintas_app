@@ -35,19 +35,28 @@ class ChallengeState extends Equatable {
   /// minggu lain sebagai tak diketahui.
   final EnsureOutcome? lastOutcome;
 
+  /// Bendera `clearX` (mis. `clearSnapshot`) WAJIB dipakai untuk meniadakan
+  /// field — `snapshot ?? this.snapshot` dkk. TIDAK BISA mengembalikan `null`
+  /// begitu field sudah pernah terisi sekali. Pola ini meniru `clearFailure`
+  /// yang sudah ada sejak awal.
   ChallengeState copyWith({
     ChallengeViewStatus? status,
     ChallengeSnapshot? snapshot,
+    bool clearSnapshot = false,
     Failure? failure,
     bool clearFailure = false,
     int? lastEnsuredWeekKey,
+    bool clearLastEnsuredWeekKey = false,
     EnsureOutcome? lastOutcome,
+    bool clearLastOutcome = false,
   }) => ChallengeState(
     status: status ?? this.status,
-    snapshot: snapshot ?? this.snapshot,
+    snapshot: clearSnapshot ? null : (snapshot ?? this.snapshot),
     failure: clearFailure ? null : (failure ?? this.failure),
-    lastEnsuredWeekKey: lastEnsuredWeekKey ?? this.lastEnsuredWeekKey,
-    lastOutcome: lastOutcome ?? this.lastOutcome,
+    lastEnsuredWeekKey: clearLastEnsuredWeekKey
+        ? null
+        : (lastEnsuredWeekKey ?? this.lastEnsuredWeekKey),
+    lastOutcome: clearLastOutcome ? null : (lastOutcome ?? this.lastOutcome),
   );
 
   @override

@@ -435,8 +435,13 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     // bisa mendarat terbalik. Putaran yang sudah tidak terbaru berhenti diam.
     var generasi = 0;
 
+    // Minor-5 — `controller.isClosed` TIDAK PERNAH true di sini: `onCancel`
+    // (di bawah) membatalkan langganan sumbernya tapi tidak pernah memanggil
+    // `controller.close()`. Flag lokal ini adalah penjaga yang SUNGGUHAN.
+    var dibatalkan = false;
+
     Future<void> hitungSekali() async {
-      if (controller.isClosed) return;
+      if (dibatalkan) return;
       if (!adaBaris || !adaRiwayat || !adaSakelar) return;
       final milikSaya = ++generasi;
       try {
@@ -457,7 +462,7 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
                 category: kategori,
               );
 
-        if (controller.isClosed || milikSaya != generasi) return;
+        if (dibatalkan || milikSaya != generasi) return;
         controller.add(
           Right(
             ChallengeInputs(
@@ -473,7 +478,7 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
         );
       } catch (e, s) {
         _log(e, s, 'watchInputs');
-        if (controller.isClosed) return;
+        if (dibatalkan) return;
         // Angka 0 yang sebenarnya berarti "gagal baca" adalah kebohongan.
         controller.add(Left(CacheFailure('Tantangan belum bisa dibaca.')));
       }
@@ -486,7 +491,7 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
 
     void gagal(Object e, StackTrace s) {
       _log(e, s, 'watchInputs.sumber');
-      if (!controller.isClosed) {
+      if (!dibatalkan) {
         controller.add(Left(CacheFailure('Tantangan belum bisa dibaca.')));
       }
     }
@@ -519,6 +524,7 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
         }, onError: gagal);
       },
       onCancel: () async {
+        dibatalkan = true;
         koalesensiTimer?.cancel();
         await bariSub?.cancel();
         await riwayatSub?.cancel();
