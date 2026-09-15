@@ -619,6 +619,36 @@ void main() {
     });
   });
 
+  group('S-B · jalan keluar anggaran belum diatur', () {
+    // Jalan keluar ini UNIK di antara sembilan: ia terminal (user tanpa
+    // anggaran berakhir di sini SETIAP Senin–Selasa, bukan sesekali) DAN ia
+    // tidak menulis baris apa pun — jadi tingkat 2 presedensi (`week != null`)
+    // tak pernah menolongnya. Satu-satunya yang membuat layar merender
+    // `PhaseBudgetNotSet` alih-alih skeleton adalah BENTUK outcome-nya:
+    // `candidateCount` nyata DAN `env` terisi. U59 hanya menjaga "tidak ada
+    // baris"; bentuknya harus dikunci terpisah, di sini.
+    setUp(() {
+      when(
+        () => env.read(),
+      ).thenAnswer((_) async => const Right(_envTanpaAnggaran));
+    });
+
+    test('candidateCount = jumlah NYATA kandidat', () async {
+      await siapkanTigaKandidat();
+
+      expect((await jalankan()).candidateCount, 3);
+    });
+
+    test('env TERISI — bukan null', () async {
+      // `env` yang jatuh ke null di sini membuat `resolveChallengePhase`
+      // menjawab `PhaseUndetermined`: skeleton yang tak kunjung selesai,
+      // permanen, untuk setiap user yang belum mengatur anggaran.
+      await siapkanTigaKandidat();
+
+      expect((await jalankan()).env, _envTanpaAnggaran);
+    });
+  });
+
   group('S-B · jalan keluar semua sehat', () {
     test('candidateCount = jumlah NYATA kandidat', () async {
       await siapkanTigaKandidat();

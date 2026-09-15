@@ -106,6 +106,14 @@ void main() {
       getLimitable: getLimitable,
     );
 
+    // Port lingkungan sengaja TIDAK distub, dan itu aman HANYA selama sakelar
+    // tetap mati di berkas ini: fallback `ChallengeSettingsDatasource` adalah
+    // MATI (D3), jadi ensure selalu hubung-singkat di langkah 3 dan tak pernah
+    // sampai ke `_env.read()`. Satu `sakelar.setEnabled(true)` di mana pun —
+    // termasuk di dalam satu test — akan membawa alur sampai ke sana dan
+    // mengubah test ini jadi galat tipe (`Null` bukan `Future<Either<...>>`),
+    // bukan asersi yang bermakna. Kalau suatu saat berkas ini perlu menyalakan
+    // sakelar, stub port-nya lebih dulu (lihat `ensure_create_test.dart`).
     usecase = EnsureAndResolveChallenge(
       repo: repo,
       local: local,
