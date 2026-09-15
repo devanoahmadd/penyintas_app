@@ -92,17 +92,19 @@ void main() {
     when(() => auth.currentUser).thenReturn(null);
 
     clock = FixedClock(DateTime(2026, 9, 7, 9));
+
+    getLimitable = _MockGetLimitable();
+    when(() => getLimitable(any()))
+        .thenAnswer((_) async => const Right(_kategoriDefault));
+
     repo = ChallengeRepositoryImpl(
       local: local,
       remote: _MockRemote(),
       network: network,
       auth: auth,
       clock: clock,
+      getLimitable: getLimitable,
     );
-
-    getLimitable = _MockGetLimitable();
-    when(() => getLimitable(any()))
-        .thenAnswer((_) async => const Right(_kategoriDefault));
 
     usecase = EnsureAndResolveChallenge(
       repo: repo,

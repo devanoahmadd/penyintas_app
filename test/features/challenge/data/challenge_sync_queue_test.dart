@@ -12,11 +12,15 @@ import 'package:penyintas_app/features/challenge/data/datasources/challenge_loca
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/models/challenge_model.dart';
 import 'package:penyintas_app/features/challenge/data/repositories/challenge_repository_impl.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
 
 class _MockAuth extends Mock implements FirebaseAuth {}
 class _MockUser extends Mock implements User {}
 class _MockNetwork extends Mock implements NetworkInfo {}
 class _MockRemote extends Mock implements ChallengeRemoteDatasource {}
+
+/// Tak pernah distub: berkas ini tidak menyentuh `getCandidates`.
+class _MockGetLimitable extends Mock implements GetLimitableCategoriesUseCase {}
 
 /// Baris `active` minimal — dipakai S-A untuk menyimulasikan minggu lampau
 /// yang belum dievaluasi.
@@ -78,6 +82,7 @@ void main() {
     repo = ChallengeRepositoryImpl(
       local: local, remote: remote, network: network,
       auth: auth, clock: FixedClock(DateTime(2026, 9, 7, 9)),
+      getLimitable: _MockGetLimitable(),
     );
   });
 

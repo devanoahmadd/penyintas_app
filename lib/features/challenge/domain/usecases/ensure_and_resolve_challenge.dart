@@ -19,13 +19,12 @@ import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable
 /// Isinya berurutan & IDEMPOTEN — memanggilnya dua kali berturut tidak boleh
 /// menghasilkan baris kedua.
 ///
-/// Task 10 baru mengisi langkah 1 dan 1c (menutup minggu lampau, merapikan
-/// hasil lama). Langkah 2–6 (pembuatan tantangan baru, yang butuh `env` dan
-/// `settings`) menyusul di Task 11 — karena itu `env` dan `settings` DITERIMA
-/// di constructor (mengunci bentuk kontrak untuk Task 11) tapi BELUM disimpan
-/// ke field: menyimpannya sekarang tanpa pernah dibaca memicu warning
-/// `unused_field` dari `dart analyze`, dan codebase ini tidak punya preseden
-/// `// ignore:` untuk melewatinya.
+/// Tujuh langkah, berurutan, dan urutannya adalah kontraknya: 1 (tutup minggu
+/// lampau), 1c (rapikan hasil lama), lalu 2–6 (pembuatan). Tiap jalan keluar
+/// melaporkan APA YANG SEMPAT DIKETAHUI lewat [EnsureOutcome], dan daftar
+/// jalan keluar itu adalah CERMIN urutan tingkat 3 `resolveChallengePhase`.
+/// Kalau salah satunya berubah tanpa yang lain, gejalanya bukan error yang
+/// terlihat — melainkan skeleton yang tak kunjung selesai di layar user.
 class EnsureAndResolveChallenge implements UseCase<EnsureOutcome, NoParams> {
   EnsureAndResolveChallenge({
     required ChallengeRepository repo,
@@ -37,11 +36,15 @@ class EnsureAndResolveChallenge implements UseCase<EnsureOutcome, NoParams> {
   }) : _repo = repo,
        _local = local,
        _getLimitable = getLimitable,
+       _env = env,
+       _settings = settings,
        _clock = clock;
 
   final ChallengeRepository _repo;
   final ChallengeLocalDatasource _local;
   final GetLimitableCategoriesUseCase _getLimitable;
+  final ChallengeEnvironmentPort _env;
+  final ChallengeSettingsDatasource _settings;
   final AppClock _clock;
 
   @override
@@ -111,8 +114,68 @@ class EnsureAndResolveChallenge implements UseCase<EnsureOutcome, NoParams> {
       await _repo.markOlderResultsSeen(keepWeekKey: terbaru);
     }
 
-    // langkah 2–6 ditambahkan di Task 11
-    return Right(keluar());
+    // ── 2. Idempoten ───────────────────────────────────────────────────────
+    // PALING ATAS di antara gerbang pembuatan, dan sengaja di atas bacaan
+    // lingkungan: minggu yang sudah punya baris tidak boleh disentuh apa pun
+    // lagi — termasuk tidak boleh membelanjakan satu pun bacaan dashboard.
+    if (await _local.findWeek(mingguIni) != null) return Right(keluar());
+
+    // ── 3–4. Gerbang murah lebih dulu ──────────────────────────────────────
+    final aktif = await _settings.isEnabled();
+    if (!aktif) return Right(keluar());
+    if (!isCreationWindow(now)) return Right(keluar());
+
+    // ── 5. Kandidat ────────────────────────────────────────────────────────
+    // S-B/M11 — `Left` TIDAK dipadatkan jadi daftar kosong. "Gagal dibaca" dan
+    // "memang tak ada yang layak" adalah dua jawaban berbeda, dan user berhak
+    // tidak dituduh kurang data ketika yang gagal sebetulnya database.
+    final kandidatHasil = await _repo.getCandidates(mingguIni);
+    if (kandidatHasil.isLeft()) return Right(keluar()); // kandidat tetap null
+    final kandidat = kandidatHasil.getOrElse(() => const []);
+    // `0`, bukan `keluar()` polos: nol di sini berarti SUDAH DIHITUNG dan
+    // memang tak ada yang layak — jawaban terminal, bukan "belum sempat".
+    if (kandidat.isEmpty) return Right(keluar(kandidat: 0));
+
+    // ── 6. SATU bacaan lingkungan, tiga keputusan ──────────────────────────
+    // Dipanggil HANYA di sini: maksimal sekali per minggu yang berhasil.
+    //
+    // Ditulis dengan `if (isLeft())` + pencocokan pola, BUKAN `fold` bercabang
+    // `async` sebelah. `fold` yang satu cabangnya sinkron dan satunya `Future`
+    // tidak menyatukan tipe dan berkas ini tidak akan kompilasi.
+    final envHasil = await _env.read();
+
+    // Fail-safe: keadaan tak diketahui TIDAK menghasilkan baris. Minggu ini
+    // masih bisa dicoba lagi hari Selasa — diam lebih aman daripada menebak,
+    // karena `held` bersifat FINAL dan tak bisa dibatalkan.
+    if (envHasil.isLeft()) return Right(keluar(kandidat: kandidat.length));
+
+    final e = envHasil.getOrElse(
+      () => const ChallengeEnvironment(
+        budgetConfigured: false,
+        survivalActive: false,
+      ),
+    );
+    final hasil = keluar(kandidat: kandidat.length, env: e);
+
+    // D16 — tanpa menulis apa pun. Kalau ini menulis `held`, user tanpa
+    // anggaran ter-`held` permanen tiap Senin, selamanya, tanpa penjelasan.
+    if (!e.budgetConfigured) return Right(hasil);
+
+    if (e.survivalActive) {
+      // T11 — FINAL. Tidak pernah di-upgrade jadi `active` di hari berikutnya;
+      // yang menegakkannya adalah langkah 2 di atas.
+      final r = await _repo.holdWeek(mingguIni);
+      return r.map((_) => hasil);
+    }
+
+    final pilihan = kandidat.first; // sudah deterministik (T17 aturan 1)
+    final r = await _repo.createChallenge(
+      weekKey: mingguIni,
+      category: pilihan.category,
+      targetAmount: pilihan.target,
+      baselineAmount: pilihan.baseline,
+    );
+    return r.map((_) => hasil);
   }
 
   /// Kategori yang tak terbaca diperlakukan seperti lenyap (set kosong):

@@ -7,16 +7,19 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
+import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/models/challenge_model.dart';
+import 'package:penyintas_app/features/challenge/domain/challenge_calculator.dart';
 import 'package:penyintas_app/features/challenge/domain/challenge_constants.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_candidate.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_snapshot.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:penyintas_app/features/challenge/domain/repositories/challenge_repository.dart';
+import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
 
 /// T17 aturan 2 — peringkat presedensi merge.
 /// Status terselesaikan SELALU menang atas `active`: minggu yang sudah tuntas
@@ -36,6 +39,31 @@ bool remoteMenang({
   return remoteUpdatedAt.isAfter(lokalUpdatedAt);
 }
 
+/// Jejak audit zona waktu device saat baris ditulis. MURNI audit: tak pernah
+/// dibaca logika mana pun di app, dan satu-satunya tujuannya ikut ke dokumen
+/// Firestore.
+///
+/// Bentuknya SENGAJA sama dengan `streak_day_marks.timezone`
+/// (`streak_repository_impl.dart:243-251`): singkatan device ("WIB", "+07"),
+/// bukan id IANA. Menggantinya dengan IANA adalah keputusan lintas-fitur milik
+/// pemilik repo, bukan keputusan diam-diam di sini — `preferences.timezone`
+/// merekam zona PROFIL user (kota pilihannya), bukan zona yang melahirkan
+/// `weekKey`, dan menariknya dari `tz.local.name` mengikat penulisan ini pada
+/// urutan inisialisasi paket timezone milik lapisan notifikasi.
+///
+/// Yang ditambahkan di sini cuma satu: jaring untuk nama zona KOSONG.
+/// `firestore.rules` menuntut `timezone.size() > 0`, jadi string kosong membuat
+/// dokumennya DITOLAK selamanya — dorongan gagal diam-diam dan barisnya
+/// mengendap di antrian tanpa satu pun pesan ke user. Offset UTC selalu ada.
+String zonaAudit(String namaZona, Duration offsetUtc) {
+  if (namaZona.isNotEmpty) return namaZona;
+  final menit = offsetUtc.inMinutes;
+  final tanda = menit < 0 ? '-' : '+';
+  final jam = (menit.abs() ~/ 60).toString().padLeft(2, '0');
+  final sisa = (menit.abs() % 60).toString().padLeft(2, '0');
+  return 'UTC$tanda$jam:$sisa';
+}
+
 class ChallengeRepositoryImpl implements ChallengeRepository {
   ChallengeRepositoryImpl({
     required ChallengeLocalDatasource local,
@@ -43,14 +71,21 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     required NetworkInfo network,
     required FirebaseAuth auth,
     required AppClock clock,
+    required GetLimitableCategoriesUseCase getLimitable,
   })  : _local = local, _remote = remote, _network = network,
-        _auth = auth, _clock = clock;
+        _auth = auth, _clock = clock, _getLimitable = getLimitable;
 
   final ChallengeLocalDatasource _local;
   final ChallengeRemoteDatasource _remote;
   final NetworkInfo _network;
   final FirebaseAuth _auth;
   final AppClock _clock;
+
+  /// Dipakai HANYA oleh `getCandidates`: kandidat wajib disaring ke kategori
+  /// yang benar-benar bisa diberi batas anggaran (T3). Sumbernya usecase
+  /// domain fitur transaksi — arah data→domain, arah yang memang sah — dan
+  /// bukan tabel kategori langsung, supaya definisi "limitable" tetap satu.
+  final GetLimitableCategoriesUseCase _getLimitable;
 
   /// S-A — DOC PATH PENUH. `users/$uid/challenges` (3 segmen) ditolak
   /// `sync_dispatcher.dart:15-23` sebagai malformed dan dihapus seketika oleh
@@ -119,9 +154,6 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     }
   }
 
-  /// Implementasi MINIMAL — hanya plumbing tulis+kirim yang diuji Task 7
-  /// (U47). Validasi bisnis penuh (mis. menolak weekKey yang bukan Senin
-  /// berjalan, memverifikasi kandidat) menyusul di Task 11.
   @override
   Future<Either<Failure, void>> createChallenge({
     required int weekKey,
@@ -129,26 +161,63 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     required int targetAmount,
     required int baselineAmount,
   }) async {
-    final now = _clock.now();
-    await _buatDanKirim(
-      WeeklyChallengesCompanion.insert(
-        weekKey: Value(weekKey),
-        category: Value(category),
-        targetAmount: Value(targetAmount),
-        baselineAmount: Value(baselineAmount),
-        status: ChallengeStatus.active,
-        timezone: now.timeZoneName,
-        createdAt: now,
-        updatedAt: now,
-      ),
-      weekKey,
-    );
-    return const Right(null);
+    try {
+      final now = _clock.now();
+      // Companion LENGKAP (timezone + createdAt ikut), jadi upsert aman —
+      // inilah baris yang memang boleh lahir. Bandingkan `resolveWeek` yang
+      // parsial dan karena itu lewat `_ubahDanKirim`.
+      await _buatDanKirim(
+        WeeklyChallengesCompanion(
+          weekKey: Value(weekKey),
+          category: Value(category),
+          targetAmount: Value(targetAmount),
+          baselineAmount: Value(baselineAmount),
+          status: const Value(ChallengeStatus.active),
+          timezone: Value(zonaAudit(now.timeZoneName, now.timeZoneOffset)),
+          createdAt: Value(now.toUtc()),
+          updatedAt: Value(now.toUtc()),
+          isSynced: const Value(false),
+        ),
+        weekKey,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      // Konvensi repo (`streak_repository_impl.dart:98,178,198,303,391`):
+      // SETIAP method tulis ber-`Either` dibungkus. Tanpa ini, kegagalan Drift
+      // tak terduga meledak keluar alih-alih jadi `Left` yang bisa ditangani.
+      _log(e, s, 'createChallenge');
+      return Left(CacheFailure('Gagal membuat tantangan.'));
+    }
   }
 
+  /// T11 — kategori/target/basis sengaja NULL: minggu ini tak pernah punya
+  /// tantangan, dan riwayat merender "—". Statusnya FINAL: tidak pernah
+  /// di-upgrade jadi `active` di hari berikutnya.
   @override
-  Future<Either<Failure, void>> holdWeek(int weekKey) =>
-      throw UnimplementedError('diisi di Task 11');
+  Future<Either<Failure, void>> holdWeek(int weekKey) async {
+    try {
+      final now = _clock.now();
+      await _buatDanKirim(
+        WeeklyChallengesCompanion(
+          weekKey: Value(weekKey),
+          category: const Value(null),
+          targetAmount: const Value(null),
+          baselineAmount: const Value(null),
+          status: const Value(ChallengeStatus.held),
+          timezone: Value(zonaAudit(now.timeZoneName, now.timeZoneOffset)),
+          createdAt: Value(now.toUtc()),
+          updatedAt: Value(now.toUtc()),
+          resolvedAt: Value(now.toUtc()),
+          isSynced: const Value(false),
+        ),
+        weekKey,
+      );
+      return const Right(null);
+    } catch (e, s) {
+      _log(e, s, 'holdWeek');
+      return Left(CacheFailure('Gagal menahan minggu ini.'));
+    }
+  }
 
   /// Field ber-payload berubah → updatedAt DIGESER (D23).
   ///
@@ -222,9 +291,64 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     }
   }
 
+  /// Kandidat minggu [weekKey], dirakit dari pola belanja user sendiri:
+  /// proyeksi belanja empat minggu basis → `computeBaselines` → saring ke
+  /// kategori yang bisa dibatasi → `selectCandidates` (yang memakai riwayat
+  /// untuk rem rotasi T5).
+  ///
+  /// M5 — jendela riwayatnya [kChallengeHistoryWeeks] (12), BUKAN
+  /// `kRotationWins + 2` (5). `consecutiveWins` memperlakukan `held`/`skipped`
+  /// sebagai TRANSPARAN, jadi dengan jendela 5, tiga minggu `held` berturut
+  /// sudah cukup mendorong kemenangan ketiga keluar jendela — dan rem rotasi
+  /// mati diam-diam. Gejalanya tak tertangkap test kalkulator, yang menyuapi
+  /// `history` langsung; ia hanya terlihat lewat jalur ini.
   @override
-  Future<Either<Failure, List<ChallengeCandidate>>> getCandidates(int weekKey) =>
-      throw UnimplementedError('diisi di Task 11');
+  Future<Either<Failure, List<ChallengeCandidate>>> getCandidates(
+    int weekKey,
+  ) async {
+    try {
+      final spends = await _local.getWeeklySpends(
+        addDays(weekKey, -7 * kBaselineWeeks),
+      );
+      final basis = computeBaselines(spends: spends, currentWeekKey: weekKey);
+
+      // S-B/M11 — kategori yang TAK TERBACA bukan "tidak ada kategori yang
+      // layak". Memadatkannya jadi himpunan kosong membuat daftar kandidat
+      // kosong, dan `EnsureOutcome` melaporkan 0; user lalu dituduh kurang
+      // data padahal yang gagal adalah database. `Left` di sini yang menjaga
+      // `candidateCount` tetap null sampai ke layar.
+      final kategori = await _getLimitable(const NoParams());
+      if (kategori.isLeft()) {
+        return Left(CacheFailure('Kategori belum bisa dibaca.'));
+      }
+      final slugs = kategori.getOrElse(() => const []).map((c) => c.slug).toSet();
+
+      // `watchHistory` sudah terurut weekKey MENURUN — bentuk yang dituntut
+      // `consecutiveWins`. `.first` mengambil satu potret, bukan langganan:
+      // menulis dari stream yang mengawasi tabelnya sendiri menghidupkan lagi
+      // loop tulis→emit→hitung→tulis (D-2 Fase 1).
+      final riwayat = await _local.watchHistory(kChallengeHistoryWeeks).first;
+
+      return Right(
+        selectCandidates(
+          baselines: basis.baselines,
+          weeksWithData: basis.weeksWithData,
+          limitableSlugs: slugs,
+          history: [
+            for (final r in riwayat)
+              ResolvedWeek(
+                weekKey: r.weekKey,
+                category: r.category,
+                status: r.status,
+              ),
+          ],
+        ),
+      );
+    } catch (e, s) {
+      _log(e, s, 'getCandidates');
+      return Left(CacheFailure('Gagal menyusun kandidat tantangan.'));
+    }
+  }
 
   @override
   Stream<Either<Failure, ChallengeInputs>> watchInputs() =>
