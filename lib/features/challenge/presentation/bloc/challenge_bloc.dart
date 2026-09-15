@@ -79,6 +79,19 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
   /// pun.
   ChallengeInputs? _inputsTerakhir;
 
+  /// K-1 (ronde 2) — pembeda ASAL `state.failure`, BUKAN `status`-nya (itu
+  /// bug ronde 1: `_onInputsFailed` hanya menaikkan `status` ke `failure`
+  /// kalau `snapshot == null`; begitu snapshot sudah ada — kasus PALING
+  /// umum — `status` tetap `ready` dan syarat `state.status == failure` tak
+  /// pernah benar, jadi failure dari STREAM pun tak pernah tersapu saat
+  /// stream pulih).
+  ///
+  /// `true` hanya sesaat sesudah AKSI user gagal (`_serapHasilAksi`); `false`
+  /// untuk semua penulis `failure` lain (stream, ensure) — supaya tick
+  /// berikutnya boleh menghapusnya. Diset ulang eksplisit di SETIAP titik
+  /// yang menulis `failure`, bukan diasumsikan dari nilai lama.
+  bool _failureDariAksi = false;
+
   // ── Langganan ─────────────────────────────────────────────────────────────
 
   Future<void> _onStarted(
@@ -118,13 +131,12 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
       state.copyWith(
         snapshot: _rakit(event.inputs, now),
         status: ChallengeViewStatus.ready,
-        // Minor-6: HANYA hapus failure kalau ia berasal dari STREAM yang baru
-        // saja pulih (`status` masih `failure`). Failure dari AKSI user yang
-        // BARU SAJA gagal (mis. `skipWeek` ditolak) tetap `status: ready` —
-        // emit stream dari tabel yang sama sekali tak berhubungan (mis. tick
-        // transaksi lain) tidak boleh menghapusnya sebelum user sempat
-        // membacanya.
-        clearFailure: state.status == ChallengeViewStatus.failure,
+        // K-1 (ronde 2) — HANYA hapus failure kalau ASALNYA bukan aksi user.
+        // Lihat dartdoc `_failureDariAksi`: syarat `status == failure` yang
+        // dipakai ronde 1 nyaris tak pernah benar (snapshot biasanya sudah
+        // ada), jadi hampir SELALU gagal menghapus failure stream yang sudah
+        // pulih — kebalikan dari niatnya.
+        clearFailure: !_failureDariAksi,
       ),
     );
     await _pastikanMingguIni(emit, event.inputs);
@@ -134,6 +146,9 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     ChallengeInputsFailed event,
     Emitter<ChallengeState> emit,
   ) {
+    // Failure ini berasal dari STREAM, bukan aksi — tick berikutnya yang
+    // sukses boleh menghapusnya.
+    _failureDariAksi = false;
     // Snapshot lama sengaja DIPERTAHANKAN: angka yang sudah terender lebih
     // berguna daripada layar kosong, selama indikator galatnya ikut tampil.
     emit(
@@ -203,6 +218,16 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     // TAK PERNAH dibuat sampai Senin berikutnya walau user baru saja
     // menyalakannya — penjaga `lastEnsuredWeekKey` sudah terlanjur terpasang
     // untuk minggu ini dan tak ada jalur lain yang melepasnya.
+    //
+    // K-2 (ronde 2, Minor, diterima apa adanya) — pelepasan ini terjadi
+    // SESUDAH `await _setEnabled(...)`, bukan sebelumnya, jadi TIDAK ADA
+    // jaminan FORMAL ia selalu mendahului `ChallengeInputsUpdated` hasil
+    // tulisan yang sama. Aman dalam PRAKTIK: kelanjutan `await` di sini
+    // adalah microtask, sedangkan emit `watchEnabled()` menunggu Timer
+    // koalesensi 16 ms (`challenge_repository_impl.dart`) yang selalu jatuh
+    // sesudah microtask manapun yang sudah tertunda. Kalau kelak jendela ini
+    // perlu ditutup formal, pindahkan pelepasan ke SEBELUM `await` dengan
+    // pembatalan saat `hasil` ternyata `Left`.
     if (event.enabled && hasil.isRight() && !emit.isDone) {
       emit(state.copyWith(clearLastEnsuredWeekKey: true));
     }
@@ -228,6 +253,7 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     Emitter<ChallengeState> emit,
   ) {
     _inputsTerakhir = null;
+    _failureDariAksi = false;
     emit(
       state.copyWith(
         status: ChallengeViewStatus.initial,
@@ -247,8 +273,16 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
   ) {
     if (emit.isDone) return;
     hasil.fold(
-      (f) => emit(state.copyWith(failure: f)),
-      (_) => emit(state.copyWith(clearFailure: true)),
+      (f) {
+        // K-1 (ronde 2) — failure ini berasal dari AKSI user: tick stream
+        // tak berhubungan yang datang sesudahnya TIDAK boleh menyapunya.
+        _failureDariAksi = true;
+        emit(state.copyWith(failure: f));
+      },
+      (_) {
+        _failureDariAksi = false;
+        emit(state.copyWith(clearFailure: true));
+      },
     );
   }
 
@@ -319,16 +353,22 @@ class ChallengeBloc extends Bloc<ChallengeEvent, ChallengeState> {
     final hasil = await _ensure(const NoParams());
     if (emit.isDone) return;
     hasil.fold(
-      (f) => emit(
-        state.copyWith(
-          failure: f,
-          // IMPORTANT-2 — "sudah DICOBA" ≠ "sudah TUNTAS". Kegagalan transien
-          // (mis. `createChallenge`/`holdWeek` mengembalikan `Left`) tidak
-          // boleh mengunci minggu ini selamanya: lepas penjaga supaya jalur
-          // berikutnya (resume, atau tick transaksi lain) boleh mencoba lagi.
-          clearLastEnsuredWeekKey: true,
-        ),
-      ),
+      (f) {
+        // K-1 (ronde 2) — failure ensure BUKAN failure aksi: tick berikutnya
+        // boleh menghapusnya begitu ensure/stream pulih.
+        _failureDariAksi = false;
+        emit(
+          state.copyWith(
+            failure: f,
+            // IMPORTANT-2 — "sudah DICOBA" ≠ "sudah TUNTAS". Kegagalan
+            // transien (mis. `createChallenge`/`holdWeek` mengembalikan
+            // `Left`) tidak boleh mengunci minggu ini selamanya: lepas
+            // penjaga supaya jalur berikutnya (resume, atau tick transaksi
+            // lain) boleh mencoba lagi.
+            clearLastEnsuredWeekKey: true,
+          ),
+        );
+      },
       (outcome) {
         // S-B — simpan apa yang ensure pelajari, lalu RAKIT ULANG: tanpa ini,
         // layar tetap menampilkan skeleton sampai ada perubahan tabel

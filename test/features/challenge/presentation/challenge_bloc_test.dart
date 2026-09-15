@@ -32,6 +32,7 @@ import 'package:penyintas_app/features/challenge/domain/usecases/skip_challenge_
 import 'package:penyintas_app/features/challenge/domain/usecases/watch_challenge_snapshot.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_state.dart';
 import 'package:penyintas_app/features/challenge/domain/ports/challenge_environment_port.dart';
 import 'package:penyintas_app/features/transaction/domain/entities/category_entity.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
@@ -800,11 +801,15 @@ void main() {
     final n1 = ensureCalls;
     expect(n1, 1); // anti-hampa: ensure memang sudah jalan sekali
 
-    // Lepas penjaga LEBIH DULU, baru tulis ke datasource sungguhan — supaya
-    // urutan tak bergantung pada seberapa cepat stream `watchEnabled()`
-    // menoleh (koalesensi 16 ms). Ini juga persis urutan yang dijamin
-    // `_onEnabledToggled`: penjaga dilepas SEBELUM hasil apa pun bisa datang
-    // dari stream.
+    // K-2 (ronde 2) — dispatch di SINI urutannya kita yang kendalikan
+    // langsung (bukan lewat `_onEnabledToggled`, yang melepas penjaga
+    // SESUDAH `await _setEnabled(...)` — TIDAK ada jaminan formal itu
+    // selalu mendahului emit `watchEnabled()` berikutnya, meski aman dalam
+    // praktik: kelanjutan `await` adalah microtask, sedangkan emit stream
+    // menunggu Timer koalesensi 16 ms yang selalu jatuh SESUDAH microtask
+    // manapun yang sudah tertunda). Test ini sengaja menunggu penjaga
+    // benar-benar `null` DULU sebelum menulis ke datasource, supaya tak
+    // bergantung pada jendela race itu sama sekali.
     b.add(const ChallengeEnabledToggled(true)); // lepas penjaga (IMPORTANT-2)
     await tungguSampai(() => b.state.lastEnsuredWeekKey == null);
     await sakelar.setEnabled(true); // baru sekarang stream `enabled` jadi true
@@ -836,8 +841,16 @@ void main() {
     await tungguSampai(() => b.state.failure != null);
     expect(b.state.lastEnsuredWeekKey, isNull); // penjaga dilepas
 
+    // K-3 (ronde 2) — poll pada `tercatat` (tick DIPROSES), BUKAN pada
+    // `ensureCalls == 2` langsung: kalau poll-nya sama persis dengan assert
+    // akhir, assert itu hampa (selalu benar begitu poll lolos). Dengan ini,
+    // "tick sudah diproses" dan "ensure benar-benar terpanggil lagi" adalah
+    // dua hal yang diperiksa terpisah.
+    final sebelum = b.tercatat.whereType<ChallengeInputsUpdated>().length;
     await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
-    await tungguSampai(() => ensureCalls == 2);
+    await tungguSampai(
+      () => b.tercatat.whereType<ChallengeInputsUpdated>().length > sebelum,
+    );
 
     expect(ensureCalls, 2); // retry benar-benar terjadi, bukan terkunci
   });
@@ -864,30 +877,52 @@ void main() {
   // ── CRITICAL-1 · resetForNewSession membuang state akun lama ──────────────
 
   group('CRITICAL-1 · resetForNewSession', () {
-    test('state PENUH (snapshot + lastOutcome + lastEnsuredWeekKey terisi) → '
-        'resetForNewSession() → ketiganya kembali null', () async {
-      when(() => ensureMock(any())).thenAnswer((_) async {
-        ensureCalls++;
-        return const Right(
-          EnsureOutcome(weekKey: _mingguIni, candidateCount: 3, env: _envSehat),
+    test(
+      'state PENUH (snapshot + lastOutcome + lastEnsuredWeekKey + failure + '
+      'status ready) → resetForNewSession() → SEMUA field kembali ke default',
+      () async {
+        // K-3 (ronde 2) — versi ronde 1 hanya membangun snapshot/lastOutcome/
+        // lastEnsuredWeekKey, jadi mutasi tunggal (nonaktifkan SELURUH
+        // `_onSessionReset`) hanya membuktikan asersi PERTAMA (`snapshot`)
+        // benar-benar terkunci — `failure`/`status` tak pernah diisi, jadi tak
+        // pernah teruji sama sekali, dan mutasi per-field tak bisa dibedakan
+        // dari mutasi total. Di sini state dibangun SELENGKAPNYA: `failure`
+        // lewat aksi yang sengaja digagalkan.
+        when(() => ensureMock(any())).thenAnswer((_) async {
+          ensureCalls++;
+          return const Right(
+            EnsureOutcome(
+              weekKey: _mingguIni,
+              candidateCount: 3,
+              env: _envSehat,
+            ),
+          );
+        });
+        when(
+          () => skipWeek(any()),
+        ).thenAnswer((_) async => Left(ValidationFailure('isi state penuh')));
+
+        final b = buatBloc()..add(const ChallengeStarted());
+        await tungguSampai(
+          () =>
+              b.state.snapshot != null &&
+              b.state.lastOutcome != null &&
+              b.state.lastEnsuredWeekKey != null,
         );
-      });
+        b.add(const ChallengeWeekSkipped()); // isi `failure`
+        await tungguSampai(() => b.state.failure != null);
+        expect(b.state.status, ChallengeViewStatus.ready); // prasyarat
 
-      final b = buatBloc()..add(const ChallengeStarted());
-      await tungguSampai(
-        () =>
-            b.state.snapshot != null &&
-            b.state.lastOutcome != null &&
-            b.state.lastEnsuredWeekKey != null,
-      ); // state PENUH — prasyarat
+        b.resetForNewSession();
+        await tungguSampai(() => b.state.snapshot == null);
 
-      b.resetForNewSession();
-      await tungguSampai(() => b.state.snapshot == null);
-
-      expect(b.state.snapshot, isNull);
-      expect(b.state.lastOutcome, isNull);
-      expect(b.state.lastEnsuredWeekKey, isNull);
-    });
+        expect(b.state.snapshot, isNull);
+        expect(b.state.lastOutcome, isNull);
+        expect(b.state.lastEnsuredWeekKey, isNull);
+        expect(b.state.failure, isNull);
+        expect(b.state.status, ChallengeViewStatus.initial);
+      },
+    );
 
     test('akun B "resume" di minggu YANG SAMA sesudah reset → ensure dipanggil '
         'lagi (bukan dipulangkan penjaga akun lama)', () async {
@@ -907,6 +942,86 @@ void main() {
       await tungguSampai(() => ensureCalls == n1 + 1);
 
       expect(ensureCalls, n1 + 1);
+    });
+
+    test('_inputsTerakhir dibuang saat reset → resume TANPA stream aktif tidak '
+        'merakit snapshot dari bahan akun lama', () async {
+      // K-3 (ronde 2) — field privat, tak terbaca langsung dari test. Bukti
+      // TAK LANGSUNG: sesudah reset, dispatch HANYA `ChallengeAppResumed`
+      // (tanpa `ChallengeStarted` baru → tanpa stream aktif). Satu-satunya
+      // bahan yang bisa dipakai `_pastikanMingguIni` untuk merakit ulang
+      // snapshot adalah `_inputsTerakhir` — kalau field itu TAK dibuang,
+      // snapshot akun LAMA bisa lahir kembali begitu ensure selesai.
+      when(() => ensureMock(any())).thenAnswer((_) async {
+        ensureCalls++;
+        return const Right(
+          EnsureOutcome(weekKey: _mingguIni, candidateCount: 3, env: _envSehat),
+        );
+      });
+
+      final b = buatBloc()..add(const ChallengeStarted());
+      await tungguSampai(() => b.state.snapshot != null);
+
+      b.resetForNewSession();
+      await tungguSampai(() => b.state.snapshot == null);
+
+      b.add(const ChallengeAppResumed());
+      await tungguSampai(() => b.state.lastOutcome != null); // ensure selesai
+
+      expect(b.state.snapshot, isNull);
+    });
+  });
+
+  // ── K-1 (ronde 2) · asal failure (stream vs aksi) ──────────────────────────
+
+  group('K-1 · pembeda asal failure', () {
+    test('stream gagal SAAT snapshot sudah ada → failure terisi, status TETAP '
+        'ready, DAN failure bersih begitu stream pulih', () async {
+      // Dispatch event langsung (tanpa ChallengeStarted/stream sungguhan) —
+      // menguji transisi state handler, bukan jalur galat stream nyata.
+      final b = buatBloc();
+      const inputsAwal = ChallengeInputs(
+        weekThisWeek: null,
+        spentThisWeek: 0,
+        excludedThisWeek: 0,
+        history: [],
+        enabled: true,
+      );
+      b.add(const ChallengeInputsUpdated(inputsAwal));
+      await tungguSampai(() => b.state.snapshot != null);
+      expect(b.state.status, ChallengeViewStatus.ready); // prasyarat
+
+      b.add(const ChallengeInputsFailed(CacheFailure('gagal baca')));
+      await tungguSampai(() => b.state.failure != null);
+      expect(b.state.status, ChallengeViewStatus.ready); // TETAP ready
+
+      b.add(const ChallengeInputsUpdated(inputsAwal)); // stream "pulih"
+      await tungguSampai(() => b.state.failure == null);
+
+      expect(b.state.failure, isNull);
+    });
+
+    test('failure dari AKSI user bertahan lewat tick stream TAK berhubungan '
+        '(baru bersih saat aksi berikutnya sukses)', () async {
+      when(() => skipWeek(any())).thenAnswer(
+        (_) async => Left(ValidationFailure('Minggu ini sudah berjalan.')),
+      );
+
+      final b = buatBloc()..add(const ChallengeStarted());
+      await tungguSampai(() => b.state.snapshot != null);
+
+      b.add(const ChallengeWeekSkipped());
+      await tungguSampai(() => b.state.failure != null);
+      expect(b.state.failure, isA<ValidationFailure>()); // prasyarat
+
+      // Tick stream TAK BERHUBUNGAN — transaksi baru, tak menyentuh skipWeek.
+      final sebelum = b.tercatat.whereType<ChallengeInputsUpdated>().length;
+      await tambahTx(tanggal: DateTime(2026, 9, 8, 10), nominal: 10000);
+      await tungguSampai(
+        () => b.tercatat.whereType<ChallengeInputsUpdated>().length > sebelum,
+      );
+
+      expect(b.state.failure, isA<ValidationFailure>()); // TETAP ada
     });
   });
 
