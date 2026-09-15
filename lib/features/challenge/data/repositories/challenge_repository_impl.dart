@@ -252,14 +252,38 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     }
   }
 
+  /// T14 — target DAN basis dihitung ulang dari kategori baru. Kalau target
+  /// lama terbawa, user bisa memilih pos termurah sambil menyandang target pos
+  /// termahal, dan kedua angka tampak wajar sendiri-sendiri di UI.
   @override
   Future<Either<Failure, void>> changeCategory({
     required int weekKey,
     required String category,
     required int targetAmount,
     required int baselineAmount,
-  }) =>
-      throw UnimplementedError('diisi di Task 12');
+  }) async {
+    try {
+      final now = _clock.now();
+      // M8 — parsial (tanpa timezone/createdAt/status), jadi `_ubahDanKirim`.
+      final berhasil = await _ubahDanKirim(
+        weekKey,
+        WeeklyChallengesCompanion(
+          category: Value(category),
+          targetAmount: Value(targetAmount),
+          baselineAmount: Value(baselineAmount),
+          updatedAt: Value(now.toUtc()),
+          isSynced: const Value(false),
+        ),
+      );
+      if (!berhasil) {
+        return Left(CacheFailure('Minggu tantangan itu tidak ditemukan.'));
+      }
+      return const Right(null);
+    } catch (e, s) {
+      _log(e, s, 'changeCategory');
+      return Left(CacheFailure('Gagal mengganti pos tantangan.'));
+    }
+  }
 
   /// Kolom lokal saja: TIDAK menggeser updatedAt, TIDAK menyetel isSynced=false
   /// — menandai baris "belum tersinkron" akan mendorong ulang dokumen yang
