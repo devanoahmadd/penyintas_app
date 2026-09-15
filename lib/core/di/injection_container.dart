@@ -41,6 +41,20 @@ import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/routing/app_router.dart';
 import 'package:penyintas_app/core/routing/bootstrap_coordinator.dart';
+import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
+import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
+import 'package:penyintas_app/features/challenge/data/datasources/challenge_settings_datasource.dart';
+import 'package:penyintas_app/features/challenge/data/ports/challenge_environment_port_impl.dart';
+import 'package:penyintas_app/features/challenge/data/repositories/challenge_repository_impl.dart';
+import 'package:penyintas_app/features/challenge/domain/ports/challenge_environment_port.dart';
+import 'package:penyintas_app/features/challenge/domain/repositories/challenge_repository.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/change_challenge_category.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/ensure_and_resolve_challenge.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/mark_challenge_result_seen.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/set_challenge_enabled.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/skip_challenge_week.dart';
+import 'package:penyintas_app/features/challenge/domain/usecases/watch_challenge_snapshot.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/utils/analytics_service.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
@@ -204,6 +218,7 @@ Future<void> init({required AppDatabase db}) async {
   _initGoal();
   _initBills();
   _initStreak();
+  _initChallenge();
   _initAppLock();
 }
 
@@ -376,6 +391,7 @@ void _initOnboarding() {
       billReminderScheduler: sl(),
       billReminderSettings: sl(),
       streakRepository: sl(),
+      challengeRepository: sl(),
       onComplete: () {
         sl<OnboardingGuard>().resetCache();
         // Riwayat penanda baru saja tiba dari Firestore — lepaskan state
@@ -717,6 +733,90 @@ void _initStreak() {
       // menghidupkannya lagi. `sl<...>()` ditunda sampai callback dipanggil
       // agar tak ada ketergantungan urutan registrasi antar-fitur.
       onDaySafetyChanged: () => sl<DailyReminderScheduler>().reschedule(),
+    ),
+  );
+}
+
+/// A4 Fase 2 — Tantangan Mingguan. Bentuknya meniru [_initStreak]: repository
+/// singleton, tiga datasource, satu port, usecase, lalu BLoC.
+void _initChallenge() {
+  sl.registerLazySingleton<ChallengeLocalDatasource>(
+    () => ChallengeLocalDatasourceImpl(sl()),
+  );
+  sl.registerLazySingleton<ChallengeRemoteDatasource>(
+    () => ChallengeRemoteDatasourceImpl(sl()),
+  );
+  // Datasource sakelar milik fitur — bukan `SettingsLocalDatasource` bersama
+  // (kelas itu tak pernah ada di repo ini). Preseden persisnya
+  // `BillReminderSettingsDatasource`.
+  sl.registerLazySingleton<ChallengeSettingsDatasource>(
+    () => ChallengeSettingsDatasourceImpl(sl()),
+  );
+  // S2 — SATU-SATUNYA titik tempat fitur ini kenal dashboard & survival.
+  sl.registerLazySingleton<ChallengeEnvironmentPort>(
+    () => ChallengeEnvironmentPortImpl(
+      dashboardRepo: sl(),
+      getSurvivalMode: sl(),
+    ),
+  );
+  // Repository singleton — stream `watchInputs` dipakai bersama tile dashboard
+  // dan halaman /challenge lewat BLoC yang sama.
+  //
+  // `getLimitable` WAJIB: `getCandidates` menyaring kandidat ke kategori yang
+  // benar-benar bisa diberi batas anggaran (T3). `settings` WAJIB: sakelar
+  // adalah stream keempat `watchInputs` (S-B).
+  sl.registerLazySingleton<ChallengeRepository>(
+    () => ChallengeRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      network: sl(),
+      auth: sl(),
+      clock: sl(),
+      getLimitable: sl(),
+      settings: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(() => WatchChallengeSnapshot(sl()));
+  sl.registerLazySingleton(
+    () => EnsureAndResolveChallenge(
+      repo: sl(),
+      local: sl(),
+      getLimitable: sl(),
+      env: sl(),
+      settings: sl(),
+      clock: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => ChangeChallengeCategory(repo: sl(), local: sl(), clock: sl()),
+  );
+  sl.registerLazySingleton(
+    () => SkipChallengeWeek(repo: sl(), local: sl(), clock: sl()),
+  );
+  sl.registerLazySingleton(
+    () => SetChallengeEnabled(
+      repo: sl(),
+      local: sl(),
+      settings: sl(),
+      clock: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => MarkChallengeResultSeen(repo: sl()));
+
+  // Singleton app-scoped: tile dashboard (Task 17) dan halaman /challenge
+  // (Task 16) berbagi instans yang sama — pola `StreakBloc`. Route memasangnya
+  // dengan BlocProvider.value; JANGAN `create:`, itu membuat provider
+  // mengklaim lifecycle dan meng-close singleton ini untuk sisa umur proses.
+  sl.registerLazySingleton(
+    () => ChallengeBloc(
+      watchInputs: sl(),
+      ensure: sl(),
+      changeCategory: sl(),
+      skipWeek: sl(),
+      setEnabled: sl(),
+      markResultSeen: sl(),
+      clock: sl(),
     ),
   );
 }

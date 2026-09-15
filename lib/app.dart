@@ -11,6 +11,8 @@ import 'package:penyintas_app/core/theme/app_theme.dart';
 import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubit.dart';
 import 'package:penyintas_app/features/app_lock/presentation/widgets/app_lock_gate.dart';
 import 'package:penyintas_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_state.dart';
@@ -47,9 +49,15 @@ class _PenyintasAppState extends State<PenyintasApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Streak dihitung dari hari lokal; app yang kembali dari background bisa
     // sudah melewati tengah malam. AppLockGate punya observer-nya sendiri —
-    // yang ini khusus milik StreakBloc.
+    // yang ini khusus milik StreakBloc dan ChallengeBloc.
     if (state == AppLifecycleState.resumed) {
       sl<StreakBloc>().add(StreakRefreshed());
+      // M3 — pergantian minggu yang terjadi selagi app di background TIDAK
+      // mengubah satu tabel pun, jadi stream tantangan tak meng-emit. Tanpa
+      // ketukan ini, minggu lalu baru ditutup ketika user kebetulan mencatat
+      // transaksi. Penjaga `lastEnsuredWeekKey` di BLoC membuat resume di
+      // minggu yang sama tidak berbiaya apa-apa.
+      sl<ChallengeBloc>().add(const ChallengeAppResumed());
     }
   }
 

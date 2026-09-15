@@ -10,6 +10,7 @@ import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_sett
 import 'package:penyintas_app/features/bills/domain/entities/bill_entity.dart';
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
+import 'package:penyintas_app/features/challenge/domain/repositories/challenge_repository.dart';
 import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/preferences/domain/entities/preferences_entity.dart';
@@ -36,6 +37,8 @@ class _MockBillReminderSettingsDs extends Mock
 
 class _MockStreakRepo extends Mock implements StreakRepository {}
 
+class _MockChallengeRepo extends Mock implements ChallengeRepository {}
+
 void main() {
   late _MockSyncUserSettings syncUserSettings;
   late _MockBudgetRepo budgetRepo;
@@ -46,6 +49,7 @@ void main() {
   late _MockBillReminderScheduler billScheduler;
   late _MockBillReminderSettingsDs billReminderSettingsDs;
   late _MockStreakRepo streakRepo;
+  late _MockChallengeRepo challengeRepo;
   late int onCompleteCalls;
 
   setUpAll(() {
@@ -63,6 +67,7 @@ void main() {
     billScheduler = _MockBillReminderScheduler();
     billReminderSettingsDs = _MockBillReminderSettingsDs();
     streakRepo = _MockStreakRepo();
+    challengeRepo = _MockChallengeRepo();
     onCompleteCalls = 0;
     when(
       () => syncUserSettings(any()),
@@ -99,9 +104,15 @@ void main() {
       () => streakRepo.syncMarksFromRemote(),
     ).thenAnswer((_) async => const Right(0));
     when(() => streakRepo.pushPendingMarks()).thenAnswer((_) async => 0);
+    when(
+      () => challengeRepo.syncChallengesFromRemote(),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => challengeRepo.pushPendingChallenges(),
+    ).thenAnswer((_) async => const Right(null));
   });
 
-  BootstrapCoordinator build() => BootstrapCoordinator(
+  BootstrapCoordinator build({Duration? stepTimeout}) => BootstrapCoordinator(
     syncUserSettings: syncUserSettings,
     budgetRepository: budgetRepo,
     goalRepository: goalRepo,
@@ -111,7 +122,9 @@ void main() {
     billReminderScheduler: billScheduler,
     billReminderSettings: billReminderSettingsDs,
     streakRepository: streakRepo,
+    challengeRepository: challengeRepo,
     onComplete: () => onCompleteCalls++,
+    stepTimeout: stepTimeout ?? const Duration(seconds: 3),
   );
 
   test(
@@ -248,4 +261,34 @@ void main() {
       expect(c.isDone, true);
     },
   );
+
+  test('tarikan tantangan ikut blok pull paralel', () async {
+    final c = build();
+    await c.ensure();
+    verify(() => challengeRepo.syncChallengesFromRemote()).called(1);
+  });
+
+  test('U46 · tarikan tantangan yang MACET tidak membatalkan dorongan — '
+      'dorongan SELESAI, bukan sekadar terpanggil', () async {
+    // D-9 Fase 1: dorongan yang ditaruh di dalam `Future.wait` tarikan
+    // ber-timeout memang tetap TERPANGGIL — yang hilang adalah kesempatannya
+    // SELESAI, karena `Future.wait` sudah menyerah lebih dulu. Karena itu
+    // asersinya bendera penyelesaian, bukan `verify(...).called(1)`; yang
+    // terakhir tetap hijau di kode yang sudah disabotase.
+    var dorongSelesai = false;
+    when(() => challengeRepo.syncChallengesFromRemote()).thenAnswer((_) async {
+      await Future<void>.delayed(const Duration(seconds: 5)); // macet
+      return const Right(null);
+    });
+    when(() => challengeRepo.pushPendingChallenges()).thenAnswer((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      dorongSelesai = true;
+      return const Right(null);
+    });
+
+    final c = build(stepTimeout: const Duration(milliseconds: 50));
+    await c.ensure();
+
+    expect(dorongSelesai, isTrue);
+  });
 }

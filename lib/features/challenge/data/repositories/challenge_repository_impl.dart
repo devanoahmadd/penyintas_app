@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
@@ -12,6 +13,7 @@ import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
+import 'package:penyintas_app/features/challenge/data/datasources/challenge_settings_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/models/challenge_model.dart';
 import 'package:penyintas_app/features/challenge/domain/challenge_calculator.dart';
 import 'package:penyintas_app/features/challenge/domain/challenge_constants.dart';
@@ -72,14 +74,27 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     required FirebaseAuth auth,
     required AppClock clock,
     required GetLimitableCategoriesUseCase getLimitable,
-  })  : _local = local, _remote = remote, _network = network,
-        _auth = auth, _clock = clock, _getLimitable = getLimitable;
+    required ChallengeSettingsDatasource settings,
+  }) : _local = local,
+       _remote = remote,
+       _network = network,
+       _auth = auth,
+       _clock = clock,
+       _getLimitable = getLimitable,
+       _settings = settings;
 
   final ChallengeLocalDatasource _local;
   final ChallengeRemoteDatasource _remote;
   final NetworkInfo _network;
   final FirebaseAuth _auth;
   final AppClock _clock;
+
+  /// Dipakai HANYA oleh `watchInputs`: sakelar fitur adalah salah satu dari
+  /// EMPAT stream yang digabung di sana. Ia ikut karena menyalakannya di
+  /// Pengaturan tidak mengubah satu pun tabel yang diawasi tiga stream
+  /// lainnya — tanpa dia, layar baru menyusul ketika ada perubahan tabel lain
+  /// yang kebetulan memicu emit.
+  final ChallengeSettingsDatasource _settings;
 
   /// Dipakai HANYA oleh `getCandidates`: kandidat wajib disaring ke kategori
   /// yang benar-benar bisa diberi batas anggaran (T3). Sumbernya usecase
@@ -119,10 +134,9 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
         }
         // resultSeenAt lokal DIPERTAHANKAN — tanpa ini, tiap sinkron
         // memunculkan ulang kartu hasil yang sudah user tutup.
-        await _local.upsert(m.toCompanion(
-          keepResultSeenAt: lokal?.resultSeenAt,
-          isSynced: true,
-        ));
+        await _local.upsert(
+          m.toCompanion(keepResultSeenAt: lokal?.resultSeenAt, isSynced: true),
+        );
       }
       return const Right(null);
     } catch (e, s) {
@@ -344,7 +358,10 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
       if (kategori.isLeft()) {
         return Left(CacheFailure('Kategori belum bisa dibaca.'));
       }
-      final slugs = kategori.getOrElse(() => const []).map((c) => c.slug).toSet();
+      final slugs = kategori
+          .getOrElse(() => const [])
+          .map((c) => c.slug)
+          .toSet();
 
       // `watchHistory` sudah terurut weekKey MENURUN — bentuk yang dituntut
       // `consecutiveWins`. `.first` mengambil satu potret, bukan langganan:
@@ -373,9 +390,144 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
     }
   }
 
+  /// Koalesensi emisi berdekatan. Satu tulisan baris menyentuh DUA stream yang
+  /// sama-sama diawasi (`watchWeek` dan `watchHistory`); tanpa jeda ini,
+  /// dua agregat SQL dijalankan dua kali untuk satu aksi user. Sengaja jauh
+  /// lebih pendek dari debounce streak (150 ms) — di sini yang dikoalesenkan
+  /// cuma emisi yang lahir dari SATU tulisan, bukan satu batch lintas-tabel.
+  static const _koalesensi = Duration(milliseconds: 16);
+
+  /// EMPAT stream, satu potret (S-B). TIDAK MENULIS APA PUN — menulis dari
+  /// stream yang mengawasi tabelnya sendiri menghidupkan loop
+  /// tulis→emit→hitung→tulis (D-2 Fase 1).
+  ///
+  /// `pendingResult` sengaja tidak dihitung di sini: stream hanya boleh
+  /// MEMILIH, tak boleh MERAPIKAN. Perapian jamaknya milik langkah 1c
+  /// `EnsureAndResolveChallenge` (D22), satu-satunya jalur tulis fitur ini.
   @override
-  Stream<Either<Failure, ChallengeInputs>> watchInputs() =>
-      throw UnimplementedError('diisi di Task 13');
+  Stream<Either<Failure, ChallengeInputs>> watchInputs() {
+    late StreamController<Either<Failure, ChallengeInputs>> controller;
+    StreamSubscription<WeeklyChallenge?>? bariSub;
+    StreamSubscription<List<WeeklyChallenge>>? riwayatSub;
+    StreamSubscription<void>? txSub;
+    StreamSubscription<bool>? sakelarSub;
+    Timer? koalesensiTimer;
+
+    // weekKey yang DIAWASI `watchWeek`, dipatok saat langganan dimulai. Kalau
+    // minggu berganti selagi app terbuka, ia jadi basi — karena itu perakit di
+    // bawah jatuh ke `riwayat` (yang tetap hidup dan memuat baris terbaru)
+    // begitu jam menunjuk minggu lain.
+    final kunciDiawasi = weekKeyOf(_clock.now());
+
+    WeeklyChallenge? barisDiawasi;
+    var riwayat = const <WeeklyChallenge>[];
+    var aktif = false;
+
+    // Drift meng-emit nilai awal saat di-listen; `tableUpdates` TIDAK. Jadi
+    // emisi pertama ditahan sampai ketiga stream berdata sudah bicara —
+    // tanpa penjaga ini, layar sempat memakai `enabled: false` bawaan dan
+    // berkedip dari "fitur mati" ke keadaan sebenarnya.
+    var adaBaris = false;
+    var adaRiwayat = false;
+    var adaSakelar = false;
+
+    // Serialisasi: `hitungSekali` async, dan dua putaran yang tumpang tindih
+    // bisa mendarat terbalik. Putaran yang sudah tidak terbaru berhenti diam.
+    var generasi = 0;
+
+    Future<void> hitungSekali() async {
+      if (controller.isClosed) return;
+      if (!adaBaris || !adaRiwayat || !adaSakelar) return;
+      final milikSaya = ++generasi;
+      try {
+        final now = _clock.now();
+        final mingguIni = weekKeyOf(now);
+        final baris = mingguIni == kunciDiawasi
+            ? barisDiawasi
+            : riwayat.where((r) => r.weekKey == mingguIni).firstOrNull;
+
+        final kategori = baris?.category;
+        final terpakai = kategori == null
+            ? 0
+            : await _local.spentInWeek(weekKey: mingguIni, category: kategori);
+        final dikecualikan = kategori == null
+            ? 0
+            : await _local.excludedInWeek(
+                weekKey: mingguIni,
+                category: kategori,
+              );
+
+        if (controller.isClosed || milikSaya != generasi) return;
+        controller.add(
+          Right(
+            ChallengeInputs(
+              // S-C — SATU-SATUNYA tempat baris Drift jadi entity domain di
+              // jalur baca. `toChallengeWeek` milik Task 6.
+              weekThisWeek: baris == null ? null : toChallengeWeek(baris),
+              spentThisWeek: terpakai,
+              excludedThisWeek: dikecualikan,
+              history: [for (final r in riwayat) toChallengeWeek(r)],
+              enabled: aktif,
+            ),
+          ),
+        );
+      } catch (e, s) {
+        _log(e, s, 'watchInputs');
+        if (controller.isClosed) return;
+        // Angka 0 yang sebenarnya berarti "gagal baca" adalah kebohongan.
+        controller.add(Left(CacheFailure('Tantangan belum bisa dibaca.')));
+      }
+    }
+
+    void jadwalkan() {
+      koalesensiTimer?.cancel();
+      koalesensiTimer = Timer(_koalesensi, hitungSekali);
+    }
+
+    void gagal(Object e, StackTrace s) {
+      _log(e, s, 'watchInputs.sumber');
+      if (!controller.isClosed) {
+        controller.add(Left(CacheFailure('Tantangan belum bisa dibaca.')));
+      }
+    }
+
+    controller = StreamController<Either<Failure, ChallengeInputs>>(
+      onListen: () {
+        // 1. Baris minggu ini — isi kartu utama.
+        bariSub = _local.watchWeek(kunciDiawasi).listen((v) {
+          barisDiawasi = v;
+          adaBaris = true;
+          jadwalkan();
+        }, onError: gagal);
+        // 2. Riwayat — daftar riwayat, `historyEmpty`, dan kartu hasil.
+        riwayatSub = _local.watchHistory(kChallengeHistoryWeeks).listen((v) {
+          riwayat = v;
+          adaRiwayat = true;
+          jadwalkan();
+        }, onError: gagal);
+        // 3. Tabel transaksi — pemicu hitung ulang progres. Hanya SINYAL:
+        //    angkanya tetap datang dari agregat SQL di `hitungSekali`.
+        txSub = _local.watchTransactionTicks().listen(
+          (_) => jadwalkan(),
+          onError: gagal,
+        );
+        // 4. Sakelar fitur — lihat dartdoc `_settings`.
+        sakelarSub = _settings.watchEnabled().listen((v) {
+          aktif = v;
+          adaSakelar = true;
+          jadwalkan();
+        }, onError: gagal);
+      },
+      onCancel: () async {
+        koalesensiTimer?.cancel();
+        await bariSub?.cancel();
+        await riwayatSub?.cancel();
+        await txSub?.cancel();
+        await sakelarSub?.cancel();
+      },
+    );
+    return controller.stream;
+  }
 
   /// M8 — DUA jalur tulis, dibedakan oleh NIAT, bukan oleh flag.
   ///
@@ -390,7 +542,9 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
   ///
   /// Keduanya memakai ekor kirim yang SAMA.
   Future<bool> _buatDanKirim(
-      WeeklyChallengesCompanion companion, int weekKey) async {
+    WeeklyChallengesCompanion companion,
+    int weekKey,
+  ) async {
     await _local.upsert(companion);
     await _kirim(weekKey);
     return true;
@@ -406,7 +560,9 @@ class ChallengeRepositoryImpl implements ChallengeRepository {
   /// jaring pengaman `pushPendingChallenges()` yang Task 13 kaitkan ke
   /// `bootstrap_coordinator` jadi tak pernah menyala untuknya.
   Future<bool> _ubahDanKirim(
-      int weekKey, WeeklyChallengesCompanion patch) async {
+    int weekKey,
+    WeeklyChallengesCompanion patch,
+  ) async {
     final tersentuh = await _local.updateWeek(
       weekKey,
       patch.copyWith(isSynced: const Value(false)),

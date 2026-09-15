@@ -24,6 +24,12 @@ ChallengeWeek toChallengeWeek(WeeklyChallenge r) => ChallengeWeek(
 abstract class ChallengeLocalDatasource {
   Stream<WeeklyChallenge?> watchWeek(int weekKey);
   Stream<List<WeeklyChallenge>> watchHistory(int limit);
+
+  /// Pemicu hitung ulang `spentInWeek`/`excludedInWeek` — SINYAL saja, tanpa
+  /// membawa data. Angkanya tetap datang dari agregat SQL, jadi tabel paling
+  /// ramai di app tidak pernah dimaterialisasi ulang ke memori hanya untuk
+  /// tahu bahwa ia berubah.
+  Stream<void> watchTransactionTicks();
   Future<WeeklyChallenge?> findWeek(int weekKey);
   Future<List<WeeklyChallenge>> activeWeeksBefore(int weekKey);
   Future<List<WeeklySpend>> getWeeklySpends(int fromWeekKey);
@@ -161,6 +167,13 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
             ..orderBy([(t) => OrderingTerm.desc(t.weekKey)])
             ..limit(limit))
           .watch();
+
+  /// Preseden bentuknya `transaction_local_datasource.dart:116-118`.
+  @override
+  Stream<void> watchTransactionTicks() =>
+      _db.tableUpdates(TableUpdateQuery.onTable(_db.transactions)).map<void>(
+            (_) {},
+          );
 
   @override
   Future<WeeklyChallenge?> findWeek(int weekKey) =>

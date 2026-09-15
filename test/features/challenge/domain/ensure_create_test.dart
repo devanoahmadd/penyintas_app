@@ -123,6 +123,7 @@ void main() {
       auth: auth,
       clock: clock,
       getLimitable: getLimitable,
+      settings: sakelar,
     );
 
     env = _MockEnvPort();

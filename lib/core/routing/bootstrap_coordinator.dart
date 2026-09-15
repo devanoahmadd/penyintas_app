@@ -6,6 +6,7 @@ import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_sche
 import 'package:penyintas_app/features/bills/data/datasources/bill_reminder_settings_datasource.dart';
 import 'package:penyintas_app/features/bills/domain/repositories/bill_repository.dart';
 import 'package:penyintas_app/features/budget/domain/repositories/budget_repository.dart';
+import 'package:penyintas_app/features/challenge/domain/repositories/challenge_repository.dart';
 import 'package:penyintas_app/features/goal/domain/repositories/goal_repository.dart';
 import 'package:penyintas_app/features/onboarding/data/datasources/onboarding_local_datasource.dart';
 import 'package:penyintas_app/features/preferences/domain/repositories/preferences_repository.dart';
@@ -27,6 +28,7 @@ class BootstrapCoordinator {
     required BillReminderScheduler billReminderScheduler,
     required BillReminderSettingsDatasource billReminderSettings,
     required StreakRepository streakRepository,
+    required ChallengeRepository challengeRepository,
     required void Function()
     onComplete, // produksi: () => resetOnboardingCache()
     Duration stepTimeout = const Duration(seconds: 3),
@@ -39,6 +41,7 @@ class BootstrapCoordinator {
        _billScheduler = billReminderScheduler,
        _billReminderSettings = billReminderSettings,
        _streak = streakRepository,
+       _challenge = challengeRepository,
        _onComplete = onComplete,
        _stepTimeout = stepTimeout;
 
@@ -51,6 +54,7 @@ class BootstrapCoordinator {
   final BillReminderScheduler _billScheduler;
   final BillReminderSettingsDatasource _billReminderSettings;
   final StreakRepository _streak;
+  final ChallengeRepository _challenge;
   final void Function() _onComplete;
   final Duration _stepTimeout;
 
@@ -70,6 +74,7 @@ class BootstrapCoordinator {
         _goals.syncGoalsFromRemote().timeout(_stepTimeout),
         _bills.syncBillsFromRemote().timeout(_stepTimeout),
         _streak.syncMarksFromRemote().timeout(_stepTimeout),
+        _challenge.syncChallengesFromRemote().timeout(_stepTimeout),
       ]);
     } catch (e, s) {
       _recordNonFatal(e, s);
@@ -109,6 +114,17 @@ class BootstrapCoordinator {
     // pemulihan yang justru paling penting. Non-fatal.
     try {
       await _streak.pushPendingMarks().timeout(const Duration(seconds: 15));
+    } catch (e, s) {
+      _recordNonFatal(e, s);
+    }
+    // Dorongan tantangan — blok TERPISAH dengan anggaran waktunya sendiri,
+    // sama alasannya dengan dorongan penanda di atas (D-9). Menaruhnya di
+    // dalam `Future.wait` tarikan ber-timeout 3 detik membuat tarikan tak
+    // pernah jalan — dan di Fase 1 itu lolos SELURUH test. Non-fatal.
+    try {
+      await _challenge.pushPendingChallenges().timeout(
+        const Duration(seconds: 15),
+      );
     } catch (e, s) {
       _recordNonFatal(e, s);
     }

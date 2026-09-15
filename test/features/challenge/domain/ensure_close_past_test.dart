@@ -104,6 +104,7 @@ void main() {
       auth: auth,
       clock: clock,
       getLimitable: getLimitable,
+      settings: sakelar,
     );
 
     // Port lingkungan sengaja TIDAK distub, dan itu aman HANYA selama sakelar

@@ -10,6 +10,7 @@ import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
+import 'package:penyintas_app/features/challenge/data/datasources/challenge_settings_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/models/challenge_model.dart';
 import 'package:penyintas_app/features/challenge/data/repositories/challenge_repository_impl.dart';
 import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
@@ -83,6 +84,7 @@ void main() {
       local: local, remote: remote, network: network,
       auth: auth, clock: FixedClock(DateTime(2026, 9, 7, 9)),
       getLimitable: _MockGetLimitable(),
+      settings: ChallengeSettingsDatasourceImpl(db),
     );
   });
 
@@ -249,5 +251,39 @@ void main() {
     await repo.syncChallengesFromRemote();
 
     expect((await local.findWeek(20260831))!.resultSeenAt, isNotNull);
+  });
+
+  test('U118 · baris yang mengantre dua hari → payload updatedAt = KOLOM, '
+      'bukan waktu push', () async {
+    // D23. Kalau `toFirestore` mengisi `updatedAt` dengan waktu push, baris
+    // yang lama mengantre mendarat sebagai yang TERMUDA di Firestore dan
+    // presedensi merge T17 terbalik: minggu yang sudah tuntas bisa
+    // dibangkitkan lagi oleh baris `active` basi dari device lain.
+    final diubah = DateTime.utc(2026, 9, 5); // dua hari sebelum jam FixedClock
+    await db.into(db.weeklyChallenges).insert(
+          WeeklyChallengesCompanion.insert(
+            weekKey: const Value(20260831),
+            category: const Value('food'),
+            targetAmount: const Value(115000),
+            baselineAmount: const Value(140000),
+            status: ChallengeStatus.achieved,
+            finalSpent: const Value(100000),
+            timezone: 'WIB',
+            createdAt: DateTime.utc(2026, 8, 31),
+            updatedAt: diubah,
+          ),
+        );
+    when(() => network.isConnected).thenAnswer((_) async => true);
+    final terkirim = <ChallengeModel>[];
+    when(() => remote.upsertChallenge(any(), any())).thenAnswer((inv) async {
+      terkirim.add(inv.positionalArguments[1] as ChallengeModel);
+    });
+
+    await repo.pushPendingChallenges();
+
+    expect(
+      terkirim.single.toFirestore()['updatedAt'],
+      diubah.millisecondsSinceEpoch,
+    );
   });
 }
