@@ -197,6 +197,114 @@ void main() {
     });
   });
 
+  // ── Ronde 2 (review) · warna baris ambang & ikon sub-teks over WAJIB
+  // textSoft*, BUKAN warna fungsional (caution/warn/primaryBright).
+  //
+  // Temuan review: mitigasi kata+ikon (wajib karena warna isi bar gagal
+  // 3:1 di tema terang) sempat DIWARISI warna fungsional yang SAMA PERSIS
+  // yang gagal — warn/cardLight = 2,63:1, caution/cardLight = 1,94:1,
+  // keduanya gagal AA (dan gagal 3:1 non-teks juga untuk caution). U88
+  // hanya memeriksa KEBERADAAN Icon/Text, bukan warnanya — lubang cakupan
+  // ini menutupnya. textSoftLight/cardLight = 11,82:1,
+  // textSoftDark/cardDark = 8,38:1 — lolos AA di KEDUA tema.
+  group('Ronde 2 · warna baris ambang & sub-teks over pakai textSoft*', () {
+    for (final isDarkTheme in [false, true]) {
+      final themeLabel = isDarkTheme ? 'gelap' : 'terang';
+      final expectedColor = isDarkTheme
+          ? AppColors.textSoftDark
+          : AppColors.textSoftLight;
+
+      testWidgets('ambang Icon textSoft* — safe (40%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 40000, target: 100000, isDark: isDarkTheme),
+        );
+        final icon = tester.widget<Icon>(
+          find.byKey(const Key('challenge-ambang-icon')),
+        );
+        expect(icon.color, expectedColor);
+      });
+
+      testWidgets('ambang Text textSoft* — safe (40%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 40000, target: 100000, isDark: isDarkTheme),
+        );
+        final text = tester.widget<Text>(
+          find.byKey(const Key('challenge-ambang-label')),
+        );
+        expect(text.style?.color, expectedColor);
+      });
+
+      testWidgets('ambang Icon textSoft* — caution (65%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 65000, target: 100000, isDark: isDarkTheme),
+        );
+        final icon = tester.widget<Icon>(
+          find.byKey(const Key('challenge-ambang-icon')),
+        );
+        expect(icon.color, expectedColor);
+      });
+
+      testWidgets('ambang Text textSoft* — caution (65%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 65000, target: 100000, isDark: isDarkTheme),
+        );
+        final text = tester.widget<Text>(
+          find.byKey(const Key('challenge-ambang-label')),
+        );
+        expect(text.style?.color, expectedColor);
+      });
+
+      testWidgets('ambang Icon textSoft* — over (95%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 95000, target: 100000, isDark: isDarkTheme),
+        );
+        final icon = tester.widget<Icon>(
+          find.byKey(const Key('challenge-ambang-icon')),
+        );
+        expect(icon.color, expectedColor);
+      });
+
+      testWidgets('ambang Text textSoft* — over (95%), tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(spent: 95000, target: 100000, isDark: isDarkTheme),
+        );
+        final text = tester.widget<Text>(
+          find.byKey(const Key('challenge-ambang-label')),
+        );
+        expect(text.style?.color, expectedColor);
+      });
+
+      testWidgets('sub-teks over · Icon 16dp textSoft*, tema $themeLabel', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          kartu(
+            spent: 130000,
+            target: 100000,
+            isOver: true,
+            isDark: isDarkTheme,
+          ),
+        );
+        final icon = tester.widget<Icon>(
+          find.byKey(const Key('challenge-over-subtext-icon')),
+        );
+        expect(icon.color, expectedColor);
+      });
+    }
+  });
+
   // ── U89 · isi bar ambang aman ────────────────────────────────────────────
   group('U89 · isi bar ambang aman', () {
     testWidgets('tema gelap → primaryBright', (tester) async {

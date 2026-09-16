@@ -63,7 +63,10 @@ class ChallengeProgressBar extends StatelessWidget {
     final state = challengeBarStateFor(rawPct);
     final fillColor = challengeBarFillColor(state, isDark);
     final reduceMotion = MediaQuery.of(context).disableAnimations;
-    final persen = (clampedPct * 100).round();
+    // Persen yang DIUMUMKAN memakai rawPct (bukan clampedPct) — saat sudah
+    // lewat target (>100%), pembaca layar harus dengar angka sebenarnya
+    // (mis. "150 persen"), bukan "100 persen" yang dibatasi demi lebar bar.
+    final persen = (rawPct * 100).round();
 
     return Semantics(
       value: l10n.challengeBarSemantics(persen),

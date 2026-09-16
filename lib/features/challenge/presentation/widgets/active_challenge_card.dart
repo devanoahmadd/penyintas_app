@@ -51,6 +51,18 @@ String _plainNumber(int amount) =>
 /// - Ketiga ambang bar (aman/mendekati/lewat) WAJIB membawa kata + ikon —
 ///   tema terang tak bisa lolos kontras 3:1 lewat warna saja.
 /// - Baris pengecualian tagihan hanya muncul bila `excludedSpent > 0`.
+///
+/// PENTING (temuan review Task 14, ronde 2): warna FUNGSIONAL
+/// (`caution`/`warn`/`primaryBright`) dipakai HANYA untuk isi bar
+/// ([ChallengeProgressBar], lewat `challengeBarFillColor`) — elemen grafis
+/// yang brief terima secara sadar dengan mitigasi kata+ikon terpisah.
+/// Teks DAN ikon baris ambang, serta ikon 16dp di sub-teks "over", memakai
+/// `textSoft*` — BUKAN warna fungsional. Memakai warna fungsional di sana
+/// membuat mitigasi kontras ikut gagal kontras (`warn`/`cardLight` =
+/// 2,63:1, `caution`/`cardLight` = 1,94:1 — persis angka yang aturan di
+/// atas larang untuk teks/ikon di atas kartu). `textSoft*` lolos AA di
+/// KEDUA tema (`textSoftLight`/`cardLight` = 11,82:1,
+/// `textSoftDark`/`cardDark` = 8,38:1).
 class ActiveChallengeCard extends StatelessWidget {
   const ActiveChallengeCard({
     super.key,
@@ -104,7 +116,6 @@ class ActiveChallengeCard extends StatelessWidget {
 
     final rawPct = target > 0 ? spent / target : 0.0;
     final barState = challengeBarStateFor(rawPct);
-    final stateColor = challengeBarFillColor(barState, isDark);
     final stateLabel = switch (barState) {
       ChallengeBarState.safe => l10n.challengeBarStateSafe,
       ChallengeBarState.caution => l10n.challengeBarStateCaution,
@@ -163,10 +174,11 @@ class ActiveChallengeCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.warning_amber_rounded,
+                        key: const Key('challenge-over-subtext-icon'),
                         size: 16,
-                        color: AppColors.warn,
+                        color: textSoftColor,
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       Flexible(
@@ -195,12 +207,18 @@ class ActiveChallengeCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(stateIcon, size: 16, color: stateColor),
+              Icon(
+                stateIcon,
+                key: const Key('challenge-ambang-icon'),
+                size: 16,
+                color: textSoftColor,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Flexible(
                 child: Text(
                   stateLabel,
-                  style: AppTextStyles.caption.copyWith(color: stateColor),
+                  key: const Key('challenge-ambang-label'),
+                  style: AppTextStyles.caption.copyWith(color: textSoftColor),
                 ),
               ),
             ],
