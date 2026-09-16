@@ -560,5 +560,16 @@
   "consistency_evening_record": "Catat",
 
   "notification_daily_title": "Jangan lupa catat pengeluaran hari ini!",
-  "notification_daily_body": "Satu catatan kecil sekarang, lebih aman sampai akhir bulan."
+  "notification_daily_body": "Satu catatan kecil sekarang, lebih aman sampai akhir bulan.",
+
+  "challenge_bar_state_safe": "Aman",
+  "challenge_bar_state_caution": "Mendekati batas",
+  "challenge_bar_state_over": "Lewat target",
+  "challenge_bar_semantics": "{percent} persen dari target minggu ini.",
+  "challenge_card_remaining_of": "Sisa dari Rp {target}.",
+  "challenge_card_over_of": "Lewat dari Rp {target}.",
+  "challenge_card_daily_hint": "Sekitar Rp {amount} per hari sampai target.",
+  "challenge_card_over_hint": "Nggak apa-apa. Catat terus, lanjut ke minggu depan.",
+  "challenge_card_excluded": "Rp {amount} dari tagihan & kebutuhan tetap tidak dihitung.",
+  "challenge_card_change_category": "Ganti pos"
 }

@@ -855,6 +855,24 @@ class AppLocalizations {
   // notifikasi bernada kecemasan ("streak kamu akan hilang!").
   String get notificationDailyTitle => _t('notification_daily_title');
   String get notificationDailyBody => _t('notification_daily_body');
+
+  // ── Challenge — kartu utama aktif/lewat target (Task 14) ──
+  String get challengeBarStateSafe => _t('challenge_bar_state_safe');
+  String get challengeBarStateCaution => _t('challenge_bar_state_caution');
+  String get challengeBarStateOver => _t('challenge_bar_state_over');
+  String challengeBarSemantics(int percent) =>
+      _t('challenge_bar_semantics').replaceAll('{percent}', '$percent');
+  String challengeCardRemainingOf(String target) =>
+      _t('challenge_card_remaining_of').replaceAll('{target}', target);
+  String challengeCardOverOf(String target) =>
+      _t('challenge_card_over_of').replaceAll('{target}', target);
+  String challengeCardDailyHint(String amount) =>
+      _t('challenge_card_daily_hint').replaceAll('{amount}', amount);
+  String get challengeCardOverHint => _t('challenge_card_over_hint');
+  String challengeCardExcluded(String amount) =>
+      _t('challenge_card_excluded').replaceAll('{amount}', amount);
+  String get challengeCardChangeCategory =>
+      _t('challenge_card_change_category');
 }
 
 class _AppLocalizationsDelegate

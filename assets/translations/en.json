@@ -560,5 +560,16 @@
   "consistency_evening_record": "Record",
 
   "notification_daily_title": "Don't forget to log today's spending!",
-  "notification_daily_body": "One small note now, safer until month's end."
+  "notification_daily_body": "One small note now, safer until month's end.",
+
+  "challenge_bar_state_safe": "Safe",
+  "challenge_bar_state_caution": "Getting close",
+  "challenge_bar_state_over": "Over target",
+  "challenge_bar_semantics": "{percent} percent of this week's target.",
+  "challenge_card_remaining_of": "Remaining of Rp {target}.",
+  "challenge_card_over_of": "Over your Rp {target} target.",
+  "challenge_card_daily_hint": "About Rp {amount} a day until your target.",
+  "challenge_card_over_hint": "That's okay. Keep logging, next week is a fresh start.",
+  "challenge_card_excluded": "Rp {amount} from bills & fixed needs isn't counted.",
+  "challenge_card_change_category": "Change category"
 }
