@@ -571,5 +571,22 @@
   "challenge_card_daily_hint": "Sekitar Rp {amount} per hari sampai target.",
   "challenge_card_over_hint": "Nggak apa-apa. Catat terus, lanjut ke minggu depan.",
   "challenge_card_excluded": "Rp {amount} dari tagihan & kebutuhan tetap tidak dihitung.",
-  "challenge_card_change_category": "Ganti pos"
+  "challenge_card_change_category": "Ganti pos",
+  "challenge_result_eyebrow": "Hasil tantangan",
+  "challenge_result_dismiss": "Tutup",
+  "challenge_empty_disabled_title": "Tantangan mingguan belum aktif.",
+  "challenge_empty_disabled_body": "Nyalakan buat dapat satu target kecil tiap minggu, dari pola belanjamu sendiri.",
+  "challenge_empty_enable_button": "Nyalakan",
+  "challenge_empty_not_enough_data_title": "Belum cukup catatan buat menantang minggu ini.",
+  "challenge_empty_not_enough_data_body": "Catat beberapa pengeluaran dulu, kita coba lagi Senin depan.",
+  "challenge_empty_out_of_window_first_title": "Tantangan pertamamu dimulai Senin depan.",
+  "challenge_empty_out_of_window_first_body": "Kami butuh beberapa hari catatan dulu buat menghitung target yang pas buatmu.",
+  "challenge_empty_out_of_window_title": "Tantangan minggu ini nggak sempat dimulai.",
+  "challenge_empty_out_of_window_body": "Nggak apa-apa. Tantangan baru muncul lagi Senin depan.",
+  "challenge_empty_settled_title": "Tantangan minggu ini sudah selesai.",
+  "challenge_empty_settled_body": "Yuk, lanjut lagi Senin depan.",
+  "challenge_empty_held_title": "Tantangan minggu ini nggak jalan dulu.",
+  "challenge_empty_held_body": "Nggak apa-apa, kita fokus dulu ke yang lain. Lanjut lagi Senin depan.",
+  "challenge_empty_budget_not_set_title": "Atur kebutuhan tetap dulu, ya.",
+  "challenge_empty_budget_not_set_body": "Biar kami bisa hitung target belanja yang pas buat tantangan minggu ini."
 }

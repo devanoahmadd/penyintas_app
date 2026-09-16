@@ -571,5 +571,22 @@
   "challenge_card_daily_hint": "About Rp {amount} a day until your target.",
   "challenge_card_over_hint": "That's okay. Keep logging, next week is a fresh start.",
   "challenge_card_excluded": "Rp {amount} from bills & fixed needs isn't counted.",
-  "challenge_card_change_category": "Change category"
+  "challenge_card_change_category": "Change category",
+  "challenge_result_eyebrow": "Challenge result",
+  "challenge_result_dismiss": "Dismiss",
+  "challenge_empty_disabled_title": "Weekly challenge is off.",
+  "challenge_empty_disabled_body": "Turn it on to get one small weekly target, based on your own spending pattern.",
+  "challenge_empty_enable_button": "Turn on",
+  "challenge_empty_not_enough_data_title": "Not enough history yet for a challenge this week.",
+  "challenge_empty_not_enough_data_body": "Log a few more expenses first — we'll try again next Monday.",
+  "challenge_empty_out_of_window_first_title": "Your first challenge starts next Monday.",
+  "challenge_empty_out_of_window_first_body": "We need a few days of history first to work out a target that fits you.",
+  "challenge_empty_out_of_window_title": "This week's challenge didn't get started in time.",
+  "challenge_empty_out_of_window_body": "That's okay. A new challenge shows up again next Monday.",
+  "challenge_empty_settled_title": "This week's challenge is done.",
+  "challenge_empty_settled_body": "See you again next Monday.",
+  "challenge_empty_held_title": "No challenge running this week.",
+  "challenge_empty_held_body": "That's alright — let's focus on other things for now. Back again next Monday.",
+  "challenge_empty_budget_not_set_title": "Set up your fixed needs first.",
+  "challenge_empty_budget_not_set_body": "So we can work out a fair spending target for this week's challenge."
 }

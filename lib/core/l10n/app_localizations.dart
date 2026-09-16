@@ -873,6 +873,37 @@ class AppLocalizations {
       _t('challenge_card_excluded').replaceAll('{amount}', amount);
   String get challengeCardChangeCategory =>
       _t('challenge_card_change_category');
+
+  // ── Challenge — kartu hasil & enam kartu kosong (Task 15) ──
+  String get challengeResultEyebrow => _t('challenge_result_eyebrow');
+  String get challengeResultDismiss => _t('challenge_result_dismiss');
+  String get challengeEmptyDisabledTitle =>
+      _t('challenge_empty_disabled_title');
+  String get challengeEmptyDisabledBody =>
+      _t('challenge_empty_disabled_body');
+  String get challengeEmptyEnableButton =>
+      _t('challenge_empty_enable_button');
+  String get challengeEmptyNotEnoughDataTitle =>
+      _t('challenge_empty_not_enough_data_title');
+  String get challengeEmptyNotEnoughDataBody =>
+      _t('challenge_empty_not_enough_data_body');
+  String get challengeEmptyOutOfWindowFirstTitle =>
+      _t('challenge_empty_out_of_window_first_title');
+  String get challengeEmptyOutOfWindowFirstBody =>
+      _t('challenge_empty_out_of_window_first_body');
+  String get challengeEmptyOutOfWindowTitle =>
+      _t('challenge_empty_out_of_window_title');
+  String get challengeEmptyOutOfWindowBody =>
+      _t('challenge_empty_out_of_window_body');
+  String get challengeEmptySettledTitle =>
+      _t('challenge_empty_settled_title');
+  String get challengeEmptySettledBody => _t('challenge_empty_settled_body');
+  String get challengeEmptyHeldTitle => _t('challenge_empty_held_title');
+  String get challengeEmptyHeldBody => _t('challenge_empty_held_body');
+  String get challengeEmptyBudgetNotSetTitle =>
+      _t('challenge_empty_budget_not_set_title');
+  String get challengeEmptyBudgetNotSetBody =>
+      _t('challenge_empty_budget_not_set_body');
 }
 
 class _AppLocalizationsDelegate
