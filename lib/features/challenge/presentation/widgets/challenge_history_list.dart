@@ -31,6 +31,20 @@ import 'package:penyintas_app/features/challenge/presentation/utils/challenge_we
 /// BLoC memang sudah dibatasi jumlah itu (Task 13), tapi `.take()` di sini
 /// membuat batasnya terkunci DI SINI juga, bukan cuma dipercaya dari
 /// pemanggil.
+///
+/// I2 (review Task 16 ronde 2) — TEMUAN: `ChallengeLocalDatasourceImpl.
+/// watchHistory` (data layer) tidak punya `where` sama sekali — baris
+/// minggu YANG SEDANG BERJALAN ikut terbawa `history` selama ia sudah
+/// pernah ditulis (`active`, dibuat Senin/Selasa). Karena baris itu JUGA
+/// yang dirender `ActiveChallengeCard` di kartu utama, tanpa penyaringan
+/// di sini user Senin pertama melihat baris RIWAYAT pertama sama persis
+/// dengan kartu utama di atasnya — kategori sama, tapi kolom nominal "—"
+/// (status `active` tidak match cabang manapun di `_HistoryRow`, lihat
+/// switch di bawah). Itu bukan riwayat, itu duplikat kosong-makna. Mock
+/// spec §7.8 hanya menggambar minggu yang SUDAH TUNTAS (✓/✗/•) — nol
+/// baris "active". Disaring DI SINI (bukan di data layer — di luar scope
+/// berkas yang boleh diubah task ini) SEBELUM `.take()`, supaya minggu
+/// aktif tidak pernah memakan salah satu dari 12 slot riwayat.
 class ChallengeHistoryList extends StatelessWidget {
   const ChallengeHistoryList({super.key, required this.history});
 
@@ -41,7 +55,10 @@ class ChallengeHistoryList extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    final rows = history.take(kChallengeHistoryWeeks).toList();
+    final rows = history
+        .where((w) => w.status != ChallengeStatus.active)
+        .take(kChallengeHistoryWeeks)
+        .toList();
 
     return Column(
       key: const Key('challenge-history-list'),
@@ -102,10 +119,12 @@ class _HistoryRow extends StatelessWidget {
         trailing = l10n.challengeHistorySkipped;
       // U85 — `unknown` TIDAK PERNAH diberi ikon ✓/✗ (atau ikon apa pun):
       // app tidak menebak hasil yang tak ia pahami. `active` masuk cabang
-      // yang sama sebagai penjaga: baris minggu BERJALAN semestinya tidak
-      // pernah muncul di riwayat (ia tampil lewat kartu utama), tapi kalau
-      // suatu saat ia terselip ke sini, merender "—" polos jauh lebih aman
-      // daripada mengklaim hasil yang belum ada.
+      // yang sama sebagai PENJAGA GANDA — `ChallengeHistoryList.build` di
+      // atas SUDAH menyaring `status == active` sebelum baris ini pernah
+      // dibangun (I2, review ronde 2), tapi switch atas `ChallengeStatus`
+      // (enam nilai) tetap wajib exhaustive lewat compiler; kalau penyaring
+      // di atas suatu saat lolos/dihapus, cabang ini tetap merender "—"
+      // polos alih-alih mengklaim hasil yang belum ada.
       case ChallengeStatus.unknown:
       case ChallengeStatus.active:
         icon = null;
@@ -120,8 +139,18 @@ class _HistoryRow extends StatelessWidget {
       alignment: Alignment.center,
       child: Row(
         children: [
+          // I3 (review ronde 2) — TEMUAN via `RenderParagraph.
+          // didExceedMaxLines` (test yang sebelumnya cuma `takeException()`
+          // tak bisa menangkap ini, sebab `overflow: ellipsis` tak pernah
+          // melempar): pembagian flex LAMA (3:4:4) memotong rentang tanggal
+          // di 320dp ("31 Agu–6 Sep" butuh ±100px, cuma dapat ±74px).
+          // Dilonggarkan jadi 5:3:6 — kategori (paling aman dipotong; nama
+          // kategori tetap terbaca dari beberapa huruf pertama + ikon di
+          // kartu utama) menyusut, rentang tanggal & trailing finansial
+          // melebar. Diverifikasi ULANG lewat `didExceedMaxLines` di test
+          // — bukan tebakan lebar piksel.
           Expanded(
-            flex: 3,
+            flex: 5,
             child: Text(
               rangeLabel,
               key: Key('challenge-history-range-$index'),
@@ -132,7 +161,7 @@ class _HistoryRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            flex: 4,
+            flex: 3,
             child: Text(
               categoryLabel,
               key: Key('challenge-history-category-$index'),
@@ -143,7 +172,7 @@ class _HistoryRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
-            flex: 4,
+            flex: 6,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,

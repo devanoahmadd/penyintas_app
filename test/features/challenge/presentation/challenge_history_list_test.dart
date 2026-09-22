@@ -105,9 +105,18 @@ void main() {
       ),
     );
 
+    // M9 (review ronde 2) — diikat ke Key kolom kategori secara eksplisit
+    // (sebelumnya `find.text('—')` polos, sama seperti U85 mengikat
+    // trailing-nya ke Key, bukan sekadar mencari teks "—" di mana pun).
     expect(
-      find.text('—'),
+      find.byKey(const Key('challenge-history-category-0')),
       findsOneWidget,
+    );
+    expect(
+      (tester.widget(find.byKey(const Key('challenge-history-category-0')))
+              as Text)
+          .data,
+      '—',
       reason: 'kolom kategori baris held tanpa tantangan harus "—"',
     );
   });
@@ -292,6 +301,80 @@ void main() {
       reason: 'baris ke-13 (index 12) tidak boleh dirender — melebihi batas',
     );
   });
+
+  // ── I2 (review ronde 2) · minggu BERJALAN tidak boleh muncul di riwayat ──
+
+  testWidgets(
+    'I2 · baris berstatus active (minggu berjalan) TIDAK dirender sama '
+    'sekali — hanya baris tuntas yang muncul',
+    (tester) async {
+      await tester.pumpWidget(
+        bungkus(
+          ChallengeHistoryList(
+            history: [
+              week(weekKey: 20260907, status: ChallengeStatus.active),
+              week(
+                weekKey: 20260831,
+                status: ChallengeStatus.achieved,
+                finalSpent: 90000,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Satu-satunya baris yang dirender adalah yang achieved (index 0) —
+      // baris active TIDAK memakan slot apa pun, sama sekali tidak dirender.
+      expect(find.byKey(const Key('challenge-history-row-0')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-history-row-1')), findsNothing);
+      final icon =
+          tester.widget(find.byKey(const Key('challenge-history-icon-0')))
+              as Icon;
+      expect(
+        icon.icon,
+        Icons.check_rounded,
+        reason:
+            'baris 0 harus baris achieved, BUKAN baris active yang '
+            'seharusnya sudah tersaring',
+      );
+    },
+  );
+
+  testWidgets(
+    'I2 · baris active TIDAK memakan salah satu dari 12 slot riwayat — 12 '
+    'baris tuntas + 1 baris active → tetap 12 baris tuntas yang dirender',
+    (tester) async {
+      int senin(int mundurMinggu) {
+        final d = DateTime(
+          2026,
+          9,
+          7,
+        ).subtract(Duration(days: 7 * mundurMinggu));
+        return d.year * 10000 + d.month * 100 + d.day;
+      }
+
+      final duaBelasTuntas = [
+        for (var i = 1; i <= 12; i++)
+          week(weekKey: senin(i), status: ChallengeStatus.achieved),
+      ];
+      final history = [
+        week(weekKey: senin(0), status: ChallengeStatus.active), // minggu ini
+        ...duaBelasTuntas,
+      ];
+
+      await tester.pumpWidget(bungkus(ChallengeHistoryList(history: history)));
+
+      // Seluruh 12 baris tuntas tetap dirender (bukan 11, gara-gara satu
+      // slot "termakan" baris active yang seharusnya sudah tersaring).
+      expect(find.byKey(const Key('challenge-history-row-11')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-history-row-12')), findsNothing);
+      for (var i = 0; i < 12; i++) {
+        final icon =
+            tester.widget(find.byKey(Key('challenge-history-icon-$i'))) as Icon;
+        expect(icon.icon, Icons.check_rounded);
+      }
+    },
+  );
 
   // ── S-C · pohon widget tidak mengimpor app_database.dart ────────────────
 

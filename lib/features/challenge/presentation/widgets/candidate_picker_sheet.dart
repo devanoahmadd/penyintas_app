@@ -222,9 +222,19 @@ class _CandidateRow extends StatelessWidget {
         : AppColors.textSoftLight;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final accentColor = isDark ? AppColors.shoot : AppColors.primary;
-    final (categoryIcon, categoryIconColor) = CategoryMetadata.of(
-      candidate.category,
-    );
+    // I1 (review Task 16 ronde 2) — TEMUAN: `CategoryMetadata.of` mengembalikan
+    // warna FUNGSIONAL per kategori (`warn` untuk food, `caution` untuk
+    // shopping, `primaryBright` untuk health/income) yang gagal 3:1 non-teks
+    // di atas `surface*` (food/`warn` 2,31:1 · shopping/`caution` 1,70:1 ·
+    // health-income/`primaryBright` 2,55:1 — lihat tabel kontras laporan
+    // Task 16 untuk angka lengkap). Setiap call-site LAIN di repo
+    // (`transaction_item.dart:32`, `add_transaction_sheet.dart:665`,
+    // `edit_transaction_sheet.dart:634`, `dashboard_page.dart:488`,
+    // `transaction_detail_sheet.dart:158,399`) SENGAJA membuang warnanya
+    // (`final (icon, _) = …` / `.$1`) — berkas ini dulu satu-satunya yang
+    // memakainya. Diperbaiki: buang warnanya juga, pakai `textSoft*` seperti
+    // teks sekunder lain di baris ini.
+    final (categoryIcon, _) = CategoryMetadata.of(candidate.category);
     final categoryLabel = CategoryMetadata.resolveLabelFromSlug(
       candidate.category,
       l10n,
@@ -252,7 +262,12 @@ class _CandidateRow extends StatelessWidget {
                 color: selected ? accentColor : mutedColor,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Icon(categoryIcon, size: 20, color: categoryIconColor),
+              Icon(
+                categoryIcon,
+                key: Key('challenge-candidate-icon-${candidate.category}'),
+                size: 20,
+                color: textSoftColor,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(

@@ -318,7 +318,14 @@ class _ReadyBody extends StatelessWidget {
                 ChallengeResultDismissed(pending.weekKey),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            // M10 (putusan pengendali, review ronde 2) — brief menulis "jarak
+            // antar bagian AppSpacing.xl" secara UMUM, tapi mock spec §7.3
+            // MENGGAMBAR AppSpacing.md tepat di titik ini. Gambar yang
+            // spesifik menang atas instruksi umum: kartu hasil adalah
+            // banner yang menempel di atas kartu utama (bukan bagian
+            // terpisah dengannya) — `xl` tetap dipakai untuk jarak antar
+            // BAGIAN lain (kartu utama → "RIWAYAT" → daftar) di bawah.
+            const SizedBox(height: AppSpacing.md),
           ],
           _mainCard(context),
           if (snapshot.history.isNotEmpty) ...[

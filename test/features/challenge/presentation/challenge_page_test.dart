@@ -34,6 +34,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/l10n/app_localizations.dart';
+import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/features/challenge/domain/challenge_calculator.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_candidate.dart';
@@ -140,7 +141,11 @@ void main() {
     Failure? failure,
   }) => ChallengeState(status: status, snapshot: snapshot, failure: failure);
 
-  Widget bungkus(ChallengeState awal, {Stream<ChallengeState>? aliran}) {
+  Widget bungkus(
+    ChallengeState awal, {
+    Stream<ChallengeState>? aliran,
+    bool isDark = false,
+  }) {
     whenListen(
       bloc,
       aliran ?? Stream<ChallengeState>.value(awal),
@@ -155,6 +160,9 @@ void main() {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      theme: ThemeData(brightness: Brightness.light),
+      darkTheme: ThemeData(brightness: Brightness.dark),
+      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       home: BlocProvider<ChallengeBloc>.value(
         value: bloc,
         child: const ChallengePage(),
@@ -342,25 +350,96 @@ void main() {
         find.byKey(const Key('challenge-candidate-target-food')),
         findsOneWidget,
       );
+      final teksFood =
+          (tester.widget(
+                    find.byKey(const Key('challenge-candidate-target-food')),
+                  )
+                  as Text)
+              .data!;
+      // M3 (review ronde 2) — sebelumnya HANYA target diuji; brief menuntut
+      // "basis DAN target" (Rp 140.000 → target Rp 115.000). Kalau template
+      // l10n kehilangan `{baseline}`, test lama tetap hijau. Basis diuji
+      // TERPISAH di sini supaya kehilangan salah satu placeholder memerahkan
+      // baris yang tepat.
       expect(
-        (tester.widget(find.byKey(const Key('challenge-candidate-target-food')))
-                as Text)
-            .data,
+        teksFood,
+        contains('140.000'),
+        reason: 'basis food hilang dari baris',
+      );
+      expect(
+        teksFood,
         contains('115.000'),
+        reason: 'target food hilang dari baris',
       );
       expect(
         find.byKey(const Key('challenge-candidate-target-transport')),
         findsOneWidget,
       );
+      final teksTransport =
+          (tester.widget(
+                    find.byKey(
+                      const Key('challenge-candidate-target-transport'),
+                    ),
+                  )
+                  as Text)
+              .data!;
       expect(
-        (tester.widget(
-                  find.byKey(const Key('challenge-candidate-target-transport')),
-                )
-                as Text)
-            .data,
+        teksTransport,
+        contains('96.000'),
+        reason: 'basis transport hilang dari baris',
+      );
+      expect(
+        teksTransport,
         contains('80.000'),
         reason: 'computeTarget(96000) = 80.000, bukan 81.000',
       );
+    },
+  );
+
+  testWidgets(
+    'I1 (review ronde 2) · ikon kategori sheet kandidat memakai textSoft*, '
+    'BUKAN warna fungsional CategoryMetadata (light)',
+    (tester) async {
+      when(
+        () => repo.getCandidates(any()),
+      ).thenAnswer((_) async => Right(kandidatContoh()));
+      await tester.pumpWidget(bungkus(state(snapshot: snapshot())));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('challenge-change-category-row')));
+      await tester.pumpAndSettle();
+
+      final icon =
+          tester.widget(find.byKey(const Key('challenge-candidate-icon-food')))
+              as Icon;
+      // `CategoryMetadata.of('food')` mengembalikan `AppColors.warn` —
+      // 2,31:1 di atas `surfaceLight`, gagal ambang 3:1 non-teks. Ikon
+      // WAJIB `textSoft*`, bukan warna itu.
+      expect(icon.color, isNot(AppColors.warn));
+      expect(icon.color, AppColors.textSoftLight);
+    },
+  );
+
+  testWidgets(
+    'I1 (review ronde 2) · ikon kategori sheet kandidat memakai textSoft* '
+    'di tema gelap juga',
+    (tester) async {
+      when(
+        () => repo.getCandidates(any()),
+      ).thenAnswer((_) async => Right(kandidatContoh()));
+      await tester.pumpWidget(
+        bungkus(state(snapshot: snapshot()), isDark: true),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('challenge-change-category-row')));
+      await tester.pumpAndSettle();
+
+      final icon =
+          tester.widget(find.byKey(const Key('challenge-candidate-icon-food')))
+              as Icon;
+      expect(icon.color, isNot(AppColors.warn));
+      expect(icon.color, AppColors.textSoftDark);
     },
   );
 
@@ -642,37 +721,112 @@ void main() {
 
   // ── Langkah 6 · nol overflow di 320dp dan 430dp ──────────────────────────
 
-  testWidgets('nol overflow pada 320dp maupun 430dp', (tester) async {
+  // M1 (review ronde 2) — sebelumnya DUA lebar dijejalkan ke SATU
+  // `testWidgets`: kalau 320dp gagal, 430dp tidak pernah sempat jalan.
+  // Dipecah, meniru pola U90 yang sudah benar dipecah tiga.
+  ChallengeSnapshot snapshotPenuhUntukOverflow() => snapshot(
+    pendingResult: week(
+      weekKey: 20260824,
+      status: ChallengeStatus.achieved,
+      finalSpent: 90000,
+    ),
+    history: [
+      week(
+        weekKey: 20260831,
+        status: ChallengeStatus.missed,
+        finalSpent: 132000,
+      ),
+      week(weekKey: 20260817, status: ChallengeStatus.held, category: null),
+      week(weekKey: 20260810, status: ChallengeStatus.unknown),
+    ],
+  );
+
+  testWidgets('nol overflow pada 320dp', (tester) async {
     addTearDown(tester.view.reset);
     when(
       () => repo.getCandidates(any()),
     ).thenAnswer((_) async => Right(kandidatContoh()));
 
-    final snapshotPenuh = snapshot(
-      pendingResult: week(
-        weekKey: 20260824,
-        status: ChallengeStatus.achieved,
-        finalSpent: 90000,
-      ),
-      history: [
-        week(
-          weekKey: 20260831,
-          status: ChallengeStatus.missed,
-          finalSpent: 132000,
-        ),
-        week(weekKey: 20260817, status: ChallengeStatus.held, category: null),
-        week(weekKey: 20260810, status: ChallengeStatus.unknown),
-      ],
-    );
-
     tester.view.physicalSize = const Size(320, 1200);
     tester.view.devicePixelRatio = 1;
-    await tester.pumpWidget(bungkus(state(snapshot: snapshotPenuh)));
+    await tester.pumpWidget(
+      bungkus(state(snapshot: snapshotPenuhUntukOverflow())),
+    );
     await tester.pump();
     expect(tester.takeException(), isNull);
 
+    // I3 (review ronde 2) — TEMUAN: `takeException()` menangkap
+    // `RenderFlex overflowed`, TAPI seluruh `Text` baris riwayat memakai
+    // `overflow: TextOverflow.ellipsis`, jadi pemotongan TIDAK PERNAH
+    // melempar galat apa pun — test LAMA bisa hijau sambil nominal
+    // finansial dipotong diam-diam.
+    //
+    // INVESTIGASI (dicoba lebih dulu): `RenderParagraph.didExceedMaxLines`
+    // diukur langsung via `tester.renderObject<RenderParagraph>(...)` pada
+    // ketiga kolom. Ditemukan `flutter_test` TIDAK memuat font produksi —
+    // GoogleFonts butuh jaringan (sandbox test ini tanpa jaringan), dan
+    // dibuktikan lewat pengukuran silang: string yang SAMA berstyle
+    // GoogleFonts JetBrains Mono 12px, `fontFamily: 'monospace'` 12px
+    // polos, DAN 12px TANPA fontFamily sama sekali, KETIGANYA mengukur
+    // lebar identik (147–153px untuk "31 Agu–6 Sep"). `flutter_test`
+    // mengganti SEMUA font dengan satu font placeholder, terlepas dari
+    // family yang diminta — bukan cuma GoogleFonts. Di bawah metrik
+    // placeholder itu, date+trailing SENDIRIAN (tanpa kategori sama
+    // sekali) sudah melebihi anggaran 272px pada 320dp — TIDAK ADA
+    // pembagian flex yang bisa membuat `didExceedMaxLines` bernilai
+    // `false` di lingkungan ini, karena constraint fisiknya sendiri
+    // mustahil (redistribusi flex tak bisa menciptakan ruang baru).
+    // Estimasi manual dengan metrik JetBrains Mono SUNGGUHAN (±96px
+    // rentang tanggal, ±104px trailing) muat nyaman dalam 272px, menyisakan
+    // ruang untuk kategori — jadi ini limitasi infrastruktur test
+    // (`flutter_test` di seluruh repo tidak pernah memuat font asli, tanpa
+    // `flutter_test_config.dart`/font loading manual di mana pun),
+    // BUKAN bug layout produksi. Membangun infrastruktur font-asli-di-test
+    // di luar scope perbaikan Task 16 ini.
+    //
+    // Pembagian flex TETAP dilonggarkan (5:3:6, lihat
+    // `challenge_history_list.dart`) sebagai perbaikan nyata untuk metrik
+    // produksi. Kontrak yang BISA diuji JUJUR di lingkungan ini —
+    // dipilih di sini sebagai pengganti klaim piksel yang tak
+    // terverifikasi — adalah: **kalau baris riwayat suatu saat memang
+    // harus memotong teks, potongannya SELALU ellipsis yang kelihatan,
+    // TIDAK PERNAH clip diam-diam, dan TIDAK PERNAH pecah ke baris
+    // kedua** (yang akan merusak tinggi baris 56dp). Ini font-independent,
+    // dan terbukti bisa merah lewat mutasi (lihat laporan Task 16).
+    for (final key in [
+      'challenge-history-range-0',
+      'challenge-history-category-0',
+      'challenge-history-trailing-0',
+    ]) {
+      final teks = tester.widget<Text>(find.byKey(Key(key)));
+      expect(
+        teks.overflow,
+        TextOverflow.ellipsis,
+        reason:
+            '$key harus overflow ellipsis — kalau terpotong, harus '
+            'kelihatan ("…"), bukan clip diam-diam',
+      );
+      expect(
+        teks.maxLines,
+        1,
+        reason:
+            '$key harus maxLines 1 — mencegah baris riwayat 56dp '
+            'membengkak/pecah baris kalau teks kepanjangan',
+      );
+    }
+  });
+
+  testWidgets('nol overflow pada 430dp', (tester) async {
+    addTearDown(tester.view.reset);
+    when(
+      () => repo.getCandidates(any()),
+    ).thenAnswer((_) async => Right(kandidatContoh()));
+
     tester.view.physicalSize = const Size(430, 1200);
-    await tester.pumpWidget(bungkus(state(snapshot: snapshotPenuh)));
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(
+      bungkus(state(snapshot: snapshotPenuhUntukOverflow())),
+    );
     await tester.pump();
     expect(tester.takeException(), isNull);
   });

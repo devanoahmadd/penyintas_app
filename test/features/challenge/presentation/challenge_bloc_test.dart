@@ -536,6 +536,37 @@ void main() {
     );
   });
 
+  test('M2 (review ronde 2) · hasil yang SUDAH dilihat (resultSeenAt non-null) '
+      'tidak pernah terpilih lagi sebagai pendingResult, walau weekKey-nya '
+      'TERBESAR', () async {
+    // Menutup celah M2 dari review ronde 2: `if (w.resultSeenAt != null)
+    // continue;` (`challenge_bloc.dart:329`) sebelumnya TAK terkunci
+    // test mana pun — nol test pernah menulis `resultSeenAt` non-null
+    // lalu memeriksa BLoC-nya. Cabang ini adalah yang mencegah kartu
+    // hasil KEMBALI muncul sesudah user menutupnya (D11, tombol ✕
+    // `ChallengeResultDismissed`) — akibat paling kelihatan dari ketiga
+    // cabang di `_hasilBelumDilihatTerbaru`.
+    await tulisTigaHasilBelumDilihat(); // 20260810, 20260817, 20260824 — BELUM dilihat
+    await tulisBaris(
+      weekKey: _mingguLalu, // 20260831 — TERBESAR
+      status: ChallengeStatus.achieved,
+      finalSpent: 50000,
+      resultSeenAt: DateTime.utc(2026, 9, 1), // SUDAH dilihat user
+    );
+
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => b.state.snapshot != null);
+
+    expect(
+      b.state.snapshot!.pendingResult?.weekKey,
+      20260824,
+      reason:
+          '20260831 sudah dilihat (resultSeenAt non-null) — walau '
+          'weekKey-nya TERBESAR, ia tidak boleh terpilih lagi. 20260824 '
+          'adalah weekKey terbesar KEDUA yang benar-benar belum dilihat.',
+    );
+  });
+
   // ── U68 · penjaga satu-minggu-satu-ensure ─────────────────────────────────
 
   test('U68 · stream diawasi lama TANPA pergantian minggu → ensure TIDAK '
