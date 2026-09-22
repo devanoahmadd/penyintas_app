@@ -9,6 +9,8 @@ import 'package:penyintas_app/core/routing/onboarding_guard.dart';
 import 'package:penyintas_app/core/routing/onboarding_status.dart';
 import 'package:penyintas_app/core/routing/go_router_refresh_stream.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
+import 'package:penyintas_app/features/challenge/presentation/pages/challenge_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/login_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/register_page.dart';
 import 'package:penyintas_app/features/auth/presentation/pages/splash_page.dart';
@@ -125,6 +127,17 @@ GoRouter createAppRouter() => GoRouter(
           BlocProvider.value(value: sl<SurvivalBloc>()),
         ],
         child: const ConsistencyPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/challenge',
+      // Task 16 — pola persis `/consistency` di atas: bloc singleton lewat
+      // `.value` (jangan close saat route di-pop/replace), event yang
+      // dipasang `restartable()` (M4, Task 13) aman di-dispatch ulang tiap
+      // masuk rute — langganan lama otomatis dibatalkan.
+      builder: (context, state) => BlocProvider.value(
+        value: sl<ChallengeBloc>()..add(const ChallengeStarted()),
+        child: const ChallengePage(),
       ),
     ),
     GoRoute(

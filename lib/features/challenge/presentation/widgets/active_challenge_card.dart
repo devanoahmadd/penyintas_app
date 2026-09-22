@@ -5,6 +5,7 @@ import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
 import 'package:penyintas_app/core/theme/app_text_styles.dart';
 import 'package:penyintas_app/core/utils/category_metadata.dart';
+import 'package:penyintas_app/core/utils/currency_config.dart';
 import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_phase.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_week.dart';
@@ -36,8 +37,19 @@ import 'package:penyintas_app/widgets/common/count_up_text.dart';
   };
 }
 
+// Task 16 (U91) — TEMUAN: sebelumnya `NumberFormat.decimalPattern` dipanggil
+// dengan locale Indonesia yang di-hardcode LANGSUNG di sini — literal yang
+// persis dilarang U91 di seluruh `lib/features/challenge/` (preseden
+// pelanggaran yang sama: `date_helper.dart:56,60`, lihat literalnya di
+// sana). BUKAN diganti locale-dari-context: format Rupiah SENGAJA tidak
+// mengikuti bahasa UI (`CurrencyConfig.idr.locale`, dipakai `formatRupiah`
+// di seluruh app) — nominal Rupiah selalu berkelompok titik, baik UI-nya
+// Indonesia maupun Inggris, supaya angka di kartu ini (mis. "34.000" dari
+// baris ini) tidak pernah berselisih format dengan `mainAmount` di atasnya
+// yang dirender lewat `formatRupiah`. Locale-nya diambil dari SATU sumber
+// kanonik (`CurrencyConfig.idr.locale`), bukan literal yang diduplikasi.
 String _plainNumber(int amount) =>
-    NumberFormat.decimalPattern('id_ID').format(amount);
+    NumberFormat.decimalPattern(CurrencyConfig.idr.locale).format(amount);
 
 /// Kartu utama tantangan mingguan saat MASIH BERJALAN — baik masih di bawah
 /// target (aktif) maupun sudah lewat (over). Task 15+ menambah kartu untuk

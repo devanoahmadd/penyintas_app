@@ -879,10 +879,8 @@ class AppLocalizations {
   String get challengeResultDismiss => _t('challenge_result_dismiss');
   String get challengeEmptyDisabledTitle =>
       _t('challenge_empty_disabled_title');
-  String get challengeEmptyDisabledBody =>
-      _t('challenge_empty_disabled_body');
-  String get challengeEmptyEnableButton =>
-      _t('challenge_empty_enable_button');
+  String get challengeEmptyDisabledBody => _t('challenge_empty_disabled_body');
+  String get challengeEmptyEnableButton => _t('challenge_empty_enable_button');
   String get challengeEmptyNotEnoughDataTitle =>
       _t('challenge_empty_not_enough_data_title');
   String get challengeEmptyNotEnoughDataBody =>
@@ -895,8 +893,7 @@ class AppLocalizations {
       _t('challenge_empty_out_of_window_title');
   String get challengeEmptyOutOfWindowBody =>
       _t('challenge_empty_out_of_window_body');
-  String get challengeEmptySettledTitle =>
-      _t('challenge_empty_settled_title');
+  String get challengeEmptySettledTitle => _t('challenge_empty_settled_title');
   String get challengeEmptySettledBody => _t('challenge_empty_settled_body');
   String get challengeEmptyHeldTitle => _t('challenge_empty_held_title');
   String get challengeEmptyHeldBody => _t('challenge_empty_held_body');
@@ -904,6 +901,39 @@ class AppLocalizations {
       _t('challenge_empty_budget_not_set_title');
   String get challengeEmptyBudgetNotSetBody =>
       _t('challenge_empty_budget_not_set_body');
+
+  // ── Halaman `/challenge` (Task 16) ──
+  String get challengePageTitle => _t('challenge_page_title');
+  String get challengeError => _t('challenge_error');
+  String get challengeRetry => _t('challenge_retry');
+  String get challengeActionFailed => _t('challenge_action_failed');
+  String get challengeHistoryTitle => _t('challenge_history_title');
+  String get challengeHistoryHeld => _t('challenge_history_held');
+  String get challengeHistorySkipped => _t('challenge_history_skipped');
+  String get challengeResultPlaceholderAchieved =>
+      _t('challenge_result_placeholder_achieved');
+  String get challengeResultPlaceholderMissed =>
+      _t('challenge_result_placeholder_missed');
+  String get challengeCandidateTitle => _t('challenge_candidate_title');
+  String get challengeCandidateSubtitle => _t('challenge_candidate_subtitle');
+  String challengeCandidateAverageToTarget(String baseline, String target) =>
+      _t(
+        'challenge_candidate_average_to_target',
+      ).replaceAll('{baseline}', baseline).replaceAll('{target}', target);
+  String challengeCandidateAlreadySpent(String amount) =>
+      _t('challenge_candidate_already_spent').replaceAll('{amount}', amount);
+  String get challengeCandidateSubmit => _t('challenge_candidate_submit');
+  String get challengeRulesTitle => _t('challenge_rules_title');
+  String get challengeRulesBody => _t('challenge_rules_body');
+  String get challengeRulesExcludedNote => _t('challenge_rules_excluded_note');
+  String get challengeRulesSkipAction => _t('challenge_rules_skip_action');
+  String get challengeRulesSkipConfirmTitle =>
+      _t('challenge_rules_skip_confirm_title');
+  String get challengeRulesSkipConfirmBody =>
+      _t('challenge_rules_skip_confirm_body');
+  String get challengeRulesSkipConfirmConfirm =>
+      _t('challenge_rules_skip_confirm_confirm');
+  String get challengeRulesA11y => _t('challenge_rules_a11y');
 }
 
 class _AppLocalizationsDelegate

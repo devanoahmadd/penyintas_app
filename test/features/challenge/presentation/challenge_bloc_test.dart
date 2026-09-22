@@ -471,27 +471,70 @@ void main() {
     expect(await potretDb(), sebelum);
   });
 
-  test(
-    'U115b · stream memilih hasil belum dilihat dengan weekKey TERBESAR',
-    () async {
-      // Penjaga anti-hampa untuk U115: membuktikan jalur `pendingResult` memang
-      // dilalui, jadi "nol tulisan" di atas bukan kebetulan karena stream diam.
-      await tulisTigaHasilBelumDilihat();
+  test('U115b · anti-hampa U115 — data tiga hasil belum dilihat memang '
+      'tersedia lewat watchInputs (BUKAN pengunci seleksi produksi — lihat '
+      'U115c)', () async {
+    // Penjaga anti-hampa untuk U115: membuktikan jalur `pendingResult` memang
+    // dilalui, jadi "nol tulisan" di atas bukan kebetulan karena stream diam.
+    //
+    // PERINGATAN (Task 16, temuan review Task 15) — nama LAMA test ini
+    // ("stream memilih hasil belum dilihat dengan weekKey TERBESAR")
+    // menyesatkan: ia menghitung ulang MAX weekKey DI DALAM TEST ITU
+    // SENDIRI dari data mentah repo, dan TIDAK PERNAH memanggil
+    // `ChallengeBloc._hasilBelumDilihatTerbaru` (method privat produksi,
+    // `challenge_bloc.dart:327`). Kalau method itu punya bug (mis. `<`
+    // bukan `>`, atau lupa memfilter status `achieved`/`missed`), test INI
+    // TETAP HIJAU — dibuktikan lewat mutasi di laporan Task 16.
+    // `U115c` di bawah adalah pengunci sungguhan, lewat BLoC UTUH.
+    await tulisTigaHasilBelumDilihat();
 
-      final inputs = await repoAsli.watchInputs().first;
-      final pilihan = inputs.getOrElse(() => throw StateError('Left'));
-      final terbaru = pilihan.history
-          .where(
-            (w) =>
-                w.resultSeenAt == null &&
-                (w.status == ChallengeStatus.achieved ||
-                    w.status == ChallengeStatus.missed),
-          )
-          .map((w) => w.weekKey)
-          .reduce((a, b) => a > b ? a : b);
-      expect(terbaru, 20260824);
-    },
-  );
+    final inputs = await repoAsli.watchInputs().first;
+    final pilihan = inputs.getOrElse(() => throw StateError('Left'));
+    final terbaru = pilihan.history
+        .where(
+          (w) =>
+              w.resultSeenAt == null &&
+              (w.status == ChallengeStatus.achieved ||
+                  w.status == ChallengeStatus.missed),
+        )
+        .map((w) => w.weekKey)
+        .reduce((a, b) => a > b ? a : b);
+    expect(terbaru, 20260824);
+  });
+
+  test('U115c · ChallengeBloc PENUH — pendingResult memilih weekKey TERBESAR '
+      'di antara hasil achieved/missed belum dilihat, mengabaikan baris '
+      'ber-status lain walau weekKey-nya lebih besar', () async {
+    // Mengunci `_hasilBelumDilihatTerbaru` (challenge_bloc.dart:327) LEWAT
+    // BLoC UTUH (`buatBloc()` + `ChallengeStarted()`) — bukan menghitung
+    // ulang di dalam test (itu U115b, TERBUKTI TIDAK mengunci apa pun di
+    // method produksi; lihat laporan Task 16 untuk bukti mutasi).
+    //
+    // Baris held di bawah SENGAJA diberi weekKey TERBESAR (20260831) —
+    // lebih besar dari ketiga hasil achieved/missed (maks 20260824).
+    // Kalau method produksi lupa memfilter status (mis. hanya membanding
+    // `weekKey` tanpa syarat `achieved`/`missed`), baris held inilah yang
+    // akan salah terpilih sebagai `pendingResult`.
+    await tulisTigaHasilBelumDilihat();
+    await tulisBaris(
+      weekKey: _mingguLalu, // 20260831 — TERBESAR, tapi BUKAN achieved/missed
+      status: ChallengeStatus.held,
+      kategori: null,
+      targetAmount: null,
+    );
+
+    final b = buatBloc()..add(const ChallengeStarted());
+    await tungguSampai(() => b.state.snapshot != null);
+
+    expect(
+      b.state.snapshot!.pendingResult?.weekKey,
+      20260824,
+      reason:
+          '20260824 adalah weekKey TERBESAR di antara baris achieved/missed '
+          '(20260810, 20260817, 20260824) — baris held 20260831 harus '
+          'diabaikan walau weekKey-nya lebih besar dari ketiganya.',
+    );
+  });
 
   // ── U68 · penjaga satu-minggu-satu-ensure ─────────────────────────────────
 
