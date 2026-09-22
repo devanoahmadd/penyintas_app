@@ -283,6 +283,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    'I2-lanjutan (review ronde 3) · history berisi HANYA baris active '
+    '(user minggu pertama) → header "RIWAYAT" TIDAK dirender, nol baris',
+    (tester) async {
+      // Skenario user minggu pertama: nol minggu tuntas, satu baris
+      // `active` (minggu berjalan) yang ikut terbawa `snapshot.history`
+      // (data layer tak pernah menyaringnya — lihat dartdoc `visibleHistory`
+      // di `challenge_page.dart`). Sebelum perbaikan ronde 3, gerbang
+      // "tampilkan RIWAYAT" memakai `snapshot.history.isNotEmpty` MENTAH →
+      // `true` (ada satu baris) → header dirender, lalu `ChallengeHistoryList`
+      // menyaring baris itu sendiri → nol baris di bawahnya. Header
+      // mengambang tanpa isi.
+      await tester.pumpWidget(
+        bungkus(
+          state(
+            snapshot: snapshot(
+              history: [
+                week(weekKey: 20260907, status: ChallengeStatus.active),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.text(l10n.challengeHistoryTitle.toUpperCase()),
+        findsNothing,
+        reason:
+            'history hanya berisi baris active (setelah difilter jadi '
+            'kosong) — header "RIWAYAT" tidak boleh dirender sama sekali',
+      );
+      expect(find.byKey(const Key('challenge-history-list')), findsNothing);
+    },
+  );
+
   // ── U83 · jendela Senin–Selasa untuk "Ganti pos" ─────────────────────────
 
   testWidgets('U83 · "Ganti pos" ADA saat clock Senin (dalam jendela)', (

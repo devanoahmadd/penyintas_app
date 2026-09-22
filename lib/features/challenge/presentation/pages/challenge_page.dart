@@ -303,6 +303,18 @@ class _ReadyBody extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
     final pending = snapshot.pendingResult;
+    // I2-lanjutan (review ronde 3) — TEMUAN: perbaikan I2 (ronde 2) menyaring
+    // baris `active` DI DALAM `ChallengeHistoryList`, tapi gerbang
+    // "tampilkan bagian RIWAYAT" di sini masih memakai `snapshot.history`
+    // MENTAH. Untuk user minggu pertama (nol minggu tuntas, satu baris
+    // `active`), `snapshot.history` berisi PERSIS satu baris — `isNotEmpty`
+    // jadi `true`, header "RIWAYAT" dirender, lalu `ChallengeHistoryList`
+    // menyaring baris itu → nol baris di bawahnya. Header mengambang tanpa
+    // isi. Dihitung SEKALI di sini, satu sumber kebenaran untuk gerbang
+    // MAUPUN daftar — bukan dua tempat yang bisa berselisih lagi nanti.
+    final visibleHistory = snapshot.history
+        .where((w) => w.status != ChallengeStatus.active)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -328,14 +340,14 @@ class _ReadyBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
           _mainCard(context),
-          if (snapshot.history.isNotEmpty) ...[
+          if (visibleHistory.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xl),
             Text(
               l10n.challengeHistoryTitle.toUpperCase(),
               style: AppTextStyles.caption.copyWith(color: mutedColor),
             ),
             const SizedBox(height: AppSpacing.md),
-            ChallengeHistoryList(history: snapshot.history),
+            ChallengeHistoryList(history: visibleHistory),
           ],
         ],
       ),
