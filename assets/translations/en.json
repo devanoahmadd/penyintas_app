@@ -610,5 +610,15 @@
   "challenge_rules_skip_confirm_title": "Skip this week?",
   "challenge_rules_skip_confirm_body": "This week's challenge won't be counted, and its progress won't be saved. You can start again next Monday.",
   "challenge_rules_skip_confirm_confirm": "Skip",
-  "challenge_rules_a11y": "How the weekly challenge works"
+  "challenge_rules_a11y": "How the weekly challenge works",
+  "challenge_tile_off": "Try a saving challenge?",
+  "challenge_tile_active": "{category} · {amount} left",
+  "challenge_tile_over": "{category} · {amount} over",
+  "challenge_tile_held": "Focus on getting through",
+  "challenge_tile_window": "Starts Monday",
+  "challenge_tile_no_data": "Not enough data yet",
+  "challenge_tile_budget": "Set your budget first",
+  "challenge_disable_confirm_title": "Turn off weekly challenges?",
+  "challenge_disable_confirm_body": "The challenge in progress will stop too. Your history stays.",
+  "challenge_disable_confirm_cta": "Turn off"
 }

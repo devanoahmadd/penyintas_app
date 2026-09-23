@@ -610,5 +610,15 @@
   "challenge_rules_skip_confirm_title": "Lewati minggu ini?",
   "challenge_rules_skip_confirm_body": "Tantangan minggu ini nggak akan dihitung, dan progresnya nggak disimpan. Kamu bisa mulai lagi Senin depan.",
   "challenge_rules_skip_confirm_confirm": "Lewati",
-  "challenge_rules_a11y": "Cara kerja tantangan mingguan"
+  "challenge_rules_a11y": "Cara kerja tantangan mingguan",
+  "challenge_tile_off": "Coba tantangan hemat?",
+  "challenge_tile_active": "{category} · sisa {amount}",
+  "challenge_tile_over": "{category} · lewat {amount}",
+  "challenge_tile_held": "Fokus bertahan dulu",
+  "challenge_tile_window": "Mulai Senin depan",
+  "challenge_tile_no_data": "Belum cukup data",
+  "challenge_tile_budget": "Atur anggaran dulu",
+  "challenge_disable_confirm_title": "Matikan tantangan mingguan?",
+  "challenge_disable_confirm_body": "Tantangan yang sedang jalan ikut berhenti. Riwayatmu tetap tersimpan.",
+  "challenge_disable_confirm_cta": "Matikan"
 }

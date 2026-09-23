@@ -20,6 +20,10 @@ import 'package:penyintas_app/features/app_lock/presentation/cubit/app_lock_cubi
 import 'package:penyintas_app/features/app_lock/presentation/pages/change_pin_page.dart';
 import 'package:penyintas_app/features/app_lock/presentation/pages/set_pin_page.dart';
 import 'package:penyintas_app/features/app_lock/presentation/pages/verify_pin_page.dart';
+import 'package:penyintas_app/features/challenge/domain/entities/challenge_phase.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
+import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_state.dart';
 import 'package:penyintas_app/features/notification/domain/repositories/notification_repository.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:penyintas_app/features/notification/presentation/bloc/notification_event.dart';
@@ -385,6 +389,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
                 const SecuritySection(),
+                const ChallengeToggleSection(),
                 _SectionHeader(
                   label: context.l10n.settingsSectionExport.toUpperCase(),
                   mutedColor: mutedColor,
@@ -703,6 +708,148 @@ class _SecuritySectionState extends State<SecuritySection> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Section "Tantangan Mingguan" — sakelar T16 di Pengaturan (Task 17).
+///
+/// `ChallengeBloc` singleton (get_it) TIDAK di-provide ke scope `/settings`
+/// (lihat `app_router.dart:236-237` — `SettingsPage` polos tanpa
+/// `BlocProvider`) — dibaca langsung lewat `sl<ChallengeBloc>()` dengan
+/// `BlocBuilder(bloc: ...)` eksplisit, pola sama seperti `SecuritySection`
+/// yang membaca `sl<AppLockRepository>()` langsung tanpa provider.
+///
+/// Copy title/subtitle SENGAJA memakai key yang SUDAH terdaftar
+/// (`challenge_page_title`, `challenge_empty_disabled_body`) — bukan key
+/// baru — supaya tidak melanggar aturan "jangan invent copy baru di luar
+/// yang sudah terdaftar" (CLAUDE.md). Spec Task 17 tidak menyediakan copy
+/// khusus untuk toggle Pengaturan; kedua key ini kebetulan pas: yang
+/// pertama nama fitur, yang kedua sudah ditulis persis untuk menjelaskan
+/// AJAKAN menyalakannya (dipakai `ChallengeEmptyCard`).
+///
+/// Mematikan sakelar SAAT ada tantangan yang MASIH BERJALAN (`PhaseActive`
+/// atau `PhaseOver` — keduanya `week.status == active`, `over` cuma sudah
+/// lewat target) didahului dialog konfirmasi, karena body copy-nya secara
+/// eksplisit bilang "tantangan yang sedang jalan ikut berhenti"
+/// (`challenge_disable_confirm_body`). Phase lain (held/settled/notEnough
+/// Data/dst.) tidak sedang menghitung apa pun yang bisa "berhenti", jadi
+/// langsung dimatikan tanpa basa-basi.
+class ChallengeToggleSection extends StatelessWidget {
+  const ChallengeToggleSection({super.key});
+
+  Future<void> _onToggle(
+    BuildContext context,
+    bool value,
+    ChallengePhase? currentPhase,
+  ) async {
+    final sedangBerjalan =
+        currentPhase is PhaseActive || currentPhase is PhaseOver;
+    if (!value && sedangBerjalan) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+      final textSoftColor = isDark
+          ? AppColors.textSoftDark
+          : AppColors.textSoftLight;
+      final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+      final l10n = context.l10n;
+
+      final konfirmasi = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          key: const Key('challenge-disable-confirm-dialog'),
+          backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          title: Text(
+            l10n.challengeDisableConfirmTitle,
+            style: AppTextStyles.h3.copyWith(color: textColor),
+          ),
+          content: Text(
+            l10n.challengeDisableConfirmBody,
+            style: AppTextStyles.body.copyWith(color: textSoftColor),
+          ),
+          actions: [
+            TextButton(
+              key: const Key('challenge-disable-confirm-cancel'),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                l10n.btnCancel,
+                style: AppTextStyles.label.copyWith(color: mutedColor),
+              ),
+            ),
+            TextButton(
+              key: const Key('challenge-disable-confirm-confirm'),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                l10n.challengeDisableConfirmCta,
+                style: AppTextStyles.label.copyWith(color: textColor),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (konfirmasi != true) return;
+    }
+    sl<ChallengeBloc>().add(ChallengeEnabledToggled(value));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textDark : AppColors.textLight;
+    final textSoftColor = isDark
+        ? AppColors.textSoftDark
+        : AppColors.textSoftLight;
+    final mutedColor = isDark ? AppColors.mutedDark : AppColors.mutedLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final accent = isDark ? AppColors.shoot : AppColors.primary;
+    final l10n = context.l10n;
+
+    return BlocBuilder<ChallengeBloc, ChallengeState>(
+      bloc: sl<ChallengeBloc>(),
+      builder: (context, state) {
+        final phase = state.snapshot?.phase;
+        final enabled = phase != null && phase is! PhaseDisabled;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SectionHeader(
+              label: l10n.challengePageTitle.toUpperCase(),
+              mutedColor: mutedColor,
+            ),
+            _CardContainer(
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              child: SwitchListTile(
+                value: enabled,
+                onChanged: (v) => _onToggle(context, v, phase),
+                title: Text(
+                  l10n.challengePageTitle,
+                  style: AppTextStyles.body.copyWith(color: textColor),
+                ),
+                subtitle: Text(
+                  l10n.challengeEmptyDisabledBody,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: textSoftColor,
+                  ),
+                ),
+                activeThumbColor: accent,
+                activeTrackColor: accent.withValues(alpha: 0.4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

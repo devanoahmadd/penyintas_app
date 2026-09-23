@@ -106,6 +106,14 @@ GoRouter createAppRouter() => GoRouter(
             BlocProvider.value(
               value: sl<StreakBloc>()..add(StreakSubscribed()),
             ),
+            // Task 17: tile Tantangan butuh ChallengeBloc di scope dashboard.
+            // Singleton yang sama dipakai halaman /challenge — pola persis
+            // StreakBloc di atas. Aman di-dispatch ulang tiap masuk route —
+            // ChallengeStarted pakai transformer restartable() (M4,
+            // langganan lama dibatalkan, lihat challenge_bloc.dart).
+            BlocProvider.value(
+              value: sl<ChallengeBloc>()..add(const ChallengeStarted()),
+            ),
           ],
           child: const DashboardPage(),
         ),

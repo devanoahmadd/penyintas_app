@@ -28,6 +28,7 @@ import 'package:penyintas_app/widgets/common/dashed_border_painter.dart';
 import 'package:penyintas_app/widgets/common/email_verification_banner.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bills_bento_tile.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/challenge_bento_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/consistency_bento_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/financial_slider_widget.dart';
@@ -734,6 +735,13 @@ class _BentoGrid extends StatelessWidget {
             const Expanded(child: ConsistencyBentoTile()),
           ],
         ),
+        const SizedBox(height: AppSpacing.sm2),
+        // Task 17: tile ketujuh — grid 2 kolom jadi ganjil, jadi baris ini
+        // sengaja SATU tile selebar penuh (bukan dipasangkan dengan
+        // Expanded kosong di sampingnya) daripada menyisakan lubang
+        // setengah baris. Lihat laporan Task 17 untuk alasan penempatan &
+        // konsekuensinya — keputusan akhir ada di tangan pengendali.
+        const SizedBox(width: double.infinity, child: ChallengeBentoTile()),
       ],
     );
   }
