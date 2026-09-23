@@ -11,15 +11,15 @@ import 'package:penyintas_app/features/challenge/domain/entities/weekly_spend.da
 /// Kalau suatu saat lahir pemeta kedua, itu tanda `ChallengeWeek` kurang
 /// lengkap: tambah field di entity-nya, jangan tambah pemetanya.
 ChallengeWeek toChallengeWeek(WeeklyChallenge r) => ChallengeWeek(
-      weekKey: r.weekKey,
-      category: r.category,
-      targetAmount: r.targetAmount,
-      baselineAmount: r.baselineAmount,
-      status: r.status,
-      finalSpent: r.finalSpent,
-      resolvedAt: r.resolvedAt,
-      resultSeenAt: r.resultSeenAt,
-    );
+  weekKey: r.weekKey,
+  category: r.category,
+  targetAmount: r.targetAmount,
+  baselineAmount: r.baselineAmount,
+  status: r.status,
+  finalSpent: r.finalSpent,
+  resolvedAt: r.resolvedAt,
+  resultSeenAt: r.resultSeenAt,
+);
 
 abstract class ChallengeLocalDatasource {
   Stream<WeeklyChallenge?> watchWeek(int weekKey);
@@ -35,12 +35,18 @@ abstract class ChallengeLocalDatasource {
   Future<List<WeeklySpend>> getWeeklySpends(int fromWeekKey);
   Future<int> spentInWeek({required int weekKey, required String category});
   Future<int> excludedInWeek({required int weekKey, required String category});
-  Future<int> totalExpenseInWeek({required int weekKey, required String category});
+  Future<int> totalExpenseInWeek({
+    required int weekKey,
+    required String category,
+  });
   Future<void> upsert(WeeklyChallengesCompanion row);
   Future<int> updateWeek(int weekKey, WeeklyChallengesCompanion patch);
   Future<void> markSynced(int weekKey);
   Future<void> markResultSeen({required int weekKey, required DateTime at});
-  Future<int> markOlderResultsSeen({required int keepWeekKey, required DateTime at});
+  Future<int> markOlderResultsSeen({
+    required int keepWeekKey,
+    required DateTime at,
+  });
   Future<List<WeeklyChallenge>> pendingRows();
   Future<void> addToSyncQueue({
     required String itemId,
@@ -114,16 +120,21 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
   /// `sourceBillId != null` (`bills_bloc.dart:238`), dan kos/listrik adalah
   /// bentuk tagihan yang paling sering user punya.
   @override
-  Future<int> excludedInWeek({required int weekKey, required String category}) =>
-      _jumlahMinggu(weekKey: weekKey, category: category, mode: _Mode.dikecualikan);
+  Future<int> excludedInWeek({
+    required int weekKey,
+    required String category,
+  }) => _jumlahMinggu(
+    weekKey: weekKey,
+    category: category,
+    mode: _Mode.dikecualikan,
+  );
 
   /// Ada demi invarian rekonsiliasi. Tidak dipakai UI.
   @override
   Future<int> totalExpenseInWeek({
     required int weekKey,
     required String category,
-  }) =>
-      _jumlahMinggu(weekKey: weekKey, category: category, mode: _Mode.total);
+  }) => _jumlahMinggu(weekKey: weekKey, category: category, mode: _Mode.total);
 
   Future<int> _jumlahMinggu({
     required int weekKey,
@@ -136,7 +147,8 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
     // Satu tempat, tiga mode — supaya komplemennya tak bisa berselisih dengan
     // yang dikomplemeni. Dua fungsi terpisah dengan predikat yang ditulis
     // tangan masing-masing adalah bentuk Rev 1, dan di situlah selisihnya lahir.
-    final dasar = t.date.isBiggerOrEqualValue(localMidnightOf(weekKey)) &
+    final dasar =
+        t.date.isBiggerOrEqualValue(localMidnightOf(weekKey)) &
         t.date.isSmallerThanValue(localMidnightOf(addDays(weekKey, 7))) &
         t.category.equals(category) &
         t.type.equals('expense');
@@ -157,9 +169,9 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
   // ─── Baris tantangan ───────────────────────────────────────────────────────
 
   @override
-  Stream<WeeklyChallenge?> watchWeek(int weekKey) =>
-      (_db.select(_db.weeklyChallenges)..where((t) => t.weekKey.equals(weekKey)))
-          .watchSingleOrNull();
+  Stream<WeeklyChallenge?> watchWeek(int weekKey) => (_db.select(
+    _db.weeklyChallenges,
+  )..where((t) => t.weekKey.equals(weekKey))).watchSingleOrNull();
 
   @override
   Stream<List<WeeklyChallenge>> watchHistory(int limit) =>
@@ -170,24 +182,25 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
 
   /// Preseden bentuknya `transaction_local_datasource.dart:116-118`.
   @override
-  Stream<void> watchTransactionTicks() =>
-      _db.tableUpdates(TableUpdateQuery.onTable(_db.transactions)).map<void>(
-            (_) {},
-          );
+  Stream<void> watchTransactionTicks() => _db
+      .tableUpdates(TableUpdateQuery.onTable(_db.transactions))
+      .map<void>((_) {});
 
   @override
-  Future<WeeklyChallenge?> findWeek(int weekKey) =>
-      (_db.select(_db.weeklyChallenges)..where((t) => t.weekKey.equals(weekKey)))
-          .getSingleOrNull();
+  Future<WeeklyChallenge?> findWeek(int weekKey) => (_db.select(
+    _db.weeklyChallenges,
+  )..where((t) => t.weekKey.equals(weekKey))).getSingleOrNull();
 
   /// Bentuk JAMAK dengan sungguh-sungguh: dua baris lampau `active` sekaligus
   /// bisa terjadi lewat jam device yang dimundurkan atau merge lintas-device.
   @override
   Future<List<WeeklyChallenge>> activeWeeksBefore(int weekKey) =>
       (_db.select(_db.weeklyChallenges)
-            ..where((t) =>
-                t.weekKey.isSmallerThanValue(weekKey) &
-                t.status.equalsValue(ChallengeStatus.active))
+            ..where(
+              (t) =>
+                  t.weekKey.isSmallerThanValue(weekKey) &
+                  t.status.equalsValue(ChallengeStatus.active),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.weekKey)]))
           .get();
 
@@ -199,12 +212,14 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
 
   @override
   Future<void> markSynced(int weekKey) =>
-      (_db.update(_db.weeklyChallenges)..where((t) => t.weekKey.equals(weekKey)))
+      (_db.update(_db.weeklyChallenges)
+            ..where((t) => t.weekKey.equals(weekKey)))
           .write(const WeeklyChallengesCompanion(isSynced: Value(true)));
 
   @override
   Future<void> markResultSeen({required int weekKey, required DateTime at}) =>
-      (_db.update(_db.weeklyChallenges)..where((t) => t.weekKey.equals(weekKey)))
+      (_db.update(_db.weeklyChallenges)
+            ..where((t) => t.weekKey.equals(weekKey)))
           .write(WeeklyChallengesCompanion(resultSeenAt: Value(at)));
 
   /// D22 — menandai SEMUA hasil belum-dilihat KECUALI [keepWeekKey].
@@ -215,12 +230,13 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
     required int keepWeekKey,
     required DateTime at,
   }) =>
-      (_db.update(_db.weeklyChallenges)
-            ..where((t) =>
+      (_db.update(_db.weeklyChallenges)..where(
+            (t) =>
                 t.weekKey.equals(keepWeekKey).not() &
                 t.resultSeenAt.isNull() &
                 (t.status.equalsValue(ChallengeStatus.achieved) |
-                    t.status.equalsValue(ChallengeStatus.missed))))
+                    t.status.equalsValue(ChallengeStatus.missed)),
+          ))
           .write(WeeklyChallengesCompanion(resultSeenAt: Value(at)));
 
   /// M8 — MENGUBAH baris yang sudah ada, bukan upsert. Mengembalikan jumlah
@@ -233,9 +249,9 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
   /// NOT NULL — gagal di runtime, di jalur yang jarang dilewati test.
   @override
   Future<int> updateWeek(int weekKey, WeeklyChallengesCompanion patch) =>
-      (_db.update(_db.weeklyChallenges)
-            ..where((t) => t.weekKey.equals(weekKey)))
-          .write(patch);
+      (_db.update(
+        _db.weeklyChallenges,
+      )..where((t) => t.weekKey.equals(weekKey))).write(patch);
 
   @override
   Future<List<WeeklyChallenge>> pendingRows() =>
@@ -252,16 +268,17 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
     required String collectionPath,
     required String data,
     required SyncOperation operation,
-  }) =>
-      _db.into(_db.syncQueue).insert(
-            SyncQueueCompanion.insert(
-              itemId: itemId,
-              collectionPath: collectionPath,
-              data: data,
-              operation: operation,
-              createdAt: DateTime.now().toUtc(),
-            ),
-          );
+  }) => _db
+      .into(_db.syncQueue)
+      .insert(
+        SyncQueueCompanion.insert(
+          itemId: itemId,
+          collectionPath: collectionPath,
+          data: data,
+          operation: operation,
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
 
   /// Kebenaran lokal saat ini SELALU menang atas apa pun yang masih menunggu
   /// terkirim. Satu weekKey bisa ditulis tiga kali dalam dua hari (buat Senin →
@@ -273,10 +290,9 @@ class ChallengeLocalDatasourceImpl implements ChallengeLocalDatasource {
   /// yang membuat purge berbutir per-minggu: menutup dua minggu lampau
   /// sekaligus dalam keadaan offline tak lagi membuang antrian saudaranya.
   @override
-  Future<int> purgePendingSyncFor(String docPath) =>
-      (_db.delete(_db.syncQueue)
-            ..where((t) => t.collectionPath.equals(docPath)))
-          .go();
+  Future<int> purgePendingSyncFor(String docPath) => (_db.delete(
+    _db.syncQueue,
+  )..where((t) => t.collectionPath.equals(docPath))).go();
 }
 
 enum _Mode { dihitung, dikecualikan, total }

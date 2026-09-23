@@ -5,7 +5,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
-import 'package:penyintas_app/core/sync/sync_dispatcher.dart' show toFirestoreOp;
+import 'package:penyintas_app/core/sync/sync_dispatcher.dart'
+    show toFirestoreOp;
 import 'package:penyintas_app/core/utils/app_clock.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
@@ -16,8 +17,11 @@ import 'package:penyintas_app/features/challenge/data/repositories/challenge_rep
 import 'package:penyintas_app/features/transaction/domain/usecases/get_limitable_categories_usecase.dart';
 
 class _MockAuth extends Mock implements FirebaseAuth {}
+
 class _MockUser extends Mock implements User {}
+
 class _MockNetwork extends Mock implements NetworkInfo {}
+
 class _MockRemote extends Mock implements ChallengeRemoteDatasource {}
 
 /// Tak pernah distub: berkas ini tidak menyentuh `getCandidates`.
@@ -25,19 +29,20 @@ class _MockGetLimitable extends Mock implements GetLimitableCategoriesUseCase {}
 
 /// Baris `active` minimal — dipakai S-A untuk menyimulasikan minggu lampau
 /// yang belum dievaluasi.
-Future<void> _tulisBarisActive(AppDatabase db, int weekKey) =>
-    db.into(db.weeklyChallenges).insert(
-          WeeklyChallengesCompanion.insert(
-            weekKey: Value(weekKey),
-            category: const Value('food'),
-            targetAmount: const Value(115000),
-            baselineAmount: const Value(140000),
-            status: ChallengeStatus.active,
-            timezone: 'WIB',
-            createdAt: DateTime.utc(2026, 8, 24),
-            updatedAt: DateTime.utc(2026, 8, 24),
-          ),
-        );
+Future<void> _tulisBarisActive(AppDatabase db, int weekKey) => db
+    .into(db.weeklyChallenges)
+    .insert(
+      WeeklyChallengesCompanion.insert(
+        weekKey: Value(weekKey),
+        category: const Value('food'),
+        targetAmount: const Value(115000),
+        baselineAmount: const Value(140000),
+        status: ChallengeStatus.active,
+        timezone: 'WIB',
+        createdAt: DateTime.utc(2026, 8, 24),
+        updatedAt: DateTime.utc(2026, 8, 24),
+      ),
+    );
 
 /// Baris `achieved` yang sudah tuntas — dipakai U50 untuk mengecek
 /// `resultSeenAt` lokal bertahan lewat tarikan.
@@ -45,21 +50,22 @@ Future<void> _tulisBarisAchieved(
   AppDatabase db,
   int weekKey, {
   DateTime? resultSeenAt,
-}) =>
-    db.into(db.weeklyChallenges).insert(
-          WeeklyChallengesCompanion.insert(
-            weekKey: Value(weekKey),
-            category: const Value('food'),
-            targetAmount: const Value(115000),
-            baselineAmount: const Value(140000),
-            status: ChallengeStatus.achieved,
-            finalSpent: const Value(100000),
-            timezone: 'WIB',
-            createdAt: DateTime.utc(2026, 8, 31),
-            updatedAt: DateTime.utc(2026, 9, 1),
-            resultSeenAt: Value(resultSeenAt),
-          ),
-        );
+}) => db
+    .into(db.weeklyChallenges)
+    .insert(
+      WeeklyChallengesCompanion.insert(
+        weekKey: Value(weekKey),
+        category: const Value('food'),
+        targetAmount: const Value(115000),
+        baselineAmount: const Value(140000),
+        status: ChallengeStatus.achieved,
+        finalSpent: const Value(100000),
+        timezone: 'WIB',
+        createdAt: DateTime.utc(2026, 8, 31),
+        updatedAt: DateTime.utc(2026, 9, 1),
+        resultSeenAt: Value(resultSeenAt),
+      ),
+    );
 
 void main() {
   late AppDatabase db;
@@ -81,8 +87,11 @@ void main() {
     when(() => auth.currentUser).thenReturn(user);
 
     repo = ChallengeRepositoryImpl(
-      local: local, remote: remote, network: network,
-      auth: auth, clock: FixedClock(DateTime(2026, 9, 7, 9)),
+      local: local,
+      remote: remote,
+      network: network,
+      auth: auth,
+      clock: FixedClock(DateTime(2026, 9, 7, 9)),
       getLimitable: _MockGetLimitable(),
       settings: ChallengeSettingsDatasourceImpl(db),
     );
@@ -91,11 +100,19 @@ void main() {
   setUpAll(() {
     // `remote.upsertChallenge(any(), any())` butuh fallback untuk
     // `ChallengeModel` — bukan tipe primitif yang sudah dikenal mocktail.
-    registerFallbackValue(ChallengeModel(
-      weekKey: 0, category: null, targetAmount: null, baselineAmount: null,
-      status: ChallengeStatus.active, finalSpent: null, timezone: '',
-      createdAt: DateTime.utc(2026), updatedAt: DateTime.utc(2026),
-    ));
+    registerFallbackValue(
+      ChallengeModel(
+        weekKey: 0,
+        category: null,
+        targetAmount: null,
+        baselineAmount: null,
+        status: ChallengeStatus.active,
+        finalSpent: null,
+        timezone: '',
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
+      ),
+    );
   });
 
   tearDown(() async => db.close());
@@ -109,14 +126,19 @@ void main() {
     when(() => network.isConnected).thenAnswer((_) async => false);
 
     await repo.createChallenge(
-      weekKey: 20260907, category: 'food',
-      targetAmount: 115000, baselineAmount: 140000,
+      weekKey: 20260907,
+      category: 'food',
+      targetAmount: 115000,
+      baselineAmount: 140000,
     );
 
     final antrian = await db.select(db.syncQueue).getSingle();
     expect(antrian.collectionPath, isNot(contains('{uid}')));
     expect(() => toFirestoreOp(antrian), returnsNormally);
-    expect(toFirestoreOp(antrian).path, 'users/uid-nyata-123/challenges/20260907');
+    expect(
+      toFirestoreOp(antrian).path,
+      'users/uid-nyata-123/challenges/20260907',
+    );
   });
 
   test('S-A · dua minggu diantre offline → KEDUANYA bertahan', () async {
@@ -128,28 +150,43 @@ void main() {
     await _tulisBarisActive(db, 20260831);
 
     await repo.resolveWeek(
-        weekKey: 20260824, status: ChallengeStatus.achieved, finalSpent: 10000);
+      weekKey: 20260824,
+      status: ChallengeStatus.achieved,
+      finalSpent: 10000,
+    );
     await repo.resolveWeek(
-        weekKey: 20260831, status: ChallengeStatus.missed, finalSpent: 90000);
+      weekKey: 20260831,
+      status: ChallengeStatus.missed,
+      finalSpent: 90000,
+    );
 
     final antrian = await db.select(db.syncQueue).get();
-    expect(antrian.map((i) => i.collectionPath), containsAll(<String>[
-      'users/uid-nyata-123/challenges/20260824',
-      'users/uid-nyata-123/challenges/20260831',
-    ]));
+    expect(
+      antrian.map((i) => i.collectionPath),
+      containsAll(<String>[
+        'users/uid-nyata-123/challenges/20260824',
+        'users/uid-nyata-123/challenges/20260831',
+      ]),
+    );
   });
 
-  test('M8 · resolveWeek pada weekKey yang TIDAK ada → Left, bukan crash', () async {
-    // Companion `resolveWeek` parsial (tanpa timezone/createdAt). Lewat
-    // insertOnConflictUpdate ia akan mencoba INSERT dan melanggar NOT NULL.
-    when(() => network.isConnected).thenAnswer((_) async => false);
+  test(
+    'M8 · resolveWeek pada weekKey yang TIDAK ada → Left, bukan crash',
+    () async {
+      // Companion `resolveWeek` parsial (tanpa timezone/createdAt). Lewat
+      // insertOnConflictUpdate ia akan mencoba INSERT dan melanggar NOT NULL.
+      when(() => network.isConnected).thenAnswer((_) async => false);
 
-    final hasil = await repo.resolveWeek(
-        weekKey: 20260601, status: ChallengeStatus.missed, finalSpent: 0);
+      final hasil = await repo.resolveWeek(
+        weekKey: 20260601,
+        status: ChallengeStatus.missed,
+        finalSpent: 0,
+      );
 
-    expect(hasil.isLeft(), isTrue);
-    expect(await db.select(db.syncQueue).get(), isEmpty);
-  });
+      expect(hasil.isLeft(), isTrue);
+      expect(await db.select(db.syncQueue).get(), isEmpty);
+    },
+  );
 
   // Ditambahkan saat verifikasi sabotase Langkah 8 butir 9. Skenario S-A asli
   // (dua weekKey BERBEDA) tak pernah menyentuh purge salah-path: purge
@@ -158,26 +195,35 @@ void main() {
   // Tujuan purge (§ komentar `_kirim`) adalah mencegah satu weekKey ditulis
   // BERKALI-KALI menumpuk beberapa payload di antrian — jadi kasus yang
   // benar-benar menguji purge adalah weekKey yang SAMA dikirim dua kali.
-  test('_kirim · purge membuang antrian LAMA weekKey yang sama sebelum kirim baru',
-      () async {
-    when(() => network.isConnected).thenAnswer((_) async => false);
+  test(
+    '_kirim · purge membuang antrian LAMA weekKey yang sama sebelum kirim baru',
+    () async {
+      when(() => network.isConnected).thenAnswer((_) async => false);
 
-    await repo.createChallenge(
-      weekKey: 20260907, category: 'food',
-      targetAmount: 115000, baselineAmount: 140000,
-    );
-    await repo.resolveWeek(
-        weekKey: 20260907, status: ChallengeStatus.achieved, finalSpent: 100000);
+      await repo.createChallenge(
+        weekKey: 20260907,
+        category: 'food',
+        targetAmount: 115000,
+        baselineAmount: 140000,
+      );
+      await repo.resolveWeek(
+        weekKey: 20260907,
+        status: ChallengeStatus.achieved,
+        finalSpent: 100000,
+      );
 
-    final antrian = await db.select(db.syncQueue).get();
-    expect(
-      antrian.where((i) =>
-          i.collectionPath == 'users/uid-nyata-123/challenges/20260907'),
-      hasLength(1),
-      reason: 'purge yang salah target meninggalkan payload createChallenge '
-          'LAMA menumpuk bersama payload resolveWeek yang baru',
-    );
-  });
+      final antrian = await db.select(db.syncQueue).get();
+      expect(
+        antrian.where(
+          (i) => i.collectionPath == 'users/uid-nyata-123/challenges/20260907',
+        ),
+        hasLength(1),
+        reason:
+            'purge yang salah target meninggalkan payload createChallenge '
+            'LAMA menumpuk bersama payload resolveWeek yang baru',
+      );
+    },
+  );
 
   // Temuan review Task 7: baris yang sudah isSynced=true lalu DIUBAH lewat
   // _ubahDanKirim (resolveWeek/changeCategory) harus menjatuhkan isSynced,
@@ -186,7 +232,9 @@ void main() {
   test('resolveWeek offline menjatuhkan isSynced — baris terjemput '
       'pushPendingChallenges (jaring pengaman)', () async {
     // Baris awal SUDAH tersinkron (mis. dibuat saat online sebelumnya).
-    await db.into(db.weeklyChallenges).insertOnConflictUpdate(
+    await db
+        .into(db.weeklyChallenges)
+        .insertOnConflictUpdate(
           WeeklyChallengesCompanion.insert(
             weekKey: const Value(20260907),
             category: const Value('food'),
@@ -202,13 +250,19 @@ void main() {
 
     when(() => network.isConnected).thenAnswer((_) async => false);
     final hasil = await repo.resolveWeek(
-        weekKey: 20260907, status: ChallengeStatus.achieved, finalSpent: 90000);
+      weekKey: 20260907,
+      status: ChallengeStatus.achieved,
+      finalSpent: 90000,
+    );
     expect(hasil.isRight(), isTrue);
 
     // isSynced dijatuhkan meski antrian sync ADA — jaring pengaman push
     // harus tetap bisa menjemputnya seandainya antrian itu sendiri hilang.
     expect((await local.findWeek(20260907))!.isSynced, isFalse);
-    expect((await local.pendingRows()).map((r) => r.weekKey), contains(20260907));
+    expect(
+      (await local.pendingRows()).map((r) => r.weekKey),
+      contains(20260907),
+    );
 
     // Buktikan jaring pengaman benar-benar bekerja: jaringan pulih, push
     // dipanggil LANGSUNG (bukan lewat antrian) — baris harus terjemput dan
@@ -237,16 +291,26 @@ void main() {
   });
 
   test('U50 · tarikan MEMPERTAHANKAN resultSeenAt lokal', () async {
-    await _tulisBarisAchieved(db, 20260831, resultSeenAt: DateTime.utc(2026, 9, 1));
-    when(() => remote.fetchChallenges(any(), any())).thenAnswer((_) async => [
-          ChallengeModel(
-            weekKey: 20260831, category: 'food', targetAmount: 115000,
-            baselineAmount: 140000, status: ChallengeStatus.achieved,
-            finalSpent: 100000, timezone: 'WIB',
-            createdAt: DateTime.utc(2026, 8, 31),
-            updatedAt: DateTime.utc(2026, 9, 5),
-          ),
-        ]);
+    await _tulisBarisAchieved(
+      db,
+      20260831,
+      resultSeenAt: DateTime.utc(2026, 9, 1),
+    );
+    when(() => remote.fetchChallenges(any(), any())).thenAnswer(
+      (_) async => [
+        ChallengeModel(
+          weekKey: 20260831,
+          category: 'food',
+          targetAmount: 115000,
+          baselineAmount: 140000,
+          status: ChallengeStatus.achieved,
+          finalSpent: 100000,
+          timezone: 'WIB',
+          createdAt: DateTime.utc(2026, 8, 31),
+          updatedAt: DateTime.utc(2026, 9, 5),
+        ),
+      ],
+    );
 
     await repo.syncChallengesFromRemote();
 
@@ -260,7 +324,9 @@ void main() {
     // presedensi merge T17 terbalik: minggu yang sudah tuntas bisa
     // dibangkitkan lagi oleh baris `active` basi dari device lain.
     final diubah = DateTime.utc(2026, 9, 5); // dua hari sebelum jam FixedClock
-    await db.into(db.weeklyChallenges).insert(
+    await db
+        .into(db.weeklyChallenges)
+        .insert(
           WeeklyChallengesCompanion.insert(
             weekKey: const Value(20260831),
             category: const Value('food'),

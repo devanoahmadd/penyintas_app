@@ -765,8 +765,7 @@ class ChallengeToggleSection extends StatefulWidget {
   const ChallengeToggleSection({super.key});
 
   @override
-  State<ChallengeToggleSection> createState() =>
-      _ChallengeToggleSectionState();
+  State<ChallengeToggleSection> createState() => _ChallengeToggleSectionState();
 }
 
 class _ChallengeToggleSectionState extends State<ChallengeToggleSection> {
@@ -881,9 +880,7 @@ class _ChallengeToggleSectionState extends State<ChallengeToggleSection> {
                 ),
                 subtitle: Text(
                   l10n.challengeSettingsSub,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: textSoftColor,
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
                 ),
                 activeThumbColor: accent,
                 activeTrackColor: accent.withValues(alpha: 0.4),

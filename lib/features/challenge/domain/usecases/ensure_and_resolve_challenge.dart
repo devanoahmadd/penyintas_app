@@ -98,7 +98,9 @@ class EnsureAndResolveChallenge implements UseCase<EnsureOutcome, NoParams> {
     // Aturan ini HIDUP DI SINI, bukan di snapshot. Snapshot lahir dari stream,
     // dan menulis dari stream yang mengawasi tabelnya sendiri menghidupkan
     // kembali loop tulis→emit→hitung→tulis (D-2 Fase 1).
-    final belumDilihat = await _local.watchHistory(kChallengeHistoryWeeks).first;
+    final belumDilihat = await _local
+        .watchHistory(kChallengeHistoryWeeks)
+        .first;
     final hasilBaru = belumDilihat
         .where(
           (r) =>

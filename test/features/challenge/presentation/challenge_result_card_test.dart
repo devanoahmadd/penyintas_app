@@ -123,9 +123,7 @@ void main() {
   ) async {
     var count = 0;
     await tester.pumpWidget(kartu(onDismiss: () => count++));
-    await tester.tap(
-      find.byKey(const Key('challenge-result-dismiss-button')),
-    );
+    await tester.tap(find.byKey(const Key('challenge-result-dismiss-button')));
     await tester.pump();
     expect(count, 1);
   });
@@ -142,9 +140,7 @@ void main() {
     });
 
     testWidgets('status skipped → kosong', (tester) async {
-      await tester.pumpWidget(
-        kartu(w: week(status: ChallengeStatus.skipped)),
-      );
+      await tester.pumpWidget(kartu(w: week(status: ChallengeStatus.skipped)));
       expect(find.byKey(const Key('challenge-result-card')), findsNothing);
       expect(
         find.byKey(const Key('challenge-result-dismiss-button')),
@@ -158,9 +154,7 @@ void main() {
     });
 
     testWidgets('status unknown → kosong', (tester) async {
-      await tester.pumpWidget(
-        kartu(w: week(status: ChallengeStatus.unknown)),
-      );
+      await tester.pumpWidget(kartu(w: week(status: ChallengeStatus.unknown)));
       expect(find.byKey(const Key('challenge-result-card')), findsNothing);
     });
   });
@@ -180,9 +174,7 @@ void main() {
       // mengunci kontrak PEMANGGIL: begitu satu week terpilih, widget
       // merender PERSIS satu kartu untuknya, tidak pernah menduplikasi
       // atau ikut merender kandidat lain.
-      final terpilih = kandidat.reduce(
-        (x, y) => x.weekKey > y.weekKey ? x : y,
-      );
+      final terpilih = kandidat.reduce((x, y) => x.weekKey > y.weekKey ? x : y);
       expect(terpilih.weekKey, 20260824);
 
       await tester.pumpWidget(
@@ -355,24 +347,21 @@ void main() {
   });
 
   // ── S-C · pohon widget tidak mengimpor app_database.dart ────────────────
-  test(
-    'S-C · challenge_result_card.dart dan challenge_empty_card.dart tidak '
-    'mengimpor app_database.dart',
-    () async {
-      final result = await Process.run('grep', [
-        '-F',
-        '-l',
-        'app_database.dart',
-        'lib/features/challenge/presentation/widgets/challenge_result_card.dart',
-        'lib/features/challenge/presentation/widgets/challenge_empty_card.dart',
-      ]);
-      expect(
-        result.exitCode,
-        1,
-        reason:
-            'setidaknya satu file kartu hasil/kosong mengimpor '
-            'app_database.dart. stdout: ${result.stdout}',
-      );
-    },
-  );
+  test('S-C · challenge_result_card.dart dan challenge_empty_card.dart tidak '
+      'mengimpor app_database.dart', () async {
+    final result = await Process.run('grep', [
+      '-F',
+      '-l',
+      'app_database.dart',
+      'lib/features/challenge/presentation/widgets/challenge_result_card.dart',
+      'lib/features/challenge/presentation/widgets/challenge_empty_card.dart',
+    ]);
+    expect(
+      result.exitCode,
+      1,
+      reason:
+          'setidaknya satu file kartu hasil/kosong mengimpor '
+          'app_database.dart. stdout: ${result.stdout}',
+    );
+  });
 }

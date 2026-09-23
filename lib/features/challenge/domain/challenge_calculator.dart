@@ -155,8 +155,11 @@ List<ChallengeCandidate> selectCandidates({
 /// merender tanggal transaksi dengan wall-clock device; minggu yang memakai
 /// sumber lain akan berselisih satu hari dengan daftar transaksi.
 int weekKeyOf(DateTime localNow) {
-  final senin = DateTime(localNow.year, localNow.month, localNow.day)
-      .subtract(Duration(days: localNow.weekday - DateTime.monday));
+  final senin = DateTime(
+    localNow.year,
+    localNow.month,
+    localNow.day,
+  ).subtract(Duration(days: localNow.weekday - DateTime.monday));
   return localDayKey(senin);
 }
 

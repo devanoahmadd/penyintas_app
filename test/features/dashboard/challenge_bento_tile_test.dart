@@ -236,10 +236,7 @@ void main() {
       stub(buildState(const PhaseUndetermined()));
       await tester.pumpWidget(harness());
       await tester.pump();
-      expect(
-        find.byKey(const Key('challenge-bento-skeleton')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('challenge-bento-skeleton')), findsOneWidget);
       expect(find.byType(BentoFeatTile), findsNothing);
     });
 
@@ -247,10 +244,7 @@ void main() {
       stub(buildState(const PhasePreparing()));
       await tester.pumpWidget(harness());
       await tester.pump();
-      expect(
-        find.byKey(const Key('challenge-bento-skeleton')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('challenge-bento-skeleton')), findsOneWidget);
       expect(find.byType(BentoFeatTile), findsNothing);
     });
 
@@ -260,10 +254,7 @@ void main() {
       stub(buildState(null));
       await tester.pumpWidget(harness());
       await tester.pump();
-      expect(
-        find.byKey(const Key('challenge-bento-skeleton')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('challenge-bento-skeleton')), findsOneWidget);
     });
   });
 
@@ -304,59 +295,51 @@ void main() {
   });
 
   // ── U97 — phase dari resolveChallengePhase == phase dari BLoC ──
-  group(
-    'U97 · phase yang dipakai tile identik dengan resolveChallengePhase — '
-    'tile tidak menghitung sendiri',
-    () {
-      testWidgets('input mentah "sakelar mati" → phase disabled', (
-        tester,
-      ) async {
-        final phase = resolveChallengePhase(
-          weekThisWeek: null,
-          spentThisWeek: 0,
-          enabled: false,
-          env: null,
-          candidateCount: null,
-          historyEmpty: true,
-          localNow: DateTime(2026, 9, 21),
-        );
-        expect(phase, const PhaseDisabled());
-
-        stub(buildState(phase));
-        await tester.pumpWidget(harness());
-        await tester.pump();
-
-        expect(find.text(l10nId.challengeTileOff), findsOneWidget);
-      });
-
-      testWidgets(
-        'input mentah "belanja lewat target" → phase over, tile setuju '
-        'persis',
-        (tester) async {
-          final week = buildWeek(status: ChallengeStatus.active);
-          final phase = resolveChallengePhase(
-            weekThisWeek: week,
-            spentThisWeek: 112000,
-            enabled: true,
-            env: null,
-            candidateCount: null,
-            historyEmpty: false,
-            localNow: DateTime(2026, 9, 21),
-          );
-          expect(phase, isA<PhaseOver>());
-
-          stub(buildState(phase));
-          await tester.pumpWidget(harness());
-          await tester.pump();
-
-          expect(
-            find.text(l10nId.challengeTileOver('Makan & Minum', 'Rp 12.000')),
-            findsOneWidget,
-          );
-        },
+  group('U97 · phase yang dipakai tile identik dengan resolveChallengePhase — '
+      'tile tidak menghitung sendiri', () {
+    testWidgets('input mentah "sakelar mati" → phase disabled', (tester) async {
+      final phase = resolveChallengePhase(
+        weekThisWeek: null,
+        spentThisWeek: 0,
+        enabled: false,
+        env: null,
+        candidateCount: null,
+        historyEmpty: true,
+        localNow: DateTime(2026, 9, 21),
       );
-    },
-  );
+      expect(phase, const PhaseDisabled());
+
+      stub(buildState(phase));
+      await tester.pumpWidget(harness());
+      await tester.pump();
+
+      expect(find.text(l10nId.challengeTileOff), findsOneWidget);
+    });
+
+    testWidgets('input mentah "belanja lewat target" → phase over, tile setuju '
+        'persis', (tester) async {
+      final week = buildWeek(status: ChallengeStatus.active);
+      final phase = resolveChallengePhase(
+        weekThisWeek: week,
+        spentThisWeek: 112000,
+        enabled: true,
+        env: null,
+        candidateCount: null,
+        historyEmpty: false,
+        localNow: DateTime(2026, 9, 21),
+      );
+      expect(phase, isA<PhaseOver>());
+
+      stub(buildState(phase));
+      await tester.pumpWidget(harness());
+      await tester.pump();
+
+      expect(
+        find.text(l10nId.challengeTileOver('Makan & Minum', 'Rp 12.000')),
+        findsOneWidget,
+      );
+    });
+  });
 
   // ── U94 — nol literal Indonesia, semua teks lewat context.l10n ──
   group('U94 · nol literal Indonesia — render EN, semua teks via l10n', () {
@@ -405,16 +388,15 @@ void main() {
           .map((t) => t.data)
           .toSet();
 
+      expect(texts, {
+        l10nEn.dashboardBentoChallengeLabel,
+        l10nEn.challengeTileActive('Food & Drinks', 'Rp 34.000'),
+        l10nEn.dashboardBentoChallengeSub,
+      });
       expect(
-        texts,
-        {
-          l10nEn.dashboardBentoChallengeLabel,
-          l10nEn.challengeTileActive('Food & Drinks', 'Rp 34.000'),
-          l10nEn.dashboardBentoChallengeSub,
-        },
-      );
-      expect(
-        texts.contains(l10nId.challengeTileActive('Makan & Minum', 'Rp 34.000')),
+        texts.contains(
+          l10nId.challengeTileActive('Makan & Minum', 'Rp 34.000'),
+        ),
         isFalse,
       );
     });

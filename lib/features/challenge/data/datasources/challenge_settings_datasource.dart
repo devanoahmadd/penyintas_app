@@ -46,6 +46,9 @@ class ChallengeSettingsDatasourceImpl implements ChallengeSettingsDatasource {
       .insertOnConflictUpdate(
         // HANYA kolom ini yang disebut: companion yang absen tidak menimpa,
         // jadi penghasilan dan seluruh setelan lain selamat.
-        AppSettingsCompanion(id: const Value(1), challengeEnabled: Value(value)),
+        AppSettingsCompanion(
+          id: const Value(1),
+          challengeEnabled: Value(value),
+        ),
       );
 }

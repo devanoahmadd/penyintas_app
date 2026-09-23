@@ -12,16 +12,16 @@ ChallengeModel _model({
   ChallengeStatus status = ChallengeStatus.active,
   int? finalSpent,
 }) => ChallengeModel(
-      weekKey: 20260907,
-      category: kategori,
-      targetAmount: target,
-      baselineAmount: basis,
-      status: status,
-      finalSpent: finalSpent,
-      timezone: 'WIB',
-      createdAt: _dibuat,
-      updatedAt: _diubah,
-    );
+  weekKey: 20260907,
+  category: kategori,
+  targetAmount: target,
+  baselineAmount: basis,
+  status: status,
+  finalSpent: finalSpent,
+  timezone: 'WIB',
+  createdAt: _dibuat,
+  updatedAt: _diubah,
+);
 
 void main() {
   test('payload memuat seluruh field ber-payload', () {
@@ -38,7 +38,10 @@ void main() {
 
   test('U35 · baris held: kategori/target/basis ABSEN dari payload', () {
     final j = _model(
-      kategori: null, target: null, basis: null, status: ChallengeStatus.held,
+      kategori: null,
+      target: null,
+      basis: null,
+      status: ChallengeStatus.held,
     ).toFirestore();
     expect(j.containsKey('category'), isFalse);
     expect(j.containsKey('targetAmount'), isFalse);
@@ -48,7 +51,10 @@ void main() {
 
   test('finalSpent absen selama active, hadir setelah dievaluasi', () {
     expect(_model().toFirestore().containsKey('finalSpent'), isFalse);
-    final selesai = _model(status: ChallengeStatus.achieved, finalSpent: 118500);
+    final selesai = _model(
+      status: ChallengeStatus.achieved,
+      finalSpent: 118500,
+    );
     expect(selesai.toFirestore()['finalSpent'], 118500);
   });
 
@@ -58,10 +64,12 @@ void main() {
   });
 
   test('U51 · status asing dari remote → unknown, tidak melempar', () {
-    final m = ChallengeModel.fromFirestore(
-      {'status': 'paused_v17', 'timezone': 'WIB', 'createdAt': 0, 'updatedAt': 0},
-      weekKey: 20260907,
-    );
+    final m = ChallengeModel.fromFirestore({
+      'status': 'paused_v17',
+      'timezone': 'WIB',
+      'createdAt': 0,
+      'updatedAt': 0,
+    }, weekKey: 20260907);
     expect(m.status, ChallengeStatus.unknown);
   });
 
@@ -72,10 +80,11 @@ void main() {
   // melindungi kasus lain: field 'status' yang ABSEN dari dokumen (bukan
   // sekadar bernilai asing) — cast `null as String` tanpanya akan melempar.
   test('U51b · status ABSEN dari payload remote → unknown, tidak melempar', () {
-    final m = ChallengeModel.fromFirestore(
-      {'timezone': 'WIB', 'createdAt': 0, 'updatedAt': 0},
-      weekKey: 20260907,
-    );
+    final m = ChallengeModel.fromFirestore({
+      'timezone': 'WIB',
+      'createdAt': 0,
+      'updatedAt': 0,
+    }, weekKey: 20260907);
     expect(m.status, ChallengeStatus.unknown);
   });
 

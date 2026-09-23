@@ -39,10 +39,12 @@ void main() {
   late AppLocalizations l10nId;
 
   setUpAll(() {
-    idJson = json.decode(File('assets/translations/id.json').readAsStringSync())
-        as Map<String, dynamic>;
-    enJson = json.decode(File('assets/translations/en.json').readAsStringSync())
-        as Map<String, dynamic>;
+    idJson =
+        json.decode(File('assets/translations/id.json').readAsStringSync())
+            as Map<String, dynamic>;
+    enJson =
+        json.decode(File('assets/translations/en.json').readAsStringSync())
+            as Map<String, dynamic>;
     l10nId = AppLocalizations(
       const Locale('id'),
       Map<String, String>.from(idJson),
@@ -56,10 +58,10 @@ void main() {
   /// dijalankan penuh, sehingga test tampak hijau padahal tidak mengunci apa
   /// pun. Nilai ditangkap saat build, ditegaskan sesudah `pumpWidget` selesai.
   Widget bungkus(WidgetBuilder builder) => MaterialApp(
-        localizationsDelegates: [_DelegateSinkron(l10nId)],
-        supportedLocales: const [Locale('id'), Locale('en')],
-        home: Builder(builder: builder),
-      );
+    localizationsDelegates: [_DelegateSinkron(l10nId)],
+    supportedLocales: const [Locale('id'), Locale('en')],
+    home: Builder(builder: builder),
+  );
 
   group('bank kalimat', () {
     test('K2 — 24 key ada (8×3 status, 2 bahasa)', () {
@@ -103,19 +105,21 @@ void main() {
     testWidgets('U105 — same weekKey → same line', (tester) async {
       String? line1, line2;
 
-      await tester.pumpWidget(bungkus((context) {
-        line1 = challengeBankLine(
-          context,
-          status: ChallengeStatus.achieved,
-          weekKey: 20260907,
-        );
-        line2 = challengeBankLine(
-          context,
-          status: ChallengeStatus.achieved,
-          weekKey: 20260907,
-        );
-        return const Scaffold(body: SizedBox.shrink());
-      }));
+      await tester.pumpWidget(
+        bungkus((context) {
+          line1 = challengeBankLine(
+            context,
+            status: ChallengeStatus.achieved,
+            weekKey: 20260907,
+          );
+          line2 = challengeBankLine(
+            context,
+            status: ChallengeStatus.achieved,
+            weekKey: 20260907,
+          );
+          return const Scaffold(body: SizedBox.shrink());
+        }),
+      );
       await tester.pumpAndSettle();
 
       expect(line1, isNotNull, reason: 'builder harus berjalan');
@@ -135,75 +139,89 @@ void main() {
     // pengulangan pertama tepat 8 minggu kemudian — maksimum teoretis untuk
     // 8 varian (pigeonhole).
     testWidgets(
-        'K2 — 8 Senin berturut → 8 kalimat BERBEDA (mengunci ordinal minggu; '
-        '`weekKey % 8` hanya memberi 6)', (tester) async {
-      const senin = <int>[
-        20260907,
-        20260914,
-        20260921,
-        20260928,
-        20261005,
-        20261012,
-        20261019,
-        20261026,
-      ];
-      final lines = <String>[];
+      'K2 — 8 Senin berturut → 8 kalimat BERBEDA (mengunci ordinal minggu; '
+      '`weekKey % 8` hanya memberi 6)',
+      (tester) async {
+        const senin = <int>[
+          20260907,
+          20260914,
+          20260921,
+          20260928,
+          20261005,
+          20261012,
+          20261019,
+          20261026,
+        ];
+        final lines = <String>[];
 
-      await tester.pumpWidget(bungkus((context) {
-        lines.clear();
-        for (final weekKey in senin) {
-          lines.add(challengeBankLine(
-            context,
-            status: ChallengeStatus.achieved,
-            weekKey: weekKey,
-          ));
-        }
-        return const Scaffold(body: SizedBox.shrink());
-      }));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          bungkus((context) {
+            lines.clear();
+            for (final weekKey in senin) {
+              lines.add(
+                challengeBankLine(
+                  context,
+                  status: ChallengeStatus.achieved,
+                  weekKey: weekKey,
+                ),
+              );
+            }
+            return const Scaffold(body: SizedBox.shrink());
+          }),
+        );
+        await tester.pumpAndSettle();
 
-      expect(lines, hasLength(8), reason: 'kedelapan pemanggilan harus terjadi');
-      expect(
-        lines.toSet().length,
-        8,
-        reason:
-            'delapan Senin berturut harus memberi delapan kalimat berbeda. '
-            '`weekKey % kBankVariants` hanya memberi 6 — minggu ke-1 & ke-7 '
-            'dan ke-2 & ke-8 jatuh ke varian yang sama.',
-      );
-    });
+        expect(
+          lines,
+          hasLength(8),
+          reason: 'kedelapan pemanggilan harus terjadi',
+        );
+        expect(
+          lines.toSet().length,
+          8,
+          reason:
+              'delapan Senin berturut harus memberi delapan kalimat berbeda. '
+              '`weekKey % kBankVariants` hanya memberi 6 — minggu ke-1 & ke-7 '
+              'dan ke-2 & ke-8 jatuh ke varian yang sama.',
+        );
+      },
+    );
 
-    testWidgets('held/skipped/unknown → string KOSONG (kartu hasil tak muncul)',
-        (tester) async {
-      final hasil = <ChallengeStatus, String>{};
+    testWidgets(
+      'held/skipped/unknown → string KOSONG (kartu hasil tak muncul)',
+      (tester) async {
+        final hasil = <ChallengeStatus, String>{};
 
-      await tester.pumpWidget(bungkus((context) {
-        for (final s in const [
-          ChallengeStatus.held,
-          ChallengeStatus.skipped,
-          ChallengeStatus.unknown,
-        ]) {
-          hasil[s] = challengeBankLine(
-            context,
-            status: s,
-            weekKey: 20260907,
+        await tester.pumpWidget(
+          bungkus((context) {
+            for (final s in const [
+              ChallengeStatus.held,
+              ChallengeStatus.skipped,
+              ChallengeStatus.unknown,
+            ]) {
+              hasil[s] = challengeBankLine(
+                context,
+                status: s,
+                weekKey: 20260907,
+              );
+            }
+            return const Scaffold(body: SizedBox.shrink());
+          }),
+        );
+        await tester.pumpAndSettle();
+
+        expect(hasil, hasLength(3), reason: 'builder harus berjalan');
+        for (final entry in hasil.entries) {
+          expect(
+            entry.value,
+            isEmpty,
+            reason:
+                '${entry.key} bukan hasil yang bisa diceritakan — kartu hasil '
+                'tidak muncul untuk status ini, jadi kalimatnya harus kosong.',
           );
         }
-        return const Scaffold(body: SizedBox.shrink());
-      }));
-      await tester.pumpAndSettle();
-
-      expect(hasil, hasLength(3), reason: 'builder harus berjalan');
-      for (final entry in hasil.entries) {
-        expect(
-          entry.value,
-          isEmpty,
-          reason:
-              '${entry.key} bukan hasil yang bisa diceritakan — kartu hasil '
-              'tidak muncul untuk status ini, jadi kalimatnya harus kosong.',
-        );
-      }
-    });
+      },
+    );
 
     // U103 — offline. Bank adalah SATU-SATUNYA jalur kalimat di fase ini
     // (Cloud Function ditunda, Keputusan 2), jadi ia yang dilewati setiap user

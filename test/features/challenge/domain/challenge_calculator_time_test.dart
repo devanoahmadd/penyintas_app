@@ -61,18 +61,24 @@ void main() {
 
   group('evaluateResult', () {
     test('U18 · finalSpent == target → achieved (batas INKLUSIF)', () {
-      expect(evaluateResult(target: 115000, finalSpent: 115000),
-          ChallengeStatus.achieved);
+      expect(
+        evaluateResult(target: 115000, finalSpent: 115000),
+        ChallengeStatus.achieved,
+      );
     });
 
     test('U18 · di bawah target → achieved', () {
-      expect(evaluateResult(target: 115000, finalSpent: 113500),
-          ChallengeStatus.achieved);
+      expect(
+        evaluateResult(target: 115000, finalSpent: 113500),
+        ChallengeStatus.achieved,
+      );
     });
 
     test('U18 · di atas target → missed', () {
-      expect(evaluateResult(target: 115000, finalSpent: 115001),
-          ChallengeStatus.missed);
+      expect(
+        evaluateResult(target: 115000, finalSpent: 115001),
+        ChallengeStatus.missed,
+      );
     });
   });
 }

@@ -142,10 +142,7 @@ void main() {
   group('notEnoughData', () {
     testWidgets('→ judul & body sesuai copy', (tester) async {
       await tester.pumpWidget(kartu(const PhaseNotEnoughData()));
-      expect(
-        find.text(l10n.challengeEmptyNotEnoughDataTitle),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.challengeEmptyNotEnoughDataTitle), findsOneWidget);
       expect(find.text(l10n.challengeEmptyNotEnoughDataBody), findsOneWidget);
     });
 
@@ -156,9 +153,7 @@ void main() {
   // ── outOfWindow (isFirstWeek true/false) ────────────────────────────────
   group('outOfWindow · isFirstWeek true', () {
     testWidgets('→ judul & body pertama kali', (tester) async {
-      await tester.pumpWidget(
-        kartu(const PhaseOutOfWindow(isFirstWeek: true)),
-      );
+      await tester.pumpWidget(kartu(const PhaseOutOfWindow(isFirstWeek: true)));
       expect(
         find.text(l10n.challengeEmptyOutOfWindowFirstTitle),
         findsOneWidget,

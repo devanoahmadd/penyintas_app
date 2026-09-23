@@ -106,7 +106,11 @@ void main() {
     // lewat nilai, bukan lewat exception mock yang tak ketemu stub).
     when(() => repo.getCandidates(any())).thenAnswer(
       (_) async => const Right([
-        ChallengeCandidate(category: 'transport', baseline: 96000, target: 80000),
+        ChallengeCandidate(
+          category: 'transport',
+          baseline: 96000,
+          target: 80000,
+        ),
       ]),
     );
 
@@ -190,8 +194,16 @@ void main() {
       // berikutnya.
       when(() => repo.getCandidates(any())).thenAnswer(
         (_) async => const Right([
-          ChallengeCandidate(category: 'food', baseline: 140000, target: 115000),
-          ChallengeCandidate(category: 'transport', baseline: 96000, target: 80000),
+          ChallengeCandidate(
+            category: 'food',
+            baseline: 140000,
+            target: 115000,
+          ),
+          ChallengeCandidate(
+            category: 'transport',
+            baseline: 96000,
+            target: 80000,
+          ),
         ]),
       );
 
@@ -252,7 +264,10 @@ void main() {
         );
 
         final hasil = await gantiPos(
-          const ChangeCategoryParams(weekKey: _mingguIni, category: 'transport'),
+          const ChangeCategoryParams(
+            weekKey: _mingguIni,
+            category: 'transport',
+          ),
         );
 
         expect(hasil.isRight(), isTrue);
@@ -275,7 +290,10 @@ void main() {
         );
 
         final hasil = await gantiPos(
-          const ChangeCategoryParams(weekKey: _mingguIni, category: 'transport'),
+          const ChangeCategoryParams(
+            weekKey: _mingguIni,
+            category: 'transport',
+          ),
         );
 
         expect(hasil.isRight(), isTrue);
@@ -357,35 +375,32 @@ void main() {
       },
     );
 
-    test(
-      'U75 · resolveWeek gagal → sakelar TIDAK ikut berubah',
-      () async {
-        // Urutan mengikat: tutup baris DULU, baru balik sakelar. Urutan
-        // terbalik lolos semua test lain.
-        //
-        // PERBAIKAN dari berkas warisan: sakelar harus dimulai ON supaya
-        // "tetap true" ada artinya. Tanpa baris ini, `settings.isEnabled()`
-        // default `false` (kolom `challengeEnabled` & `_fallback` sama-sama
-        // `false`) dan assersi di bawah gagal untuk implementasi APA PUN,
-        // benar maupun salah — bukan cuma untuk sabotase.
-        await settings.setEnabled(true);
-        await tulisBaris(status: ChallengeStatus.active);
-        when(
-          () => repo.resolveWeek(
-            weekKey: any(named: 'weekKey'),
-            status: any(named: 'status'),
-            finalSpent: any(named: 'finalSpent'),
-          ),
-        ).thenAnswer((_) async => Left(CacheFailure('gagal')));
+    test('U75 · resolveWeek gagal → sakelar TIDAK ikut berubah', () async {
+      // Urutan mengikat: tutup baris DULU, baru balik sakelar. Urutan
+      // terbalik lolos semua test lain.
+      //
+      // PERBAIKAN dari berkas warisan: sakelar harus dimulai ON supaya
+      // "tetap true" ada artinya. Tanpa baris ini, `settings.isEnabled()`
+      // default `false` (kolom `challengeEnabled` & `_fallback` sama-sama
+      // `false`) dan assersi di bawah gagal untuk implementasi APA PUN,
+      // benar maupun salah — bukan cuma untuk sabotase.
+      await settings.setEnabled(true);
+      await tulisBaris(status: ChallengeStatus.active);
+      when(
+        () => repo.resolveWeek(
+          weekKey: any(named: 'weekKey'),
+          status: any(named: 'status'),
+          finalSpent: any(named: 'finalSpent'),
+        ),
+      ).thenAnswer((_) async => Left(CacheFailure('gagal')));
 
-        final hasil = await setEnabled(
-          const SetChallengeEnabledParams(enabled: false),
-        );
+      final hasil = await setEnabled(
+        const SetChallengeEnabledParams(enabled: false),
+      );
 
-        expect(hasil.isLeft(), isTrue);
-        expect(await settings.isEnabled(), isTrue);
-      },
-    );
+      expect(hasil.isLeft(), isTrue);
+      expect(await settings.isEnabled(), isTrue);
+    });
 
     test(
       'U74 · nyalakan lagi minggu yang sama dengan baris skipped → tidak ada baris baru',

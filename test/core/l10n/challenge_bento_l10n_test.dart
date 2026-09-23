@@ -33,14 +33,8 @@ void main() {
     en =
         json.decode(File('assets/translations/en.json').readAsStringSync())
             as Map<String, dynamic>;
-    l10nId = AppLocalizations(
-      const Locale('id'),
-      Map<String, String>.from(id),
-    );
-    l10nEn = AppLocalizations(
-      const Locale('en'),
-      Map<String, String>.from(en),
-    );
+    l10nId = AppLocalizations(const Locale('id'), Map<String, String>.from(id));
+    l10nEn = AppLocalizations(const Locale('en'), Map<String, String>.from(en));
     sumberL10n = await File(
       'lib/core/l10n/app_localizations.dart',
     ).readAsString();
@@ -139,31 +133,25 @@ void main() {
   // baris 61-62) — desain yang disengaja, bukan celah. Key `challenge_tile_
   // window` dipakai ULANG oleh keduanya, jadi tidak ada key terpisah untuk
   // `outOfWindow` di daftar `challengeBentoKeys` di atas.
-  test(
-    'challenge_tile_window dipakai ulang — bukan bug, tapi tidak boleh '
-    'kosong',
-    () {
-      expect(id['challenge_tile_window'], isNotEmpty);
-      expect(en['challenge_tile_window'], isNotEmpty);
-    },
-  );
+  test('challenge_tile_window dipakai ulang — bukan bug, tapi tidak boleh '
+      'kosong', () {
+    expect(id['challenge_tile_window'], isNotEmpty);
+    expect(en['challenge_tile_window'], isNotEmpty);
+  });
 
   // ── Artefak ketiga: getter/method wajib ada di app_localizations.dart ──
-  test(
-    'tiap key challenge_tile_*/challenge_disable_confirm_* punya getter di '
-    'app_localizations.dart',
-    () {
-      final kurang = challengeBentoKeys
-          .where((k) => !sumberL10n.contains("'$k'"))
-          .toList();
-      expect(
-        kurang,
-        isEmpty,
-        reason:
-            'key tanpa getter akan merender nama key mentah di layar: $kurang',
-      );
-    },
-  );
+  test('tiap key challenge_tile_*/challenge_disable_confirm_* punya getter di '
+      'app_localizations.dart', () {
+    final kurang = challengeBentoKeys
+        .where((k) => !sumberL10n.contains("'$k'"))
+        .toList();
+    expect(
+      kurang,
+      isEmpty,
+      reason:
+          'key tanpa getter akan merender nama key mentah di layar: $kurang',
+    );
+  });
 
   // ── Arah balik: id.json → challengeBentoKeys ──
   test(

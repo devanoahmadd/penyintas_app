@@ -28,57 +28,59 @@ class ChallengeModel {
   final DateTime updatedAt;
 
   factory ChallengeModel.fromRow(WeeklyChallenge r) => ChallengeModel(
-        weekKey: r.weekKey,
-        category: r.category,
-        targetAmount: r.targetAmount,
-        baselineAmount: r.baselineAmount,
-        status: r.status,
-        finalSpent: r.finalSpent,
-        timezone: r.timezone,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
-      );
+    weekKey: r.weekKey,
+    category: r.category,
+    targetAmount: r.targetAmount,
+    baselineAmount: r.baselineAmount,
+    status: r.status,
+    finalSpent: r.finalSpent,
+    timezone: r.timezone,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  );
 
   factory ChallengeModel.fromFirestore(
     Map<String, dynamic> j, {
     required int weekKey,
-  }) =>
-      ChallengeModel(
-        weekKey: weekKey,
-        category: j['category'] as String?,
-        targetAmount: (j['targetAmount'] as num?)?.toInt(),
-        baselineAmount: (j['baselineAmount'] as num?)?.toInt(),
-        // U51 — fallback WAJIB. Converter yang melempar mematikan seluruh
-        // stream snapshot: satu dokumen asing dari versi app lebih baru bikin
-        // halaman kosong permanen di device versi lama.
-        status: const ChallengeStatusConverter()
-            .fromSql((j['status'] as String?) ?? 'unknown'),
-        finalSpent: (j['finalSpent'] as num?)?.toInt(),
-        timezone: (j['timezone'] as String?) ?? '',
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-            ((j['createdAt'] as num?) ?? 0).toInt(),
-            isUtc: true),
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-            ((j['updatedAt'] as num?) ?? 0).toInt(),
-            isUtc: true),
-      );
+  }) => ChallengeModel(
+    weekKey: weekKey,
+    category: j['category'] as String?,
+    targetAmount: (j['targetAmount'] as num?)?.toInt(),
+    baselineAmount: (j['baselineAmount'] as num?)?.toInt(),
+    // U51 — fallback WAJIB. Converter yang melempar mematikan seluruh
+    // stream snapshot: satu dokumen asing dari versi app lebih baru bikin
+    // halaman kosong permanen di device versi lama.
+    status: const ChallengeStatusConverter().fromSql(
+      (j['status'] as String?) ?? 'unknown',
+    ),
+    finalSpent: (j['finalSpent'] as num?)?.toInt(),
+    timezone: (j['timezone'] as String?) ?? '',
+    createdAt: DateTime.fromMillisecondsSinceEpoch(
+      ((j['createdAt'] as num?) ?? 0).toInt(),
+      isUtc: true,
+    ),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(
+      ((j['updatedAt'] as num?) ?? 0).toInt(),
+      isUtc: true,
+    ),
+  );
 
   /// Field yang null DIHILANGKAN, bukan dikirim sebagai null — rules memvalidasi
   /// tipe hanya bila field hadir, dan baris `held` memang tak punya ketiganya.
   Map<String, dynamic> toFirestore() => {
-        'weekKey': weekKey,
-        if (category != null) 'category': category,
-        if (targetAmount != null) 'targetAmount': targetAmount,
-        if (baselineAmount != null) 'baselineAmount': baselineAmount,
-        'status': const ChallengeStatusConverter().toSql(status),
-        if (finalSpent != null) 'finalSpent': finalSpent,
-        'timezone': timezone,
-        'createdAt': createdAt.millisecondsSinceEpoch,
-        // D23 — KOLOM, bukan waktu push. Kalau diisi waktu push, baris yang
-        // lama mengantre mendarat sebagai yang termuda dan presedensi terbalik.
-        'updatedAt': updatedAt.millisecondsSinceEpoch,
-        // resultSeenAt TIDAK PERNAH dikirim — ia kolom lokal-saja (D11).
-      };
+    'weekKey': weekKey,
+    if (category != null) 'category': category,
+    if (targetAmount != null) 'targetAmount': targetAmount,
+    if (baselineAmount != null) 'baselineAmount': baselineAmount,
+    'status': const ChallengeStatusConverter().toSql(status),
+    if (finalSpent != null) 'finalSpent': finalSpent,
+    'timezone': timezone,
+    'createdAt': createdAt.millisecondsSinceEpoch,
+    // D23 — KOLOM, bukan waktu push. Kalau diisi waktu push, baris yang
+    // lama mengantre mendarat sebagai yang termuda dan presedensi terbalik.
+    'updatedAt': updatedAt.millisecondsSinceEpoch,
+    // resultSeenAt TIDAK PERNAH dikirim — ia kolom lokal-saja (D11).
+  };
 
   /// [keepResultSeenAt] WAJIB diisi nilai lokal saat menyimpan hasil tarikan
   /// (T17 aturan 3): "tidak dikirim" tidak otomatis berarti "tidak tertimpa".
@@ -89,18 +91,17 @@ class ChallengeModel {
   WeeklyChallengesCompanion toCompanion({
     required DateTime? keepResultSeenAt,
     required bool isSynced,
-  }) =>
-      WeeklyChallengesCompanion(
-        weekKey: Value(weekKey),
-        category: Value(category),
-        targetAmount: Value(targetAmount),
-        baselineAmount: Value(baselineAmount),
-        status: Value(status),
-        finalSpent: Value(finalSpent),
-        timezone: Value(timezone),
-        createdAt: Value(createdAt),
-        updatedAt: Value(updatedAt),
-        resultSeenAt: Value(keepResultSeenAt),
-        isSynced: Value(isSynced),
-      );
+  }) => WeeklyChallengesCompanion(
+    weekKey: Value(weekKey),
+    category: Value(category),
+    targetAmount: Value(targetAmount),
+    baselineAmount: Value(baselineAmount),
+    status: Value(status),
+    finalSpent: Value(finalSpent),
+    timezone: Value(timezone),
+    createdAt: Value(createdAt),
+    updatedAt: Value(updatedAt),
+    resultSeenAt: Value(keepResultSeenAt),
+    isSynced: Value(isSynced),
+  );
 }

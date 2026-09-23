@@ -18,15 +18,20 @@ class ChallengeRemoteDatasourceImpl implements ChallengeRemoteDatasource {
       _col(uid).doc('${model.weekKey}').set(model.toFirestore());
 
   @override
-  Future<List<ChallengeModel>> fetchChallenges(String uid, int sinceWeekKey) async {
-    final snap = await _col(uid)
-        .where('weekKey', isGreaterThanOrEqualTo: sinceWeekKey)
-        .get();
+  Future<List<ChallengeModel>> fetchChallenges(
+    String uid,
+    int sinceWeekKey,
+  ) async {
+    final snap = await _col(
+      uid,
+    ).where('weekKey', isGreaterThanOrEqualTo: sinceWeekKey).get();
     return snap.docs
-        .map((d) => ChallengeModel.fromFirestore(
-              d.data(),
-              weekKey: int.tryParse(d.id) ?? 0,
-            ))
+        .map(
+          (d) => ChallengeModel.fromFirestore(
+            d.data(),
+            weekKey: int.tryParse(d.id) ?? 0,
+          ),
+        )
         .where((m) => m.weekKey > 0)
         .toList();
   }

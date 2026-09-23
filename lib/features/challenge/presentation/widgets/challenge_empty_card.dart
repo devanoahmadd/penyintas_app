@@ -171,9 +171,7 @@ class _EmptyShell extends StatelessWidget {
                 Text(
                   body,
                   key: const Key('challenge-empty-body'),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: textSoftColor,
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(color: textSoftColor),
                 ),
               ],
             ),
@@ -232,9 +230,7 @@ class _SkeletonShell extends StatelessWidget {
     final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final baseColor = isDark ? const Color(0xFF1C3526) : AppColors.cardLight;
-    final highlightColor = isDark
-        ? const Color(0xFF2E5040)
-        : AppColors.bgLight;
+    final highlightColor = isDark ? const Color(0xFF2E5040) : AppColors.bgLight;
 
     return Semantics(
       label: l10n.loading,
@@ -267,7 +263,11 @@ class _SkeletonShell extends StatelessWidget {
     );
   }
 
-  Widget _shimmerBar(Color color, {required double width, required double height}) {
+  Widget _shimmerBar(
+    Color color, {
+    required double width,
+    required double height,
+  }) {
     return Container(
       width: width,
       height: height,

@@ -108,8 +108,7 @@ void main() {
     await tester.pump();
   }
 
-  Finder toggleSwitch() =>
-      find.byKey(const Key('challenge-toggle-switch'));
+  Finder toggleSwitch() => find.byKey(const Key('challenge-toggle-switch'));
 
   testWidgets('phase disabled → switch OFF', (tester) async {
     stub(_stateFor(const PhaseDisabled()));
@@ -127,7 +126,11 @@ void main() {
   });
 
   testWidgets('phase active → switch ON', (tester) async {
-    stub(_stateFor(PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0)));
+    stub(
+      _stateFor(
+        PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0),
+      ),
+    );
     await pumpSection(tester);
 
     final sw = tester.widget<SwitchListTile>(toggleSwitch());
@@ -151,17 +154,26 @@ void main() {
     'matikan saat phase active → dialog konfirmasi tampil, batal → TIDAK '
     'dispatch',
     (tester) async {
-      stub(_stateFor(PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0)));
+      stub(
+        _stateFor(
+          PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0),
+        ),
+      );
       await pumpSection(tester);
 
       await tester.tap(toggleSwitch());
       await tester.pump();
 
-      expect(find.byKey(const Key('challenge-disable-confirm-dialog')), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-disable-confirm-dialog')),
+        findsOneWidget,
+      );
       expect(find.text(l10n.challengeDisableConfirmTitle), findsOneWidget);
       expect(find.text(l10n.challengeDisableConfirmBody), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('challenge-disable-confirm-cancel')));
+      await tester.tap(
+        find.byKey(const Key('challenge-disable-confirm-cancel')),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(() => bloc.add(const ChallengeEnabledToggled(false)));
@@ -171,13 +183,19 @@ void main() {
   testWidgets(
     'matikan saat phase active → konfirmasi → dispatch ChallengeEnabledToggled(false)',
     (tester) async {
-      stub(_stateFor(PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0)));
+      stub(
+        _stateFor(
+          PhaseActive(week: _buildWeek(ChallengeStatus.active), spent: 0),
+        ),
+      );
       await pumpSection(tester);
 
       await tester.tap(toggleSwitch());
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('challenge-disable-confirm-confirm')));
+      await tester.tap(
+        find.byKey(const Key('challenge-disable-confirm-confirm')),
+      );
       await tester.pumpAndSettle();
 
       verify(() => bloc.add(const ChallengeEnabledToggled(false))).called(1);
@@ -188,13 +206,20 @@ void main() {
     'matikan saat phase over → dialog konfirmasi TETAP tampil (minggu masih '
     'berjalan sampai lewat target)',
     (tester) async {
-      stub(_stateFor(PhaseOver(week: _buildWeek(ChallengeStatus.active), spent: 150000)));
+      stub(
+        _stateFor(
+          PhaseOver(week: _buildWeek(ChallengeStatus.active), spent: 150000),
+        ),
+      );
       await pumpSection(tester);
 
       await tester.tap(toggleSwitch());
       await tester.pump();
 
-      expect(find.byKey(const Key('challenge-disable-confirm-dialog')), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-disable-confirm-dialog')),
+        findsOneWidget,
+      );
     },
   );
 

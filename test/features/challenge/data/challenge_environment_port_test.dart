@@ -85,11 +85,12 @@ void main() {
   );
 
   test('U59 · anggaran nol → budgetConfigured false, BUKAN Left', () async {
-    when(() => dashboardRepo.watchDashboard()).thenAnswer(
-      (_) => Stream.value(Right(_dashboard(totalMonthlyBudget: 0))),
-    );
+    when(
+      () => dashboardRepo.watchDashboard(),
+    ).thenAnswer((_) => Stream.value(Right(_dashboard(totalMonthlyBudget: 0))));
     when(() => getSurvival(any())).thenAnswer(
-      (_) async => Right(_survival(isActive: true)), // danger, seperti kode nyata
+      (_) async =>
+          Right(_survival(isActive: true)), // danger, seperti kode nyata
     );
 
     final hasil = await port.read();

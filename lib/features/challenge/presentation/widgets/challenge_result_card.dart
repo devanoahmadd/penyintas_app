@@ -98,9 +98,7 @@ class ChallengeResultCard extends StatelessWidget {
                   Text(
                     eyebrow,
                     key: const Key('challenge-result-eyebrow'),
-                    style: AppTextStyles.caption.copyWith(
-                      color: textSoftColor,
-                    ),
+                    style: AppTextStyles.caption.copyWith(color: textSoftColor),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(

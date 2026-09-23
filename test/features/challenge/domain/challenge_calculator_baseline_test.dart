@@ -61,7 +61,10 @@ void main() {
     });
 
     test('U9 · daftar kosong → map kosong, bukan exception', () {
-      final hasil = computeBaselines(spends: const [], currentWeekKey: _mingguIni);
+      final hasil = computeBaselines(
+        spends: const [],
+        currentWeekKey: _mingguIni,
+      );
       expect(hasil.baselines, isEmpty);
       expect(hasil.weeksWithData, isEmpty);
     });

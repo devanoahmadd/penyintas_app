@@ -30,7 +30,9 @@ class ChangeChallengeCategory implements UseCase<void, ChangeCategoryParams> {
   Future<Either<Failure, void>> call(ChangeCategoryParams p) async {
     // ATURAN → Left bercopy.
     if (!isCreationWindow(_clock.now())) {
-      return Left(ValidationFailure('Pos hanya bisa diganti Senin atau Selasa.'));
+      return Left(
+        ValidationFailure('Pos hanya bisa diganti Senin atau Selasa.'),
+      );
     }
 
     // BALAPAN → Right diam (M7). `changeCategory` tidak menyetel `status`, jadi
@@ -43,12 +45,14 @@ class ChangeChallengeCategory implements UseCase<void, ChangeCategoryParams> {
       return const Right(null);
     }
 
-    final kandidat = (await _repo.getCandidates(p.weekKey)).getOrElse(
-      () => const [],
-    );
+    final kandidat = (await _repo.getCandidates(
+      p.weekKey,
+    )).getOrElse(() => const []);
     final pilihan = kandidat.where((c) => c.category == p.category).firstOrNull;
     if (pilihan == null) {
-      return Left(ValidationFailure('Pos itu tidak ada di pilihan minggu ini.'));
+      return Left(
+        ValidationFailure('Pos itu tidak ada di pilihan minggu ini.'),
+      );
     }
     return _repo.changeCategory(
       weekKey: p.weekKey,

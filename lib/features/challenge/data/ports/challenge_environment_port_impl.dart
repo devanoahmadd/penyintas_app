@@ -26,10 +26,9 @@ class ChallengeEnvironmentPortImpl implements ChallengeEnvironmentPort {
   @override
   Future<Either<Failure, ChallengeEnvironment>> read() async {
     try {
-      final either = await _dashboardRepo
-          .watchDashboard()
-          .first
-          .timeout(kEnvReadTimeout);
+      final either = await _dashboardRepo.watchDashboard().first.timeout(
+        kEnvReadTimeout,
+      );
 
       // KEDUA cabang `async`. Mencampur cabang sinkron dan Future dalam satu
       // `fold` membuat tipe hasilnya tak menyatu dan berkas ini tidak compile.

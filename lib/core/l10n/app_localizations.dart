@@ -969,14 +969,12 @@ class AppLocalizations {
 
   // ── Task 17 — tile bento & sakelar Pengaturan ──
   String get challengeTileOff => _t('challenge_tile_off');
-  String challengeTileActive(String category, String amount) =>
-      _t(
-        'challenge_tile_active',
-      ).replaceAll('{category}', category).replaceAll('{amount}', amount);
-  String challengeTileOver(String category, String amount) =>
-      _t(
-        'challenge_tile_over',
-      ).replaceAll('{category}', category).replaceAll('{amount}', amount);
+  String challengeTileActive(String category, String amount) => _t(
+    'challenge_tile_active',
+  ).replaceAll('{category}', category).replaceAll('{amount}', amount);
+  String challengeTileOver(String category, String amount) => _t(
+    'challenge_tile_over',
+  ).replaceAll('{category}', category).replaceAll('{amount}', amount);
   String get challengeTileHeld => _t('challenge_tile_held');
   String get challengeTileWindow => _t('challenge_tile_window');
   String get challengeTileNoData => _t('challenge_tile_no_data');

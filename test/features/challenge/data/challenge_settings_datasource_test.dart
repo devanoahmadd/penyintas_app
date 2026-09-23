@@ -40,13 +40,18 @@ void main() {
     });
 
     test('setEnabled TIDAK menghapus kolom app_settings lain', () async {
-      await db.into(db.appSettings).insertOnConflictUpdate(
-            const AppSettingsCompanion(id: Value(1), monthlyIncome: Value(3500000)),
+      await db
+          .into(db.appSettings)
+          .insertOnConflictUpdate(
+            const AppSettingsCompanion(
+              id: Value(1),
+              monthlyIncome: Value(3500000),
+            ),
           );
       await sakelar.setEnabled(true);
-      final row = await (db.select(db.appSettings)
-            ..where((t) => t.id.equals(1)))
-          .getSingle();
+      final row = await (db.select(
+        db.appSettings,
+      )..where((t) => t.id.equals(1))).getSingle();
       expect(row.monthlyIncome, 3500000);
       expect(row.challengeEnabled, isTrue);
     });

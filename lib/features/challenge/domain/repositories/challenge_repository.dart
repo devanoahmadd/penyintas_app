@@ -45,7 +45,9 @@ abstract class ChallengeRepository {
   Future<Either<Failure, void>> markResultSeen(int weekKey);
 
   /// D22 — dipanggil HANYA dari langkah 1c EnsureAndResolveChallenge.
-  Future<Either<Failure, void>> markOlderResultsSeen({required int keepWeekKey});
+  Future<Either<Failure, void>> markOlderResultsSeen({
+    required int keepWeekKey,
+  });
 
   /// Dua blok TERPISAH dengan anggaran waktu sendiri — pelajaran D-9 Fase 1:
   /// push yang ditaruh di dalam blok pull ber-timeout membuat pull tak pernah

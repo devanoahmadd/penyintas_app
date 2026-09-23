@@ -5,15 +5,21 @@ import 'package:penyintas_app/features/challenge/data/models/challenge_model.dar
 
 void main() {
   test('U49 · status terselesaikan menang atas active', () {
-    expect(mergeRank(ChallengeStatus.active), lessThan(mergeRank(ChallengeStatus.skipped)));
+    expect(
+      mergeRank(ChallengeStatus.active),
+      lessThan(mergeRank(ChallengeStatus.skipped)),
+    );
     for (final s in [
       ChallengeStatus.achieved,
       ChallengeStatus.missed,
       ChallengeStatus.held,
       ChallengeStatus.skipped,
     ]) {
-      expect(mergeRank(s), greaterThan(mergeRank(ChallengeStatus.active)),
-          reason: '$s harus menang atas active');
+      expect(
+        mergeRank(s),
+        greaterThan(mergeRank(ChallengeStatus.active)),
+        reason: '$s harus menang atas active',
+      );
     }
   });
 
@@ -22,15 +28,19 @@ void main() {
     final baru = DateTime.utc(2026, 9, 8);
     expect(
       remoteMenang(
-        lokalStatus: ChallengeStatus.achieved, lokalUpdatedAt: lama,
-        remoteStatus: ChallengeStatus.missed, remoteUpdatedAt: baru,
+        lokalStatus: ChallengeStatus.achieved,
+        lokalUpdatedAt: lama,
+        remoteStatus: ChallengeStatus.missed,
+        remoteUpdatedAt: baru,
       ),
       isTrue,
     );
     expect(
       remoteMenang(
-        lokalStatus: ChallengeStatus.achieved, lokalUpdatedAt: baru,
-        remoteStatus: ChallengeStatus.missed, remoteUpdatedAt: lama,
+        lokalStatus: ChallengeStatus.achieved,
+        lokalUpdatedAt: baru,
+        remoteStatus: ChallengeStatus.missed,
+        remoteUpdatedAt: lama,
       ),
       isFalse,
     );
@@ -40,11 +50,12 @@ void main() {
     // Kalau diisi waktu tarik, semua baris remote jadi termuda dan presedensi
     // rusak pada sinkron berikutnya.
     final remote = DateTime.utc(2026, 9, 8, 3);
-    final c = ChallengeModel.fromFirestore(
-      {'status': 'achieved', 'timezone': 'WIB',
-       'createdAt': 0, 'updatedAt': remote.millisecondsSinceEpoch},
-      weekKey: 20260907,
-    ).toCompanion(keepResultSeenAt: null, isSynced: true);
+    final c = ChallengeModel.fromFirestore({
+      'status': 'achieved',
+      'timezone': 'WIB',
+      'createdAt': 0,
+      'updatedAt': remote.millisecondsSinceEpoch,
+    }, weekKey: 20260907).toCompanion(keepResultSeenAt: null, isSynced: true);
     expect(c.updatedAt.value, remote);
   });
 
@@ -71,8 +82,10 @@ void main() {
     // Meski updatedAt remote lebih besar — peringkat status menang lebih dulu.
     expect(
       remoteMenang(
-        lokalStatus: ChallengeStatus.skipped, lokalUpdatedAt: DateTime.utc(2026, 9, 7),
-        remoteStatus: ChallengeStatus.active, remoteUpdatedAt: DateTime.utc(2026, 9, 9),
+        lokalStatus: ChallengeStatus.skipped,
+        lokalUpdatedAt: DateTime.utc(2026, 9, 7),
+        remoteStatus: ChallengeStatus.active,
+        remoteUpdatedAt: DateTime.utc(2026, 9, 9),
       ),
       isFalse,
     );
