@@ -914,6 +914,38 @@ class AppLocalizations {
       _t('challenge_result_placeholder_achieved');
   String get challengeResultPlaceholderMissed =>
       _t('challenge_result_placeholder_missed');
+
+  // ── Task 18 — bank kalimat lokal (8 per status × 3 status) ──
+  // Active (sedang berjalan)
+  String get challengeBankActive1 => _t('challenge_bank_active_1');
+  String get challengeBankActive2 => _t('challenge_bank_active_2');
+  String get challengeBankActive3 => _t('challenge_bank_active_3');
+  String get challengeBankActive4 => _t('challenge_bank_active_4');
+  String get challengeBankActive5 => _t('challenge_bank_active_5');
+  String get challengeBankActive6 => _t('challenge_bank_active_6');
+  String get challengeBankActive7 => _t('challenge_bank_active_7');
+  String get challengeBankActive8 => _t('challenge_bank_active_8');
+
+  // Achieved (berhasil)
+  String get challengeBankAchieved1 => _t('challenge_bank_achieved_1');
+  String get challengeBankAchieved2 => _t('challenge_bank_achieved_2');
+  String get challengeBankAchieved3 => _t('challenge_bank_achieved_3');
+  String get challengeBankAchieved4 => _t('challenge_bank_achieved_4');
+  String get challengeBankAchieved5 => _t('challenge_bank_achieved_5');
+  String get challengeBankAchieved6 => _t('challenge_bank_achieved_6');
+  String get challengeBankAchieved7 => _t('challenge_bank_achieved_7');
+  String get challengeBankAchieved8 => _t('challenge_bank_achieved_8');
+
+  // Missed (lewat)
+  String get challengeBankMissed1 => _t('challenge_bank_missed_1');
+  String get challengeBankMissed2 => _t('challenge_bank_missed_2');
+  String get challengeBankMissed3 => _t('challenge_bank_missed_3');
+  String get challengeBankMissed4 => _t('challenge_bank_missed_4');
+  String get challengeBankMissed5 => _t('challenge_bank_missed_5');
+  String get challengeBankMissed6 => _t('challenge_bank_missed_6');
+  String get challengeBankMissed7 => _t('challenge_bank_missed_7');
+  String get challengeBankMissed8 => _t('challenge_bank_missed_8');
+
   String get challengeCandidateTitle => _t('challenge_candidate_title');
   String get challengeCandidateSubtitle => _t('challenge_candidate_subtitle');
   String challengeCandidateAverageToTarget(String baseline, String target) =>

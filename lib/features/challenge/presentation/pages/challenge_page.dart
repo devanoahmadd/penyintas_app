@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:penyintas_app/core/di/injection_container.dart';
-import 'package:penyintas_app/core/l10n/app_localizations.dart';
 import 'package:penyintas_app/core/l10n/app_localizations_ext.dart';
 import 'package:penyintas_app/core/theme/app_colors.dart';
 import 'package:penyintas_app/core/theme/app_spacing.dart';
@@ -16,6 +15,7 @@ import 'package:penyintas_app/features/challenge/domain/repositories/challenge_r
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_state.dart';
+import 'package:penyintas_app/features/challenge/presentation/utils/challenge_copy_bank.dart';
 import 'package:penyintas_app/features/challenge/presentation/utils/challenge_week_range.dart';
 import 'package:penyintas_app/features/challenge/presentation/widgets/active_challenge_card.dart';
 import 'package:penyintas_app/features/challenge/presentation/widgets/candidate_picker_sheet.dart';
@@ -219,15 +219,6 @@ class _ReadyBody extends StatelessWidget {
   final ChallengeSnapshot snapshot;
   final bool creationWindow;
 
-  /// U91 — TIDAK ADA `challengeBankLine` (Task 18) saat berkas ini ditulis.
-  /// Placeholder yang JELAS asalnya, bukan string kosong: Task 18 menyambung
-  /// penyuplai sungguhan di sini, menggantikan fungsi ini.
-  String _placeholderLine(ChallengeWeek week, AppLocalizations l10n) {
-    return week.status == ChallengeStatus.achieved
-        ? l10n.challengeResultPlaceholderAchieved
-        : l10n.challengeResultPlaceholderMissed;
-  }
-
   Future<void> _openCandidateSheet(
     BuildContext context, {
     required ChallengeWeek week,
@@ -325,7 +316,11 @@ class _ReadyBody extends StatelessWidget {
             ChallengeResultCard(
               week: pending,
               rangeLabel: challengeWeekRange(context, pending.weekKey),
-              line: _placeholderLine(pending, l10n),
+              line: challengeBankLine(
+                context,
+                status: pending.status,
+                weekKey: pending.weekKey,
+              ),
               onDismiss: () => context.read<ChallengeBloc>().add(
                 ChallengeResultDismissed(pending.weekKey),
               ),
