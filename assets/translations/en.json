@@ -628,9 +628,9 @@
   "challenge_bank_active_5": "One category to focus on this week, the rest as usual.",
   "challenge_bank_active_6": "End of week is in sight. You've got this.",
   "challenge_bank_active_7": "One step at a time this week. Solid.",
-  "challenge_bank_active_8": "Small target this week, but the math matters.",
-  "challenge_bank_achieved_1": "Take it slow. The point is making it to Sunday.",
-  "challenge_bank_achieved_2": "One category first. Everything else runs as usual.",
+  "challenge_bank_active_8": "Small target this week, but the numbers matter to track.",
+  "challenge_bank_achieved_1": "This week—target hit. One rung climbed.",
+  "challenge_bank_achieved_2": "Target done, confidence up. Next week again.",
   "challenge_bank_achieved_3": "You came in under target this week.",
   "challenge_bank_achieved_4": "Great job—you hit this week's target.",
   "challenge_bank_achieved_5": "More careful this week. Hard work pays off.",
@@ -642,7 +642,7 @@
   "challenge_bank_missed_3": "That's part of learning. Keep going.",
   "challenge_bank_missed_4": "Not perfect, but that's okay.",
   "challenge_bank_missed_5": "Needed a bit more, but no sweat. Next week again.",
-  "challenge_bank_missed_6": "Happens to everyone. Keep it up.",
-  "challenge_bank_missed_7": "Ups and downs happen. That's normal. Keep going.",
+  "challenge_bank_missed_6": "Not quite, but that's part of learning. Keep going.",
+  "challenge_bank_missed_7": "Some up, some down. That's how it goes. Keep moving.",
   "challenge_bank_missed_8": "Not a failure—just learning how much you really need."
 }

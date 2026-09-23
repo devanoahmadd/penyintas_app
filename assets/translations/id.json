@@ -628,9 +628,9 @@
   "challenge_bank_active_5": "Fokus satu pos minggu ini, sisanya biar normal.",
   "challenge_bank_active_6": "Akhir minggu tinggal mengincar. Kamu bisa.",
   "challenge_bank_active_7": "Satu langkah demi langkah minggu ini. Mantap.",
-  "challenge_bank_active_8": "Target kecil minggu ini, tapi penghitungnya penting.",
-  "challenge_bank_achieved_1": "Pelan-pelan saja, yang penting sampai Minggu.",
-  "challenge_bank_achieved_2": "Satu pos dulu. Sisanya biar jalan seperti biasa.",
+  "challenge_bank_active_8": "Target kecil minggu ini, tapi angka-angkanya penting untuk hitung.",
+  "challenge_bank_achieved_1": "Minggu ini berhasil dipangkas. Satu ruas dilalui.",
+  "challenge_bank_achieved_2": "Target selesai, kepercayaan diri naik. Lanjut minggu depan.",
   "challenge_bank_achieved_3": "Kamu di bawah target minggu ini.",
   "challenge_bank_achieved_4": "Hebat, target minggu ini tercapai.",
   "challenge_bank_achieved_5": "Seminggu lebih cermat. Usaha terbayar.",
@@ -642,7 +642,7 @@
   "challenge_bank_missed_3": "Itu bagian dari belajar. Lanjut terus.",
   "challenge_bank_missed_4": "Nggak sempurna, tapi nggak apa-apa kok.",
   "challenge_bank_missed_5": "Ada yang perlu, tapi nggak apa-apa. Minggu depan lagi.",
-  "challenge_bank_missed_6": "Pernah pun pernah, nggak apa-apa. Terus aja.",
-  "challenge_bank_missed_7": "Kayak naik turun. Itu lumrah. Lanjut.",
+  "challenge_bank_missed_6": "Ada yang tidak sesuai, tapi itu bagian dari proses. Terus maju.",
+  "challenge_bank_missed_7": "Ada naik, ada turun. Itu dinamika normal. Lanjut.",
   "challenge_bank_missed_8": "Bukannya gagal, tapi belajar berapa banyak cukup buat kamu."
 }
