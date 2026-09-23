@@ -125,9 +125,9 @@ void main() {
 
   // ── Perkakas ──────────────────────────────────────────────────────────────
 
-  int _txCounter = 0;
+  int txCounter = 0;
 
-  Future<void> _tulisBaris({
+  Future<void> tulisBaris({
     int weekKey = _mingguIni,
     ChallengeStatus status = ChallengeStatus.active,
     String? kategori = 'food',
@@ -153,18 +153,18 @@ void main() {
   /// Transaksi expense biasa (bukan tetap, bukan hasil tagihan) — masuk hitungan
   /// `spentInWeek`. Tanggal default Senin minggu ini, supaya otomatis terhitung
   /// di [_mingguIni] tanpa perlu diulang tiap panggilan.
-  Future<void> _tambahTransaksi({
+  Future<void> tambahTransaksi({
     required int nominal,
     String kategori = 'food',
     DateTime? tanggal,
   }) {
     final t = tanggal ?? DateTime(2026, 9, 7, 12);
-    _txCounter++;
+    txCounter++;
     return db
         .into(db.transactions)
         .insert(
           TransactionsCompanion.insert(
-            txId: 'tx-$_txCounter',
+            txId: 'tx-$txCounter',
             amount: nominal,
             category: kategori,
             type: 'expense',
@@ -182,7 +182,7 @@ void main() {
       // Tanpa ini ada pintu belakang menang gratis: pilih pos termurah sambil
       // menyandang target pos termahal.
       clock.at = DateTime(2026, 9, 7, 9);
-      await _tulisBaris(kategori: 'food', target: 115000, basis: 140000);
+      await tulisBaris(kategori: 'food', target: 115000, basis: 140000);
       // Kedua kandidat WAJIB membawa target hasil computeTarget yang sebenarnya:
       // 96000 × 0,85 = 81.600 → floor kelipatan 5.000 = 80.000. Rev 1 menulis
       // 81.000 di sini — angka yang tak bisa dihasilkan rumus mana pun, dan test
@@ -211,7 +211,7 @@ void main() {
       'U64 · ganti pos ke kategori di luar daftar kandidat → Left, baris tidak berubah',
       () async {
         clock.at = DateTime(2026, 9, 7, 9);
-        await _tulisBaris(kategori: 'food', target: 115000, basis: 140000);
+        await tulisBaris(kategori: 'food', target: 115000, basis: 140000);
         // Kandidat default hanya 'transport' — 'hiburan' sengaja tidak ada.
 
         final hasil = await gantiPos(
@@ -228,7 +228,7 @@ void main() {
 
     test('U65 · ganti pos hari Rabu → Left, baris tidak berubah', () async {
       clock.at = DateTime(2026, 9, 9, 9); // Rabu — di luar jendela
-      await _tulisBaris(kategori: 'food', target: 115000, basis: 140000);
+      await tulisBaris(kategori: 'food', target: 115000, basis: 140000);
 
       final hasil = await gantiPos(
         const ChangeCategoryParams(weekKey: _mingguIni, category: 'transport'),
@@ -244,7 +244,7 @@ void main() {
       'M7 · ganti pos pada baris held → Right diam, baris tidak berubah',
       () async {
         clock.at = DateTime(2026, 9, 7, 9); // Senin, di jendela
-        await _tulisBaris(
+        await tulisBaris(
           status: ChallengeStatus.held,
           kategori: null,
           target: null,
@@ -267,7 +267,7 @@ void main() {
       'M7 · ganti pos pada baris skipped → Right diam, baris tidak berubah',
       () async {
         clock.at = DateTime(2026, 9, 7, 9); // Senin, di jendela
-        await _tulisBaris(
+        await tulisBaris(
           status: ChallengeStatus.skipped,
           kategori: null,
           target: null,
@@ -292,7 +292,7 @@ void main() {
   group('SkipChallengeWeek', () {
     test('U66 · lewati hari Rabu → Left, baris tetap active', () async {
       clock.at = DateTime(2026, 9, 9, 9); // Rabu — di luar jendela
-      await _tulisBaris(status: ChallengeStatus.active);
+      await tulisBaris(status: ChallengeStatus.active);
 
       final hasil = await lewati(const SkipWeekParams(weekKey: _mingguIni));
 
@@ -305,8 +305,8 @@ void main() {
       'U67 · lewati Senin, sudah terpakai 34.000 → skipped, finalSpent terisi',
       () async {
         clock.at = DateTime(2026, 9, 7, 9); // Senin — di jendela
-        await _tulisBaris(status: ChallengeStatus.active, kategori: 'food');
-        await _tambahTransaksi(nominal: 34000, kategori: 'food');
+        await tulisBaris(status: ChallengeStatus.active, kategori: 'food');
+        await tambahTransaksi(nominal: 34000, kategori: 'food');
 
         final hasil = await lewati(const SkipWeekParams(weekKey: _mingguIni));
 
@@ -326,8 +326,8 @@ void main() {
       'U72 · matikan sakelar dengan baris minggu ini active → ditutup skipped',
       () async {
         clock.at = DateTime(2026, 9, 7, 9); // Senin
-        await _tulisBaris(status: ChallengeStatus.active, kategori: 'food');
-        await _tambahTransaksi(nominal: 34000, kategori: 'food');
+        await tulisBaris(status: ChallengeStatus.active, kategori: 'food');
+        await tambahTransaksi(nominal: 34000, kategori: 'food');
 
         final hasil = await setEnabled(
           const SetChallengeEnabledParams(enabled: false),
@@ -345,7 +345,7 @@ void main() {
       'U73 · matikan sakelar hari Jumat tetap boleh (T16 tidak terkunci jendela)',
       () async {
         clock.at = DateTime(2026, 9, 11, 9); // Jumat, minggu yang sama
-        await _tulisBaris(status: ChallengeStatus.active, kategori: 'food');
+        await tulisBaris(status: ChallengeStatus.active, kategori: 'food');
 
         final hasil = await setEnabled(
           const SetChallengeEnabledParams(enabled: false),
@@ -369,7 +369,7 @@ void main() {
         // `false`) dan assersi di bawah gagal untuk implementasi APA PUN,
         // benar maupun salah — bukan cuma untuk sabotase.
         await settings.setEnabled(true);
-        await _tulisBaris(status: ChallengeStatus.active);
+        await tulisBaris(status: ChallengeStatus.active);
         when(
           () => repo.resolveWeek(
             weekKey: any(named: 'weekKey'),
@@ -391,7 +391,7 @@ void main() {
       'U74 · nyalakan lagi minggu yang sama dengan baris skipped → tidak ada baris baru',
       () async {
         clock.at = DateTime(2026, 9, 7, 9); // Senin
-        await _tulisBaris(
+        await tulisBaris(
           status: ChallengeStatus.skipped,
           kategori: null,
           target: null,
@@ -417,7 +417,7 @@ void main() {
     test(
       'U77 · tandai hasil pada baris achieved isSynced=true → isSynced TETAP true',
       () async {
-        await _tulisBaris(status: ChallengeStatus.achieved, isSynced: true);
+        await tulisBaris(status: ChallengeStatus.achieved, isSynced: true);
 
         final hasil = await tandaiHasil(
           const MarkResultSeenParams(weekKey: _mingguIni),
