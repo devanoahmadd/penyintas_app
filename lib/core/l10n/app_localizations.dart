@@ -954,6 +954,8 @@ class AppLocalizations {
   String get challengeDisableConfirmBody =>
       _t('challenge_disable_confirm_body');
   String get challengeDisableConfirmCta => _t('challenge_disable_confirm_cta');
+  String get challengeSettingsLabel => _t('challenge_settings_label');
+  String get challengeSettingsSub => _t('challenge_settings_sub');
 }
 
 class _AppLocalizationsDelegate

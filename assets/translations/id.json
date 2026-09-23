@@ -620,5 +620,7 @@
   "challenge_tile_budget": "Atur anggaran dulu",
   "challenge_disable_confirm_title": "Matikan tantangan mingguan?",
   "challenge_disable_confirm_body": "Tantangan yang sedang jalan ikut berhenti. Riwayatmu tetap tersimpan.",
-  "challenge_disable_confirm_cta": "Matikan"
+  "challenge_disable_confirm_cta": "Matikan",
+  "challenge_settings_label": "Tantangan mingguan",
+  "challenge_settings_sub": "App pilihkan satu pos tiap Senin."
 }

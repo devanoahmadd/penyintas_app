@@ -67,6 +67,12 @@ ChallengeState _stateFor(ChallengePhase phase) => ChallengeState(
   ),
 );
 
+/// Keadaan "belum ada bacaan sama sekali" — `snapshot == null`. Persis
+/// keadaan awal `ChallengeState()` sebelum stream pernah meng-emit apa pun
+/// (mis. app baru dibuka lewat notifikasi → `/budget` → Pengaturan, TANPA
+/// pernah singgah ke `/dashboard`/`/challenge`).
+const _stateBelumTahu = ChallengeState(status: ChallengeViewStatus.loading);
+
 void main() {
   late AppLocalizations l10n;
   late MockChallengeBloc bloc;
@@ -74,6 +80,9 @@ void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     l10n = await AppLocalizations.delegate.load(const Locale('id'));
+    // WAJIB untuk `any(that: isA<ChallengeEvent>())` di verify/verifyNever —
+    // mocktail butuh nilai fallback yang sah untuk tipe yang di-`any`-kan.
+    registerFallbackValue(const ChallengeStarted());
   });
 
   setUp(() {
@@ -100,15 +109,21 @@ void main() {
   }
 
   Finder toggleSwitch() =>
-      find.widgetWithText(SwitchListTile, l10n.challengePageTitle);
+      find.byKey(const Key('challenge-toggle-switch'));
 
   testWidgets('phase disabled → switch OFF', (tester) async {
     stub(_stateFor(const PhaseDisabled()));
     await pumpSection(tester);
 
-    expect(find.text(l10n.challengePageTitle.toUpperCase()), findsOneWidget);
+    expect(
+      find.text(l10n.challengeSettingsLabel.toUpperCase()),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.challengeSettingsLabel), findsOneWidget);
+    expect(find.text(l10n.challengeSettingsSub), findsOneWidget);
     final sw = tester.widget<SwitchListTile>(toggleSwitch());
     expect(sw.value, isFalse);
+    expect(sw.onChanged, isNotNull);
   });
 
   testWidgets('phase active → switch ON', (tester) async {
@@ -195,6 +210,56 @@ void main() {
 
       expect(find.byType(AlertDialog), findsNothing);
       verify(() => bloc.add(const ChallengeEnabledToggled(false))).called(1);
+    },
+  );
+
+  // ── Ronde perbaikan review (CRITICAL) ──
+
+  testWidgets(
+    'section mendispatch ChallengeStarted() sendiri saat mount — TIDAK '
+    'bergantung /dashboard atau /challenge sudah pernah dikunjungi',
+    (tester) async {
+      stub(_stateFor(const PhaseDisabled()));
+      await pumpSection(tester);
+
+      verify(() => bloc.add(const ChallengeStarted())).called(1);
+    },
+  );
+
+  testWidgets(
+    'snapshot == null (belum ada bacaan) → sakelar non-interaktif, BUKAN '
+    'OFF yang bisa ditekan',
+    (tester) async {
+      stub(_stateBelumTahu);
+      await pumpSection(tester);
+
+      final sw = tester.widget<SwitchListTile>(toggleSwitch());
+      expect(
+        sw.onChanged,
+        isNull,
+        reason:
+            'nilai sebenarnya belum diketahui — sakelar tidak boleh '
+            'terlihat sebagai OFF yang bisa ditekan',
+      );
+
+      // Tap pada switch disabled tidak memicu apa pun — bukti tambahan
+      // di luar pemeriksaan onChanged di atas.
+      await tester.tap(toggleSwitch(), warnIfMissed: false);
+      await tester.pump();
+      verifyNever(() => bloc.add(any(that: isA<ChallengeEnabledToggled>())));
+    },
+  );
+
+  testWidgets(
+    'snapshot == null TAPI status failure → tetap non-interaktif (bukan '
+    'cuma loading yang dijaga)',
+    (tester) async {
+      stub(
+        const ChallengeState(status: ChallengeViewStatus.failure),
+      ); // snapshot null, sudah gagal — tetap tak diketahui nilainya
+      await pumpSection(tester);
+
+      expect(tester.widget<SwitchListTile>(toggleSwitch()).onChanged, isNull);
     },
   );
 

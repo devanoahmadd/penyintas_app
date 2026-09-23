@@ -620,5 +620,7 @@
   "challenge_tile_budget": "Set your budget first",
   "challenge_disable_confirm_title": "Turn off weekly challenges?",
   "challenge_disable_confirm_body": "The challenge in progress will stop too. Your history stays.",
-  "challenge_disable_confirm_cta": "Turn off"
+  "challenge_disable_confirm_cta": "Turn off",
+  "challenge_settings_label": "Weekly challenge",
+  "challenge_settings_sub": "We pick one category every Monday."
 }

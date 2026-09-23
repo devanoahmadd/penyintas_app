@@ -48,7 +48,12 @@ void main() {
 
   /// Key BARU Task 17 — tile bento dashboard (`challenge_tile_*`, 7 varian
   /// sesuai tabel spec baris 1465–1478) + dialog konfirmasi mematikan
-  /// sakelar (`challenge_disable_confirm_*`, 3 varian, baris 1508–1510).
+  /// sakelar (`challenge_disable_confirm_*`, 3 varian, baris 1508–1510) +
+  /// label/sub netral ON/OFF untuk toggle Pengaturan itu sendiri
+  /// (`challenge_settings_*`, 2 varian, baris 1522–1523 — ronde perbaikan
+  /// review: `challengePageTitle`/`challengeEmptyDisabledBody` yang
+  /// dipakai sebelumnya BUKAN netral, `challengeEmptyDisabledBody` ditulis
+  /// sebagai ajakan menyalakan dan kontradiktif saat fitur sudah ON).
   const challengeBentoKeys = [
     'challenge_tile_off',
     'challenge_tile_active',
@@ -60,6 +65,8 @@ void main() {
     'challenge_disable_confirm_title',
     'challenge_disable_confirm_body',
     'challenge_disable_confirm_cta',
+    'challenge_settings_label',
+    'challenge_settings_sub',
   ];
 
   test('id.json memuat semua key tile & dialog Tantangan', () {
@@ -161,13 +168,14 @@ void main() {
   // ── Arah balik: id.json → challengeBentoKeys ──
   test(
     'challengeBentoKeys memuat semua key challenge_tile_*/challenge_'
-    'disable_confirm_* yang ada di id.json (arah balik)',
+    'disable_confirm_*/challenge_settings_* yang ada di id.json (arah balik)',
     () {
       final actual = id.keys
           .where(
             (k) =>
                 k.startsWith('challenge_tile_') ||
-                k.startsWith('challenge_disable_confirm_'),
+                k.startsWith('challenge_disable_confirm_') ||
+                k.startsWith('challenge_settings_'),
           )
           .toSet();
       final missing = actual.difference(challengeBentoKeys.toSet());

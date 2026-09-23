@@ -735,8 +735,47 @@ class _SecuritySectionState extends State<SecuritySection> {
 /// (`challenge_disable_confirm_body`). Phase lain (held/settled/notEnough
 /// Data/dst.) tidak sedang menghitung apa pun yang bisa "berhenti", jadi
 /// langsung dimatikan tanpa basa-basi.
-class ChallengeToggleSection extends StatelessWidget {
+///
+/// **Perbaikan ronde review (CRITICAL) — dua cacat yang ditemukan:**
+///
+/// 1. **Section ini dulu diam-diam bergantung pada `/dashboard` atau
+///    `/challenge` sudah pernah dikunjungi** untuk menyalakan langganan
+///    stream `ChallengeBloc` (`_onStarted` cuma terpasang ke event
+///    `ChallengeStarted`, yang cuma dikirim dua rute itu — TIDAK di
+///    `/settings`). Jalur produksi nyata (notifikasi anggaran/pengingat
+///    harian → `/budget` atau `/transactions` → tab "Saya" → Pengaturan)
+///    TIDAK PERNAH melewati keduanya, jadi sakelar bisa macet di nilai
+///    awal (`initial`, `snapshot == null`) selama sisa sesi app — user
+///    menekannya, event terkirim, tapi tampilan tak pernah pindah karena
+///    tak ada stream yang menyegarkan. **Perbaikan:** `initState` di sini
+///    men-dispatch `ChallengeStarted()` sendiri. Aman diulang — handler
+///    `_onStarted` pakai transformer `restartable()` (M4,
+///    `challenge_bloc.dart:52-56`): kalau `/dashboard` sudah memulai
+///    langganan duluan, dispatch kedua ini cuma membatalkan & mengganti
+///    langganan lama dengan yang baru (data sama), BUKAN membuat dua
+///    langganan paralel.
+/// 2. **Selama `state.snapshot == null` (belum ada bacaan sama sekali),
+///    sakelar TIDAK BOLEH menyajikan OFF yang bisa ditekan** — itu
+///    kebohongan diam: nilai sebenarnya belum diketahui, bisa saja ON di
+///    database. **Perbaikan:** selama `snapshot == null`, `onChanged`
+///    di-set `null` (SwitchListTile Flutter otomatis merender disabled —
+///    pudar, tak merespons tap) — bukan `false` yang terlihat seperti OFF
+///    biasa yang bisa ditekan.
+class ChallengeToggleSection extends StatefulWidget {
   const ChallengeToggleSection({super.key});
+
+  @override
+  State<ChallengeToggleSection> createState() =>
+      _ChallengeToggleSectionState();
+}
+
+class _ChallengeToggleSectionState extends State<ChallengeToggleSection> {
+  @override
+  void initState() {
+    super.initState();
+    // Lihat dartdoc kelas ini (perbaikan #1) — WAJIB, jangan hapus.
+    sl<ChallengeBloc>().add(const ChallengeStarted());
+  }
 
   Future<void> _onToggle(
     BuildContext context,
@@ -814,27 +853,34 @@ class ChallengeToggleSection extends StatelessWidget {
       bloc: sl<ChallengeBloc>(),
       builder: (context, state) {
         final phase = state.snapshot?.phase;
-        final enabled = phase != null && phase is! PhaseDisabled;
+        // Belum ada bacaan SAMA SEKALI — nilai sebenarnya belum diketahui.
+        // Lihat dartdoc kelas ini (perbaikan #2): jangan pernah merender
+        // OFF yang bisa ditekan di keadaan ini.
+        final belumTahu = phase == null;
+        final enabled = !belumTahu && phase is! PhaseDisabled;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _SectionHeader(
-              label: l10n.challengePageTitle.toUpperCase(),
+              label: l10n.challengeSettingsLabel.toUpperCase(),
               mutedColor: mutedColor,
             ),
             _CardContainer(
               surfaceColor: surfaceColor,
               borderColor: borderColor,
               child: SwitchListTile(
+                key: const Key('challenge-toggle-switch'),
                 value: enabled,
-                onChanged: (v) => _onToggle(context, v, phase),
+                onChanged: belumTahu
+                    ? null
+                    : (v) => _onToggle(context, v, phase),
                 title: Text(
-                  l10n.challengePageTitle,
+                  l10n.challengeSettingsLabel,
                   style: AppTextStyles.body.copyWith(color: textColor),
                 ),
                 subtitle: Text(
-                  l10n.challengeEmptyDisabledBody,
+                  l10n.challengeSettingsSub,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: textSoftColor,
                   ),
