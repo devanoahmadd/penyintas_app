@@ -567,7 +567,7 @@
   "challenge_card_remaining_of": "Remaining of Rp {target}.",
   "challenge_card_over_of": "Over your Rp {target} target.",
   "challenge_card_daily_hint": "About Rp {amount} a day until your target.",
-  "challenge_card_over_hint": "That's okay. Keep logging, next week is a fresh start.",
+  "challenge_card_over_hint": "That's okay. The rest of this week still counts, keep logging.",
   "challenge_card_excluded": "Rp {amount} from bills & fixed needs isn't counted.",
   "challenge_card_change_category": "Change category",
   "challenge_result_eyebrow": "Challenge result",

@@ -567,7 +567,7 @@
   "challenge_card_remaining_of": "Sisa dari Rp {target}.",
   "challenge_card_over_of": "Lewat dari Rp {target}.",
   "challenge_card_daily_hint": "Sekitar Rp {amount} per hari sampai target.",
-  "challenge_card_over_hint": "Nggak apa-apa. Catat terus, lanjut ke minggu depan.",
+  "challenge_card_over_hint": "Nggak apa-apa. Sisa minggu ini tetap berarti, catat terus ya.",
   "challenge_card_excluded": "Rp {amount} dari tagihan & kebutuhan tetap tidak dihitung.",
   "challenge_card_change_category": "Ganti pos",
   "challenge_result_eyebrow": "Hasil tantangan",
