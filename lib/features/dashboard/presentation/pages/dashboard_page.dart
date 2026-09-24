@@ -739,8 +739,9 @@ class _BentoGrid extends StatelessWidget {
         // Task 17: tile ketujuh — grid 2 kolom jadi ganjil, jadi baris ini
         // sengaja SATU tile selebar penuh (bukan dipasangkan dengan
         // Expanded kosong di sampingnya) daripada menyisakan lubang
-        // setengah baris. Lihat laporan Task 17 untuk alasan penempatan &
-        // konsekuensinya — keputusan akhir ada di tangan pengendali.
+        // setengah baris. Butir 4 (2026-09-24): tampil sebagai banner
+        // horizontal pendek — menurunkan porsi hijau grid dan mengisi ruang
+        // yang dulu kosong.
         const SizedBox(width: double.infinity, child: ChallengeBentoTile()),
       ],
     );

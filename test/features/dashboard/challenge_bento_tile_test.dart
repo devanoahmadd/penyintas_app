@@ -14,6 +14,7 @@ import 'package:penyintas_app/features/challenge/domain/entities/challenge_week.
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_event.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_state.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_banner_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
 import 'package:penyintas_app/features/dashboard/presentation/widgets/challenge_bento_tile.dart';
 
@@ -237,7 +238,7 @@ void main() {
       await tester.pumpWidget(harness());
       await tester.pump();
       expect(find.byKey(const Key('challenge-bento-skeleton')), findsOneWidget);
-      expect(find.byType(BentoFeatTile), findsNothing);
+      expect(find.byType(BentoBannerTile), findsNothing);
     });
 
     testWidgets('preparing → skeleton, BUKAN teks', (tester) async {
@@ -245,7 +246,7 @@ void main() {
       await tester.pumpWidget(harness());
       await tester.pump();
       expect(find.byKey(const Key('challenge-bento-skeleton')), findsOneWidget);
-      expect(find.byType(BentoFeatTile), findsNothing);
+      expect(find.byType(BentoBannerTile), findsNothing);
     });
 
     testWidgets('belum ada snapshot sama sekali → skeleton juga', (
@@ -259,6 +260,31 @@ void main() {
   });
 
   // ── U119 — D24: tile SELALU hijau, phase over dibedakan lewat kata ──
+  group('butir 4 · tile selebar penuh berbentuk banner', () {
+    testWidgets('phase siap → BentoBannerTile, BUKAN BentoFeatTile vertikal', (
+      tester,
+    ) async {
+      stub(buildState(const PhaseDisabled()));
+      await tester.pumpWidget(harness());
+      await tester.pump();
+      expect(find.byType(BentoBannerTile), findsOneWidget);
+      expect(find.byType(BentoFeatTile), findsNothing);
+    });
+
+    testWidgets(
+      'skeleton berbentuk banner juga — tak melompat saat data tiba',
+      (tester) async {
+        stub(buildState(null));
+        await tester.pumpWidget(harness());
+        await tester.pump();
+        final tinggi = tester
+            .getSize(find.byKey(const Key('challenge-bento-skeleton')))
+            .height;
+        expect(tinggi, kBentoBannerMinHeight);
+      },
+    );
+  });
+
   group('U119 · bg tile SELALU AppColors.primary, phase over bukan warn', () {
     testWidgets('phase over → bg primary, BUKAN warn', (tester) async {
       final week = buildWeek(status: ChallengeStatus.active);
@@ -266,7 +292,7 @@ void main() {
       await tester.pumpWidget(harness());
       await tester.pump();
 
-      final tile = tester.widget<BentoFeatTile>(find.byType(BentoFeatTile));
+      final tile = tester.widget<BentoBannerTile>(find.byType(BentoBannerTile));
       expect(tile.bg, AppColors.primary);
       expect(tile.bg, isNot(AppColors.warn));
     });
@@ -278,7 +304,7 @@ void main() {
       await tester.pumpWidget(harness());
       await tester.pump();
       final bgActive = tester
-          .widget<BentoFeatTile>(find.byType(BentoFeatTile))
+          .widget<BentoBannerTile>(find.byType(BentoBannerTile))
           .bg;
 
       bloc = MockChallengeBloc();
@@ -286,7 +312,7 @@ void main() {
       await tester.pumpWidget(harness());
       await tester.pump();
       final bgOver = tester
-          .widget<BentoFeatTile>(find.byType(BentoFeatTile))
+          .widget<BentoBannerTile>(find.byType(BentoBannerTile))
           .bg;
 
       expect(bgActive, bgOver);

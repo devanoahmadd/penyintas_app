@@ -9,7 +9,7 @@ import 'package:penyintas_app/core/utils/currency_formatter.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_phase.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_bloc.dart';
 import 'package:penyintas_app/features/challenge/presentation/bloc/challenge_state.dart';
-import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_feat_tile.dart';
+import 'package:penyintas_app/features/dashboard/presentation/widgets/bento_banner_tile.dart';
 
 /// Tile bento "Tantangan / Mingguan" di dashboard (Task 17).
 ///
@@ -91,7 +91,9 @@ class ChallengeBentoTile extends StatelessWidget {
           return const _ChallengeBentoSkeleton();
         }
 
-        return BentoFeatTile(
+        // Butir 4 — banner horizontal, bukan kartu vertikal: tile ini berdiri
+        // sendiri selebar penuh di baris ketujuh grid.
+        return BentoBannerTile(
           bg: AppColors.primary,
           icon: Icons.flag_outlined,
           label: l10n.dashboardBentoChallengeLabel,
@@ -104,7 +106,7 @@ class ChallengeBentoTile extends StatelessWidget {
   }
 }
 
-/// Skeleton ukuran tile bento — dipakai selama belum ada snapshot, atau
+/// Skeleton ukuran tile bento (bentuk banner sejak butir 4) — dipakai selama belum ada snapshot, atau
 /// selagi phase masih `undetermined`/`preparing`. Meniru PERSIS
 /// `_ConsistencyBentoSkeleton` (Task 16) — dua tile sama-sama full-color di
 /// keadaan siap, jadi skeleton keduanya juga harus konsisten.
@@ -128,21 +130,26 @@ class _ChallengeBentoSkeleton extends StatelessWidget {
       ),
     );
 
+    // Berbentuk BANNER seperti tile siapnya — tinggi sama, jadi dashboard
+    // tak melompat saat snapshot tiba.
     return Container(
       key: const Key('challenge-bento-skeleton'),
-      constraints: const BoxConstraints(minHeight: 116),
-      padding: const EdgeInsets.all(AppSpacing.md2),
+      constraints: const BoxConstraints(minHeight: kBentoBannerMinHeight),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md2,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
         children: [
           bar(26, 26),
+          const SizedBox(width: AppSpacing.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               bar(80, 16),
               const SizedBox(height: AppSpacing.xs),
