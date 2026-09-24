@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:penyintas_app/core/database/app_database.dart';
+import 'package:penyintas_app/core/utils/audit_timezone.dart';
 import 'package:penyintas_app/features/challenge/domain/entities/challenge_status.dart';
 
 /// Model data satu baris tantangan — jembatan antara baris Drift
@@ -74,7 +75,8 @@ class ChallengeModel {
     if (baselineAmount != null) 'baselineAmount': baselineAmount,
     'status': const ChallengeStatusConverter().toSql(status),
     if (finalSpent != null) 'finalSpent': finalSpent,
-    'timezone': timezone,
+    // Butir 6 — gerbang keluar: '' / > 64 akan ditolak rules diam-diam.
+    'timezone': zonaSiapKirim(timezone),
     'createdAt': createdAt.millisecondsSinceEpoch,
     // D23 — KOLOM, bukan waktu push. Kalau diisi waktu push, baris yang
     // lama mengantre mendarat sebagai yang termuda dan presedensi terbalik.

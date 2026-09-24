@@ -11,6 +11,7 @@ ChallengeModel _model({
   int? basis = 140000,
   ChallengeStatus status = ChallengeStatus.active,
   int? finalSpent,
+  String timezone = 'WIB',
 }) => ChallengeModel(
   weekKey: 20260907,
   category: kategori,
@@ -18,7 +19,7 @@ ChallengeModel _model({
   baselineAmount: basis,
   status: status,
   finalSpent: finalSpent,
-  timezone: 'WIB',
+  timezone: timezone,
   createdAt: _dibuat,
   updatedAt: _diubah,
 );
@@ -92,5 +93,20 @@ void main() {
     final lokal = DateTime.utc(2026, 9, 9);
     final c = _model().toCompanion(keepResultSeenAt: lokal, isSynced: true);
     expect(c.resultSeenAt.value, lokal);
+  });
+
+  group('butir 6 · gerbang keluar timezone', () {
+    // Baris lokal bisa membawa '' (tarikan dokumen cloud tak lengkap,
+    // `fromFirestore` di atas) atau nama terlalu panjang. Rules menolak
+    // keduanya, jadi setiap jalur kirim — unggah langsung, antrian, dorongan
+    // tertunda — harus lewat penjaga yang SAMA di `toFirestore()`.
+    test('timezone kosong dikirim sebagai "UTC", tak pernah string kosong', () {
+      expect(_model(timezone: '').toFirestore()['timezone'], 'UTC');
+    });
+
+    test('timezone kepanjangan dipotong ke 64', () {
+      final j = _model(timezone: 'z' * 100).toFirestore();
+      expect(j['timezone'], 'z' * 64);
+    });
   });
 }

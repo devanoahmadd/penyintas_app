@@ -1,3 +1,5 @@
+import 'package:penyintas_app/core/utils/audit_timezone.dart';
+
 /// Satu dokumen `users/{uid}/streak_marks/{yyyyMMdd}`.
 ///
 /// SATU DOKUMEN PER HARI, bukan map bulanan. Alasannya bukan estetika:
@@ -24,7 +26,8 @@ class StreakMarkModel {
   Map<String, dynamic> toFirestore({required int updatedAtMs}) => {
     'dayKey': dayKey,
     'markedAt': markedAt.toUtc().millisecondsSinceEpoch,
-    'timezone': timezone,
+    // Butir 6 — gerbang keluar: '' / > 64 akan ditolak rules diam-diam.
+    'timezone': zonaSiapKirim(timezone),
     'updatedAt': updatedAtMs,
   };
 

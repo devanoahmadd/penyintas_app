@@ -46,4 +46,26 @@ void main() {
     });
     expect(pulang.dayKey, 20260903);
   });
+
+  group('butir 6 · gerbang keluar timezone', () {
+    // `timeZoneName` device bisa kosong; rules `streak_marks` menolak '' dan
+    // > 64 — penanda hari tanpa pengeluaran akan tertahan diam-diam.
+    test('timezone kosong dikirim sebagai "UTC"', () {
+      final m = StreakMarkModel(
+        dayKey: 20260902,
+        markedAt: DateTime.utc(2026, 9, 2),
+        timezone: '',
+      );
+      expect(m.toFirestore(updatedAtMs: 1)['timezone'], 'UTC');
+    });
+
+    test('timezone kepanjangan dipotong ke 64', () {
+      final m = StreakMarkModel(
+        dayKey: 20260902,
+        markedAt: DateTime.utc(2026, 9, 2),
+        timezone: 'z' * 100,
+      );
+      expect(m.toFirestore(updatedAtMs: 1)['timezone'], 'z' * 64);
+    });
+  });
 }

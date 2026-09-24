@@ -10,6 +10,7 @@ import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/usecases/usecase.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
+import 'package:penyintas_app/core/utils/audit_timezone.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_local_datasource.dart';
 import 'package:penyintas_app/features/challenge/data/datasources/challenge_remote_datasource.dart';
@@ -39,31 +40,6 @@ bool remoteMenang({
   final rr = mergeRank(remoteStatus);
   if (rr != rl) return rr > rl;
   return remoteUpdatedAt.isAfter(lokalUpdatedAt);
-}
-
-/// Jejak audit zona waktu device saat baris ditulis. MURNI audit: tak pernah
-/// dibaca logika mana pun di app, dan satu-satunya tujuannya ikut ke dokumen
-/// Firestore.
-///
-/// Bentuknya SENGAJA sama dengan `streak_day_marks.timezone`
-/// (`streak_repository_impl.dart:243-251`): singkatan device ("WIB", "+07"),
-/// bukan id IANA. Menggantinya dengan IANA adalah keputusan lintas-fitur milik
-/// pemilik repo, bukan keputusan diam-diam di sini — `preferences.timezone`
-/// merekam zona PROFIL user (kota pilihannya), bukan zona yang melahirkan
-/// `weekKey`, dan menariknya dari `tz.local.name` mengikat penulisan ini pada
-/// urutan inisialisasi paket timezone milik lapisan notifikasi.
-///
-/// Yang ditambahkan di sini cuma satu: jaring untuk nama zona KOSONG.
-/// `firestore.rules` menuntut `timezone.size() > 0`, jadi string kosong membuat
-/// dokumennya DITOLAK selamanya — dorongan gagal diam-diam dan barisnya
-/// mengendap di antrian tanpa satu pun pesan ke user. Offset UTC selalu ada.
-String zonaAudit(String namaZona, Duration offsetUtc) {
-  if (namaZona.isNotEmpty) return namaZona;
-  final menit = offsetUtc.inMinutes;
-  final tanda = menit < 0 ? '-' : '+';
-  final jam = (menit.abs() ~/ 60).toString().padLeft(2, '0');
-  final sisa = (menit.abs() % 60).toString().padLeft(2, '0');
-  return 'UTC$tanda$jam:$sisa';
 }
 
 class ChallengeRepositoryImpl implements ChallengeRepository {

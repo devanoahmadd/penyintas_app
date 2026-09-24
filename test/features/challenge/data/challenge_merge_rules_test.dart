@@ -59,25 +59,6 @@ void main() {
     expect(c.updatedAt.value, remote);
   });
 
-  group('zonaAudit · jejak audit zona waktu', () {
-    test('nama zona device dipakai APA ADANYA', () {
-      // Bentuk yang sama dengan `streak_day_marks.timezone`: singkatan device,
-      // bukan id IANA. Konsistensi lintas-fitur A4 yang dijaga di sini.
-      expect(zonaAudit('WIB', const Duration(hours: 7)), 'WIB');
-      expect(zonaAudit('+07', const Duration(hours: 7)), '+07');
-    });
-
-    test('nama zona KOSONG jatuh ke offset UTC — tak pernah string kosong', () {
-      // `firestore.rules` menuntut `timezone.size() > 0`. String kosong membuat
-      // dokumennya ditolak SELAMANYA: dorongan gagal diam-diam dan barisnya
-      // mengendap di antrian tanpa satu pun pesan ke user.
-      expect(zonaAudit('', const Duration(hours: 7)), 'UTC+07:00');
-      expect(zonaAudit('', const Duration(hours: 5, minutes: 30)), 'UTC+05:30');
-      expect(zonaAudit('', const Duration(hours: -8)), 'UTC-08:00');
-      expect(zonaAudit('', Duration.zero), 'UTC+00:00');
-    });
-  });
-
   test('U49 · remote active TIDAK membangkitkan minggu yang sudah tuntas', () {
     // Meski updatedAt remote lebih besar — peringkat status menang lebih dulu.
     expect(

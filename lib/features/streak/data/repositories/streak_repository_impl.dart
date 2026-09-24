@@ -10,6 +10,7 @@ import 'package:penyintas_app/core/error/exceptions.dart';
 import 'package:penyintas_app/core/error/failures.dart';
 import 'package:penyintas_app/core/network/network_info.dart';
 import 'package:penyintas_app/core/utils/app_clock.dart';
+import 'package:penyintas_app/core/utils/audit_timezone.dart';
 import 'package:penyintas_app/core/utils/date_helper.dart';
 import 'package:penyintas_app/features/streak/data/datasources/streak_local_datasource.dart';
 import 'package:penyintas_app/features/streak/data/datasources/streak_mark_remote_datasource.dart';
@@ -245,10 +246,12 @@ class StreakRepositoryImpl implements StreakRepository {
       // sadar: kolom ini murni jejak audit, tak pernah dibaca logika mana pun,
       // dan menariknya dari `tz.local.name` akan mengikat penandaan pada
       // urutan inisialisasi paket timezone milik lapisan notifikasi.
+      // `zonaAudit` (butir 6) menjaga nama kosong/kepanjangan yang akan
+      // ditolak rules — bentuk yang sama dengan Tantangan.
       await _local.insertMark(
         dayKey: today,
         markedAt: now.toUtc(),
-        timezone: now.timeZoneName,
+        timezone: zonaAudit(now.timeZoneName, now.timeZoneOffset),
         viaClockCorrection: viaClockCorrection,
       );
       requestRecompute();
@@ -272,7 +275,7 @@ class StreakRepositoryImpl implements StreakRepository {
       final model = StreakMarkModel(
         dayKey: today,
         markedAt: now.toUtc(),
-        timezone: now.timeZoneName,
+        timezone: zonaAudit(now.timeZoneName, now.timeZoneOffset),
       );
       final data = model.toFirestore(updatedAtMs: now.millisecondsSinceEpoch);
 
