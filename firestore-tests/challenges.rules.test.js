@@ -157,3 +157,30 @@ test('S-A · weekKey Senin 12 minggu lalu (batas retensi riwayat) diterima', asy
   const wk = hariLalu(12 * 7);
   await assertSucceeds(setDoc(ref(ctx, 'u1', wk), valid(wk)));
 });
+
+// --- Butir 7: baris `active` WAJIB punya target positif ---
+// Kalkulator tak pernah menulis `active` tanpa target (target minimum hasil
+// hitung = Rp 40.000), jadi dokumen seperti ini hanya bisa lahir dari klien
+// rusak atau versi app lain. Tanpa penjaga ini app menilainya terhadap target
+// 0 dan menjatuhkan vonis `missed` FINAL atas belanja Rp 1 pun.
+test('Butir 7 · active tanpa targetAmount ditolak', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const wk = hariIni();
+  const { targetAmount, ...rest } = valid(wk);
+  await assertFails(setDoc(ref(ctx, 'u1', wk), rest));
+});
+test('Butir 7 · active dengan targetAmount 0 ditolak', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const wk = hariIni();
+  await assertFails(
+    setDoc(ref(ctx, 'u1', wk), { ...valid(wk), targetAmount: 0 }),
+  );
+});
+test('Butir 7 · skipped tanpa targetAmount tetap diterima', async () => {
+  const ctx = env.authenticatedContext('u1');
+  const wk = hariIni();
+  const { targetAmount, ...rest } = valid(wk);
+  await assertSucceeds(
+    setDoc(ref(ctx, 'u1', wk), { ...rest, status: 'skipped' }),
+  );
+});

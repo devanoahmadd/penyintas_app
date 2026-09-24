@@ -71,9 +71,14 @@ class EnsureAndResolveChallenge implements UseCase<EnsureOutcome, NoParams> {
       // lagi bertindak pada pos itu, jadi mencatatnya sebagai kegagalan user
       // adalah tuduhan yang salah alamat. finalSpent TETAP diisi: transaksinya
       // masih hidup (deleteCategory hanya menyapu budget_limits + categories).
-      final status = (kategori == null || !slugAda.contains(kategori))
+      //
+      // Butir 7 — target null diperlakukan sama: baris tanpa target tak bisa
+      // dinilai, dan menilainya terhadap 0 memvonis `missed` atas Rp 1 pun.
+      final target = row.targetAmount;
+      final status =
+          (kategori == null || !slugAda.contains(kategori) || target == null)
           ? ChallengeStatus.skipped
-          : evaluateResult(target: row.targetAmount ?? 0, finalSpent: terpakai);
+          : evaluateResult(target: target, finalSpent: terpakai);
 
       await _repo.resolveWeek(
         weekKey: row.weekKey,

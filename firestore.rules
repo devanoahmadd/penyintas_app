@@ -135,6 +135,14 @@ service cloud.firestore {
           && (!('targetAmount' in request.resource.data) || (
                request.resource.data.targetAmount is int
                && request.resource.data.targetAmount >= 0))
+          // Baris `active` dinilai terhadap targetnya — tanpa target positif
+          // app akan menjatuhkan vonis `missed` atas belanja Rp 1 pun. App
+          // tak pernah menulisnya (target minimum hasil hitung Rp 40.000),
+          // jadi penjaga ini hanya menolak klien rusak / versi lain.
+          && (request.resource.data.status != 'active' || (
+               'targetAmount' in request.resource.data
+               && request.resource.data.targetAmount is int
+               && request.resource.data.targetAmount > 0))
           && (!('baselineAmount' in request.resource.data) || (
                request.resource.data.baselineAmount is int
                && request.resource.data.baselineAmount >= 0))

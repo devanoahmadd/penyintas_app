@@ -204,7 +204,12 @@ ChallengePhase resolveChallengePhase({
   if (week != null) {
     switch (week.status) {
       case ChallengeStatus.active:
-        final target = week.targetAmount ?? 0;
+        final target = week.targetAmount;
+        // Butir 7 — `active` tanpa target hanya lahir dari dokumen cloud
+        // rusak/versi lain (rules kini menolaknya). Tampil seperti nasibnya
+        // saat ditutup (`skipped`), sejalan dengan `unknown` di bawah: data
+        // rusak tak pernah dinilai terhadap target 0.
+        if (target == null) return PhaseSettledThisWeek(week);
         return spentThisWeek > target
             ? PhaseOver(week: week, spent: spentThisWeek)
             : PhaseActive(week: week, spent: spentThisWeek);

@@ -64,6 +64,22 @@ void main() {
     expect(_phase(week: _minggu(), spent: 115001), isA<PhaseOver>());
   });
 
+  test(
+    'Butir 7 · baris active TANPA target → settledThisWeek, bukan active/over',
+    () {
+      // Hanya bisa lahir dari dokumen cloud rusak/versi lain. Diperlakukan
+      // sama dengan nasibnya saat ditutup (`skipped`) — tak pernah dinilai
+      // terhadap target 0, tak pernah memvonis "lewat target".
+      for (final spent in [0, 1, 500000]) {
+        expect(
+          _phase(week: _minggu(target: null), spent: spent),
+          isA<PhaseSettledThisWeek>(),
+          reason: 'spent=$spent',
+        );
+      }
+    },
+  );
+
   test('U25 · baris held minggu ini → held', () {
     final p = _phase(
       week: _minggu(status: ChallengeStatus.held, category: null, target: null),

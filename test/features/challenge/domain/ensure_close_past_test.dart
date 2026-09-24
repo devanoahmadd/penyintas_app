@@ -242,6 +242,25 @@ void main() {
       },
     );
 
+    test(
+      'Butir 7 · baris active TANPA target → skipped, BUKAN vonis missed',
+      () async {
+        // Baris begini hanya lahir dari dokumen cloud rusak/versi lain.
+        // Menilainya terhadap target 0 memvonis `missed` FINAL atas belanja
+        // Rp 1 pun — tuduhan salah alamat, sama seperti kategori lenyap (T13).
+        await tulisBaris(weekKey: 20260831, targetAmount: null);
+        await tambahTx(hari: 2, nominal: 40000);
+        clock.at = DateTime(2026, 9, 7, 9);
+
+        await usecase(const NoParams());
+
+        final row = await local.findWeek(20260831);
+        expect(row!.status, ChallengeStatus.skipped);
+        expect(row.finalSpent, 40000); // angkanya tetap dibekukan
+        expect(row.resolvedAt, isNotNull);
+      },
+    );
+
     test('U34 · setelah ditutup, hapus transaksi minggu itu lalu ensure lagi → '
         'finalSpent TIDAK berubah', () async {
       await tulisBaris(weekKey: 20260831, targetAmount: 100000);
